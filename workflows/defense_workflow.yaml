@@ -1,0 +1,351 @@
+# Defense workflow (oral defense / colloquium)
+
+name: defense_workflow
+version: 3.0
+description: |
+  Workflow for preparing the oral defense (colloquium) of a thesis or 
+  dissertation. Begins AFTER submission of the main work. The work is 
+  frozen at this point and cannot be modified.
+
+purpose: |
+  The defense is a standalone oral assignment:
+  - Presentation of core findings (typically 15-20 minutes)
+  - Discussion with the examining committee (typically 15-30 minutes)
+  - Grade counts separately or as part of the overall grade
+  
+  Goal of preparation: confident presentation + confident defense.
+
+typical_size:
+  presentation: 15-20 minutes, 12-20 slides
+  discussion: 15-30 minutes
+typical_preparation_duration: 2-4 weeks
+
+# Agents
+
+agents:
+  orchestrator-defense:
+    file: .claude/agents/orchestrator-defense.md
+    model: inherit
+    role: Project coordination, handover ritual
+  
+  writer:
+    file: .claude/agents/writer-agent.md
+    model: opus
+    role: Slide content, speaker notes, question catalogs
+  
+  data:
+    file: .claude/agents/data-agent.md
+    model: opus
+    role: Chart simplification for slides (only for empirical work)
+    optional: true
+  
+  style-resolver:
+    file: .claude/agents/style-resolver.md
+    model: opus
+    role: Verify or extract styleguide (Phase 0 only; usually reused from main work)
+
+# Constraints
+
+constraints:
+  slides_min: 12
+  slides_max: 20
+  feedback_loop_max: 3
+  feedback_loop_escalation:
+    # See orchestrator-defense.md -> "Feedback-loop escalation" for the full
+    # semantics. Summary: on limit reached, user chooses abort / manual_fix /
+    # force_continue.
+    on_limit_reached: abort | manual_fix | force_continue (user choice)
+
+# Structure within the defense sub-project
+
+directory_structure:
+  project_root: 03_Defense/
+  
+  files_in_project_root:
+    - 00_Status.md
+    - 00_Decisions.md
+    - 00_Feedback_log.md
+    - README.md
+  
+  phase_directories:
+    - 01_Slides/
+    - 02_Speaker_Notes/
+    - 03_Defense_Prep/
+    - 04_Handout/                # optional
+    - 05_Rehearsals/             # optional
+    - 06_Defense_Day/            # final checklist, emergency notes
+
+# References to other sub-projects
+
+references:
+  submitted_work:
+    relative_path: ../02_Main_Work/08_Formal_Review/submissions/v_final_*.docx
+    status: READ-ONLY — do not modify
+  
+  main_work_chapters:
+    relative_path: ../02_Main_Work/
+    status: READ-ONLY — reference for content
+  
+  shared_materials:
+    relative_path: ../00_Shared_Materials/
+    symlink_path: ./shared/
+
+# Workflow
+
+phases:
+  # ===========================================================
+  # Phase 0 - Setup
+  # ===========================================================
+  phase_0_setup:
+    steps:
+      - step: 0.0
+        name: Create project directory
+        manual: true
+        task: 03_Defense/ with sub-directories 01_Slides, 02_Speaker_Notes, etc.
+      
+      - step: 0.1
+        name: Confirm submitted work is the basis
+        agent: orchestrator-defense
+        blocking: true
+        task: |
+          Verify that 02_Main_Work/ is marked as "frozen" 
+          (submission Git tag — v_final_<date> per the long-form workflows'
+          submission step, or work_submitted_<date> per
+          docs/multiproject_structure.md; accept either).
+          If no: STOP. Submit thesis officially first.
+      
+      - step: 0.2
+        name: Create central files
+        agent: orchestrator-defense
+        task: |
+          - 00_Status.md from templates/status.md
+          - 00_Decisions.md from templates/decisions.md (initial: defense date, examining committee)
+          - 00_Feedback_log.md from templates/feedback_log.md
+          - README.md describing the sub-project's purpose
+      
+      - step: 0.3
+        name: Clarify defense requirements
+        manual: true
+        task: |
+          From the examination regulations or examining committee notice, clarify:
+          - How long should the presentation be?
+          - How many examiners?
+          - Is a handout expected?
+          - Are there formal slide requirements (logo, templates)?
+          - Are slides required to be submitted in advance?
+          
+          Record results in 00_Decisions.md.
+      
+      - step: 0.4
+        name: Verify or extract styleguide
+        agent: style-resolver
+        blocking: true
+        task: |
+          In multi-project setups, verify that `../00_Shared_Materials/styleguide.md` 
+          exists and contains no open ❓ items. The defense reuses the styleguide 
+          from the main work.
+          
+          In stand-alone defense setups (rare — defense without prior cephalo project), 
+          extract the styleguide from institutional guidelines into `styleguide.md` 
+          at the defense project root.
+  
+  # ===========================================================
+  # Phase 1 - Slides
+  # ===========================================================
+  phase_01_slides:
+    directory: 01_Slides/
+    agents: [orchestrator-defense, writer]
+    optional_agents: [data]    # data-agent only for empirical defenses (see note below)
+    
+    goals:
+      - PPTX presentation with 12-20 slides
+      - "Typical structure: (1) title slide, (2) agenda, (3) topic and relevance, (4) research question, (5) theoretical framework [1-2 slides], (6) methodology [1-2 slides, more for empirical], (7) core findings [3-6 slides], (8) discussion [1-2 slides], (9) conclusion and outlook, (10) backup slides for expected critical questions"
+    
+    output:
+      - 01_Slides/presentation_v1.pptx
+      - 01_Slides/backup_slides.md (which topics additionally as backup?)
+    
+    important:
+      - Slides are NOT prose. Bullet points, graphics, no text walls.
+      - Every number on a slide must match the submitted work
+      - Use institutional layout OR institution-conformant template (clarify!)
+    
+    chat_structure:
+      - One chat for basic structure and title/agenda slides
+      - One to two chats for content slides
+      - One chat for backup slides
+    
+    note_for_data_agent: |
+      For empirical work: take charts from the main work but often simplify.
+      Slides need fewer details than print (legibility from 5m distance!).
+      Data-agent verifies that simplified version remains consistent with original.
+  
+  # ===========================================================
+  # Phase 2 - Speaker notes
+  # ===========================================================
+  phase_02_speaker_notes:
+    directory: 02_Speaker_Notes/
+    agents: [orchestrator-defense, writer]
+    
+    goals:
+      - Per slide: what exactly do I say?
+      - Time budget per slide (stay within 15-20 min total)
+      - Connecting transitions between slides
+    
+    output:
+      - 02_Speaker_Notes/notes_per_slide.md
+      - 02_Speaker_Notes/timing.md
+    
+    chat_structure:
+      - One chat for initial notes (all slides)
+      - One to two chats for trimming and tightening
+    
+    style_note: |
+      Speaker notes are NOT a script for reading aloud. They are bullet points 
+      and sentence fragments from which you can speak freely. Fully written-out 
+      sentences invite reading.
+      
+      Timing: 1 slide ≈ 1 minute on average. Content-dense slides (methods, 
+      results): up to 2 minutes.
+  
+  # ===========================================================
+  # Phase 3 - Defense preparation (most important phase)
+  # ===========================================================
+  phase_03_defense_prep:
+    directory: 03_Defense_Prep/
+    agents: [orchestrator-defense, writer]
+    
+    goals:
+      - Anticipate critical questions
+      - Identify weaknesses in the work
+      - Prepare answer outlines (bullet points, not memorized)
+    
+    output:
+      - 03_Defense_Prep/expected_questions.md
+      - 03_Defense_Prep/weaknesses_of_work.md
+      - 03_Defense_Prep/answer_outlines.md
+    
+    chat_structure:
+      - One chat: generate question catalog (Claude as "critical examining committee")
+      - One chat: weakness analysis (where are limits of the work?)
+      - One chat: structure answers
+    
+    method_for_question_catalog:
+      prompt_pattern: |
+        "Imagine you are a critical examiner in the defense. The thesis 
+        is about <topic>. Formulate 20 critical questions an examiner 
+        might ask. Sort by category:
+        
+        1. Methodological questions (why this method?)
+        2. Theoretical questions (why this theory?)
+        3. Questions about results (what do the numbers mean?)
+        4. Critical questions about limits and limitations
+        5. Questions about generalizability
+        6. Transfer questions (what would change if ...?)
+        
+        For each question: provide a brief answer direction (bullets), 
+        not a fully written answer."
+    
+    important_question_types:
+      - Why this research question and not another?
+      - Why this methodology and not an alternative?
+      - What are the limitations of your work?
+      - How would you extend the work if you had more time?
+      - Which results surprised you?
+      - Where in your work are you uncertain?
+      - How would you summarize your conclusion in one sentence?
+    
+    important: |
+      The value lies NOT in memorized answers. That would be transparent.
+      The value lies in knowing your own work SO well that you can answer 
+      from intuition. Preparation builds familiarity, not a script.
+  
+  # ===========================================================
+  # Phase 4 - Handout (optional)
+  # ===========================================================
+  phase_04_handout:
+    directory: 04_Handout/
+    agents: [orchestrator-defense, writer]
+    optional: true
+    trigger: If desired by examining committee
+    
+    goals:
+      - Two-page summary (one sheet, both sides)
+      - Core points: question, methodology, main findings
+    
+    output:
+      - 04_Handout/handout_final.pdf
+    
+    format: |
+      Single column, readable when printed. Not a marketing brochure but 
+      a factual summary. Reuse formal elements from the main work (styleguide).
+  
+  # ===========================================================
+  # Phase 5 - Rehearsals
+  # ===========================================================
+  phase_05_rehearsals:
+    directory: 05_Rehearsals/
+    agents: [orchestrator-defense]
+    optional: true
+    recommended: true
+    
+    goals:
+      - Stay within timing (run a timer!)
+      - Free presentation without reading
+      - Smooth transitions between slides
+      - Tech works (projector, clicker, monitor setup)
+    
+    output:
+      - 05_Rehearsals/rehearsal_log.md (what went well? what didn't?)
+    
+    chat_structure:
+      - Claude can help little here — primarily self-training.
+      - After rehearsal: log what to improve  ->  adjustments to slides/notes
+    
+    rehearsal_recommendation: |
+      - At least 3 solo runs (in front of mirror or with recording)
+      - 1-2 runs in front of real people (peers, family)
+      - After each run: ask for critical feedback
+  
+  # ===========================================================
+  # Phase 6 - Defense day
+  # ===========================================================
+  phase_06_defense_day:
+    directory: 06_Defense_Day/
+    agents: [orchestrator-defense]
+    
+    goals:
+      - Execute final checklist
+      - Emergency notes for the unexpected
+    
+    output:
+      - 06_Defense_Day/checklist.md
+      - 06_Defense_Day/emergency_notes.md (rules of thumb for uncertainty)
+    
+    typical_checklist: |
+      - Clothing: appropriate but comfortable
+      - Copy of presentation on USB stick + in cloud
+      - Printed slides + notes as backup
+      - Handout (if required) printed in multiple copies
+      - Water bottle
+      - Watch (to keep time in view)
+      - 30 minutes buffer before the appointment
+      - Deep breathing
+    
+    emergency_rules_of_thumb:
+      - Question unclear? -> "Did I understand your question correctly: ...?"
+      - Answer not immediately ready? -> Brief pause is OK: "Let me think about that for a moment."
+      - Question outside your work? -> Be honest: "I did not investigate that, but I would expect..."
+      - Found an error? -> Acknowledge, don't defend: "You're right, I could have phrased that differently."
+  
+  # ===========================================================
+  # Closing
+  # ===========================================================
+  project_closure:
+    trigger: Defense passed
+    
+    actions:
+      - Git tag: defense_<date>
+      - Set 00_Status.md to "completed"
+      - Update README.md with grade (optional)
+      - Record committee feedback (for future projects)

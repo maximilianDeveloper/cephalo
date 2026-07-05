@@ -1,0 +1,164 @@
+# Presentation workflow — 3 agents, flat structure
+
+name: presentation_3agent
+version: 3.0
+description: |
+  Setup for project presentations (PPTX, typically 15-25 slides) with optional 
+  written companion document. Like seminar_2agent, but adds a format-verifier 
+  for visual consistency and the three-way check (PPTX <-> PDF <-> speaker notes).
+  No orchestrator — user drives manually, one chat per slide cluster or phase.
+  Flat directory structure, no phase folders.
+  
+  Not to be confused with defense_workflow.yaml — that one is for the oral 
+  defense AFTER a thesis submission.
+
+use_cases:
+  - Project presentations
+  - Other assignments combining slides + written companion
+
+# Agents
+
+agents:
+  writer:
+    file: .claude/agents/writer-agent.md
+    model: opus
+    role: Slide content, speaker notes, written companion
+  
+  source-verifier:
+    file: .claude/agents/source-verifier.md
+    model: opus
+    role: Verify numbers, quotes, citations
+  
+  format-verifier:
+    file: .claude/agents/format-verifier.md
+    model: inherit
+    role: Format consistency, three-way check (PPTX / PDF / speaker notes)
+  
+  style-resolver:
+    file: .claude/agents/style-resolver.md
+    model: opus
+    role: One-time extraction of institutional rules into styleguide.md
+
+# Constraints
+
+constraints:
+  slides_min: 15
+  slides_max: 25
+  companion_pages: 5-10        # if applicable
+  feedback_loop_max: 2
+  feedback_loop_escalation:
+    # See orchestrator.md -> "Feedback-loop escalation" for the full behavior.
+    on_limit_reached: abort | manual_fix | force_continue (user choice)
+
+# Directory structure (flat)
+
+directory_structure:
+  workspace: workspace/
+  sources: workspace/sources/
+  guidelines: workspace/sources/_guidelines/
+  slides: workspace/output/slides/
+  companion: workspace/output/chapters/
+  data: workspace/data/                # for chart values
+  state_file: workspace/state.md
+  styleguide: styleguide.md
+
+# Workflow
+
+phases:
+  # ===========================================================
+  # Phase 0 - Preparation
+  # ===========================================================
+  phase_0_setup:
+    steps:
+      - step: 0.0
+        name: Materials pre-check
+        checklist: checklists/precheck.md
+        blocking: true
+      
+      - step: 0.5
+        name: Style resolution
+        agent: style-resolver
+        output: styleguide.md
+        blocking: true
+      
+      - step: 0.6
+        name: Define data basis
+        manual: true
+        task: |
+          If the presentation contains charts or numbers: place data sources 
+          in workspace/data/. One file per source or chart, so consistency 
+          between slides and companion can be checked.
+  
+  # ===========================================================
+  # Slides + Companion
+  # ===========================================================
+  phase_slides:
+    agents: [writer, source-verifier, format-verifier]
+    
+    steps:
+      - step: 1
+        agent: writer
+        task: |
+          Define slide structure, content per slide, speaker notes.
+          In parallel: written companion document if required.
+      
+      - step: 2
+        agent: source-verifier
+        task: |
+          Verify all numbers, quotes, citations on slides AND in companion.
+          Plagiarism check on the companion.
+        feedback_loop_max: 2
+      
+      - step: 3
+        agent: format-verifier
+        task: |
+          - Slide layout consistent (fonts, colors, logo position)
+          - Companion conforms to styleguide.md
+          - Trigger three-way check (see below)
+  
+  # ===========================================================
+  # Three-way consistency check
+  # ===========================================================
+  three_way_check:
+    agents: [format-verifier, source-verifier]
+    
+    description: |
+      Every number, quote, and statement must be consistent across three artifacts:
+      
+        PPTX (slides) <-> PDF (export) <-> speaker notes
+    
+    rules:
+      - Number formatting: decimal separator consistent (comma or period per styleguide)
+      - Pie chart format: NEVER "0%" — always "0.0%" to avoid rounding errors
+        (development lesson: sums can otherwise total 101%)
+      - Units on all values (EUR, %, n=...)
+      - If companion exists: numbers consistent there too
+    
+    steps:
+      - Export PPTX to PDF (python-pptx or LibreOffice)
+      - Automated comparison of numbers across PPTX <-> PDF <-> companion
+      - Manual check of speaker notes (do they contain the key numbers?)
+      - Correct discrepancies until all three versions are identical
+
+# ===========================================================
+# Closing
+# ===========================================================
+  closing:
+    - step: F.1
+      manual: true
+      task: |
+        - Final PPTX export
+        - Final PDF (for submission)
+        - Speaker notes export (if required)
+        - Rehearsal with timing (15-20 min target)
+
+# python-pptx specifics (from project experience)
+
+pptx_notes: |
+  Lessons from past projects:
+  - Chart XML lives under ppt/charts/*.xml — direct lxml manipulation often necessary
+  - Format codes matter: "0%" vs "0.0%" for pie charts
+  - Remove slides only in reverse order
+  - Delete orphaned notesSlide files before repacking
+  - Maintain chart values in a separate data/ file
+    -> Avoids inconsistencies between slides, speaker notes, and companion

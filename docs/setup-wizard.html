@@ -1,0 +1,783 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cephalo &middot; setup assistant</title>
+<style>
+  :root{
+    --paper:#eef1f0; --card:#ffffff; --ink:#0d2226; --ink-soft:#4a5b5d;
+    --accent:#0f6e66; --accent-deep:#0a4c46; --line:#d6dedd; --line-soft:#e6ebea;
+    --term-bg:#0c1a1d; --term-fg:#d7e4e2; --term-dim:#6f8a86; --term-accent:#5fd0c4;
+    --warn:#9a6b1e; --warn-bg:#fbf3e2;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
+    --mono:ui-monospace,"SF Mono","Cascadia Code","Cascadia Mono",Menlo,Consolas,monospace;
+    --radius:10px;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:var(--sans); font-size:16px; line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1080px; margin:0 auto; padding:clamp(20px,4vw,44px) clamp(16px,4vw,32px) 64px}
+
+  /* header */
+  header{display:flex; flex-wrap:wrap; align-items:baseline; gap:8px 18px; padding-bottom:22px; border-bottom:1px solid var(--line)}
+  .brand{font-family:var(--serif); font-size:clamp(30px,5vw,42px); font-weight:600; letter-spacing:-.015em; color:var(--ink); line-height:1}
+  .brand .dot{color:var(--accent)}
+  .tagline{font-size:15px; color:var(--ink-soft); max-width:46ch}
+  .eyebrow{font-family:var(--mono); font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--accent-deep)}
+
+  .lede{margin:22px 0 30px; font-size:clamp(17px,2.2vw,19px); line-height:1.5; color:var(--ink); max-width:60ch; text-wrap:pretty}
+  .lede b{color:var(--accent-deep); font-weight:600}
+
+  /* two-column tool */
+  .grid{display:grid; grid-template-columns:1fr; gap:26px}
+  @media(min-width:860px){ .grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)} }
+
+  section.panel{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:22px}
+  .field{margin-bottom:24px}
+  .field:last-child{margin-bottom:0}
+  .label{display:flex; align-items:baseline; gap:10px; margin-bottom:10px}
+  .label .n{font-family:var(--mono); font-size:11px; letter-spacing:.12em; color:var(--accent); text-transform:uppercase}
+  .label h2{margin:0; font-size:15px; font-weight:600; letter-spacing:-.01em}
+  .hint{font-size:13px; color:var(--ink-soft); margin:-2px 0 10px; text-wrap:pretty}
+
+  /* option groups */
+  .opts{display:flex; flex-wrap:wrap; gap:8px}
+  .opts.stack{flex-direction:column}
+  .opt{
+    position:relative; border:1px solid var(--line); background:#fbfdfc; border-radius:8px;
+    padding:10px 14px; cursor:pointer; font-size:14px; color:var(--ink);
+    transition:border-color .12s, background .12s, box-shadow .12s;
+  }
+  .opt:hover{border-color:#b8c6c4}
+  .opt.wide{width:100%; display:flex; flex-direction:column; gap:2px}
+  .opt .t{font-weight:600}
+  .opt .d{font-size:12.5px; color:var(--ink-soft); line-height:1.4}
+  .opt input{position:absolute; opacity:0; pointer-events:none}
+  .opt.sel{border-color:var(--accent); background:#e7f2f0; box-shadow:inset 0 0 0 1px var(--accent)}
+  .opt.disabled{opacity:.42; cursor:not-allowed; filter:grayscale(.3)}
+  .opt:focus-within{outline:2px solid var(--accent); outline-offset:2px}
+
+  /* segmented (OS) */
+  .seg{display:inline-flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; background:#fbfdfc}
+  .seg .opt{border:0; border-radius:0; background:transparent; box-shadow:none; padding:9px 16px}
+  .seg .opt+.opt{border-left:1px solid var(--line)}
+  .seg .opt.sel{background:var(--accent); color:#fff; box-shadow:none}
+
+  input[type=text]{
+    width:100%; font-family:var(--mono); font-size:13.5px; color:var(--ink);
+    border:1px solid var(--line); border-radius:8px; padding:10px 12px; background:#fbfdfc;
+  }
+  input[type=text]:focus{outline:2px solid var(--accent); outline-offset:1px; border-color:var(--accent)}
+  .subnote{font-size:12.5px; color:var(--ink-soft); margin-top:8px}
+
+  /* right column: result */
+  .result{position:sticky; top:20px; align-self:start}
+  .rlabel{display:flex; align-items:center; justify-content:space-between; margin-bottom:10px}
+  .rlabel h2{margin:0; font-size:13px; font-family:var(--mono); letter-spacing:.1em; text-transform:uppercase; color:var(--ink-soft)}
+
+  .term{background:var(--term-bg); border-radius:var(--radius); border:1px solid #10312f; overflow:hidden}
+  .term-bar{display:flex; align-items:center; gap:7px; padding:11px 14px; border-bottom:1px solid #12312e}
+  .term-bar .dotr{width:11px; height:11px; border-radius:50%}
+  .term-bar .p1{background:#e05a4d}.term-bar .p2{background:#e0b24d}.term-bar .p3{background:#4db07a}
+  .term-bar .path{margin-left:8px; font-family:var(--mono); font-size:11.5px; color:var(--term-dim)}
+  .term-body{padding:16px 16px 18px; font-family:var(--mono); font-size:13.5px; line-height:1.7; color:var(--term-fg); overflow-x:auto}
+  .term-body .prompt{color:var(--term-accent); user-select:none}
+  #cmd{white-space:pre; word-break:normal}
+  #cmd .flag{color:var(--term-accent)}
+  #cmd .str{color:#e0c98a}
+
+  .copy{
+    font-family:var(--mono); font-size:12px; letter-spacing:.04em; text-transform:uppercase;
+    border:1px solid var(--accent); color:var(--accent-deep); background:#e7f2f0;
+    border-radius:7px; padding:7px 13px; cursor:pointer; transition:background .12s,color .12s;
+  }
+  .copy:hover{background:var(--accent); color:#fff}
+  .copy:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+  .copy.done{background:var(--accent-deep); color:#fff; border-color:var(--accent-deep)}
+
+  .btns{display:flex; gap:8px}
+  .btn{font-family:var(--mono); font-size:12px; letter-spacing:.04em; text-transform:uppercase; border-radius:7px; padding:7px 13px; cursor:pointer; transition:background .12s,color .12s,border-color .12s}
+  .btn.ghost{border:1px solid var(--line); background:#fff; color:var(--accent-deep)}
+  .btn.ghost:hover{border-color:var(--accent); background:#e7f2f0}
+  .btn.ghost.done{background:var(--accent-deep); color:#fff; border-color:var(--accent-deep)}
+  .btn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+  .launchnote{margin:12px 2px 0; font-size:12.5px; color:var(--ink-soft); line-height:1.5; text-wrap:pretty}
+  .launchnote code{font-family:var(--mono); font-size:11.5px; background:#e2e9e8; padding:1px 5px; border-radius:4px; color:var(--ink)}
+  .launchnote b{color:var(--accent-deep); font-weight:600}
+  .safenote{margin:6px 2px 0; font-size:12px; color:var(--ink-soft); opacity:.82; line-height:1.5}
+  .runnote{margin:12px 2px 0; font-size:13px; color:var(--ink-soft); line-height:1.5; text-wrap:pretty}
+  .runnote code{font-family:var(--mono); font-size:12px; background:#e2e9e8; padding:1px 5px; border-radius:4px; color:var(--ink)}
+
+  .caveat{display:none; margin-top:14px; background:var(--warn-bg); border:1px solid #ecd9ac; border-left:3px solid var(--warn); border-radius:8px; padding:12px 14px; font-size:13px; line-height:1.5; color:#5c431a}
+  .caveat.show{display:block}
+  .caveat b{color:var(--warn)}
+
+  /* tree preview */
+  .tree-wrap{margin-top:22px}
+  .tree{background:#f6f9f8; border:1px solid var(--line); border-radius:var(--radius); padding:16px 16px; font-family:var(--mono); font-size:12.5px; line-height:1.65; color:var(--ink); overflow-x:auto; white-space:pre}
+  .tree .dir{color:var(--accent-deep); font-weight:600}
+  .tree .cm{color:var(--ink-soft)}
+  .tree-cap{font-family:var(--mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:9px}
+
+  footer{margin-top:38px; padding-top:20px; border-top:1px solid var(--line); font-size:13px; color:var(--ink-soft); line-height:1.6; text-wrap:pretty}
+  footer code{font-family:var(--mono); font-size:12px; background:#e2e9e8; padding:1px 5px; border-radius:4px; color:var(--ink)}
+  footer a{color:var(--accent-deep); text-decoration:underline; text-underline-offset:2px}
+  footer a:hover{color:var(--accent)}
+
+  /* doc overlay */
+  .doc-hidden{display:none}
+  .overlay{position:fixed; inset:0; background:rgba(10,25,28,.55); display:flex; align-items:flex-start; justify-content:center; padding:5vh 16px; z-index:100}
+  .overlay[hidden]{display:none}
+  .overlay-panel{background:var(--card); border-radius:12px; max-width:780px; width:100%; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 24px 64px rgba(0,0,0,.32)}
+  .overlay-head{flex:none; background:var(--card); border-bottom:1px solid var(--line); border-radius:12px 12px 0 0; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:13px 16px}
+  .overlay-head h3{margin:0; font-family:var(--mono); font-size:11.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-soft)}
+  .overlay-close{border:1px solid var(--line); background:#fff; color:var(--ink); width:30px; height:30px; border-radius:7px; font-size:19px; line-height:1; cursor:pointer; flex:none}
+  .overlay-close:hover{border-color:var(--accent); color:var(--accent-deep)}
+  .overlay-close:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+  .overlay-content{flex:1 1 auto; overflow-y:auto; padding:20px 26px 30px; color:var(--ink); line-height:1.6; font-size:14.5px}
+  .doc h1{font-family:var(--serif); font-size:26px; margin:2px 0 8px; color:var(--ink); text-wrap:balance}
+  .doc h2{font-size:19px; margin:26px 0 8px; color:var(--ink); border-bottom:1px solid var(--line-soft); padding-bottom:4px}
+  .doc h3{font-size:15px; margin:20px 0 6px; color:var(--accent-deep)}
+  .doc h4{font-size:13.5px; margin:16px 0 4px; color:var(--ink)}
+  .doc p{margin:0 0 12px}
+  .doc ul,.doc ol{margin:0 0 12px; padding-left:22px}
+  .doc li{margin-bottom:5px}
+  .doc code{font-family:var(--mono); font-size:12.5px; background:#e2e9e8; padding:1px 5px; border-radius:4px}
+  .doc pre{background:var(--term-bg); border-radius:8px; padding:14px 16px; overflow-x:auto; margin:0 0 14px}
+  .doc pre code{background:none; color:var(--term-fg); padding:0; font-size:12.5px; line-height:1.6}
+  .doc hr{border:0; border-top:1px solid var(--line); margin:22px 0}
+  .doc a{color:var(--accent-deep); text-decoration:underline}
+  .doc blockquote{border-left:3px solid var(--accent); margin:0 0 12px; padding:2px 14px; color:var(--ink-soft)}
+  .doc table{border-collapse:collapse; width:100%; margin:0 0 14px; font-size:13px; display:block; overflow-x:auto}
+  .doc th,.doc td{border:1px solid var(--line); padding:6px 10px; text-align:left; vertical-align:top}
+  .doc th{background:#eef3f2; font-weight:600; white-space:nowrap}
+  footer a{color:var(--accent-deep)}
+
+  @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">cephalo<span class="dot">.</span></div>
+    <div class="eyebrow">setup assistant</div>
+    <p class="tagline">One orchestrator, many specialized arms &mdash; a scaffold for writing scholarly work with AI.</p>
+  </header>
+
+  <p class="lede">Answer a few questions and this page builds the <b>exact command</b> to scaffold your project &mdash; and shows you the folders it will create. Nothing runs here; you copy the command and run it yourself.</p>
+
+  <div class="grid">
+    <!-- LEFT: choices -->
+    <div>
+      <section class="panel">
+        <div class="field">
+          <div class="label"><span class="n">Platform</span><h2>Which system are you on?</h2></div>
+          <div class="seg" id="os" role="radiogroup" aria-label="Operating system">
+            <label class="opt sel"><input type="radio" name="os" value="windows" checked>Windows</label>
+            <label class="opt"><input type="radio" name="os" value="macos">macOS</label>
+            <label class="opt"><input type="radio" name="os" value="linux">Linux</label>
+          </div>
+          <p class="subnote" id="os-note">Generates a PowerShell command for <code>setup.ps1</code>.</p>
+        </div>
+
+        <div class="field">
+          <div class="label"><span class="n">Work</span><h2>What are you writing?</h2></div>
+          <div class="opts" id="work" role="radiogroup" aria-label="Work type">
+            <label class="opt sel"><input type="radio" name="work" value="Bachelor thesis" checked>Bachelor thesis</label>
+            <label class="opt"><input type="radio" name="work" value="Master thesis">Master thesis</label>
+            <label class="opt"><input type="radio" name="work" value="Dissertation">Dissertation</label>
+            <label class="opt"><input type="radio" name="work" value="Seminar paper">Seminar paper</label>
+            <label class="opt"><input type="radio" name="work" value="Presentation">Presentation</label>
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="label"><span class="n">Structure</span><h2>How should the project be organized?</h2></div>
+          <div class="opts stack" id="struct" role="radiogroup" aria-label="Structure">
+            <label class="opt wide"><input type="radio" name="struct" value="Flat"><span class="t">Flat</span><span class="d">A single directory. Best for short papers and presentations.</span></label>
+            <label class="opt wide sel"><input type="radio" name="struct" value="Long-form" checked><span class="t">Long-form</span><span class="d">Phase-based directories (proposal &rarr; chapters &rarr; review) with central status files. Best for a bachelor or master thesis.</span></label>
+            <label class="opt wide"><input type="radio" name="struct" value="Multi-project"><span class="t">Multi-project</span><span class="d">Separate proposal, main work, and defense sub-projects sharing one style guide. For a full thesis with a defense.</span></label>
+          </div>
+          <p class="subnote" id="struct-note"></p>
+        </div>
+
+        <div class="field">
+          <div class="label"><span class="n">Scaffolding</span><h2>How much should be pre-created?</h2></div>
+          <div class="opts" id="scaf" role="radiogroup" aria-label="Scaffolding">
+            <label class="opt sel"><input type="radio" name="scaf" value="full" checked>Full &mdash; ready to use</label>
+            <label class="opt"><input type="radio" name="scaf" value="minimal">Minimal &mdash; base only</label>
+          </div>
+          <p class="hint" style="margin-top:10px">Minimal creates just the base folders and lets the style-resolver add more once it has read your institution&rsquo;s guidelines.</p>
+        </div>
+
+        <div class="field">
+          <div class="label"><span class="n">Target</span><h2>Where should the project go? <span style="font-weight:400;color:var(--ink-soft)">(optional)</span></h2></div>
+          <p class="hint">Leave empty to create it in the current folder. Or give a path to build it elsewhere.</p>
+          <input type="text" id="target" autocomplete="off" spellcheck="false" placeholder="C:\Users\you\Documents\Thesis">
+        </div>
+      </section>
+    </div>
+
+    <!-- RIGHT: result -->
+    <div class="result">
+      <div class="rlabel"><h2>Your command</h2><div class="btns"><button class="btn ghost" id="download" type="button">Download launcher</button><button class="copy" id="copy" type="button">Copy</button></div></div>
+      <div class="term">
+        <div class="term-bar"><span class="dotr p1"></span><span class="dotr p2"></span><span class="dotr p3"></span><span class="path" id="termpath">cephalo &mdash; PowerShell</span></div>
+        <div class="term-body"><span class="prompt" id="promptsym">PS&gt;</span> <span id="cmd"></span></div>
+      </div>
+      <p class="runnote" id="runnote"></p>
+      <p class="launchnote" id="launchnote"></p>
+      <p class="safenote">The launcher is a small script that runs the command for you. A browser cannot run terminal commands directly &mdash; that boundary is exactly what keeps this page safe.</p>
+
+      <div class="caveat" id="caveat"><b>Heads up &mdash;</b> Multi-project uses symbolic links on Windows. Enable <b>Developer Mode</b> (Settings &rarr; For developers) once, or run the command from an elevated terminal. Otherwise setup falls back to copying the shared materials, and later edits to the shared style guide will not propagate between sub-projects.</div>
+
+      <div class="tree-wrap">
+        <div class="tree-cap">What gets created</div>
+        <div class="tree" id="tree"></div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <b style="color:var(--ink)">Before you run it:</b> open a terminal <i>inside the folder where you unzipped cephalo</i> (the one that contains <code>setup.ps1</code> / <code>setup.sh</code>) &mdash; setup scaffolds relative to where it runs. Running setup itself needs only the shell you already have (PowerShell on Windows, <code>bash</code> on macOS/Linux); <code>git</code> is optional (recommended for versioning) and <code>python&nbsp;3</code> is needed only later, for the optional utility scripts. Full guides: <a href="../README.md" data-doc="readme">README.md</a> and <a href="QUICKSTART.md" data-doc="quickstart">docs/QUICKSTART.md</a>. This page is fully offline and static &mdash; it never sends anything anywhere.
+  </footer>
+
+  <!-- README.md and QUICKSTART.md are embedded below (rendered to HTML) so the
+       footer links open them in-page, fully offline and with no server. This
+       content is generated from the source Markdown between the DOC_* markers;
+       if those files change, re-render this section. -->
+  <div class="doc-hidden" id="src-readme"><div class="doc"><!--DOC_README_START--><h1>cephalo</h1>
+<p><strong>A multi-agent system for scientific writing.</strong></p>
+<p>cephalo helps students and researchers produce high-quality academic work by orchestrating specialized AI agents through the lifecycle of a thesis, paper, or presentation. The system enforces source fidelity, plagiarism-safe paraphrasing, and consistent formatting — adapted dynamically to whatever citation guidelines and institutional rules apply to the user.</p>
+<p>The name is short for <em>cephalopod</em> — an organism with a central nervous system and many specialized arms. That&#x27;s the metaphor: one orchestrator, many agents, coordinated toward a single goal.</p>
+<hr>
+<h2>Status</h2>
+<p><strong>Early stage.</strong> The system has been developed and refined through actual coursework (bachelor-level) across multiple projects and iterations. It works and is stable enough to use productively — expect the rough edges typical of an early release, and please report them.</p>
+<p>If you are reading this as an early adopter: welcome. Feedback and improvements are welcome.</p>
+<hr>
+<h2>What cephalo does</h2>
+<p>You point cephalo at a writing project — a seminar paper, a thesis, a conference presentation — and it helps you work through it systematically. Concretely:</p>
+<ul><li><strong>Agents read your sources</strong> and produce structured extracts with original quotes, page numbers, and term-usage notes</li><li><strong>Agents write draft sections</strong> based on those extracts, adhering to whatever style guide your institution mandates</li><li><strong>Agents verify claims</strong> sentence-by-sentence against the original sources, catching paraphrasing errors, secondary citations, and plagiarism risks</li><li><strong>Agents enforce formatting</strong> dynamically — citation styles, page numbering, bibliography conventions — based on guideline documents you provide</li><li><strong>You stay in control</strong> of research questions, outlines, methodological choices, and all substantive editorial decisions</li></ul>
+<p>cephalo is a sparring partner and a mechanic, not an author. Every sentence in the final work remains yours to defend.</p>
+<hr>
+<h2>What makes it different</h2>
+<p><strong>Dynamic guideline extraction.</strong> Most writing tools hardcode citation rules (APA, Chicago, etc.). cephalo reads whatever style guide your institution gives you — however idiosyncratic — and extracts the rules into a structured configuration. If the rules change, you update the document; the agents update themselves.</p>
+<p><strong>phase separation.</strong> Content quality stabilizes well before formatting does. cephalo formalizes this: a Content phase uses capable, expensive models; a Formatting phase uses fast, cheap models. This cuts costs significantly without sacrificing quality.</p>
+<p><strong>Source fidelity as first-class concern.</strong> The most valuable agent in the system is the source verifier — catching subtle errors like &quot;your text says <em>X</em>, but the source says <em>Y</em> (close but not identical).&quot; These errors are invisible without a dedicated review pass, and they are the difference between good and publishable work.</p>
+<p><strong>Project-scale awareness.</strong> A seminar paper needs different structure than a dissertation. cephalo offers workflow variants for:</p>
+<ul><li>Small works (seminar papers, presentations)</li><li>Medium works (bachelor theses)</li><li>Long-running works (master theses, dissertations) — with phase-based directories, handover rituals, Git versioning, and reference manager integration</li></ul>
+<p>Dissertations do not currently have their own dedicated workflow; cephalo uses <code>master_7agent_longform.yaml</code> as the closest match and expects adaptation (more phases, longer timeline, possibly multiple sub-projects per chapter). A native dissertation workflow may be added in a future version.</p>
+<hr>
+<h2>Responsible use</h2>
+<p>cephalo is a writing <em>assistant</em>, not a ghostwriter. It reads sources, drafts from them, checks citations, and enforces formatting — but the research questions, the argument, and every final sentence are yours, and yours to defend.</p>
+<p>Before using it for graded or published work:</p>
+<ul><li><strong>Check your institution&#x27;s rules on AI assistance.</strong> They vary widely and they change. What is permitted for one course or degree may be forbidden for another.</li><li><strong>Disclose your use</strong> where your institution asks for it — many now require a short declaration. Be specific about what the tool did.</li><li><strong>Own every claim.</strong> Verify each source yourself and make sure you can explain and defend every sentence in an oral exam or review. The source-verifier reduces errors; it does not absolve you of them.</li></ul>
+<p>Used this way, cephalo makes you a more rigorous writer. Used to hand in text you cannot stand behind, it will not serve you well — and neither will the examiner.</p>
+<hr>
+<h2>Requirements</h2>
+<ul><li><strong>Claude Code</strong> (desktop app or CLI) with a paid Anthropic subscription</li><li><strong>Git</strong> installed (for versioning, recommended for theses)</li><li><strong>Optional:</strong> Zotero or Citavi for bibliographic data (recommended for 15+ sources)</li></ul>
+<p>No programming knowledge required for basic use. Scripts are optional.</p>
+<hr>
+<h2>Quick start</h2>
+<h3>1. Download and extract</h3>
+<p>Get cephalo from the project&#x27;s GitHub page — a release archive from the Releases page, or <strong>Code -&gt; Download ZIP</strong> — and unzip it anywhere; <code>git clone &lt;repo-url&gt;</code> works too. The setup script will ask you at launch time where your project should live. If you cloned instead of unzipping: use a <code>--target</code> path in step 2, so your project starts with its own fresh Git history.</p>
+<p><strong>New here? Prefer a visual start.</strong> Open <a href="docs/setup-wizard.html"><code>docs/setup-wizard.html</code></a> in any browser — answer a few questions and it builds the exact setup command for your system and previews the folders it will create. It is fully offline and runs nothing; you copy the command and run it yourself in the next step.</p>
+<h3>2. Run the setup script</h3>
+<p><strong>Windows (PowerShell):</strong> <em>(only multi-project setups create symlinks — for those, enable Developer Mode once or run elevated; see the FAQ)</em></p>
+<pre><code>Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\setup.ps1</code></pre>
+<p><strong>macOS / Linux / Git Bash:</strong></p>
+<pre><code>chmod +x setup.sh
+./setup.sh</code></pre>
+<p>The script asks four questions:</p>
+<ul><li><strong>Where should the project be created?</strong> — the current folder (e.g. your Downloads), or a target path you specify (e.g. <code>~/Documents/Bachelorarbeit_OSS</code>). A target path is recommended for real work; the cephalo template is copied there and the project is created inside.</li><li>What kind of work is this? (seminar paper, presentation, thesis, dissertation)</li><li>What project structure? (flat, long-form, multi-project)</li><li>How much structure should be pre-created? (standard scaffolding, or minimal — the rest is added later based on your guidelines)</li></ul>
+<p>For non-interactive runs, pass the answers as arguments:</p>
+<pre><code>./setup.sh &quot;Bachelor thesis&quot; &quot;Long-form&quot; full --target ~/Documents/Thesis_OSS</code></pre>
+<pre><code>.\setup.ps1 -WorkType &quot;Bachelor thesis&quot; -Structure &quot;Long-form&quot; -Scaffolding full -Target ~\Documents\Thesis_OSS -NonInteractive</code></pre>
+<h3>3. Drop your institution&#x27;s guidelines into place</h3>
+<p>Depending on your chosen structure:</p>
+<ul><li>Flat: <code>workspace/sources/_guidelines/</code></li><li>Long-form: <code>guidelines/</code></li><li>Multi-project: <code>00_Shared_Materials/guidelines/</code></li></ul>
+<p>Add whatever your institution provides: citation guide, formatting rules, examination regulations, etc. Also optionally course-specific materials (syllabi, assignment descriptions).</p>
+<h3>4. Open the project in Claude Code and invoke the style resolver</h3>
+<p>Open the project root (or, for multi-project setups, the sub-project you&#x27;re working on) in Claude Code. Run the first prompt:</p>
+<pre><code>Please invoke the style-resolver agent. Extract the formatting 
+and citation rules from the guidelines directory into styleguide.md. 
+List any open questions for me to resolve before we proceed.</code></pre>
+<p>The resolver produces a structured <code>styleguide.md</code>. Open questions are marked <code>❓</code> — resolve these (usually by asking your supervisor) before content work begins.</p>
+<h3>5. Begin writing</h3>
+<p>Use the workflow that matches your project. See <code>docs/QUICKSTART.md</code> for detailed chapter-by-chapter instructions.</p>
+<hr>
+<h2>Project structure variants</h2>
+<p>Three structures, chosen at setup time based on the scale of your work:</p>
+<h3>Flat (seminar papers, presentations)</h3>
+<pre><code>project/
+├── .claude/agents/
+├── workflows/
+├── [...other agent files]
+├── workspace/
+│   ├── sources/
+│   │   ├── _guidelines/
+│   │   └── extracts/
+│   └── output/
+│       └── chapters/
+└── styleguide.md</code></pre>
+<p>Everything in one directory, one chat per chapter, state file as bridge between chats.</p>
+<h3>Long-form (bachelor and master theses)</h3>
+<pre><code>project/
+├── [...agent files]
+├── guidelines/
+├── 00_Status.md
+├── 00_Decisions.md
+├── 00_Feedback_log.md
+├── 01_Proposal/                    (optional within long-form)
+├── 02_Literature/
+├── 03_Theory_chapters/
+├── 04_Methods/                     (if applicable)
+├── 05_Empirical/                   (if applicable)
+├── 06_Discussion_Conclusion/
+├── 07_Introduction/                (written last)
+└── 08_Formal_Review/               (Phase B)</code></pre>
+<p>phase-based directories, per-phase handover documents, centralized state management. Git and reference manager recommended.</p>
+<h3>Multi-project (long works with proposal and defense)</h3>
+<pre><code>project/
+├── [...agent files]
+├── 00_Shared_Materials/
+│   └── guidelines/
+├── 01_Proposal/
+├── 02_Main_Work/
+└── 03_Defense/</code></pre>
+<p>Three independent sub-projects sharing one set of materials. Each sub-project has its own state, its own workflow, its own freeze point. The proposal is frozen after acceptance. The main work is frozen after submission. The defense works from both as read-only references.</p>
+<hr>
+<h2>The agents</h2>
+<table><thead><tr><th>Agent</th><th>Role</th><th>Default model</th></tr></thead><tbody><tr><td><code>orchestrator</code></td><td>Coordinates flat-structure workflows</td><td>inherit</td></tr><tr><td><code>orchestrator-longform</code></td><td>Coordinates long-form / multi-project workflows</td><td>inherit</td></tr><tr><td><code>orchestrator-defense</code></td><td>Specializes in defense preparation</td><td>inherit</td></tr><tr><td><code>research-agent</code></td><td>Reads sources, produces structured extracts</td><td>inherit</td></tr><tr><td><code>writer-agent</code></td><td>Produces prose from extracts, enforces style</td><td>opus</td></tr><tr><td><code>source-verifier</code></td><td>Sentence-by-sentence verification, plagiarism check</td><td>opus</td></tr><tr><td><code>format-verifier</code></td><td>Checks document against styleguide</td><td>inherit</td></tr><tr><td><code>style-resolver</code></td><td>Extracts rules from institutional guidelines</td><td>opus</td></tr><tr><td><code>methods-agent</code></td><td>Research design for empirical work</td><td>opus</td></tr><tr><td><code>data-agent</code></td><td>Tables, statistics, numerical consistency</td><td>opus</td></tr></tbody></table>
+<p><em>Model assignment.</em> <code>inherit</code> means the agent uses whatever model the main chat is using — typically the user&#x27;s default. <code>opus</code> means the agent is pinned to the strongest available model regardless of the main chat&#x27;s setting, because the role requires careful judgment (paraphrasing, source fidelity, methodological reasoning). You can override these per project by editing the agent&#x27;s frontmatter.</p>
+<hr>
+<h2>Documentation roadmap</h2>
+<p>Read in this order if new:</p>
+<ol><li><strong>README.md</strong> (this file) — overview</li><li><strong>docs/QUICKSTART.md</strong> — 5-minute onboarding for a new project</li><li><strong>docs/error_catalog.md</strong> — common writing errors this system catches</li><li><strong>docs/phase_separation.md</strong> — how the Content / Formatting phase split works</li></ol>
+<p>For thesis-scale projects:</p>
+<ol><li><strong>docs/longform_structure.md</strong> — long-form project organization</li><li><strong>docs/multiproject_structure.md</strong> — when to split into sub-projects</li><li><strong>docs/git_introduction.md</strong> — versioning for beginners</li><li><strong>docs/reference_management.md</strong> — Zotero/Citavi integration</li></ol>
+<hr>
+<h2>FAQ</h2>
+<h3>Is cephalo specific to any institution?</h3>
+<p>No. The style-resolver agent extracts rules from whatever guideline documents you provide. Tested primarily with German-language university guidelines, but the architecture makes no assumption about language, citation style, or institutional conventions.</p>
+<h3>Does cephalo do the writing for me?</h3>
+<p>No. It helps you write. You provide research questions, outlines, sources, and final editorial judgment. The agents extract, draft, verify, and format — but the intellectual substance remains yours. Every sentence should be defendable by you in an oral examination.</p>
+<h3>What happens if I already have a work-in-progress?</h3>
+<p>You can import an existing project. See <code>docs/QUICKSTART.md</code> for migration steps. Typically: place existing chapters in phase directories, create a Status document summarizing current state, invoke the style-resolver on your institution&#x27;s guidelines, continue.</p>
+<h3>Does this work without Git?</h3>
+<p>For small works (seminar papers), yes. For theses, you will regret not using Git by month three. The setup script initializes a repository automatically. <code>docs/git_introduction.md</code> explains the three commands you need: <code>status</code>, <code>add</code>, <code>commit</code>.</p>
+<h3>How much does it cost?</h3>
+<p>cephalo itself is free. You pay for the Claude Code subscription (standard Anthropic pricing). Typical thesis projects use a mix of expensive and cheap models, with the phase separation feature cutting total costs by an estimated 60–70% versus naive use of the capable model throughout.</p>
+<h3>Can I contribute?</h3>
+<p>This is an early project. Feedback on the agent definitions, workflow configurations, and error catalog is welcome. Specifically: if your institution&#x27;s style guide produces unusual results with the style-resolver, a sample (anonymized) plus the problematic output is valuable.</p>
+<h3>Symlinks don&#x27;t work on my Windows machine — what do I do?</h3>
+<p>Creating symlinks on Windows requires Administrator privileges OR Developer Mode enabled (Settings -&gt; For developers -&gt; Developer Mode: on). Developer Mode is the less invasive option — enable it once and symlinks work without Admin rights.</p>
+<p>If neither is possible, the multi-project setup script falls back to copying <code>00_Shared_Materials/</code> into each sub-project. The setup succeeds, but updates to the styleguide will not propagate automatically. See <code>docs/multiproject_structure.md</code> for the diagnostic command (<code>Get-Item shared | Select-Object LinkType</code>) and a re-sync PowerShell snippet.</p>
+<p>Alternative: use the flat or long-form structure instead. Both avoid symlinks entirely.</p>
+<h3>My institution has no citation guide — what should I put in <code>styleguide.md</code>?</h3>
+<p>Two options:</p>
+<ol><li><strong>Ask.</strong> Contact the program coordinator or your supervisor. Institutions nearly always have conventions, just sometimes not written down. A short email often yields the information faster than searching.</li><li><strong>Adopt a published standard.</strong> If nothing exists, APA 7 is the safest default for social sciences and business; Chicago for humanities; IEEE for engineering. Document the choice explicitly in <code>00_Decisions.md</code>: &quot;Institution provides no style guide; adopting APA 7 as default.&quot; Then extract that standard into <code>styleguide.md</code> using the style-resolver (most published standards have PDFs available).</li></ol>
+<p>Either way, the <code>styleguide.md</code> file must exist and be explicit. Agents will not improvise.</p>
+<hr>
+<h2>Credits</h2>
+<p>Developed through real coursework at a German distance-learning university. The error catalog and workflow patterns reflect patterns observed across dozens of revisions of actual student work. Mistakes made during development became the rules enforced by the agents.</p>
+<hr>
+<h2>License</h2>
+<p>cephalo is licensed under the Apache License 2.0. See <code>LICENSE</code> for the full text.</p>
+<p>In short: you may use, modify, and redistribute cephalo, including commercially. You must preserve the license and attribution. Modifications must be marked. The Apache 2.0 patent grant protects you from patent claims by contributors. There is no warranty — cephalo is provided as-is.</p>
+<hr>
+<h2>A note on the name</h2>
+<p><em>Cephalo</em> (from Greek κεφαλή, <em>kephalē</em>, &quot;head&quot;; also the root of &quot;cephalopod&quot;) refers to organisms with centralized intelligence distributed across specialized arms. Octopuses are the canonical example. The metaphor is intentional: one orchestrator coordinates many agents, each tuned for a specific task, all reaching toward the same goal.</p>
+<p>It also happens to be a short, pronounceable name in most languages. That matters.</p><!--DOC_README_END--></div></div>
+  <div class="doc-hidden" id="src-quickstart"><div class="doc"><!--DOC_QUICKSTART_START--><h1>Quickstart</h1>
+<p>This is a 5-minute onboarding for a new project. It assumes you have already extracted the cephalo package.</p>
+<p><strong>Tip:</strong> if you would rather not assemble the command by hand, open <a href="setup-wizard.html"><code>setup-wizard.html</code></a> in any browser. It builds the exact command for your system from a few clicks and previews the resulting folders — fully offline, and it runs nothing itself.</p>
+<p>For full architecture and concepts, see <code>README.md</code>.</p>
+<hr>
+<h2>Step 0: Decide where your project lives</h2>
+<p>When you run the setup script, it will ask where to create the project. You have two options:</p>
+<ol><li><strong>Here</strong> — the project is created inside the extracted cephalo folder itself. Fast, but the folder will keep its download name (e.g. <code>cephalo-v1.0.0/</code> or <code>cephalo-main/</code>), which is not a great name for your thesis.</li><li><strong>In a different directory</strong> — enter a path like <code>~/Documents/Bachelorarbeit_KMU_OSS</code>. The cephalo template is copied there, and the project is created inside. At the end, the script offers to delete the original download.</li></ol>
+<p>Option 2 is recommended for real work. Option 1 is fine for quick testing.</p>
+<p>Non-interactive:</p>
+<pre><code>./setup.sh &quot;Bachelor thesis&quot; &quot;Long-form&quot; full --target ~/Documents/Bachelorarbeit</code></pre>
+<pre><code>.\setup.ps1 -WorkType &quot;Bachelor thesis&quot; -Structure &quot;Long-form&quot; -Scaffolding full -Target ~\Documents\Bachelorarbeit -NonInteractive</code></pre>
+<p>Why this matters: Claude Code needs the agent files (<code>.claude/</code>, <code>workflows/</code>, etc.) and your project content in the <em>same</em> directory. That is why the template is copied rather than just the project folder being created somewhere else — everything has to coexist.</p>
+<hr>
+<h2>Step 1: Verify your setup</h2>
+<p>After running the setup script, your project directory should contain:</p>
+<ul><li>The agent files (<code>.claude/</code>, <code>workflows/</code>, <code>checklists/</code>, <code>templates/</code>, <code>scripts/</code>, <code>docs/</code>)</li><li>The structure for your chosen variant (see your setup output)</li><li>A <code>.git</code> directory (Git initialized)</li><li><code>.gitignore</code> and <code>.gitattributes</code></li></ul>
+<p>Open the project directory in Claude Code (desktop app or CLI).</p>
+<p>For multi-project setups: open the <strong>sub-project</strong> you&#x27;re currently working on (e.g., <code>01_Proposal/</code>), not the root directory. Otherwise Claude sees all three projects at once, which is confusing.</p>
+<hr>
+<h2>Step 2: Place your guidelines</h2>
+<p>Drop your institution&#x27;s documents into the guidelines directory. Depending on your structure:</p>
+<table><thead><tr><th>Structure</th><th>Path</th></tr></thead><tbody><tr><td>Flat</td><td><code>workspace/sources/_guidelines/</code></td></tr><tr><td>Long-form</td><td><code>guidelines/</code></td></tr><tr><td>Multi-project</td><td><code>00_Shared_Materials/guidelines/</code></td></tr></tbody></table>
+<p>What to include:</p>
+<ul><li>Citation guide (mandatory)</li><li>Formatting / writing guidelines (mandatory)</li><li>Examination regulations (recommended)</li><li>Plagiarism prevention guide (recommended)</li><li>Course-specific assignment briefing (recommended)</li></ul>
+<p>If you don&#x27;t have one of these yet, that&#x27;s fine — the style-resolver will flag missing rules as <code>❓</code> for you to clarify later.</p>
+<hr>
+<h2>Step 3: Run the style-resolver</h2>
+<p>In Claude Code, send this prompt:</p>
+<pre><code>Please invoke the style-resolver agent. Extract the formatting and 
+citation rules from the guidelines directory into styleguide.md. 
+List any open questions for me to resolve before we proceed.</code></pre>
+<p>The resolver will:</p>
+<ol><li>Read your guidelines</li><li>Produce <code>styleguide.md</code> at the project root (or <code>00_Shared_Materials/styleguide.md</code>)</li><li>Flag ambiguous or missing rules as <code>❓</code></li><li>(For minimal-scaffolding setups) propose additional directories based on what your guidelines require</li></ol>
+<p>Resolve all <code>❓</code> items before proceeding to content work. This usually means asking your supervisor about the ambiguous points.</p>
+<hr>
+<h2>Step 4: Begin chapter work</h2>
+<p>Choose your workflow based on your project type:</p>
+<table><thead><tr><th>Type</th><th>Workflow file</th></tr></thead><tbody><tr><td>Seminar paper</td><td><code>workflows/seminar_2agent.yaml</code></td></tr><tr><td>Presentation</td><td><code>workflows/presentation_3agent.yaml</code></td></tr><tr><td>Bachelor thesis (flat)</td><td><code>workflows/bachelor_5agent.yaml</code></td></tr><tr><td>Bachelor thesis (long-form)</td><td><code>workflows/bachelor_5agent_longform.yaml</code></td></tr><tr><td>Master thesis (flat)</td><td><code>workflows/master_7agent.yaml</code></td></tr><tr><td>Master thesis (long-form)</td><td><code>workflows/master_7agent_longform.yaml</code></td></tr><tr><td>Proposal sub-project</td><td><code>workflows/proposal_workflow.yaml</code></td></tr><tr><td>Defense sub-project</td><td><code>workflows/defense_workflow.yaml</code></td></tr></tbody></table>
+<p>Open the chosen workflow file once to understand the phase structure. Then start a chat for the first chapter.</p>
+<p>For long-form projects, follow the <strong>chat closure ritual</strong> at the end of every chat: update <code>00_Status.md</code>, write the phase&#x27;s <code>handover.md</code>, suggest a Git commit. The orchestrator will guide you.</p>
+<hr>
+<h2>Step 5: Read these next</h2>
+<p>In order:</p>
+<ol><li><strong><code>docs/error_catalog.md</code></strong> — the top errors this system catches. Knowing them in advance saves work.</li><li><strong><code>docs/phase_separation.md</code></strong> — how cephalo separates Content (Phase A) from Formatting (Phase B), and why.</li><li><strong><code>docs/longform_structure.md</code></strong> — if you&#x27;re using long-form structure.</li><li><strong><code>docs/multiproject_structure.md</code></strong> — if you&#x27;re using multi-project structure.</li><li><strong><code>docs/git_introduction.md</code></strong> — if Git is new to you.</li><li><strong><code>docs/reference_management.md</code></strong> — if you&#x27;re using Zotero, Citavi, or another reference manager.</li></ol>
+<hr>
+<h2>Common first-day mistakes</h2>
+<h3>Skipping the style-resolver</h3>
+<p>If you skip step 3, agents fall back on built-in defaults that may not match your institution&#x27;s rules. You&#x27;ll discover this much later when revisions pile up. Always run the resolver first.</p>
+<h3>Trusting filenames</h3>
+<p>Institutional course files sometimes have misleading names. A <code>.pdf</code> may actually be a ZIP archive of JPEGs. The research-agent should inspect file contents, not filenames. If you upload sources manually, verify what&#x27;s actually inside.</p>
+<h3>Ignoring open <code>❓</code> items</h3>
+<p><code>❓</code> items in <code>styleguide.md</code> mean &quot;I don&#x27;t know&quot;. If you let them sit, the format-verifier will repeatedly flag the same issues. Resolve early.</p>
+<h3>Working in the multi-project root</h3>
+<p>For multi-project setups, open the active sub-project (<code>01_Proposal/</code>, <code>02_Main_Work/</code>, or <code>03_Defense/</code>) in Claude Code. Opening the root exposes all three to the agent at once, which leads to confusion and unintended edits across sub-projects.</p>
+<hr>
+<h2>Migration from existing work</h2>
+<p>If you already have a draft (in Word, Markdown, etc.):</p>
+<ol><li>Run setup as above</li><li>Place existing chapters in the appropriate phase directories (long-form) or <code>workspace/output/chapters/</code> (flat)</li><li>Create an initial <code>00_Status.md</code> summarizing where you stand</li><li>Run the style-resolver</li><li>Start a chat asking the source-verifier to verify your existing chapters</li></ol>
+<p>The agents work with what&#x27;s already there. You don&#x27;t need to rewrite anything that already exists.</p>
+<hr>
+<h2>Troubleshooting</h2>
+<p><strong><code>./setup.sh: Permission denied</code></strong> — the script needs the execute bit: <code>chmod +x setup.sh</code>.</p>
+<p><strong><code>setup.ps1 cannot be loaded because running scripts is disabled</code></strong> — PowerShell&#x27;s execution policy. Allow this session only:</p>
+<pre><code>Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\setup.ps1</code></pre>
+<p><strong><code>git: command not found</code></strong> — install Git. On Windows: download Git for Windows (includes Git Bash, which is needed for the <code>.sh</code> helper scripts). On Linux/macOS: <code>apt install git</code> / <code>brew install git</code>.</p>
+<p><strong><code>New-Item: Administrator privilege required</code></strong> on Windows (Multi-project setup) — symlinks need Admin rights or Developer Mode. The easier fix: Settings -&gt; For developers -&gt; Developer Mode: on. Then re-run setup.</p>
+<p><strong><code>ModuleNotFoundError: No module named &#x27;docx&#x27;</code></strong> — the Python utility scripts need their dependencies. From the project root: <code>pip install -r requirements.txt</code>. If you see <code>No module named &#x27;docx&#x27;</code> specifically, you may have the wrong package — uninstall <code>docx</code> (the abandoned one) and install <code>python-docx</code>.</p>
+<p><strong>Setup finishes but no workflow is mentioned</strong> — check the script output. The last lines name the active workflow. Invalid arguments make the script exit with an error message naming the valid options — fix the argument and re-run.</p>
+<p><strong>Something else went wrong</strong> — re-run with verbose output: <code>bash -x setup.sh</code> (Linux/macOS) or add <code>-Verbose</code> to the PowerShell invocation. Open an issue with the output.</p>
+<hr>
+<h2>Getting help</h2>
+<ul><li>For architecture questions: <code>README.md</code></li><li>For specific agent behavior: <code>.claude/agents/&lt;agent-name&gt;.md</code></li><li>For workflow details: <code>workflows/&lt;workflow&gt;.yaml</code></li><li>For known issues: <code>docs/error_catalog.md</code></li><li>For script installation and usage: <code>docs/scripts.md</code></li></ul><!--DOC_QUICKSTART_END--></div></div>
+
+  <div class="overlay" id="overlay" hidden role="dialog" aria-modal="true" aria-labelledby="overlay-title">
+    <div class="overlay-panel">
+      <div class="overlay-head"><h3 id="overlay-title"></h3><button class="overlay-close" id="overlay-close" type="button" aria-label="Close">&times;</button></div>
+      <div class="overlay-content" id="overlay-content"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var state={os:"windows",work:"Bachelor thesis",struct:"Long-form",scaf:"full",target:""};
+
+  var FLAT_ONLY={"Seminar paper":true,"Presentation":true};
+
+  // ----- folder trees (accurate to what setup.* creates, per work type and
+  // scaffolding; entries the agents generate later are labeled as such) -----
+  function tree(struct,scaf,work){
+    var min=(scaf==="minimal");
+    var emp=(work==="Master thesis"||work==="Dissertation");
+    var rows;
+    if(struct==="Flat"){
+      rows=[
+        line("project/","dir"),
+        row("├── ","CLAUDE.md  .claude/  workflows/  checklists/  templates/","cm"),
+        row("└── ","workspace/","dir")
+      ];
+      if(min){
+        rows.push(row("    └── ","sources/","dir")+sp("_guidelines/"));
+        rows.push(row("    ","(more added later by the style-resolver)","cm"));
+      } else {
+        rows.push(row("    ├── ","sources/","dir")+sp("_guidelines/ , extracts/"));
+        rows.push(row("    ├── ","output/","dir")+sp(work==="Presentation"?"chapters/ , slides/":"chapters/"));
+        if(work==="Presentation") rows.push(row("    ├── ","data/","dir"));
+        if(emp) rows.push(row("    ├── ","methods/","dir")+"  "+row("","data/","dir"));
+        rows.push(row("    └── ","state.md","cm")+sp("created later by the orchestrator"));
+      }
+      return rows.join("\n");
+    }
+    if(struct==="Long-form"){
+      rows=[
+        line("project/","dir"),
+        row("├── ","00_Status.md  00_Decisions.md  00_Feedback_log.md","")
+      ];
+      if(min){
+        rows.push(row("└── ","guidelines/","dir"));
+        rows.push(row("    ","(phase folders added later by the style-resolver)","cm"));
+      } else {
+        rows.push(
+          row("├── ","guidelines/","dir"),
+          row("├── ","01_Proposal/","dir"),
+          row("├── ","02_Literature/","dir")+sp("extracts/ , sources/"),
+          row("├── ","03_Theory_chapters/","dir")
+        );
+        if(emp) rows.push(row("├── ","04_Methods/","dir")+"  "+row("","05_Empirical/","dir"));
+        rows.push(
+          row("├── ","06_Discussion_Conclusion/","dir"),
+          row("├── ","07_Introduction/","dir"),
+          row("└── ","08_Formal_Review/","dir")
+        );
+      }
+      return rows.join("\n");
+    }
+    // Multi-project
+    return [
+      line("project/","dir"),
+      row("├── ","00_Shared_Materials/","dir")+sp("guidelines/ (+ styleguide.md, added later)"),
+      row("├── ","01_Proposal/","dir")+sp(min?"its own status files":"its own status + phase folders"),
+      row("├── ","02_Main_Work/","dir")+sp(min?"status files; phases added later":"the long-form thesis structure"),
+      row("└── ","03_Defense/","dir")+sp(min?"status files":"slides, notes, Q&A")
+    ].join("\n");
+  }
+  function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+  function line(t,cls){return '<span class="'+cls+'">'+esc(t)+'</span>';}
+  function row(pre,t,cls){return esc(pre)+(cls?'<span class="'+cls+'">'+esc(t)+'</span>':esc(t));}
+  function sp(t){return '   <span class="cm">'+esc(t)+'</span>';}
+
+  // ----- command -----
+  // Safe interpolation of the free-text Target path into each context.
+  // The path is the only user-controlled field, so it must be neutralised
+  // before it reaches a shell command, a batch file, or the DOM.
+  function shQuote(x){return "'"+String(x).replace(/'/g,"'\\''")+"'";}       // POSIX single-quote (bash on-page + .sh launcher)
+  function shTarget(x){                                                       // like shQuote, but keep a leading ~/ or ~user/ (safe chars only) unquoted so bash tilde-expansion still works
+    x=String(x);
+    var m=x.match(/^(~[A-Za-z0-9_.-]*\/)(.*)$/);                              // ~ or ~user followed by a slash: keep "~.../" outside the quotes
+    if(m) return m[1]+(m[2]?shQuote(m[2]):"");
+    if(/^~[A-Za-z0-9_.-]*$/.test(x)) return x;                               // a bare ~ or ~user (safe chars only) — leave unquoted so it expands
+    return shQuote(x);
+  }
+  function psQuote(x){return "'"+String(x).replace(/'/g,"''")+"'";}          // PowerShell single-quote literal (on-page PS command; no expansion of $(...) / backtick)
+  function winCmdArg(x){return String(x).replace(/["\r\n]/g,"").replace(/%/g,"%%");} // inside a .cmd "..." passed to powershell -File
+
+  function buildCmd(){
+    var w=state.work,s=state.struct,c=state.scaf,t=state.target.trim();
+    if(state.os==="windows"){
+      var parts=['.\\setup.ps1',
+        f('-WorkType')+' '+str('"'+w+'"'),
+        f('-Structure')+' '+str('"'+s+'"'),
+        f('-Scaffolding')+' '+c];
+      if(t) parts.push(f('-Target')+' '+str(psQuote(t)));
+      parts.push(f('-NonInteractive'));
+      return parts.join(' ');
+    } else {
+      var p=['./setup.sh', str('"'+w+'"'), str('"'+s+'"'), c];
+      if(t) p.push(f('--target')+' '+str(shTarget(t)));
+      return p.join(' ');
+    }
+  }
+  function f(x){return '<span class="flag">'+esc(x)+'</span>';}
+  function str(x){return '<span class="str">'+esc(x)+'</span>';}
+  function plainCmd(){
+    return document.getElementById('cmd').textContent;
+  }
+
+  // ----- render -----
+  function render(){
+    var win=state.os==="windows";
+    document.getElementById('cmd').innerHTML=buildCmd();
+    document.getElementById('promptsym').textContent=win?"PS>":"$";
+    document.getElementById('termpath').textContent=win?"cephalo — PowerShell":"cephalo — bash";
+    document.getElementById('os-note').innerHTML=win
+      ? 'Generates a PowerShell command for <code>setup.ps1</code>.'
+      : 'Generates a shell command for <code>setup.sh</code>.';
+    document.getElementById('target').placeholder=win
+      ? "C:\\Users\\you\\Documents\\Thesis" : "~/Documents/Thesis";
+
+    // run note
+    var rn=document.getElementById('runnote');
+    rn.innerHTML=win
+      ? 'Run it from the cephalo folder. If PowerShell blocks the script, prefix once with <code>powershell -ExecutionPolicy Bypass -File .\\setup.ps1 …</code>'
+      : 'Make it executable once with <code>chmod +x setup.sh</code>, then run it from the cephalo folder.';
+
+    var ln=document.getElementById('launchnote');
+    ln.innerHTML=win
+      ? 'Rather not touch a terminal? Click <b>Download launcher</b>, save <code>cephalo-setup.cmd</code> into your cephalo folder, and double-click it.'
+      : (state.os==='macos'
+        ? 'Rather not touch a terminal? Click <b>Download launcher</b>, save <code>cephalo-setup.command</code> into your cephalo folder, then right-click it &rarr; Open.'
+        : 'Rather not touch a terminal? Click <b>Download launcher</b>, save <code>cephalo-setup.sh</code> into your cephalo folder, then make it executable and run it.');
+
+    // structure lock for flat-only work types
+    var flatOnly=!!FLAT_ONLY[state.work];
+    document.querySelectorAll('#struct .opt').forEach(function(o){
+      var v=o.querySelector('input').value;
+      var lock=flatOnly && v!=="Flat";
+      o.classList.toggle('disabled',lock);
+      o.querySelector('input').disabled=lock;
+    });
+    document.getElementById('struct-note').textContent=flatOnly
+      ? state.work+' always uses the flat structure.'
+      : '';
+
+    // caveat
+    document.getElementById('caveat').classList.toggle('show', win && state.struct==="Multi-project");
+
+    // tree
+    document.getElementById('tree').innerHTML=tree(state.struct,state.scaf,state.work);
+
+    // reflect selection styling
+    syncSel('os','os'); syncSel('work','work'); syncSel('struct','struct'); syncSel('scaf','scaf');
+  }
+  function syncSel(name,group){
+    document.querySelectorAll('#'+group+' .opt').forEach(function(o){
+      o.classList.toggle('sel', o.querySelector('input').checked);
+    });
+  }
+
+  // ----- wiring -----
+  function onPick(group,key,after){
+    document.querySelectorAll('#'+group+' input').forEach(function(inp){
+      inp.addEventListener('change',function(){
+        if(inp.disabled) return;
+        state[key]=inp.value;
+        if(after) after();
+        render();
+      });
+    });
+  }
+  onPick('os','os');
+  onPick('work','work',function(){
+    if(FLAT_ONLY[state.work]){
+      state.struct="Flat";
+      var flat=document.querySelector('#struct input[value="Flat"]');
+      if(flat) flat.checked=true;
+    }
+  });
+  onPick('struct','struct');
+  onPick('scaf','scaf');
+  document.getElementById('target').addEventListener('input',function(e){
+    state.target=e.target.value; render();
+  });
+
+  var copyBtn=document.getElementById('copy');
+  copyBtn.addEventListener('click',function(){
+    var text=plainCmd();
+    var done=function(){
+      copyBtn.textContent="Copied";copyBtn.classList.add('done');
+      setTimeout(function(){copyBtn.textContent="Copy";copyBtn.classList.remove('done');},1600);
+    };
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(done,function(){fallback(text,done);});
+    } else {fallback(text,done);}
+  });
+  function fallback(text,done){
+    var ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';
+    document.body.appendChild(ta);ta.select();
+    try{document.execCommand('copy');done();}catch(e){}
+    document.body.removeChild(ta);
+  }
+
+  // ----- downloadable launcher (double-click instead of copy) -----
+  function launcher(){
+    var w=state.work,s=state.struct,c=state.scaf,t=state.target.trim();
+    if(state.os==="windows"){
+      var tgt=winCmdArg(t);
+      var args='-WorkType "'+w+'" -Structure "'+s+'" -Scaffolding '+c+(tgt?' -Target "'+tgt+'"':'')+' -NonInteractive';
+      return {name:"cephalo-setup.cmd",crlf:true,text:[
+        "@echo off",
+        "REM cephalo launcher -- save this file INTO your cephalo folder (next to setup.ps1), then double-click it.",
+        'cd /d "%~dp0"',
+        'if not exist ".\\setup.ps1" (',
+        "  echo Could not find setup.ps1 next to this launcher.",
+        "  echo Move this file into your cephalo folder, then run it again.",
+        "  pause",
+        "  exit /b 1",
+        ")",
+        'powershell -NoProfile -ExecutionPolicy Bypass -File ".\\setup.ps1" '+args,
+        "echo.",
+        "echo Done. You can close this window.",
+        "pause"
+      ]};
+    }
+    var sh='"'+w+'" "'+s+'" '+c+(t?' --target '+shTarget(t):'');
+    return {name:(state.os==="macos"?"cephalo-setup.command":"cephalo-setup.sh"),crlf:false,text:[
+      "#!/bin/bash",
+      "# cephalo launcher -- save this file INTO your cephalo folder (next to setup.sh).",
+      "# macOS: right-click this file -> Open.   Linux: run it (chmod +x if your file manager needs it).",
+      'cd "$(dirname "$0")" || exit 1',
+      'if [ ! -f "./setup.sh" ]; then',
+      '  echo "Could not find setup.sh next to this launcher."',
+      '  echo "Move this file into your cephalo folder, then run it again."',
+      '  read -p "Press Enter to close..."',
+      "  exit 1",
+      "fi",
+      "chmod +x ./setup.sh 2>/dev/null",
+      "./setup.sh "+sh,
+      'echo ""',
+      'echo "Done. You can close this window."'
+    ]};
+  }
+  var dlBtn=document.getElementById('download');
+  dlBtn.addEventListener('click',function(){
+    var L=launcher(); var eol=L.crlf?"\r\n":"\n";
+    var blob=new Blob([L.text.join(eol)+eol],{type:"application/octet-stream"});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a'); a.href=url; a.download=L.name;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){URL.revokeObjectURL(url);},1500);
+    dlBtn.textContent="Downloaded"; dlBtn.classList.add('done');
+    setTimeout(function(){dlBtn.textContent="Download launcher"; dlBtn.classList.remove('done');},1700);
+  });
+
+  // ----- doc overlay (README / QUICKSTART embedded, works offline & in preview) -----
+  var overlay=document.getElementById('overlay');
+  var overlayContent=document.getElementById('overlay-content');
+  var overlayTitle=document.getElementById('overlay-title');
+  var lastFocus=null;
+  function openDoc(id,title){
+    var src=document.getElementById('src-'+id);
+    if(!src) return;
+    overlayContent.innerHTML=src.innerHTML;
+    overlayTitle.textContent=title;
+    overlay.hidden=false;
+    overlayContent.scrollTop=0;
+    lastFocus=document.activeElement;
+    document.getElementById('overlay-close').focus();
+  }
+  function closeDoc(){ overlay.hidden=true; overlayContent.innerHTML=''; if(lastFocus&&lastFocus.focus) lastFocus.focus(); }
+  document.querySelectorAll('footer a[data-doc]').forEach(function(a){
+    a.addEventListener('click',function(e){ e.preventDefault(); openDoc(a.getAttribute('data-doc'), a.textContent); });
+  });
+  document.getElementById('overlay-close').addEventListener('click',closeDoc);
+  overlay.addEventListener('click',function(e){ if(e.target===overlay) closeDoc(); });
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape' && !overlay.hidden) closeDoc(); });
+  // Cross-links inside the embedded docs: route README<->QUICKSTART to the other embedded doc,
+  // and neutralise any other relative link (it has no target in this single-file page).
+  overlayContent.addEventListener('click',function(e){
+    var a=e.target.closest('a'); if(!a) return;
+    var href=a.getAttribute('href')||'';
+    if(/README\.md($|[#?])/i.test(href)){ e.preventDefault(); openDoc('readme','README.md'); }
+    else if(/QUICKSTART\.md($|[#?])/i.test(href)){ e.preventDefault(); openDoc('quickstart','docs/QUICKSTART.md'); }
+    else if(/setup-wizard\.html($|[#?])/i.test(href)){ e.preventDefault(); closeDoc(); }  // "open the wizard" — you are already here
+    else if(!/^(https?:|mailto:|#)/i.test(href)){ e.preventDefault(); }
+  });
+  // Focus trap: keep Tab within the open dialog (it advertises aria-modal).
+  overlay.addEventListener('keydown',function(e){
+    if(e.key!=='Tab' || overlay.hidden) return;
+    var f=Array.prototype.filter.call(
+      overlay.querySelectorAll('button, a[href], [tabindex]:not([tabindex="-1"])'),
+      function(el){ return el.offsetParent!==null; });
+    if(!f.length) return;
+    var first=f[0], last=f[f.length-1];
+    if(e.shiftKey && document.activeElement===first){ e.preventDefault(); last.focus(); }
+    else if(!e.shiftKey && document.activeElement===last){ e.preventDefault(); first.focus(); }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,35 @@
+# System files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary Office files
+~$*.docx
+~$*.pptx
+~$*.xlsx
+
+# Editor directories
+.vscode/
+.idea/
+*.swp
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Personal data — never commit raw data with personal identifiers
+**/data/raw/*.csv
+**/data/raw/*.xlsx
+**/data/raw/*_personal*
+**/data/raw/*_identified*
+**/data/processed/
+
+# Keep placeholders
+!**/data/raw/.gitkeep
+!**/data/raw/README.md
+
+# Claude Code runtime artifacts
+.claude/worktrees/
+.claude/settings.local.json

@@ -1,0 +1,178 @@
+# CLAUDE.md
+
+This file is the entry point for Claude Code when working in a cephalo project. It describes the system's architecture and where to find specific components.
+
+## What is cephalo?
+
+cephalo is a multi-agent system for academic writing. It coordinates specialized agents through the lifecycle of a scientific work — proposal, research, drafting, verification, formatting, defense.
+
+See `README.md` for a full overview.
+
+## Project structure
+
+When a user opens a project in Claude Code, the structure depends on which project variant was set up. Three variants are supported:
+
+### Flat structure (seminar papers, presentations, flat-variant theses)
+```
+project-root/
+├── CLAUDE.md                    ← this file
+├── .claude/agents/              ← agent definitions
+├── workflows/                   ← workflow configurations
+├── checklists/                  ← rule catalogs
+├── templates/                   ← template files
+├── scripts/                     ← utility scripts
+├── docs/                        ← documentation
+├── styleguide.md                ← extracted formatting rules (generated)
+└── workspace/
+    ├── sources/
+    │   ├── _guidelines/         ← institutional guideline documents
+    │   └── extracts/            ← structured source extracts
+    ├── output/
+    │   ├── chapters/            ← chapter drafts
+    │   └── slides/              ← presentations only
+    ├── methods/                 ← empirical master/dissertation only
+    ├── data/                    ← empirical master/dissertation only
+    │   ├── raw/                 ← read-only, never modified
+    │   ├── processed/
+    │   ├── scripts/             ← analysis scripts (R, Python, etc.)
+    │   └── outputs/             ← generated tables and figures
+    └── state.md                 ← current project state
+```
+
+### Long-form structure (bachelor / master theses)
+```
+project-root/
+├── CLAUDE.md
+├── [...agent files as above]
+├── guidelines/                  ← institutional documents
+├── styleguide.md                ← extracted formatting rules
+├── 00_Status.md                 ← central status document
+├── 00_Decisions.md              ← architectural decisions log (append-only)
+├── 00_Feedback_log.md           ← cross-chapter learning
+├── 01_Proposal/                 ← optional, see multi-project for full workflow
+├── 02_Literature/               ← each phase has handover.md
+├── 03_Theory_chapters/
+├── 04_Methods/                  ← empirical works only
+├── 05_Empirical/                ← empirical works only
+├── 06_Discussion_Conclusion/
+├── 07_Introduction/             ← written last
+└── 08_Formal_Review/            ← formatting phase (Phase B)
+```
+
+### Multi-project structure (with proposal and defense)
+```
+project-root/
+├── CLAUDE.md
+├── [...agent files]
+├── 00_Shared_Materials/
+│   ├── guidelines/              ← shared institutional documents
+│   └── styleguide.md            ← one styleguide for all sub-projects
+├── 01_Proposal/                 ← independent sub-project, frozen after acceptance
+├── 02_Main_Work/                ← independent sub-project, frozen after submission
+└── 03_Defense/                  ← independent sub-project
+```
+
+Each sub-project has its own `00_Status.md`, `00_Decisions.md`, and phase directories.
+
+## Agent locations
+
+All agents are in `.claude/agents/`. There are three orchestrators:
+
+- `orchestrator.md` — for flat structures
+- `orchestrator-longform.md` — for long-form and multi-project structures
+- `orchestrator-defense.md` — specialized for defense preparation, knows the main work is frozen
+
+Non-orchestrator agents (`research-agent`, `writer-agent`, `source-verifier`, `format-verifier`, `style-resolver`, `methods-agent`, `data-agent`) are shared across all structures.
+
+Each agent definition includes its own file path conventions in a `File paths` section. Agents cannot read this CLAUDE.md — they must be self-contained.
+
+## Workflow selection
+
+Workflows are in `workflows/`. Each workflow is a YAML file that describes a sequence of agent invocations and validation steps.
+
+| Work type | Flat variant | Long-form variant |
+|-----------|--------------|-------------------|
+| Seminar paper | `seminar_2agent.yaml` | (not applicable — too small) |
+| Presentation | `presentation_3agent.yaml` | (not applicable) |
+| Bachelor thesis | `bachelor_5agent.yaml` | `bachelor_5agent_longform.yaml` |
+| Master thesis | `master_7agent.yaml` | `master_7agent_longform.yaml` |
+
+Multi-project setups additionally use:
+- `proposal_workflow.yaml` for the proposal sub-project
+- `defense_workflow.yaml` for the defense sub-project
+- The main work sub-project uses the corresponding long-form workflow
+
+## Style and formatting rules
+
+**Critical architectural principle:** Formatting rules (citation format, page numbering, heading sizes, etc.) are not hardcoded in agent prompts. They live in `styleguide.md`, which is generated by the `style-resolver` agent from whatever institutional guidelines the user provides.
+
+Agents consult `styleguide.md` as their single source of truth for formatting. If `styleguide.md` lacks a rule, the agent flags this rather than guessing.
+
+The `style-resolver` runs once per project during setup (or when guidelines change). See `.claude/agents/style-resolver.md` for details.
+
+## The content / formatting phase split
+
+Long-form works go through two distinct phases:
+
+**Phase A (Content):** Writer and source-verifier agents (capable models) iterate on substance until the chapters are stable.
+
+**Phase B (Formatting):** format-verifier and utility scripts (fast models) iterate on presentation, citations, plagiarism checks. The writer agent is dormant unless a real content issue surfaces.
+
+This split reduces cost by ~60–70% versus running capable models throughout. See `docs/phase_separation.md`.
+
+## Universal rules (apply in every project)
+
+1. **Preserve original quotes, not just page numbers.** Source extracts must contain verbatim text, enabling downstream verification.
+2. **Technical terms are sacred.** If a source uses term *X*, the text must also use *X* — not a synonym the source does not use.
+3. **Inspect file contents, not filenames.** Institutional source documents sometimes have misleading names.
+4. **`styleguide.md` is the truth for formatting.** No hardcoded rules in agent prompts.
+5. **A citation without an accessible source is not a citation.** The setup checklist verifies source accessibility.
+
+## When to ask the user
+
+Agents should ask rather than guess when:
+
+- A guideline rule is ambiguous or contradictory in the source documents
+- A source is cited in the text but the underlying file is not accessible
+- A decision would have cross-chapter implications (always log in `00_Decisions.md`)
+- The setup has open `❓` items in `styleguide.md`
+
+## Platform caveats
+
+### Windows: multi-project setups need elevated privileges for symlinks
+
+The multi-project structure uses symlinks from each sub-project into `00_Shared_Materials/`. On Windows, creating a symlink requires EITHER:
+
+- **Developer Mode enabled** (Settings -> For developers -> Developer Mode: on — recommended, one-time setup), OR
+- **Administrator / elevated shell**
+
+This applies to BOTH setup scripts:
+
+**`setup.ps1` (PowerShell):** `New-Item -ItemType SymbolicLink` fails without elevation. The script catches this and falls back to copying `00_Shared_Materials/` into each sub-project, with a visible warning.
+
+**`setup.sh` (Git Bash / MinGW64):** even more subtle. By default, `ln -s` in Git Bash silently creates a directory **copy** instead of failing — exit code 0, no error. The setup script detects this after the fact (checks whether a real symlink was created) and issues the same visible warning.
+
+For Git Bash specifically, setting `MSYS=winsymlinks:nativestrict` in your environment makes `ln -s` create real NTFS symlinks — but you still need Developer Mode or Administrator rights for the creation itself.
+
+**Either fallback works**, but:
+
+**Updates to `00_Shared_Materials/styleguide.md` will NOT propagate.** You would have to copy the updated file into each sub-project manually, or re-run setup. The symptom: Proposal, Main Work, and Defense can silently drift apart in formatting.
+
+Diagnostic commands:
+
+- PowerShell: `Get-Item 01_Proposal\shared | Select-Object LinkType` — empty means fallback was used
+- Git Bash: `readlink 01_Proposal/shared` — empty output means fallback was used
+
+If you are on Windows and plan a multi-project setup: enable Developer Mode once. Otherwise use the flat or long-form structure, which avoid symlinks entirely.
+
+### macOS and Linux
+
+No special requirements. Symlinks work out of the box.
+
+### Encoding on Windows consoles
+
+The Python scripts print Unicode symbols (`⚠️`, `✅`). On German Windows installations with CP1252 consoles, this would raise `UnicodeEncodeError`. The scripts reconfigure stdout to UTF-8 at startup, which handles this — but if you see `UnicodeEncodeError` anyway, your Python is older than 3.9. Upgrade.
+
+## Reference
+
+Full specification: see `docs/` directory. Architecture philosophy: see `README.md`.

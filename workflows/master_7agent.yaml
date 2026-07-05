@@ -1,0 +1,262 @@
+# Master thesis workflow — 7 agents, flat structure
+
+name: master_7agent
+version: 3.0
+description: |
+  Full multi-agent setup for master theses (typically 50-80 pages, 30-60 sources).
+  Adds methods-agent and data-agent on top of the bachelor setup, for empirical work.
+  Flat directory structure (single workspace/ folder).
+  
+  For long-running master projects, prefer master_7agent_longform.yaml.
+
+based_on: bachelor_5agent.yaml
+
+# Agents (5 from bachelor + 2 new)
+
+agents:
+  orchestrator:
+    file: .claude/agents/orchestrator.md
+    model: inherit
+  
+  research:
+    file: .claude/agents/research-agent.md
+    model: inherit
+  
+  writer:
+    file: .claude/agents/writer-agent.md
+    model: opus
+  
+  source-verifier:
+    file: .claude/agents/source-verifier.md
+    model: opus
+  
+  format-verifier:
+    file: .claude/agents/format-verifier.md
+    model: inherit
+  
+  methods:
+    file: .claude/agents/methods-agent.md
+    model: opus
+    role: Research design, methods chapter, methodological consistency
+  
+  data:
+    file: .claude/agents/data-agent.md
+    model: opus
+    role: Data preparation, tables, statistics, three-way consistency 
+          (raw data <-> table <-> text)
+  
+  style-resolver:
+    file: .claude/agents/style-resolver.md
+    model: opus
+    role: One-time extraction of institutional rules into styleguide.md
+
+# Constraints
+
+constraints:
+  page_count: 50-80           # default; styleguide may override
+  sources_min: 30
+  sources_max: 60
+  outline_depth_max: 3
+  empirical: true             # methods + data agents only used if empirical
+  feedback_loop_max: 3
+  feedback_loop_escalation:
+    # See orchestrator.md -> "Feedback-loop escalation" for the full behavior.
+    on_limit_reached: abort | manual_fix | force_continue (user choice)
+
+# Workflow
+
+phases:
+  # ===========================================================
+  # Phase 0 - Preparation
+  # ===========================================================
+  phase_0_preparation:
+    steps:
+      - step: 0.0
+        name: Materials pre-check
+        agent: orchestrator
+        checklist: checklists/precheck.md
+        blocking: true
+      
+      - step: 0.5
+        name: Style resolution
+        agent: style-resolver
+        output: styleguide.md
+        blocking: true
+      
+      - step: 0.6
+        name: Methods design (only if empirical)
+        agent: methods
+        output: workspace/methods/design.md
+        blocking: true
+        note: |
+          Without a defined methodology, no data agent can work. The design 
+          decision (qualitative / quantitative / mixed-methods) is binding 
+          for everything that follows.
+  
+  # ===========================================================
+  # Phase A - Content
+  # ===========================================================
+  phase_A_content:
+    description: |
+      Chapter-by-chapter work. For empirical theses, methods and data 
+      chapters use specialized agents.
+    
+    order: [theory, methods, empirical, discussion, conclusion, introduction]
+    
+    per_theory_chapter:
+      - step: A.1
+        agent: research
+        input: Chapter-relevant sources
+      
+      - step: A.2
+        agent: source-verifier
+        input: Extracts
+      
+      - step: A.3
+        agent: writer
+        input: Verified extracts, styleguide.md
+      
+      - step: A.4
+        agent: source-verifier
+        action: Sentence-by-sentence verification
+        feedback_loop_max: 3
+      
+      - step: A.5
+        agent: format-verifier
+        action: Critical format errors
+      
+      - step: A.6
+        agent: orchestrator
+        action: Status update
+    
+    methods_chapter:
+      condition: empirical == true
+      note: Skip this block for purely theoretical theses. Redistribute page budget accordingly.
+      steps:
+      - step: A.M.1
+        agent: methods
+        input: design.md, methodological literature
+        output: workspace/output/chapters/ch_methods.md
+      
+      - step: A.M.2
+        agent: source-verifier
+        action: Verify methodological literature
+      
+      - step: A.M.3
+        agent: format-verifier
+    
+    empirical_chapter:
+      condition: empirical == true
+      note: Skip this block for purely theoretical theses.
+      steps:
+      - step: A.E.1
+        agent: data
+        input: workspace/data/raw/, workspace/data/scripts/
+        output: workspace/data/processed/, workspace/data/outputs/ (tables, charts)
+        note: Raw data is read-only — never modified
+      
+      - step: A.E.2
+        agent: writer
+        input: data outputs, styleguide.md
+        output: workspace/output/chapters/ch_empirical.md
+      
+      - step: A.E.3
+        agent: data
+        action: Three-way consistency check (raw data <-> table <-> text)
+      
+      - step: A.E.4
+        agent: source-verifier
+        action: Methodological consistency between methods chapter and empirical chapter
+      
+      - step: A.E.5
+        agent: format-verifier
+    
+    consistency_check:
+      after_every_n_chapters: 2
+      checklist: checklists/consistency.md
+      agent: source-verifier
+  
+  # ===========================================================
+  # Phase transition A -> B (same as bachelor)
+  # ===========================================================
+  phase_transition_a_to_b:
+    name: A -> B
+    agent: orchestrator
+    criteria:
+      - all_chapters_content_complete: true
+      - all_chapters_source_verified: "✅"
+      - methods_data_consistent: true
+      - open_content_warnings: 0
+    documentation: docs/phase_separation.md
+    
+    rollback_b_to_a:
+      when: |
+        During Phase B a genuine content issue surfaces (e.g., a citation reveals
+        a claim not actually supported by the source, or a format pass exposes a 
+        missing argumentation step or a methods/data inconsistency). 
+        Format-only fixes do NOT qualify for rollback.
+      procedure:
+        - Pause Phase B
+        - Set workspace/state.md -> overall phase: A (rollback from B)
+        - Reactivate writer-agent (and methods/data-agent if empirical) for the fix
+        - Run source-verifier on the affected passage
+        - Document the rollback in workspace/state.md with rationale
+        - Resume Phase B when the fix is verified
+      note: |
+        Rollbacks should be rare. If they happen more than twice, the original 
+        A -> B transition was premature.
+  
+  # ===========================================================
+  # Phase B - Form (same as bachelor)
+  # ===========================================================
+  phase_B_form:
+    description: |
+      format-verifier (fast) and build scripts only. writer-agent (capable) 
+      activated only for genuine content corrections.
+    
+    active_agents: [format-verifier, orchestrator]
+    writer_agent_deactivated: true
+    
+    steps:
+      - step: B.1
+        agent: format-verifier
+        action: Full styleguide check
+      
+      - step: B.2
+        script: scripts/bibliography_check.py
+      
+      - step: B.3
+        script: scripts/abbreviations_extract.py
+      
+      - step: B.4
+        agent: format-verifier
+        action: Consistency checks
+      
+      - step: B.5
+        script: scripts/docx_postprocess.sh
+        action: Hyphenation, final formatting
+  
+  # ===========================================================
+  # Closing
+  # ===========================================================
+  closing:
+    - step: F.1
+      agent: orchestrator
+      checklist: checklists/consistency.md
+      action: Full-document consistency check
+    
+    - step: F.2
+      agent: format-verifier
+      action: Final styleguide report
+    
+    - step: F.3
+      agent: data
+      action: Final data audit (all numbers in text vs. raw data)
+    
+    - step: F.4
+      manual: true
+      task: |
+        - Update table of contents
+        - Confirm hyphenation
+        - Visual proofreading
+        - Mentally rehearse defending each sentence

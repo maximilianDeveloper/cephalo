@@ -1,0 +1,153 @@
+# Seminar paper workflow — 2 agents, flat structure
+
+name: seminar_2agent
+version: 3.0
+description: |
+  Lean setup for seminar papers (typically 7-10 pages, 8-15 sources).
+  No orchestrator — user drives manually, one chat per chapter.
+  Flat directory structure, no phase folders.
+  
+  For larger works, use bachelor_5agent or bachelor_5agent_longform.
+
+use_cases:
+  - Seminar papers
+  - Short term papers
+  - Theoretical essays under 10 pages
+
+# Agents
+
+agents:
+  writer:
+    file: .claude/agents/writer-agent.md
+    model: opus
+    role: Read sources, draft prose, check paraphrases
+    note: |
+      In this lean setup, the writer-agent also handles extraction.
+      There is no separate research-agent.
+  
+  source-verifier:
+    file: .claude/agents/source-verifier.md
+    model: opus
+    role: Sentence-by-sentence verification against originals + plagiarism check
+  
+  style-resolver:
+    file: .claude/agents/style-resolver.md
+    model: opus
+    role: One-time extraction of institutional rules into styleguide.md
+
+# Optional: if formal compliance is critical, the format-verifier can be added.
+# In that case, consider presentation_3agent instead.
+
+# Constraints
+
+constraints:
+  page_count: 7-10        # default; styleguide may override
+  sources_min: 8
+  sources_max: 15
+  outline_depth_max: 2
+  chapter_weighting:
+    introduction: 20%
+    body: 70%
+    conclusion: 10%
+  feedback_loop_max: 2
+  feedback_loop_escalation:
+    # See orchestrator.md -> "Feedback-loop escalation" for the full behavior.
+    on_limit_reached: abort | manual_fix | force_continue (user choice)
+    force_continue_suggested_limit: 3   # conservative for short works
+
+# Directory structure (flat)
+
+directory_structure:
+  workspace: workspace/
+  sources: workspace/sources/
+  guidelines: workspace/sources/_guidelines/
+  extracts: workspace/sources/extracts/
+  output: workspace/output/chapters/
+  state_file: workspace/state.md
+  styleguide: styleguide.md
+
+# Workflow
+
+phases:
+  # ===========================================================
+  # Phase 0 - Preparation
+  # ===========================================================
+  phase_0_setup:
+    steps:
+      - step: 0.0
+        name: Pre-check of materials
+        checklist: checklists/precheck.md
+        blocking: true
+        manual: true
+        note: |
+          Verify that the citation guide, formatting guidelines, and 
+          assignment description are present, and all sources are accessible.
+      
+      - step: 0.5
+        name: Style resolution
+        agent: style-resolver
+        output: styleguide.md
+        blocking: true
+        note: |
+          Once per project. If the resolver leaves any open ❓ items,
+          clarify them before starting chapter work.
+  
+  # ===========================================================
+  # Per-chapter work (one chat per chapter)
+  # ===========================================================
+  chapter_work:
+    order: [body, conclusion, introduction]   # introduction last
+    
+    per_chapter:
+      - step: 1
+        agent: writer
+        input: Sources (uploaded by user or in workspace/sources/)
+        output: workspace/output/chapters/ch_X_<slug>.md
+        tasks:
+          - Read sources and identify relevant passages
+          - Record original quotes with page numbers in the state file
+          - Draft prose from the extracted material
+          - Follow the styleguide
+          - Stay within the page budget
+      
+      - step: 2
+        agent: source-verifier
+        input: Chapter text + workspace/sources/extracts/
+        action: Sentence-by-sentence verification incl. plagiarism check (verification step 8 in source-verifier.md)
+        feedback_loop_max: 2
+      
+      - step: 3
+        manual: true
+        task: Update state file (manually or via writer-agent)
+  
+  # ===========================================================
+  # Closing
+  # ===========================================================
+  closing:
+    - step: F.1
+      manual: true
+      task: |
+        - Verify all chapters against styleguide (checklists/format_rules.md)
+        - Derive list of abbreviations from text (scripts/abbreviations_extract.py)
+        - Bibliography minus-test (scripts/bibliography_check.py)
+        - Export to DOCX, run scripts/docx_postprocess.sh for hyphenation
+        - Visual proofreading
+
+# Notes on the lean setup
+
+minimal_setup_notes: |
+  The 2-agent setup is intentionally lean:
+  - No separate research-agent: the writer-agent reads sources directly
+  - No orchestrator: user drives chapter sequencing manually
+  - No format-verifier loop: formal compliance is checked manually at the end
+  
+  Trade-offs vs. bachelor_5agent:
+  - No strict separation of reading / extracting / writing
+  - No systematic cross-chapter consistency check
+  
+  For < 10 pages and < 15 sources, the overhead of the larger setup
+  is not justified. Quality loss is modest.
+  
+  If the writer-agent frequently makes extraction errors during a project
+  (e.g., shifts technical terms), switch to presentation_3agent or
+  bachelor_5agent. Existing chats remain usable under the new workflow.

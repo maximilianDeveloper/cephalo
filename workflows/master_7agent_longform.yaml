@@ -1,0 +1,321 @@
+# Master thesis workflow — long-form variant
+
+name: master_7agent_longform
+version: 3.0
+description: |
+  Long-form variant of the master workflow. Combines the 7-agent setup 
+  with phase-based directory structure, chat closure ritual, and central 
+  state files. Strict raw-data separation for empirical work.
+  
+  For the flat variant, see master_7agent.yaml.
+
+based_on: master_7agent.yaml
+extended_by: docs/longform_structure.md
+
+# Agents
+
+agents:
+  orchestrator-longform:
+    file: .claude/agents/orchestrator-longform.md
+    model: inherit
+  
+  research:
+    file: .claude/agents/research-agent.md
+    model: inherit
+  
+  writer:
+    file: .claude/agents/writer-agent.md
+    model: opus
+  
+  source-verifier:
+    file: .claude/agents/source-verifier.md
+    model: opus
+  
+  format-verifier:
+    file: .claude/agents/format-verifier.md
+    model: inherit
+  
+  methods:
+    file: .claude/agents/methods-agent.md
+    model: opus
+  
+  data:
+    file: .claude/agents/data-agent.md
+    model: opus
+  
+  style-resolver:
+    file: .claude/agents/style-resolver.md
+    model: opus
+    role: One-time extraction of institutional rules into styleguide.md
+
+# Constraints
+
+constraints:
+  page_count: 50-80
+  sources_min: 30
+  sources_max: 60
+  outline_depth_max: 3
+  empirical: true
+  feedback_loop_max: 3
+  feedback_loop_escalation:
+    # See orchestrator-longform.md -> "Feedback-loop escalation" for the full
+    # semantics. Summary: on limit reached, user chooses abort / manual_fix / force_continue.
+    on_limit_reached: abort | manual_fix | force_continue (user choice)
+
+# Long-form structural rules
+
+longform:
+  project_root_files:
+    - 00_Status.md
+    - 00_Decisions.md
+    - 00_Feedback_log.md
+    - styleguide.md
+    - .gitignore
+    - .gitattributes
+  
+  phase_directories:
+    - 01_Proposal
+    - 02_Literature
+    - 03_Theory_chapters
+    - 04_Methods
+    - 05_Empirical                    # contains data/raw, data/processed, data/scripts, data/outputs
+    - 06_Discussion_Conclusion
+    - 07_Introduction
+    - 08_Formal_Review
+  
+  guidelines_directory: guidelines
+  
+  data_directory_rules:
+    raw:
+      path: 05_Empirical/data/raw/
+      access: read-only
+      gitignore: true              # personal data should never be committed
+    processed:
+      path: 05_Empirical/data/processed/
+      access: read-write (data-agent only)
+    scripts:
+      path: 05_Empirical/data/scripts/
+      access: read-write (data-agent)
+      version_controlled: true
+    outputs:
+      path: 05_Empirical/data/outputs/
+      access: write (data-agent), read (writer-agent)
+
+# Workflow
+
+phases:
+  # ===========================================================
+  # Phase 0 - Setup (one-time)
+  # ===========================================================
+  phase_0_setup:
+    description: |
+      Project initialization with Git, reference manager, methodological design.
+    
+    steps:
+      - step: 0.0
+        name: Create directory structure
+        manual: true
+        task: structure per docs/longform_structure.md
+      
+      - step: 0.1
+        name: Initialize Git
+        manual: true
+      
+      - step: 0.2
+        name: Create central files
+        agent: orchestrator-longform
+      
+      - step: 0.3
+        name: Materials pre-check
+        agent: orchestrator-longform
+        checklist: checklists/precheck.md
+        blocking: true
+      
+      - step: 0.4
+        name: Reference manager check
+        manual: true
+      
+      - step: 0.5
+        name: Style resolution
+        agent: style-resolver
+        input_directory: guidelines/
+        output: styleguide.md
+        blocking: true
+      
+      - step: 0.6
+        name: Methodological design
+        agent: methods
+        output: 04_Methods/design.md
+        blocking: true
+        note: |
+          Without a defined methodology, the data-agent cannot work.
+          The design decision (qualitative / quantitative / mixed-methods) 
+          is binding for everything that follows.
+  
+  # ===========================================================
+  # Lead-in phases (same as bachelor longform)
+  # ===========================================================
+  phase_01_proposal:
+    directory: 01_Proposal/
+    agents: [orchestrator-longform, writer, source-verifier]
+  
+  phase_02_literature:
+    directory: 02_Literature/
+    agents: [orchestrator-longform, research, source-verifier]
+  
+  # ===========================================================
+  # Main: Theory
+  # ===========================================================
+  phase_03_theory:
+    directory: 03_Theory_chapters/
+    agents: [orchestrator-longform, research, writer, source-verifier, format-verifier]
+    content_or_form_phase: A
+  
+  # ===========================================================
+  # Main: Methods
+  # ===========================================================
+  phase_04_methods:
+    directory: 04_Methods/
+    agents: [orchestrator-longform, methods, source-verifier, format-verifier]
+    content_or_form_phase: A
+    condition: empirical == true
+    
+    description: |
+      Methods-agent leads. Methods chapter must be fully written before 
+      empirical work begins, since the methodology dictates analytical procedures.
+      
+      For purely theoretical master theses (condition: empirical == false), 
+      skip this phase and redistribute the page budget across theory and 
+      discussion.
+    
+    chat_structure:
+      - One chat for design refinement (based on 04_Methods/design.md)
+      - One chat for methods chapter draft
+      - One chat for revision after methodological literature check
+  
+  # ===========================================================
+  # Main: Empirical
+  # ===========================================================
+  phase_05_empirical:
+    directory: 05_Empirical/
+    agents: [orchestrator-longform, data, writer, source-verifier, format-verifier]
+    content_or_form_phase: A
+    condition: empirical == true
+    
+    description: |
+      Data-agent leads data preparation and analysis. Writer-agent drafts 
+      the empirical chapter from the data-agent's outputs. Strict three-way 
+      consistency: raw data <-> processed tables <-> chapter text.
+      
+      Skipped for purely theoretical master theses.
+    
+    chat_structure:
+      - data preparation chats (data-agent)
+      - One chat per analysis question
+      - Chapter writing chats (writer-agent)
+      - Verification chats (data-agent confirms numbers in text)
+    
+    critical_rules:
+      - Raw data is read-only; never modify
+      - Every number in the text must be reproducible from data/scripts/
+      - Tables in the text must match data/outputs/ exactly
+  
+  # ===========================================================
+  # Synthesis
+  # ===========================================================
+  phase_06_discussion_conclusion:
+    directory: 06_Discussion_Conclusion/
+    agents: [orchestrator-longform, writer, source-verifier, format-verifier]
+    content_or_form_phase: A
+    order: [discussion, conclusion]
+  
+  # ===========================================================
+  # Final: Introduction
+  # ===========================================================
+  phase_07_introduction:
+    directory: 07_Introduction/
+    agents: [orchestrator-longform, writer, source-verifier]
+    content_or_form_phase: A
+    important: |
+      Introduction is ALWAYS written LAST.
+      It must reflect the actual content, not the planned content.
+  
+  # ===========================================================
+  # Cross-phase consistency check (runs during Phase A)
+  # ===========================================================
+  consistency_check:
+    after_every_n_chapters: 2
+    checklist: checklists/consistency.md
+    agent: source-verifier
+    scope: |
+      Cross-chapter cross-references, terminology drift, self-plagiarism 
+      between introduction and conclusion, argumentation coherence, 
+      methods/empirical consistency (master-specific).
+  
+  # ===========================================================
+  # Phase transition A -> B
+  # ===========================================================
+  phase_transition_a_to_b:
+    agent: orchestrator-longform
+    documentation: docs/phase_separation.md
+    
+    triggers:
+      - All content chapters complete with ✅ source verification
+      - Methods and empirical chapters consistent (data-agent confirmed)
+      - No outstanding ⚠️ or ❓ items
+      - All ❓ items in styleguide.md clarified
+    
+    actions:
+      - 00_Status.md  ->  overall phase: B
+      - writer-agent deactivated
+      - data-agent deactivated (data work is done)
+      - format-verifier + build scripts active
+      - Begin phase 08_Formal_Review
+    
+    rollback_b_to_a:
+      when: |
+        During Phase B a genuine content issue surfaces. For master theses, this 
+        includes any numerical inconsistency found by the data-agent that requires 
+        re-running analysis or re-writing the empirical chapter. Format-only fixes 
+        do NOT qualify for rollback.
+      procedure:
+        - Pause Phase B
+        - Set 00_Status.md -> overall phase: A (rollback from B)
+        - Reactivate writer-agent (and data-agent if the issue is numerical)
+        - Re-run the affected verification steps
+        - Document the rollback in 00_Decisions.md with rationale
+        - Resume Phase B when the fix is verified
+      note: |
+        Master-level rollbacks triggered by data-agent findings should be 
+        treated as learning opportunities — log the pattern in 00_Feedback_log.md 
+        so the data-agent can check for it earlier in future chapters.
+  
+  # ===========================================================
+  # Phase B
+  # ===========================================================
+  phase_08_formal_review:
+    directory: 08_Formal_Review/
+    agents: [orchestrator-longform, format-verifier]
+    content_or_form_phase: B
+    
+    steps:
+      - Full styleguide check
+      - scripts/bibliography_check.py
+      - scripts/abbreviations_extract.py
+      - Consistency checks
+      - scripts/docx_postprocess.sh
+      - Milestone exports to submissions/
+  
+  # ===========================================================
+  # Submission
+  # ===========================================================
+  submission:
+    manual: true
+    task: |
+      - Final DOCX export to 08_Formal_Review/submissions/v_final_<date>.docx
+      - Tag in Git: git tag v_final_<date>
+      - Update table of contents
+      - Confirm hyphenation
+      - Visual proofreading
+      - Sign declaration of academic integrity
+      - Mentally rehearse defending each sentence (especially methods chapter)

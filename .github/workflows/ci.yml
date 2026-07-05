@@ -1,0 +1,117 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint-and-smoke:
+    name: Lint & setup smoke (Ubuntu, Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 3.9 backs the documented minimum; a recent version catches deprecations.
+        python-version: ["3.9", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install script dependencies
+        run: python -m pip install -r requirements.txt pyyaml
+
+      - name: Python syntax
+        run: python -m py_compile scripts/abbreviations_extract.py scripts/bibliography_check.py scripts/cross_session_audit.py
+
+      - name: Shell syntax
+        run: bash -n setup.sh scripts/docx_postprocess.sh scripts/extract_styleguide.sh
+
+      - name: shellcheck
+        run: shellcheck setup.sh scripts/docx_postprocess.sh scripts/extract_styleguide.sh
+
+      - name: Workflow YAML parse (all 8 must load)
+        run: |
+          python - <<'EOF'
+          import glob, yaml
+          files = sorted(glob.glob("workflows/*.yaml"))
+          assert len(files) == 8, f"expected 8 workflow files, found {len(files)}"
+          for f in files:
+              yaml.safe_load(open(f, encoding="utf-8"))
+              print("OK", f)
+          EOF
+
+      - name: Script --help smokes
+        run: |
+          python scripts/bibliography_check.py --help
+          python scripts/cross_session_audit.py --help
+          bash scripts/docx_postprocess.sh --help
+          bash scripts/extract_styleguide.sh --help
+          bash setup.sh --help
+
+      - name: Non-interactive setup smoke (all three structures)
+        run: |
+          bash setup.sh "Seminar paper" "Flat" full --target /tmp/ci_flat </dev/null
+          bash setup.sh "Bachelor thesis" "Long-form" full --target /tmp/ci_long </dev/null
+          bash setup.sh "Master thesis" "Multi-project" minimal --target /tmp/ci_multi </dev/null
+          test -d /tmp/ci_flat/workspace/sources/_guidelines
+          test -f /tmp/ci_long/00_Status.md
+          test -d /tmp/ci_multi/00_Shared_Materials/guidelines
+
+      - name: Invalid arguments fail fast (exit 2, no stray target)
+        run: |
+          set +e
+          bash setup.sh "Bachelor thesis" "Langform" full --target /tmp/ci_typo </dev/null
+          code=$?
+          set -e
+          test "$code" -eq 2
+          test ! -e /tmp/ci_typo
+
+  windows:
+    name: PowerShell 5.1 parse & setup smoke (Windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # "shell: powershell" is Windows PowerShell 5.1 — exactly the floor the
+      # scripts document. (pwsh would be PowerShell 7 and hides 5.1 issues.)
+      - name: setup.ps1 parses under Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          $errs = $null
+          [System.Management.Automation.Language.Parser]::ParseFile("$PWD\setup.ps1", [ref]$null, [ref]$errs) | Out-Null
+          if ($errs.Count -gt 0) { $errs | ForEach-Object { Write-Host $_.Message }; exit 1 }
+          Write-Host "0 parse errors"
+
+      - name: Non-interactive setup smoke (long-form)
+        shell: powershell
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File .\setup.ps1 -WorkType "Bachelor thesis" -Structure "Long-form" -Scaffolding full -Target "$env:TEMP\ci_long" -NonInteractive
+          if ($LASTEXITCODE -ne 0) { Write-Host "expected exit 0, got $LASTEXITCODE"; exit 1 }
+          if (-not (Test-Path "$env:TEMP\ci_long\00_Status.md")) { Write-Host "00_Status.md missing"; exit 1 }
+
+      - name: Typo in -Structure fails fast without stray copy
+        shell: powershell
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File .\setup.ps1 -WorkType "Bachelor thesis" -Structure "Langform" -Scaffolding full -Target "$env:TEMP\ci_typo" -NonInteractive
+          if ($LASTEXITCODE -ne 2) { Write-Host "expected exit 2, got $LASTEXITCODE"; exit 1 }
+          if (Test-Path "$env:TEMP\ci_typo") { Write-Host "stray target directory was created"; exit 1 }
+
+      - name: Python syntax (Windows)
+        shell: powershell
+        run: python -m py_compile scripts/abbreviations_extract.py scripts/bibliography_check.py scripts/cross_session_audit.py
+
+      # Informational only: not part of the verified baseline. Remove
+      # continue-on-error once a clean run is confirmed.
+      - name: PSScriptAnalyzer (errors only, informational)
+        shell: powershell
+        continue-on-error: true
+        run: |
+          if (Get-Module -ListAvailable PSScriptAnalyzer) {
+            Invoke-ScriptAnalyzer -Path .\setup.ps1 -Severity Error
+          } else {
+            Write-Host "PSScriptAnalyzer not available - skipped"
+          }

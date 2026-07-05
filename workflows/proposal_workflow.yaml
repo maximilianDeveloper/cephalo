@@ -1,0 +1,282 @@
+# Proposal workflow (multi-project setup)
+
+name: proposal_workflow
+version: 3.0
+description: |
+  Workflow for the proposal phase (supervisor application). 
+  Not to be confused with the first phase of the main thesis itself. 
+  This sub-project runs before the main work and ends with supervisor 
+  acceptance.
+
+purpose: |
+  The proposal is a standalone application:
+  - Demonstrates to the supervisor that the author has grasped the 
+    research question
+  - Contains: research question, literature situation, planned methodology, 
+    timeline, outline
+  - After acceptance: frozen, no more changes
+
+typical_size: 3-5 pages
+typical_duration: 1-4 weeks
+
+# Agents
+
+agents:
+  orchestrator-longform:
+    file: .claude/agents/orchestrator-longform.md
+    model: inherit
+    role: Project coordination, handover ritual
+  
+  research:
+    file: .claude/agents/research-agent.md
+    model: inherit
+    role: Initial literature scan, identify research gap
+  
+  writer:
+    file: .claude/agents/writer-agent.md
+    model: opus
+    role: Draft proposal text
+  
+  source-verifier:
+    file: .claude/agents/source-verifier.md
+    model: opus
+    role: Citation check (lighter than for the main work — fewer sources)
+  
+  format-verifier:
+    file: .claude/agents/format-verifier.md
+    model: inherit
+    role: Final style check before submission (Phase 4)
+  
+  style-resolver:
+    file: .claude/agents/style-resolver.md
+    model: opus
+    role: One-time extraction of institutional rules into styleguide.md
+
+# Constraints
+
+constraints:
+  page_count: 3-5
+  sources_min: 5
+  sources_max: 15
+  feedback_loop_max: 2
+  feedback_loop_escalation:
+    # See orchestrator-longform.md -> "Feedback-loop escalation" for the full
+    # semantics. Summary: on limit reached, user chooses abort / manual_fix /
+    # force_continue.
+    on_limit_reached: abort | manual_fix | force_continue (user choice)
+
+# Structure within the proposal sub-project
+
+directory_structure:
+  project_root: 01_Proposal/
+  
+  files_in_project_root:
+    - 00_Status.md
+    - 00_Decisions.md
+    - 00_Feedback_log.md
+    - README.md
+  
+  phase_directories:
+    - 01_Research/
+    - 02_Outline/
+    - 03_Drafting/
+    - 04_Submission/
+
+# Access to shared materials
+
+shared_materials:
+  relative_path: ../00_Shared_Materials/
+  symlink_path: ./shared/
+  contains:
+    - guidelines/
+    - course_materials/
+    - styleguide.md
+
+# Workflow
+
+phases:
+  # ===========================================================
+  # Phase 0 - Setup
+  # ===========================================================
+  phase_0_setup:
+    steps:
+      - step: 0.0
+        name: Create project directory
+        manual: true
+        task: |
+          01_Proposal/ as a sub-directory in the multi-project root.
+          Sub-directories: 01_Research, 02_Outline, 03_Drafting, 04_Submission.
+      
+      - step: 0.1
+        name: Create central files
+        agent: orchestrator-longform
+        task: |
+          - 00_Status.md from templates/status.md
+          - 00_Decisions.md from templates/decisions.md
+          - 00_Feedback_log.md (empty)
+          - README.md describing the sub-project's purpose
+      
+      - step: 0.2
+        name: Symlink to shared materials
+        manual: true
+        task: |
+          Windows (Developer Mode enabled — Settings -> For developers — or an
+          elevated PowerShell):
+            New-Item -ItemType SymbolicLink -Path "shared" -Target "..\00_Shared_Materials"
+          macOS/Linux:
+            ln -s ../00_Shared_Materials shared
+      
+      - step: 0.3
+        name: Verify or extract styleguide
+        agent: style-resolver
+        blocking: true
+        task: |
+          Two cases:
+          
+          (a) Proposal inside a multi-project setup (typical): verify that 
+          `../00_Shared_Materials/styleguide.md` (via `shared/` symlink) exists 
+          and contains no open ❓ items. The style-resolver only verifies; it 
+          does not re-extract, because the main work will reuse the same file.
+          
+          (b) Proposal as stand-alone (rare — proposal written before the main 
+          work's cephalo project exists): invoke the style-resolver to extract 
+          rules from institutional guidelines into a local `styleguide.md`. 
+          Once the main work begins, move this styleguide to the 
+          `00_Shared_Materials/` location.
+  
+  # ===========================================================
+  # Phase 1 - Research
+  # ===========================================================
+  phase_01_research:
+    directory: 01_Research/
+    agents: [orchestrator-longform, research, source-verifier]
+    
+    goals:
+      - Topic and research question sharpened
+      - Research gap identified (why is the question still unanswered?)
+      - 5-10 key sources researched, with brief extracts
+      - Initial methodological framing (which research tradition?)
+    
+    output:
+      - 01_Research/research_question.md
+      - 01_Research/research_gap.md
+      - 01_Research/key_sources.md (with brief extract per source)
+    
+    chat_structure:
+      - One chat for topic / question sharpening
+      - One to two chats for literature scan
+      - Closing handover confirms: question stable, gap named, key literature identified
+    
+    note_for_source_verifier: |
+      In the proposal phase, source verification is lighter than for the 
+      main work. It's enough to confirm core claims are correctly attributed. 
+      Full sentence-by-sentence verification comes later in the main work.
+  
+  # ===========================================================
+  # Phase 2 - Outline
+  # ===========================================================
+  phase_02_outline:
+    directory: 02_Outline/
+    agents: [orchestrator-longform, writer]
+    
+    goals:
+      - Rough chapter structure (typically 5-7 chapters)
+      - Page budget per chapter (rough estimate)
+      - Methodological framing clear (theoretical? qualitative? quantitative? mixed?)
+      - Timeline for the main work
+    
+    output:
+      - 02_Outline/outline.md
+      - 02_Outline/methodology_rough.md
+      - 02_Outline/timeline.md
+    
+    chat_structure:
+      - One chat for outline draft
+      - One chat for methodological plan and timeline
+    
+    important: |
+      The outline here is a FIRST DRAFT. It will likely need adjustment 
+      during the main work — deviations are then logged in the main work's 
+      00_Decisions.md.
+  
+  # ===========================================================
+  # Phase 3 - Drafting
+  # ===========================================================
+  phase_03_drafting:
+    directory: 03_Drafting/
+    agents: [orchestrator-longform, writer, source-verifier]
+    
+    goals:
+      - Complete proposal text (3-5 pages)
+      - "Typical structure: (1) topic and relevance, (2) research question and gap, (3) theoretical background [brief], (4) methodological approach, (5) planned outline, (6) timeline, (7) bibliography with key sources"
+    
+    output:
+      - 03_Drafting/proposal_draft.md
+    
+    chat_structure:
+      - One chat for first complete draft
+      - One to two chats for revision
+    
+    style_note: |
+      Proposal style is slightly more accessible than the final thesis text, 
+      but still scholarly. No personal pronouns, no evaluative adjectives, 
+      clear citations for all substantive claims. shared/styleguide.md applies.
+  
+  # ===========================================================
+  # Phase 4 - Submission
+  # ===========================================================
+  phase_04_submission:
+    directory: 04_Submission/
+    agents: [orchestrator-longform, format-verifier]
+    
+    goals:
+      - Formatted proposal text as DOCX or PDF
+      - Styleguide check by format-verifier
+      - Submission file with date in name
+    
+    output:
+      - 04_Submission/proposal_final_<YYYY-MM-DD>.docx
+      - 04_Submission/proposal_final_<YYYY-MM-DD>.pdf (optional)
+    
+    steps:
+      - format-verifier: check against shared/styleguide.md
+      - Manual export to DOCX
+      - Manual export to PDF (if supervisor prefers)
+      - Git tag: proposal_v1_<date>
+    
+    submission_is_manual: true
+    submission_note: |
+      The actual submission to the supervisor happens outside this workflow.
+      Typically: email with PDF attachment, or via the institution's 
+      supervisor system.
+  
+  # ===========================================================
+  # After feedback (optional)
+  # ===========================================================
+  phase_05_revision:
+    optional: true
+    trigger: Feedback received from supervisor
+    
+    steps:
+      - Document feedback in 04_Submission/supervisor_feedback.md
+      - Record decisions about changes in 00_Decisions.md
+      - Return to relevant phase (usually Phase 3 - Drafting)
+      - New version: proposal_final_<YYYY-MM-DD>_v2.docx
+  
+  # ===========================================================
+  # Closing: freeze
+  # ===========================================================
+  project_closure:
+    trigger: Proposal accepted by supervisor
+    
+    actions:
+      - Git tag: proposal_accepted_<date>
+      - Set 00_Status.md to "completed"
+      - Copy final DOCX to: 02_Main_Work/01_Proposal_Reference/proposal_final_<date>.docx
+      - 01_Proposal/ becomes read-only
+      - Update README.md: "FROZEN — as of <date>"
+    
+    important: |
+      From this point on, 01_Proposal/ is read-only. Any deviation of the 
+      actual main work content from the proposal is documented in 
+      02_Main_Work/00_Decisions.md, not by retroactively editing the proposal.

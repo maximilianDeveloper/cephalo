@@ -1,0 +1,13 @@
+# cephalo — Python dependencies for utility scripts
+#
+# Install with:
+#   pip install -r requirements.txt
+#
+# Python 3.9+ required (the scripts use PEP-585 generic type hints).
+
+python-docx>=1.0.0    # scripts/abbreviations_extract.py, bibliography_check.py
+                      # (1.0+ required for stable doc.part.package.iter_parts())
+pypdf>=3.0.0          # scripts/extract_styleguide.sh (pure-Python PDF extraction)
+
+# Optional but recommended for development / contributors:
+# pyyaml>=6.0         # if you want to lint/validate the workflow YAMLs yourself

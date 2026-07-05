@@ -1,0 +1,293 @@
+# Bachelor thesis workflow — long-form variant
+
+name: bachelor_5agent_longform
+version: 3.0
+description: |
+  Long-form variant of the bachelor workflow. Uses phase-based directory 
+  structure, chat closure ritual, and central state files (00_Status.md, 
+  00_Decisions.md, 00_Feedback_log.md). No workspace/ subdirectory — 
+  everything lives at the project root.
+  
+  For the flat variant, see bachelor_5agent.yaml.
+
+based_on: bachelor_5agent.yaml
+extended_by: docs/longform_structure.md
+
+# Agents
+
+agents:
+  orchestrator-longform:
+    file: .claude/agents/orchestrator-longform.md
+    model: inherit
+    role: Coordination in long-form mode (incl. handover ritual, status updates)
+  
+  research:
+    file: .claude/agents/research-agent.md
+    model: inherit
+  
+  writer:
+    file: .claude/agents/writer-agent.md
+    model: opus
+  
+  source-verifier:
+    file: .claude/agents/source-verifier.md
+    model: opus
+  
+  format-verifier:
+    file: .claude/agents/format-verifier.md
+    model: inherit
+  
+  style-resolver:
+    file: .claude/agents/style-resolver.md
+    model: opus
+    role: One-time extraction of institutional rules into styleguide.md
+
+# Constraints (same as flat variant)
+
+constraints:
+  page_count: 30-40
+  sources_min: 15
+  sources_max: 25
+  outline_depth_max: 3
+  feedback_loop_max: 3
+  feedback_loop_escalation:
+    # See orchestrator-longform.md -> "Feedback-loop escalation" for the full
+    # semantics. Summary: on limit reached, user chooses abort / manual_fix / force_continue.
+    on_limit_reached: abort | manual_fix | force_continue (user choice)
+
+# Long-form structural rules
+
+longform:
+  project_root_files:
+    - 00_Status.md            # mandatory
+    - 00_Decisions.md         # mandatory
+    - 00_Feedback_log.md      # mandatory
+    - styleguide.md           # after step 0.5
+    - .gitignore              # mandatory
+    - .gitattributes          # mandatory (Git LFS)
+  
+  phase_directories:
+    - 01_Proposal
+    - 02_Literature           # with literature.bib and extracts/
+    - 03_Theory_chapters
+    - 06_Discussion_Conclusion
+    - 07_Introduction
+    - 08_Formal_Review
+  
+  guidelines_directory: guidelines        # replaces workspace/sources/_guidelines/
+  
+  per_phase_directory_contents:
+    - handover.md             # updated at every chat closure
+    - README.md               # entry document (goal of the phase; created by the
+                              # orchestrator at the first chat of the phase)
+
+# Workflow
+
+phases:
+  # ===========================================================
+  # Phase 0 - Preparation (one-time per project)
+  # ===========================================================
+  phase_0_setup:
+    description: |
+      Project initialization: Git repo, directory structure, reference 
+      manager integration, place institutional guidelines, extract styleguide.
+    
+    steps:
+      - step: 0.0
+        name: Create directory structure
+        manual: true
+        task: structure per docs/longform_structure.md ("Directory layout" section)
+      
+      - step: 0.1
+        name: Initialize Git
+        manual: true
+        task: |
+          git init
+          # copy .gitignore and .gitattributes
+          git lfs install
+      
+      - step: 0.2
+        name: Create central files
+        agent: orchestrator-longform
+        task: |
+          Copy templates into the project root:
+          - templates/status.md  -> 00_Status.md (fill initially)
+          - templates/decisions.md -> 00_Decisions.md (with research question)
+          - Create empty 00_Feedback_log.md
+      
+      - step: 0.3
+        name: Materials pre-check
+        agent: orchestrator-longform
+        checklist: checklists/precheck.md
+        blocking: true
+        note: Institutional guidelines must be in guidelines/
+      
+      - step: 0.4
+        name: Reference manager check
+        manual: true
+        task: |
+          - Reference manager collection created?
+          - BibTeX export configured (Better BibTeX or equivalent)?
+          - Auto-export to 02_Literature/literature.bib?
+      
+      - step: 0.5
+        name: Style resolution
+        agent: style-resolver
+        input_directory: guidelines/
+        output: styleguide.md
+        blocking: true
+  
+  # ===========================================================
+  # Lead-in: Proposal
+  # ===========================================================
+  phase_01_proposal:
+    directory: 01_Proposal/
+    agents: [orchestrator-longform, writer, source-verifier]
+    
+    goals:
+      - Finalize research question (-> 00_Decisions.md)
+      - Rough outline
+      - Initial literature scan (< 10 sources)
+      - Proposal text in 01_Proposal/proposal_final.md
+    
+    chat_structure:
+      - One chat for first draft
+      - One chat for revision after supervisor feedback
+      - Closing handover.md confirms finished proposal
+  
+  # ===========================================================
+  # Lead-in: Literature
+  # ===========================================================
+  phase_02_literature:
+    directory: 02_Literature/
+    agents: [orchestrator-longform, research, source-verifier]
+    
+    goals:
+      - Complete literature inventory in reference manager, exported as literature.bib
+      - For each source: extract in extracts/<citekey>.md (structured, with original quotes)
+      - source-verifier has verified all extracts
+      - Secondary citations identified, primary sources sourced where possible
+    
+    chat_structure:
+      - One chat per source (or source group)
+      - Closing handover.md lists all verified citekeys + status
+  
+  # ===========================================================
+  # Main: Theory chapters
+  # ===========================================================
+  phase_03_theory:
+    directory: 03_Theory_chapters/
+    agents: [orchestrator-longform, research, writer, source-verifier, format-verifier]
+    content_or_form_phase: A
+    
+    chat_structure:
+      - One chat per chapter or chapter section (e.g., Ch. 2, Ch. 3, Ch. 4)
+      - For longer chapters, split into sections (e.g., Ch. 3.1-3.2 / Ch. 3.3-3.4)
+    
+    per_chapter:
+      - research-agent reads extracts from 02_Literature/extracts/
+      - writer-agent drafts text with citekey-based citations
+      - source-verifier: sentence-by-sentence verification
+      - format-verifier: critical format errors only
+      - Feedback loop max 3
+    
+    consistency_check:
+      after_every_n_chapters: 2
+      checklist: checklists/consistency.md
+  
+  # ===========================================================
+  # Synthesis: Discussion + Conclusion
+  # ===========================================================
+  phase_06_discussion_conclusion:
+    directory: 06_Discussion_Conclusion/
+    agents: [orchestrator-longform, writer, source-verifier, format-verifier]
+    content_or_form_phase: A
+    
+    order: [discussion, conclusion]
+    
+    chat_structure:
+      - One chat for discussion
+      - One chat for conclusion
+  
+  # ===========================================================
+  # Final: Introduction
+  # ===========================================================
+  phase_07_introduction:
+    directory: 07_Introduction/
+    agents: [orchestrator-longform, writer, source-verifier]
+    content_or_form_phase: A
+    
+    important: |
+      Introduction is ALWAYS written LAST.
+      It must reflect the actual content, not the planned content.
+    
+    chat_structure:
+      - One chat for the full introduction (research question, objectives, structure)
+  
+  # ===========================================================
+  # Phase transition A -> B
+  # ===========================================================
+  phase_transition_a_to_b:
+    agent: orchestrator-longform
+    documentation: docs/phase_separation.md
+    
+    triggers:
+      - All content chapters (incl. introduction) complete with ✅ source verification
+      - No outstanding content ⚠️ or ❓ items
+      - All ❓ items in styleguide.md clarified
+    
+    actions:
+      - 00_Status.md  ->  overall phase: B
+      - writer-agent deactivated
+      - format-verifier + build scripts active
+      - Begin phase 08_Formal_Review
+    
+    rollback_b_to_a:
+      when: |
+        During Phase B a genuine content issue surfaces (e.g., a citation reveals
+        a claim not actually supported by the source, or a format pass exposes a 
+        missing argumentation step). Format-only fixes do NOT qualify for rollback.
+      procedure:
+        - Pause Phase B
+        - Set 00_Status.md -> overall phase: A (rollback from B)
+        - Reactivate writer-agent for the specific fix
+        - Run source-verifier on the affected passage
+        - Document the rollback in 00_Decisions.md with rationale
+        - Resume Phase B when the fix is verified
+      note: |
+        Rollbacks should be rare. If they happen more than twice, the original 
+        A -> B transition was premature.
+  
+  # ===========================================================
+  # Phase B: Formal review
+  # ===========================================================
+  phase_08_formal_review:
+    directory: 08_Formal_Review/
+    agents: [orchestrator-longform, format-verifier]
+    content_or_form_phase: B
+    
+    chat_structure:
+      - One chat per review pass (typically 3-6 passes for a bachelor thesis)
+      - Closing handover.md lists found and resolved issues
+    
+    steps:
+      - Full styleguide check
+      - scripts/bibliography_check.py (minus-test)
+      - scripts/abbreviations_extract.py (derive list of abbreviations)
+      - Consistency checks (page ranges, et-al., editions, pronouns)
+      - scripts/docx_postprocess.sh (hyphenation)
+      - Milestone export as DOCX into submissions/v_<tag>_<date>.docx
+  
+  # ===========================================================
+  # Submission
+  # ===========================================================
+  submission:
+    manual: true
+    task: |
+      - Final DOCX export to submissions/v_final_<date>.docx
+      - Tag in Git: git tag v_final_<date>
+      - Update table of contents (Ctrl+A then F9)
+      - Confirm hyphenation in Word
+      - Visual proofreading
+      - Sign declaration of academic integrity
+      - Mentally rehearse defending each sentence
