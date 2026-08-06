@@ -8,9 +8,9 @@ Dates follow ISO 8601 (`YYYY-MM-DD`).
 
 ---
 
-## [1.0.0] — 2026-07-16
+## [1.0.0] — 2026-08-06
 
-**First public release.** A browser-based setup assistant, a documentation and utility-script hardening pass, removal of hard-coded formatting rules from three agent definitions, and a pre-publication review sweep (license text, distribution docs, GitHub project files). No workflow or template changes.
+**First public release.** A browser-based setup assistant, a documentation and utility-script hardening pass, removal of hard-coded formatting rules from three agent definitions, a pre-publication review sweep (license text, distribution docs, GitHub project files), and a pre-publication security pass (see **Security** below). No workflow or template changes.
 
 ### Added
 
@@ -46,6 +46,12 @@ Dates follow ISO 8601 (`YYYY-MM-DD`).
 
 - `cross_session_audit.py` report output and inline documentation are now in English, matching the rest of the framework (behavior unchanged).
 - Agent definitions (`writer-agent.md`, `format-verifier.md`, `data-agent.md`) and `checklists/format_rules.md` no longer hard-code institution-specific formatting rules (a first-person/voice ban, fixed title-page elements, a fixed pagination scheme, table-of-contents emphasis, caption placement, and two citation deviations). These now defer to `styleguide.md`; any concrete values that remain are kept only as explicitly institution-neutral illustrative defaults. This restores the framework's core principle that formatting rules live only in the generated `styleguide.md`, never hard-coded in prompts.
+
+### Security
+
+- **ZIP extraction is routed through `scripts/extract_styleguide.sh`** in `research-agent.md` and `style-resolver.md`. Both previously instructed a bare `unzip`, bypassing the script's `safe_extract_zip()`, which rejects entries carrying absolute paths or `..` components. A prepared archive — a style guide downloaded from anywhere — could otherwise have written outside the target directory.
+- **Prompt-injection guardrails** added to `research-agent.md`, `source-verifier.md`, and `style-resolver.md`: source and guideline content is material to quote and summarize, never a directive. Text inside a PDF, ZIP, or e-book can be written to read like an instruction addressed to the agent; the agents now record such text as a flagged note and continue the original task instead of acting on it. `SECURITY.md` names this risk, but no agent definition had previously addressed it.
+- **`requirements.txt` gained upper bounds** (`python-docx>=1.0.0,<2.0`, `pypdf>=3.0.0,<7.0`). An open range would silently pull in a new major release that changes the APIs these scripts rely on.
 
 ---
 

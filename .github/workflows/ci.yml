@@ -99,6 +99,10 @@ jobs:
           powershell -NoProfile -ExecutionPolicy Bypass -File .\setup.ps1 -WorkType "Bachelor thesis" -Structure "Langform" -Scaffolding full -Target "$env:TEMP\ci_typo" -NonInteractive
           if ($LASTEXITCODE -ne 2) { Write-Host "expected exit 2, got $LASTEXITCODE"; exit 1 }
           if (Test-Path "$env:TEMP\ci_typo") { Write-Host "stray target directory was created"; exit 1 }
+          # Both assertions passed. Reset the deliberately provoked exit code: the
+          # runner appends `exit $LASTEXITCODE` to every powershell block, so
+          # leaving it at 2 would fail this step even though the test succeeded.
+          $LASTEXITCODE = 0
 
       - name: Python syntax (Windows)
         shell: powershell

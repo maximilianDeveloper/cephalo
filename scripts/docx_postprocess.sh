@@ -160,7 +160,7 @@ fi
 # consumers. Use Python's zipfile for this — `zip -r` does not guarantee
 # entry order.
 NEW_DOC="${DOC_ABS}.new"
-"$PY" - "$NEW_DOC" "$TMPDIR" << 'PYEOF'
+"$PY" - "$NEW_DOC" "$WORK_DIR" << 'PYEOF'
 import os
 import sys
 import zipfile
