@@ -157,12 +157,12 @@ def extract_in_text_authors(body: str) -> set[str]:
             # A citation fragment typically has "Author(s), YYYY[, p. X]"
             # (English/APA style — comma before year)
             # or "Author(s) YYYY[, S. X]" (German author-year style — no comma)
-            match = re.match(r"^((?:cf\.\s+|see\s+|vgl\.\s+|siehe\s+|nach\s+|zit\.\s+nach\s+)?[^,]+(?:\s+(?:et\s+al\.?|u\.\s*a\.))?(?:\s*(?:,\s*)?(?:&|and|und)\s+[\w'-]+|,\s*[\w'-]+)*),\s*\d{4}", fragment)
+            match = re.match(r"^((?:cf\.\s+|see\s+|vgl\.\s+|siehe\s+|nach\s+|zit\.\s+nach\s+)?[^,]+(?:\s+(?:et\s+al\.?|u\.\s*a\.))?(?:\s*(?:,\s*)?(?:&|and|und)\s+[\w'’-]+|,\s*[\w'’-]+)*),\s*\d{4}", fragment)
             if not match:
                 # Try German style: "Author YYYY" without comma
                 match = re.match(
-                    r"^((?:vgl\.\s+|cf\.\s+|see\s+|siehe\s+|nach\s+|zit\.\s+nach\s+)?[A-ZÄÖÜ][\wäöüß'-]+"
-                    r"(?:\s+(?:&|und|and)\s+[A-ZÄÖÜ][\wäöüß'-]+)?"
+                    r"^((?:vgl\.\s+|cf\.\s+|see\s+|siehe\s+|nach\s+|zit\.\s+nach\s+)?[A-ZÄÖÜ][\wäöüß'’-]+"
+                    r"(?:\s+(?:&|und|and)\s+[A-ZÄÖÜ][\wäöüß'’-]+)?"
                     r"(?:\s+(?:et\s+al\.?|u\.\s*a\.))?)"
                     r"\s+\d{4}",
                     fragment,
@@ -184,6 +184,7 @@ def extract_in_text_authors(body: str) -> set[str]:
     # Pattern 2: narrative citations (Author (YYYY))
     # Supports:
     #   - hyphenated surnames: Müller-Schmidt
+    #   - letters of any script and apostrophes: García, O'Brien, O’Brien
     #   - name prefixes: van der Berg, de la Rosa, von Wagner
     #   - joint authors: Smith and Jones, Müller-Schmidt & Weiss
     #   - et al. narrative: Brown et al. (2021), German Müller u. a. (2021)
@@ -191,7 +192,7 @@ def extract_in_text_authors(body: str) -> set[str]:
     #   - locator or further years inside the parentheses: Müller (2020, S. 15),
     #     Müller (2020: 15), Smith (2019, 2020)
     #   - German author-year style: Schmidt 2020 (no parentheses, handled below)
-    name_token = r"[A-ZÄÖÜ][a-zäöüßA-ZÄÖÜ'-]+"
+    name_token = r"[A-ZÄÖÜ](?:[^\W\d_]|['’-])+"
     prefix = r"(?:(?:van|von|de|del|della|di|la|le|du|dos|das|ter|ten)\s+(?:der\s+|den\s+|de\s+|la\s+)?)?"
     # Joint form OR et-al form
     joint = r"\s+(?:&|and|und)\s+" + prefix + name_token
@@ -286,8 +287,9 @@ def extract_bibliography_authors(bibliography: list[str]) -> tuple[set[str], set
     #   - simple: Smith
     #   - non-ASCII initial: Öztürk (same class as the in-text patterns)
     #   - hyphenated: Müller-Schmidt
+    #   - apostrophe, straight or typographic (Word AutoCorrect): O'Brien, O’Brien
     #   - with prefix: van der Berg, van den Berg, de la Rosa, von Wagner
-    surname_core = r"[A-ZÄÖÜ][\w'-]+"
+    surname_core = r"[A-ZÄÖÜ][\w'’-]+"
     prefix = r"(?:(?:van|von|de|del|della|di|la|le|du|dos|das|ter|ten)\s+(?:der\s+|den\s+|de\s+|la\s+)?)?"
     surname_token = prefix + surname_core
     
