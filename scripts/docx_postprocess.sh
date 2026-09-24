@@ -176,6 +176,9 @@ fi
 # consumers. Use Python's zipfile for this — `zip -r` does not guarantee
 # entry order.
 NEW_DOC="${DOC_ABS}.new"
+# If the repack or the final mv fails, do not leave a partial archive behind
+# (after a successful mv, NEW_DOC no longer exists).
+trap 'rm -rf "$WORK_DIR"; rm -f "$NEW_DOC"' EXIT
 "$PY" - "$NEW_DOC" "$WORK_DIR" << 'PYEOF'
 import os
 import sys
