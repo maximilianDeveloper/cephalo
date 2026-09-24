@@ -198,7 +198,8 @@ create_symlink() {
         echo -e "  ${YELLOW}! $link created as COPY (symlink not supported here).${NC}"
         echo -e "  ${YELLOW}  Updates to $target will NOT propagate automatically.${NC}"
         echo -e "  ${YELLOW}  On Git Bash: export MSYS=winsymlinks:nativestrict and enable${NC}"
-        echo -e "  ${YELLOW}  Developer Mode (Settings -> For developers), then re-run setup.${NC}"
+        echo -e "  ${YELLOW}  Developer Mode (Settings -> For developers), then delete the three${NC}"
+        echo -e "  ${YELLOW}  shared/ copies (01_Proposal, 02_Main_Work, 03_Defense) and re-run setup.${NC}"
         echo -e "  ${YELLOW}  See docs/multiproject_structure.md for manual re-sync.${NC}"
     else
         echo -e "  ${RED}! $link could not be created (symlink AND copy failed).${NC}"

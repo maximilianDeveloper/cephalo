@@ -262,7 +262,7 @@ done
 
 Re-run this after every change to `00_Shared_Materials/`, especially after styleguide updates.
 
-**Recommended fix:** enable Developer Mode once. The setting persists; symlinks then work without re-running setup. On Git Bash, additionally set `MSYS=winsymlinks:nativestrict` in your shell profile so `ln -s` produces real symlinks on the first try.
+**Recommended fix:** enable Developer Mode once. The setting persists. On Git Bash, additionally set `MSYS=winsymlinks:nativestrict` in your shell profile so `ln -s` produces real symlinks on the first try. Existing `shared/` copies stay copies: re-running setup skips them as existing, so delete the three copies first (`01_Proposal/shared`, `02_Main_Work/shared`, `03_Defense/shared`), then re-run setup to create the links.
 
 ### Agent assignment per sub-project
 

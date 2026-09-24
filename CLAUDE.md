@@ -156,7 +156,7 @@ For Git Bash specifically, setting `MSYS=winsymlinks:nativestrict` in your envir
 
 **Either fallback works**, but:
 
-**Updates to `00_Shared_Materials/styleguide.md` will NOT propagate.** You would have to copy the updated file into each sub-project manually, or re-run setup. The symptom: Proposal, Main Work, and Defense can silently drift apart in formatting.
+**Updates to `00_Shared_Materials/styleguide.md` will NOT propagate.** You would have to copy the updated file into each sub-project manually, or delete the three `shared/` copies first and then re-run setup. The symptom: Proposal, Main Work, and Defense can silently drift apart in formatting.
 
 Diagnostic commands:
 
