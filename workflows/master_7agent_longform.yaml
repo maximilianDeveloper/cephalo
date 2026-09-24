@@ -308,11 +308,11 @@ phases:
     
     steps:
       - Full styleguide check
+      - Milestone export as DOCX to submissions/ (the scripts below read this file)
       - scripts/bibliography_check.py
       - scripts/abbreviations_extract.py
       - Consistency checks
       - scripts/docx_postprocess.sh (hyphenation; only if styleguide.md document.hyphenation = automatic)
-      - Milestone exports to submissions/
   
   # ===========================================================
   # Submission

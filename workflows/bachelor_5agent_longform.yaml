@@ -279,11 +279,11 @@ phases:
     
     steps:
       - Full styleguide check
+      - Milestone export as DOCX into submissions/v_<tag>_<date>.docx (the scripts below read this file)
       - scripts/bibliography_check.py (minus-test)
       - scripts/abbreviations_extract.py (derive list of abbreviations)
       - Consistency checks (page ranges, et-al., editions, pronouns)
       - scripts/docx_postprocess.sh (hyphenation; only if styleguide.md document.hyphenation = automatic)
-      - Milestone export as DOCX into submissions/v_<tag>_<date>.docx
   
   # ===========================================================
   # Submission
