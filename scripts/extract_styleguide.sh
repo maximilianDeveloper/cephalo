@@ -224,15 +224,22 @@ def extract_pdf_text(pdf_path, out_path):
         try:
             reader = PdfReader(str(pdf_path))
             texts = []
+            failed = 0
             for page in reader.pages:
                 try:
                     texts.append(page.extract_text() or '')
-                except Exception:
+                except Exception as e:
                     texts.append('')
+                    failed += 1
+                    last_err = e
+            # Every page failed (e.g. an AES-encrypted PDF without the optional
+            # `cryptography` package): report the real cause, not "empty text".
+            if texts and failed == len(texts):
+                raise last_err
             out_path.write_text('\n\n'.join(texts), encoding='utf-8')
             return True
         except Exception as e:
-            print(f"    pypdf failed ({e}), trying pdftotext...", file=sys.stderr)
+            print(f"    pypdf failed ({e})" + (", trying pdftotext..." if have_pdftotext else ""), file=sys.stderr)
     if have_pdftotext:
         try:
             subprocess.run(
