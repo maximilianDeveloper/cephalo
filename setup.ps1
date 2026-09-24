@@ -85,11 +85,11 @@ trap {
 # the result would be a project without agents, workflows, or templates.
 # Mirrors the equivalent guard in setup.sh.
 
-if (-not (Test-Path ".claude") -or -not (Test-Path "templates")) {
+if (-not (Test-Path -LiteralPath "setup.ps1" -PathType Leaf) -or -not (Test-Path -LiteralPath ".claude" -PathType Container) -or -not (Test-Path -LiteralPath "templates" -PathType Container)) {
     $ScriptDir = $PSScriptRoot
     Write-Host ""
     Write-Host "Error: the current directory does not look like a cephalo template" -ForegroundColor Red
-    Write-Host "(.claude/ and templates/ expected in: $(Get-Location))." -ForegroundColor Red
+    Write-Host "(setup.ps1, .claude/ and templates/ expected in: $(Get-Location))." -ForegroundColor Red
     if ($ScriptDir -and (Test-Path (Join-Path $ScriptDir ".claude"))) {
         Write-Host "The template appears to be at: $ScriptDir" -ForegroundColor Yellow
         Write-Host "Run:  Set-Location `"$ScriptDir`"; .\setup.ps1 [args]" -ForegroundColor Yellow
