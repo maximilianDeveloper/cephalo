@@ -8,7 +8,7 @@ cephalo ships five utility scripts in `scripts/`. They are optional — the agen
 | `abbreviations_extract.py` | Derive the list of abbreviations from a finished DOCX | Phase B, final stages |
 | `bibliography_check.py` | Minus-test by author surname: every cited author is in the bibliography, every entry's lead author is cited | Phase B, final stages |
 | `docx_postprocess.sh` | Enable automatic hyphenation in a DOCX (python-docx doesn't set this) | Phase B, before final export |
-| `cross_session_audit.py` | Cross-worktree audit: surfaces notes and changes from other worktrees/sessions that never reached the master branch | Multi-worktree projects, at session start or weekly |
+| `cross_session_audit.py` | Cross-worktree audit: surfaces notes and changes from other worktrees/sessions that never reached the main worktree | Multi-worktree projects, at session start or weekly |
 
 ---
 
@@ -118,7 +118,7 @@ python3 scripts/bibliography_check.py --help
 What it does:
 
 1. Splits the document into body and bibliography (detects the section by header)
-2. Extracts author surnames from in-text citations — supports parenthetical and narrative forms (also with a locator, `Müller (2020, S. 15)`), `et al.`/`u. a.`, joint authors (also `Müller/Schmidt`), hyphenated surnames, surnames starting with Ä/Ö/Ü, typographic apostrophes (`O’Brien`), year-suffix citations (`Schulz (2022a)`, `(Wagner, 2022a)`), name prefixes including `van der`/`van den`/`von`/`de la`/`ter`/`ten`, and the citation-lead words `vgl.`/`cf.`/`see`/`siehe`/`nach`/`zit. nach`
+2. Extracts author surnames from in-text citations — supports parenthetical and narrative forms (also with a page locator, `Müller (2020, S. 15)`, `Müller (2020: 15)`), `et al.`/`u. a.`, joint authors (in parentheses also `(Müller/Schmidt 2019)`), hyphenated surnames, surnames starting with Ä/Ö/Ü, typographic apostrophes (`O’Brien`), year-suffix citations (`Schulz (2022a)`, `(Wagner, 2022a)`), name prefixes including `van der`/`van den`/`von`/`de la`/`ter`/`ten`, and the citation-lead words `vgl.`/`cf.`/`see`/`siehe`/`nach`/`zit. nach`
 3. Extracts author surnames from bibliography entries, using the same surname-prefix and umlaut handling as the in-text extraction
 4. Reports asymmetries in both directions
 
