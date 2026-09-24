@@ -130,7 +130,8 @@ phases:
         - Verify all chapters against styleguide (checklists/format_rules.md)
         - Derive list of abbreviations from text (scripts/abbreviations_extract.py)
         - Bibliography minus-test (scripts/bibliography_check.py)
-        - Export to DOCX, run scripts/docx_postprocess.sh for hyphenation
+        - Export to DOCX; run scripts/docx_postprocess.sh (hyphenation) only if
+          styleguide.md document.hyphenation = automatic
         - Visual proofreading
 
 # Notes on the lean setup

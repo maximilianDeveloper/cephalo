@@ -282,7 +282,7 @@ phases:
       - scripts/bibliography_check.py (minus-test)
       - scripts/abbreviations_extract.py (derive list of abbreviations)
       - Consistency checks (page ranges, et-al., editions, pronouns)
-      - scripts/docx_postprocess.sh (hyphenation)
+      - scripts/docx_postprocess.sh (hyphenation; only if styleguide.md document.hyphenation = automatic)
       - Milestone export as DOCX into submissions/v_<tag>_<date>.docx
   
   # ===========================================================
@@ -294,7 +294,7 @@ phases:
       - Final DOCX export to submissions/v_final_<date>.docx
       - Tag in Git: git tag v_final_<date>
       - Update table of contents (Ctrl+A then F9)
-      - Confirm hyphenation in Word
+      - Confirm the hyphenation setting matches styleguide.md (document.hyphenation)
       - Visual proofreading
       - Sign declaration of academic integrity
       - Mentally rehearse defending each sentence

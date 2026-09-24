@@ -311,7 +311,7 @@ phases:
       - scripts/bibliography_check.py
       - scripts/abbreviations_extract.py
       - Consistency checks
-      - scripts/docx_postprocess.sh
+      - scripts/docx_postprocess.sh (hyphenation; only if styleguide.md document.hyphenation = automatic)
       - Milestone exports to submissions/
   
   # ===========================================================
@@ -323,7 +323,7 @@ phases:
       - Final DOCX export to 08_Formal_Review/submissions/v_final_<date>.docx
       - Tag in Git: git tag v_final_<date>
       - Update table of contents
-      - Confirm hyphenation
+      - Confirm the hyphenation setting matches styleguide.md (document.hyphenation)
       - Visual proofreading
       - Sign declaration of academic integrity
       - Mentally rehearse defending each sentence (especially methods chapter)
