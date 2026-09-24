@@ -40,7 +40,7 @@ py -m pip install -r requirements.txt
 
 **Shell scripts on Windows:** the two `.sh` scripts run under Git Bash (included with Git for Windows). If Git Bash is not installed, download Git for Windows and select the "Use Git Bash" option during installation. PowerShell alone cannot run `.sh` files directly.
 
-**Note on `zip` on Windows:** Git Bash ships with `unzip` but NOT with `zip`. This is no longer a problem: `docx_postprocess.sh` only needs `unzip` plus Python 3 (`python3` or `python` on PATH) — re-zipping is done with Python's `zipfile` module, so `zip` itself is never invoked.
+**Note on `zip` on Windows:** Git Bash ships with `unzip` but NOT with `zip`. This is no longer a problem: `docx_postprocess.sh` only needs `unzip` plus Python 3 (`python3`, `python` or `py` on PATH) — re-zipping is done with Python's `zipfile` module, so `zip` itself is never invoked.
 
 ---
 
@@ -174,7 +174,7 @@ Like the other checks, this is a heuristic aid, not a guarantee — it only catc
 
 ## Troubleshooting
 
-**`python3: command not found`** — the Python utility scripts (`abbreviations_extract.py`, `bibliography_check.py`, `cross_session_audit.py`) are invoked directly with `python3` or `py`; on Windows, use `py` instead if `python3` isn't on PATH. On macOS before Monterey, you may need to install Python 3 via Homebrew. The shell scripts (`docx_postprocess.sh`, `extract_styleguide.sh`) handle this themselves: they probe for a *working* interpreter under both `python3` and `python` (this also catches the case where `python3` resolves to the dead Microsoft Store app-execution-alias stub on Windows) and print a clear error only if neither works.
+**`python3: command not found`** — the Python utility scripts (`abbreviations_extract.py`, `bibliography_check.py`, `cross_session_audit.py`) are invoked directly with `python3` or `py`; on Windows, use `py` instead if `python3` isn't on PATH. On macOS before Monterey, you may need to install Python 3 via Homebrew. The shell scripts (`docx_postprocess.sh`, `extract_styleguide.sh`) handle this themselves: they probe for a *working* interpreter under `python3`, `python` and the Windows `py` launcher (this also catches the case where `python3` resolves to the dead Microsoft Store app-execution-alias stub on Windows) and print a clear error only if none works.
 
 **`ModuleNotFoundError: No module named 'docx'`** — you installed `docx`, not `python-docx`. Run `pip uninstall docx && pip install python-docx`.
 

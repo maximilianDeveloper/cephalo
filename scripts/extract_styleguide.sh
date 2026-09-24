@@ -18,8 +18,8 @@
 #
 # Requirements:
 #   - bash (for wrapper)
-#   - python3 (or python) with the `pypdf` package installed (pure-python
-#     PDF parser). Install: pip3 install pypdf
+#   - python3 (or python, or the Windows `py` launcher) with the `pypdf`
+#     package installed (pure-python PDF parser). Install: pip3 install pypdf
 #   - pdftotext (poppler) as fallback if python / pypdf is not available
 #
 # Why not pdftotext directly?
@@ -60,14 +60,14 @@ if [ ! -d "$GUIDELINES_DIR" ]; then
     exit 1
 fi
 
-# Tool discovery. Prefer python3; on Windows the python.org installer only
-# provides `python`, so accept that too when it is a Python 3. `command -v
-# python3` alone is not enough on Windows: python3 may resolve to the dead
-# Microsoft Store app-execution-alias stub, and the python.org installer
-# creates `python`/`py` but no `python3`. So probe that the interpreter
-# actually runs, and fall back to `python`.
+# Tool discovery. Prefer python3, but accept `python` and the Windows `py`
+# launcher too when they are a Python 3. `command -v python3` alone is not
+# enough on Windows: python3 may resolve to the dead Microsoft Store
+# app-execution-alias stub, and the python.org installer creates no `python3`
+# and by default puts only the `py` launcher on PATH. So probe that the
+# interpreter actually runs, and fall back to `python`, then `py`.
 PYTHON_BIN=""
-for cand in python3 python; do
+for cand in python3 python py; do
     if command -v "$cand" >/dev/null 2>&1 \
         && "$cand" -c 'import sys; raise SystemExit(sys.version_info[0] < 3)' >/dev/null 2>&1; then
         PYTHON_BIN="$cand"
@@ -81,7 +81,7 @@ if command -v pdftotext >/dev/null 2>&1; then
 fi
 
 if [ -z "$PYTHON_BIN" ] && [ "$HAVE_PDFTOTEXT" = "0" ]; then
-    echo "Error: neither python3 nor pdftotext is installed." >&2
+    echo "Error: no working Python 3 interpreter (tried: python3, python, py) and no pdftotext found." >&2
     echo "Install one of:" >&2
     echo "  - python3 + 'pip3 install pypdf' (recommended, cross-platform)" >&2
     echo "  - pdftotext (poppler-utils on Linux, poppler on macOS)" >&2

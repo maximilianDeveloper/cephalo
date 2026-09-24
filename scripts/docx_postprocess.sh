@@ -19,8 +19,8 @@
 #
 # Requirements:
 #   - bash, unzip (re-zipping uses Python's zipfile module — `zip` is NOT needed)
-#   - Python 3 (`python3` or `python` on PATH; used for portable XML patching
-#     and re-zipping)
+#   - Python 3 (`python3`, `python` or the Windows `py` launcher on PATH; used
+#     for portable XML patching and re-zipping)
 
 set -euo pipefail
 
@@ -64,10 +64,11 @@ fi
 
 # Find a working Python 3. `command -v python3` alone is not enough on Windows:
 # python3 may resolve to the dead Microsoft Store app-execution-alias stub, and
-# the python.org installer creates `python`/`py` but no `python3`. So probe that
-# the interpreter actually runs, and fall back to `python`.
+# the python.org installer creates no `python3` and by default puts only the
+# `py` launcher on PATH. So probe that the interpreter actually runs, and fall
+# back to `python`, then `py`.
 PY=""
-for cand in python3 python; do
+for cand in python3 python py; do
     if command -v "$cand" >/dev/null 2>&1 \
         && "$cand" -c 'import sys; raise SystemExit(sys.version_info[0] < 3)' >/dev/null 2>&1; then
         PY="$cand"
@@ -75,9 +76,9 @@ for cand in python3 python; do
     fi
 done
 if [ -z "$PY" ]; then
-    echo "Error: no working Python 3 interpreter found (tried: python3, python)." >&2
+    echo "Error: no working Python 3 interpreter found (tried: python3, python, py)." >&2
     echo "  Install: 'apt install python3' (Linux), 'brew install python' (macOS)," >&2
-    echo "  or the python.org installer on Windows (it provides 'python', not 'python3')." >&2
+    echo "  or the python.org installer on Windows (it provides 'py', not 'python3')." >&2
     exit 1
 fi
 
