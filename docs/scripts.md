@@ -150,7 +150,7 @@ Run once before the final export. Re-running is safe (the script detects if the 
 
 ### `cross_session_audit.py`
 
-Audits a multi-worktree repository for information that exists in a worktree or past session but never made it into the master branch. Useful for projects that use `.claude/worktrees` (or any `git worktree`) to run agent sessions in parallel.
+Audits a multi-worktree repository for information that exists in a worktree or past session but never made it into the main worktree (the first entry of `git worktree list`, whatever branch it has checked out). Useful for projects that use `.claude/worktrees` (or any `git worktree`) to run agent sessions in parallel.
 
 ```bash
 python3 scripts/cross_session_audit.py
@@ -158,15 +158,15 @@ python3 scripts/cross_session_audit.py --repo-root /path/to/repo
 python3 scripts/cross_session_audit.py --report-file audit_report.md
 ```
 
-What it does, in three layers:
+What it does: after a summary, the report shows a **worktree overview** (all worktrees, their current branch/HEAD, and the number of uncommitted changes and of `_*.md`-style closing/briefing/TODO notes in each), followed by three layers, numbered as in the report:
 
-1. **Worktree overview** — lists all worktrees, their current branch/HEAD, and any uncommitted changes, plus any `_*.md`-style closing/briefing/TODO notes found in each.
-2. **Master-diff** — for the `_*.md`-pattern notes, checks whether each one that exists in a linked worktree also exists in the master worktree; flags the ones that don't as potentially lost.
-3. **Dangling-reference check** — scans master's own Markdown files for backticked cross-references to other project files (paths prefixed `0N_...`, `scripts/...`, or `workspace/...`) and reports any that point to a file that doesn't exist.
+1. **Layer 1 — `_*.md` files in a worktree but not in the main worktree** — for the `_*.md`-pattern notes, checks whether each one that exists in a linked worktree also exists in the main worktree; flags the ones that don't as potentially lost.
+2. **Layer 2 — dangling refs in the main worktree** — scans the main worktree's own Markdown files for backticked references to other Markdown (`.md`) files (paths prefixed with a two-digit `NN_.../`, `scripts/...`, or `workspace/...`) and reports any that point to a file that doesn't exist. References to other file types (e.g. `scripts/tool.py`) are not checked.
+3. **Layer 3 — uncommitted changes per worktree** — lists the `git status --porcelain` lines (including untracked files) of each worktree that has uncommitted changes.
 
 Output goes to stdout by default; `--report-file PATH` additionally writes a Markdown report to that path.
 
-Exit codes: `0` = no findings, `1` = findings reported (intended for CI/hooks), `2` = the audit could not run (e.g. not a git repository, `--repo-root` does not exist, or `git` is not on PATH).
+Exit codes: `0` = no findings, `1` = findings reported (intended for CI/hooks), `2` = the audit could not run: `--repo-root` (default: the current directory) is not an existing directory inside a git working tree, `git` is not on PATH, a worktree could not be inspected (`git status` fails there, e.g. with "dubious ownership" or a corrupt index, or its directory cannot be read), or the `--report-file` could not be written (the report has already been printed to stdout in that case). The cause is printed as one `Error: ...` line on stderr.
 
 Like the other checks, this is a heuristic aid, not a guarantee — it only catches the specific patterns described above (uncommitted changes, `_*.md` notes, and backticked cross-references in a recognized path format).
 
