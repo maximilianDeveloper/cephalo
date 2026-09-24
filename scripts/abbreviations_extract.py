@@ -194,6 +194,8 @@ def read_docx_text(path: Path) -> str:
                         for el in para.iter(qn("w:t"), qn("w:tab"), qn("w:ptab"),
                                             qn("w:br"), qn("w:cr"),
                                             qn("w:noBreakHyphen"))
+                        # a text box's paragraphs are chunks of their own
+                        if next(el.iterancestors(qn("w:p"))) is para
                     )
                     if text.strip():
                         chunks.append(text)
