@@ -1,12 +1,12 @@
 # Pre-check (Step 0)
 
 **Purpose:** Blocking pre-check before any content work.
-**Executed by:** Orchestrator (in multi-agent workflows) or user manually (in seminar_2agent).
+**Executed by:** Orchestrator (in multi-agent workflows) or user manually (in seminar_2agent and presentation_3agent, which have no orchestrator).
 **On missing materials:** STOP. Inform the user. Do not make assumptions.
 
-**Applies to:** `seminar_2agent`, `presentation_3agent`, `bachelor_5agent` and `_longform`, `master_7agent` and `_longform`. These workflows all reference this checklist in their Step 0.
+**Applies to:** `seminar_2agent`, `presentation_3agent`, `bachelor_5agent` and `_longform`, `master_7agent` and `_longform`. These workflows all reference this checklist in their Step 0. `proposal_workflow` applies sections 1 and 2 in its Phase 0: it runs before the main work, so no earlier pre-check has covered its materials.
 
-**Does NOT apply to:** `proposal_workflow` and `defense_workflow`. These are sub-workflows that run inside a multi-project setup where the parent work's pre-check already covered the institutional materials. They have their own narrower Step 0 checks (verify styleguide exists; verify main work is frozen).
+**Does NOT apply to:** `defense_workflow`. It only cites the frozen main work, whose pre-check already covered the materials; its own Step 0 verifies that the styleguide exists and the main work is frozen.
 
 ---
 

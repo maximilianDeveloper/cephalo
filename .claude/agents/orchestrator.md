@@ -66,6 +66,7 @@ After each written chapter:
 - All chapters passed source-verification with ✅
 - No outstanding ⚠️ content issues
 - Last 3 iterations brought only format-level changes (indicator)
+- No open `❓` items left in `styleguide.md`
 
 **Action on transition:**
 1. Set `state.md` → `phase: B`
