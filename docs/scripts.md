@@ -176,9 +176,9 @@ Like the other checks, this is a heuristic aid, not a guarantee — it only catc
 
 **`python3: command not found`** — the Python utility scripts (`abbreviations_extract.py`, `bibliography_check.py`, `cross_session_audit.py`) are invoked directly with `python3` or `py`; on Windows, use `py` instead if `python3` isn't on PATH. On macOS before Monterey, you may need to install Python 3 via Homebrew. The shell scripts (`docx_postprocess.sh`, `extract_styleguide.sh`) handle this themselves: they probe for a *working* interpreter under `python3`, `python` and the Windows `py` launcher (this also catches the case where `python3` resolves to the dead Microsoft Store app-execution-alias stub on Windows) and print a clear error only if none works.
 
-**`ModuleNotFoundError: No module named 'docx'`** — you installed `docx`, not `python-docx`. Run `pip uninstall docx && pip install python-docx`.
+**`Error: python-docx not installed.`** (from `abbreviations_extract.py` and `bibliography_check.py`; the underlying import error is `ModuleNotFoundError: No module named 'docx'`) — install it: `pip install python-docx` (or `pip install -r requirements.txt`). If you installed `docx` instead, that is a different package: run `pip uninstall docx && pip install python-docx`.
 
-**`ModuleNotFoundError: No module named 'pypdf'`** — install it: `pip install pypdf`. Alternatively, install `pdftotext` (poppler) as fallback.
+**`Error: neither pypdf nor pdftotext available for PDF extraction.`** (from `extract_styleguide.sh`; the underlying import error is `ModuleNotFoundError: No module named 'pypdf'`) — install it: `pip install pypdf`. Alternatively, install `pdftotext` (poppler) as fallback.
 
 **`UnicodeEncodeError: 'charmap'`** on Windows — your Python is older than 3.9. Upgrade Python.
 
