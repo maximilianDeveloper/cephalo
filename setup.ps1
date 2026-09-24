@@ -798,11 +798,25 @@ $GitattributesContent = @"
 *.jpg filter=lfs diff=lfs merge=lfs -text
 "@
 
+# As for .gitignore: LF endings plus the trailing newline the here-string
+# omits. The template ships its own .gitattributes (line-ending rules only),
+# so after a -Target copy or in an in-place setup the file usually exists
+# already: append the LFS rules unless it has some (no duplicates on re-run).
+$GitattributesContentLf = ($GitattributesContent -replace "`r`n", "`n") + "`n"
 if (!(Test-Path ".gitattributes")) {
-    Write-Utf8NoBom ".gitattributes" $GitattributesContent
+    Write-Utf8NoBom ".gitattributes" $GitattributesContentLf
     Write-Host "  + .gitattributes" -ForegroundColor Green
 } else {
-    Write-Host "  . .gitattributes (exists)" -ForegroundColor Gray
+    $ExistingGitattributes = [string](Get-Content -LiteralPath ".gitattributes" -Raw -Encoding UTF8)
+    if ($ExistingGitattributes -notmatch "filter=lfs") {
+        if ($ExistingGitattributes -ne "" -and -not $ExistingGitattributes.EndsWith("`n", [System.StringComparison]::Ordinal)) {
+            $ExistingGitattributes += "`n"
+        }
+        Write-Utf8NoBom ".gitattributes" ($ExistingGitattributes + $GitattributesContentLf)
+        Write-Host "  + .gitattributes (LFS rules appended)" -ForegroundColor Green
+    } else {
+        Write-Host "  . .gitattributes (exists)" -ForegroundColor Gray
+    }
 }
 
 if (!(Test-Path ".git")) {
