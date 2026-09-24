@@ -252,8 +252,11 @@ echo ""
 # Argument handling
 # ==========================================================
 
-# --help
-if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+# --help (accepted anywhere in the argument list). ${1+"$@"} instead of a
+# bare "$@": older bash versions treat "$@" without arguments as unbound
+# under set -u.
+for arg in ${1+"$@"}; do
+    [ "$arg" = "-h" ] || [ "$arg" = "--help" ] || continue
     cat << 'USAGE'
 Usage: ./setup.sh [WORK_TYPE] [STRUCTURE] [SCAFFOLDING] [--target PATH]
 
@@ -286,7 +289,7 @@ Examples:
 
 USAGE
     exit 0
-fi
+done
 
 # ==========================================================
 # Template location sanity check
@@ -324,7 +327,18 @@ while [ $# -gt 0 ]; do
             ;;
         --target=*)
             TARGET_DIR="${1#--target=}"
+            if [ -z "$TARGET_DIR" ]; then
+                echo "Error: --target requires a path argument." >&2
+                exit 2
+            fi
             shift
+            ;;
+        -*)
+            # A misspelled flag (e.g. --taget) must not fall through to an
+            # in-place setup of the template directory.
+            echo "Error: unknown option '$1'." >&2
+            echo "See: $0 --help" >&2
+            exit 2
             ;;
         *)
             POSITIONAL+=("$1")
@@ -332,6 +346,11 @@ while [ $# -gt 0 ]; do
             ;;
     esac
 done
+if [ "${#POSITIONAL[@]}" -gt 3 ]; then
+    echo "Error: too many arguments (at most 3 positional: WORK_TYPE STRUCTURE SCAFFOLDING)." >&2
+    echo "See: $0 --help" >&2
+    exit 2
+fi
 # Restore positional arguments
 set -- "${POSITIONAL[@]:-}"
 
