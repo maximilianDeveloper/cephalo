@@ -63,16 +63,18 @@ jobs:
           # Archives are unpacked only through scripts/extract_styleguide.sh (safe_extract_zip):
           # no agent or checklist may show another extractor as a command, in a code span
           # or in a code block (naming one in prose, e.g. to forbid it, is fine).
-          cmd = r"\b(?:unzip|7z|bsdtar)\s+\S|\btar\s+-?[a-z]*x|\.extractall\(|unpack_archive\(|\bExpand-Archive\s+\S"
+          cmd = r"\b(?:unzip|7z|bsdtar)\s+\S|\btar\b[^|;&`\n]*(?:\s-?[a-z]*x[a-z]*\b|--extract)|\.extractall\(|unpack_archive\(|\bExpand-Archive\s+\S"
           in_span = re.compile(r"`[^`]*?(?:" + cmd + r")[^`]*`")
-          in_block = re.compile(r"^\s*(?:\$\s*)?(?:" + cmd + r")")
+          in_block = re.compile(cmd)
           for f in agent_files + sorted(glob.glob("checklists/*.md")):
               fenced = False
               for n, line in enumerate(open(f, encoding="utf-8").read().splitlines(), 1):
                   if line.lstrip().startswith("```"):
                       fenced = not fenced
                       continue
-                  if in_span.search(line) or (fenced and in_block.search(line)):
+                  # In a code block, any extractor call counts (after dropping a shell comment).
+                  code = re.sub(r"(^|\s)#.*", "", line)
+                  if in_span.search(line) or (fenced and in_block.search(code)):
                       errors.append(f"{f}:{n}: archive extraction outside scripts/extract_styleguide.sh")
           def refs(node):
               if isinstance(node, dict):
