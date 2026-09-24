@@ -48,7 +48,7 @@ All three must match. On discrepancy: raw data is truth. Adjust table and text.
 ### Format consistency
 
 Lessons from project experience:
-- **Pie chart format**: `0%` rounds to whole numbers — sums can total 101%. Always use `0.0%`.
+- **Pie chart format**: `0%` rounds to whole numbers — sums can total 99% or 101%. Keep at least one decimal (e.g. `0.0%`) and check that the labelled values sum to 100%; otherwise add a rounding note.
 - **Decimal separator**: per styleguide (`numbers.decimal_separator`), used consistently
 - **Thousands separator**: consistent (space, period, comma, or none — but consistent)
 - **Units**: include with all values, or define in the table header

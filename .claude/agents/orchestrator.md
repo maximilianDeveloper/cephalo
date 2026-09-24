@@ -110,7 +110,7 @@ After last chapter (introduction, written last):
 - Run scripts:
   - `scripts/bibliography_check.py` (minus-test)
   - `scripts/abbreviations_extract.py`
-  - `scripts/docx_postprocess.sh`
+  - `scripts/docx_postprocess.sh` (only if `document.hyphenation` in `styleguide.md` is automatic)
 - For presentations: three-way check PPTX ↔ PDF ↔ speaker notes
 
 ## State file format

@@ -87,7 +87,7 @@ python scripts/bibliography_check.py workspace/output/document.docx
 python scripts/abbreviations_extract.py workspace/output/document.docx
 ```
 
-**Automatic hyphenation** (before final export):
+**Automatic hyphenation** (only if `styleguide.md` sets `document.hyphenation` to automatic; before final export):
 ```bash
 ./scripts/docx_postprocess.sh workspace/output/document.docx
 ```

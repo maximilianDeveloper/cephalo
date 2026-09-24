@@ -96,7 +96,7 @@ In Phase B, the format-verifier handles:
 - Page-range notation consistency
 - Et al. rule consistency
 - Edition number consistency across the document
-- Hyphenation and final formatting (`scripts/docx_postprocess.sh`)
+- Hyphenation and final formatting (`scripts/docx_postprocess.sh`, only if the styleguide's `document.hyphenation` is automatic)
 
 What it does NOT do:
 - Add or remove citations
