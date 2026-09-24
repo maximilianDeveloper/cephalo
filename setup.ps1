@@ -437,7 +437,7 @@ if ($Target -ne "") {
     Write-Verbose "Copying template from '$SourceDir' to target '$Target'"
     Write-Host ""
     Write-Host "Copying cephalo template to target..." -ForegroundColor Cyan
-    $ExcludedTopLevelNames = @(".git", "__pycache__", ".venv", "venv")
+    $ExcludedTopLevelNames = @(".git", ".github", "__pycache__", ".venv", "venv")
     try {
         Get-ChildItem -Path $SourceDir -Force | Where-Object {
             $ExcludedTopLevelNames -notcontains $_.Name -and $_.Extension -ne ".pyc" -and $_.Name -notlike "cephalo-setup.*"

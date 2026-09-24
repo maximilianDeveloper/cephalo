@@ -642,6 +642,8 @@ if [ -n "$TARGET_DIR" ]; then
     # setup.ps1 and .gitignore: their scripts point back into the template.
     # The wizard launcher (cephalo-setup.* at the template root) is left out:
     # it embeds the user's absolute path and would end up in the commit.
+    # So is .github/: cephalo's own CI and issue templates would otherwise
+    # run and show up in every thesis repository pushed to GitHub.
     echo ""
     echo -e "${CYAN}Copying cephalo template to target...${NC}"
     # Use a tar-pipe to reliably include dotfiles and respect excludes
@@ -655,6 +657,7 @@ if [ -n "$TARGET_DIR" ]; then
             --exclude='./.claude/worktrees' --exclude='./.claude/worktrees/*' \
             --exclude='./.claude/settings.local.json' \
             --exclude='./cephalo-setup.*' \
+            --exclude='./.github' --exclude='./.github/*' \
             --exclude='.venv' --exclude='*/.venv' --exclude='*/.venv/*' \
             --exclude='venv' --exclude='*/venv' --exclude='*/venv/*' \
             --exclude='__pycache__' --exclude='*/__pycache__' --exclude='*/__pycache__/*' \

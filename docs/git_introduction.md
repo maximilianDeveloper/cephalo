@@ -209,6 +209,8 @@ After that, `git push` after each commit (or batch of commits) sends your work t
 
 For a private thesis project, use a private repository — never public.
 
+If you set the project up in place (without `--target` / `-Target`), it still contains cephalo's own `.github/` folder. Delete it before the first push, otherwise GitHub runs cephalo's CI workflow on every push to your thesis repository.
+
 ---
 
 ## What you don't need to learn (yet)
