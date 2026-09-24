@@ -347,8 +347,9 @@ if ($Target -ne "") {
         $Target = Join-Path $env:USERPROFILE $Target.Substring(1).TrimStart('\', '/')
     }
     
-    # Resolve to absolute path
-    $Target = [System.IO.Path]::GetFullPath($Target)
+    # Resolve to absolute path against the PowerShell location, not the process
+    # working directory that GetFullPath alone would use (see Write-Utf8NoBom)
+    $Target = [System.IO.Path]::GetFullPath($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Target))
     $SourceDir = (Get-Location).Path
 
     if ($Target -eq $SourceDir) {
