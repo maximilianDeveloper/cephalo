@@ -255,20 +255,27 @@
   <div class="doc-hidden" id="src-readme"><div class="doc"><!--DOC_README_START--><h1>cephalo</h1>
 <p><strong>A multi-agent system for scientific writing.</strong></p>
 <p>cephalo helps students and researchers produce high-quality academic work by orchestrating specialized AI agents through the lifecycle of a thesis, paper, or presentation. The system enforces source fidelity, plagiarism-safe paraphrasing, and consistent formatting — adapted dynamically to whatever citation guidelines and institutional rules apply to the user.</p>
-<p>The name is short for <em>cephalopod</em> — an organism with a central nervous system and many specialized arms. That&#x27;s the metaphor: one orchestrator, many agents, coordinated toward a single goal.</p>
+<p>The name is short for <em>cephalopod</em> — one orchestrator, many specialized arms (more on the name at the end of this file).</p>
 <hr>
 <h2>Status</h2>
-<p><strong>Early stage.</strong> The system has been developed and refined through actual coursework (bachelor-level) across multiple projects and iterations. It works and is stable enough to use productively — expect the rough edges typical of an early release, and please report them.</p>
-<p>If you are reading this as an early adopter: welcome. Feedback and improvements are welcome.</p>
+<p><strong>Early stage.</strong> The system has been developed and refined through actual coursework (bachelor-level) across multiple projects and iterations. It works and is stable enough to use productively — expect the rough edges typical of an early release, and please report them via the project&#x27;s GitHub issues.</p>
+<p>If you are reading this as an early adopter: welcome. Feedback and improvements are welcome — see <code>CONTRIBUTING.md</code> for how to report issues and contribute. Changes are tracked in <code>CHANGELOG.md</code>.</p>
 <hr>
 <h2>What cephalo does</h2>
 <p>You point cephalo at a writing project — a seminar paper, a thesis, a conference presentation — and it helps you work through it systematically. Concretely:</p>
 <ul><li><strong>Agents read your sources</strong> and produce structured extracts with original quotes, page numbers, and term-usage notes</li><li><strong>Agents write draft sections</strong> based on those extracts, adhering to whatever style guide your institution mandates</li><li><strong>Agents verify claims</strong> sentence-by-sentence against the original sources, catching paraphrasing errors, secondary citations, and plagiarism risks</li><li><strong>Agents enforce formatting</strong> dynamically — citation styles, page numbering, bibliography conventions — based on guideline documents you provide</li><li><strong>You stay in control</strong> of research questions, outlines, methodological choices, and all substantive editorial decisions</li></ul>
 <p>cephalo is a sparring partner and a mechanic, not an author. Every sentence in the final work remains yours to defend.</p>
+<p>To make that concrete, this is the kind of finding the source-verifier produces (illustrative example):</p>
+<pre><code>[source-verifier] chapter2_draft.md, sentence 14:
+  Text:   &quot;Transaction costs fall significantly for small firms.&quot;
+  Source: Example &amp; Author (2021, p. 43): &quot;transaction costs decline
+          moderately for small and medium-sized firms&quot;
+  Issue:  overstatement (&quot;significantly&quot; vs. &quot;moderately&quot;); scope
+          narrowed (SMEs -&gt; small firms). Suggest aligning the wording.</code></pre>
 <hr>
 <h2>What makes it different</h2>
 <p><strong>Dynamic guideline extraction.</strong> Most writing tools hardcode citation rules (APA, Chicago, etc.). cephalo reads whatever style guide your institution gives you — however idiosyncratic — and extracts the rules into a structured configuration. If the rules change, you update the document; the agents update themselves.</p>
-<p><strong>phase separation.</strong> Content quality stabilizes well before formatting does. cephalo formalizes this: a Content phase uses capable, expensive models; a Formatting phase uses fast, cheap models. This cuts costs significantly without sacrificing quality.</p>
+<p><strong>Phase separation.</strong> Content quality stabilizes well before formatting does. cephalo formalizes this: a Content phase uses capable, expensive models; a Formatting phase uses fast, cheap models. This cuts costs significantly without sacrificing quality.</p>
 <p><strong>Source fidelity as first-class concern.</strong> The most valuable agent in the system is the source verifier — catching subtle errors like &quot;your text says <em>X</em>, but the source says <em>Y</em> (close but not identical).&quot; These errors are invisible without a dedicated review pass, and they are the difference between good and publishable work.</p>
 <p><strong>Project-scale awareness.</strong> A seminar paper needs different structure than a dissertation. cephalo offers workflow variants for:</p>
 <ul><li>Small works (seminar papers, presentations)</li><li>Medium works (bachelor theses)</li><li>Long-running works (master theses, dissertations) — with phase-based directories, handover rituals, Git versioning, and reference manager integration</li></ul>
@@ -286,12 +293,14 @@
 <hr>
 <h2>Quick start</h2>
 <h3>1. Download and extract</h3>
-<p>Get cephalo from the project&#x27;s GitHub page — a release archive from the Releases page, or <strong>Code -&gt; Download ZIP</strong> — and unzip it anywhere; <code>git clone &lt;repo-url&gt;</code> works too. The setup script will ask you at launch time where your project should live. If you cloned instead of unzipping: use a <code>--target</code> path in step 2, so your project starts with its own fresh Git history.</p>
+<p>Get cephalo from the project&#x27;s GitHub page — a release archive from the Releases page, or <strong>Code -&gt; Download ZIP</strong> — and unzip it anywhere; <code>git clone &lt;repo-url&gt;</code> works too. The setup script will ask you at launch time where your project should live.</p>
+<p>If you cloned instead of unzipping: use a <code>--target</code> path in step 2, so your project starts with its own fresh Git history instead of sitting on top of cephalo&#x27;s.</p>
 <p><strong>New here? Prefer a visual start.</strong> Open <a href="docs/setup-wizard.html"><code>docs/setup-wizard.html</code></a> in any browser — answer a few questions and it builds the exact setup command for your system and previews the folders it will create. It is fully offline and runs nothing; you copy the command and run it yourself in the next step.</p>
 <h3>2. Run the setup script</h3>
-<p><strong>Windows (PowerShell):</strong> <em>(only multi-project setups create symlinks — for those, enable Developer Mode once or run elevated; see the FAQ)</em></p>
+<p><strong>Windows (PowerShell):</strong></p>
 <pre><code>Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\setup.ps1</code></pre>
+<p>Only multi-project setups create symlinks — for those, enable Developer Mode once (Settings -&gt; For developers) or run from an elevated shell; see the FAQ. Flat and long-form setups need neither.</p>
 <p><strong>macOS / Linux / Git Bash:</strong></p>
 <pre><code>chmod +x setup.sh
 ./setup.sh</code></pre>
@@ -342,8 +351,8 @@ List any open questions for me to resolve before we proceed.</code></pre>
 ├── 05_Empirical/                   (if applicable)
 ├── 06_Discussion_Conclusion/
 ├── 07_Introduction/                (written last)
-└── 08_Formal_Review/               (Phase B)</code></pre>
-<p>phase-based directories, per-phase handover documents, centralized state management. Git and reference manager recommended.</p>
+└── 08_Formal_Review/               (formatting phase — see docs/phase_separation.md)</code></pre>
+<p>Phase-based directories, per-phase handover documents, centralized state management. Git and reference manager recommended.</p>
 <h3>Multi-project (long works with proposal and defense)</h3>
 <pre><code>project/
 ├── [...agent files]
@@ -360,23 +369,23 @@ List any open questions for me to resolve before we proceed.</code></pre>
 <hr>
 <h2>Documentation roadmap</h2>
 <p>Read in this order if new:</p>
-<ol><li><strong>README.md</strong> (this file) — overview</li><li><strong>docs/QUICKSTART.md</strong> — 5-minute onboarding for a new project</li><li><strong>docs/error_catalog.md</strong> — common writing errors this system catches</li><li><strong>docs/phase_separation.md</strong> — how the Content / Formatting phase split works</li></ol>
+<ol><li><strong>README.md</strong> (this file) — overview</li><li><strong>docs/QUICKSTART.md</strong> — 5-minute onboarding for a new project</li><li><strong>docs/error_catalog.md</strong> — common writing errors this system catches</li><li><strong>docs/phase_separation.md</strong> — how the Content / Formatting phase split works</li><li><strong>docs/scripts.md</strong> — the optional utility scripts (guideline extraction, bibliography and abbreviation checks, DOCX post-processing)</li></ol>
 <p>For thesis-scale projects:</p>
-<ol><li><strong>docs/longform_structure.md</strong> — long-form project organization</li><li><strong>docs/multiproject_structure.md</strong> — when to split into sub-projects</li><li><strong>docs/git_introduction.md</strong> — versioning for beginners</li><li><strong>docs/reference_management.md</strong> — Zotero/Citavi integration</li></ol>
+<ol start="6"><li><strong>docs/longform_structure.md</strong> — long-form project organization</li><li><strong>docs/multiproject_structure.md</strong> — when to split into sub-projects</li><li><strong>docs/git_introduction.md</strong> — versioning for beginners</li><li><strong>docs/reference_management.md</strong> — Zotero/Citavi integration</li></ol>
 <hr>
 <h2>FAQ</h2>
 <h3>Is cephalo specific to any institution?</h3>
-<p>No. The style-resolver agent extracts rules from whatever guideline documents you provide. Tested primarily with German-language university guidelines, but the architecture makes no assumption about language, citation style, or institutional conventions.</p>
+<p>No. The style-resolver agent extracts rules from whatever guideline documents you provide. Tested primarily with German-language university guidelines, but the architecture makes no assumption about language, citation style, or institutional conventions. (The optional utility scripts ship with English/German detection heuristics, which are easy to extend — they tell you how when it matters.)</p>
 <h3>Does cephalo do the writing for me?</h3>
 <p>No. It helps you write. You provide research questions, outlines, sources, and final editorial judgment. The agents extract, draft, verify, and format — but the intellectual substance remains yours. Every sentence should be defendable by you in an oral examination.</p>
 <h3>What happens if I already have a work-in-progress?</h3>
 <p>You can import an existing project. See <code>docs/QUICKSTART.md</code> for migration steps. Typically: place existing chapters in phase directories, create a Status document summarizing current state, invoke the style-resolver on your institution&#x27;s guidelines, continue.</p>
 <h3>Does this work without Git?</h3>
-<p>For small works (seminar papers), yes. For theses, you will regret not using Git by month three. The setup script initializes a repository automatically. <code>docs/git_introduction.md</code> explains the three commands you need: <code>status</code>, <code>add</code>, <code>commit</code>.</p>
+<p>For small works (seminar papers), yes. For theses, you will regret not using Git by month three. The setup script initializes a repository automatically — unless the folder already is one: if you cloned cephalo instead of downloading the ZIP, set up with <code>--target</code> so your thesis gets its own fresh history instead of sitting on top of cephalo&#x27;s. <code>docs/git_introduction.md</code> explains the three commands you need: <code>status</code>, <code>add</code>, <code>commit</code>.</p>
 <h3>How much does it cost?</h3>
 <p>cephalo itself is free. You pay for the Claude Code subscription (standard Anthropic pricing). Typical thesis projects use a mix of expensive and cheap models, with the phase separation feature cutting total costs by an estimated 60–70% versus naive use of the capable model throughout.</p>
 <h3>Can I contribute?</h3>
-<p>This is an early project. Feedback on the agent definitions, workflow configurations, and error catalog is welcome. Specifically: if your institution&#x27;s style guide produces unusual results with the style-resolver, a sample (anonymized) plus the problematic output is valuable.</p>
+<p>This is an early project. Feedback on the agent definitions, workflow configurations, and error catalog is welcome — <code>CONTRIBUTING.md</code> explains how. Specifically: if your institution&#x27;s style guide produces unusual results with the style-resolver, a sample (anonymized) plus the problematic output is valuable.</p>
 <h3>Symlinks don&#x27;t work on my Windows machine — what do I do?</h3>
 <p>Creating symlinks on Windows requires Administrator privileges OR Developer Mode enabled (Settings -&gt; For developers -&gt; Developer Mode: on). Developer Mode is the less invasive option — enable it once and symlinks work without Admin rights.</p>
 <p>If neither is possible, the multi-project setup script falls back to copying <code>00_Shared_Materials/</code> into each sub-project. The setup succeeds, but updates to the styleguide will not propagate automatically. See <code>docs/multiproject_structure.md</code> for the diagnostic command (<code>Get-Item shared | Select-Object LinkType</code>) and a re-sync PowerShell snippet.</p>
