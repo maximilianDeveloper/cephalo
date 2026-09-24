@@ -231,6 +231,36 @@ normalize_structure() {
     esac
 }
 
+canon_path() {
+    # Print the canonical absolute form of path $1, which need not exist
+    # yet: the deepest existing ancestor is resolved physically (cd +
+    # pwd -P, so symlinks and a symlinked cwd are seen through), the
+    # remaining components are appended with "." and ".." resolved
+    # lexically. A relative path ends at "." (the cwd); a path that is
+    # already a directory is resolved as given (e.g. C:/... on Git Bash).
+    # Plain bash 3.2 (macOS): no arrays, no mapfile.
+    local p="$1" rest="" out comp
+    while [ ! -d "$p" ]; do
+        case "$p" in .|/) return 1 ;; esac
+        rest="$(basename -- "$p")${rest:+/$rest}"
+        p="$(dirname -- "$p")"
+    done
+    out="$(cd -- "$p" 2>/dev/null && pwd -P)" || return 1
+    while [ -n "$rest" ]; do
+        comp="${rest%%/*}"
+        case "$rest" in
+            */*) rest="${rest#*/}" ;;
+            *)   rest="" ;;
+        esac
+        case "$comp" in
+            ""|.) ;;
+            ..)   out="${out%/*}"; [ -n "$out" ] || out="/" ;;
+            *)    out="${out%/}/$comp" ;;
+        esac
+    done
+    printf '%s\n' "$out"
+}
+
 # ==========================================================
 # Start
 # ==========================================================
@@ -455,46 +485,35 @@ if [ -n "$TARGET_DIR" ]; then
     SOURCE_DIR_BEFORE_MOVE="$(pwd)"
 
     # Compare canonical physical paths, so alternate spellings of the same
-    # directory (trailing slash, relative path like ".", symlinked path)
-    # are recognized and we do not tar-copy a directory onto itself.
+    # directory (trailing slash, relative path like "." or "..", symlinked
+    # path or cwd) are recognized and we do not tar-copy a directory onto
+    # itself. canon_path also resolves targets that do not exist yet.
     SOURCE_CANON="$(pwd -P)"
-    TARGET_CANON=""
-    if [ -d "$TARGET_DIR" ]; then
-        TARGET_CANON="$(cd "$TARGET_DIR" 2>/dev/null && pwd -P)" || TARGET_CANON=""
+    if ! TARGET_CANON="$(canon_path "$TARGET_DIR")"; then
+        echo -e "${RED}Error: cannot resolve target path '$TARGET_DIR'.${NC}" >&2
+        exit 2
     fi
-    if [ -n "$TARGET_CANON" ] && [ "$TARGET_CANON" = "$SOURCE_CANON" ]; then
+    if [ "$TARGET_CANON" = "$SOURCE_CANON" ]; then
         echo -e "${GRAY}Target path equals current location — proceeding here.${NC}"
         TARGET_DIR=""
         SOURCE_DIR_BEFORE_MOVE=""
-    elif [ -n "$TARGET_DIR" ]; then
+    else
         # Refuse a target INSIDE the template directory: the copy would try to
         # copy the source into one of its own subdirectories (self-copy), fail
         # mid-way, and leave a half-populated directory behind. Reject up front
         # with an actionable message (mirrors setup.ps1's equivalent guard).
-        #
-        # TARGET_CANON is only set above if the target already exists on disk
-        # (pwd -P needs a real directory to resolve into), so a not-yet-created
-        # target needs a string-based resolution instead. We approximate
-        # GetFullPath by prefixing a relative path with the source directory;
-        # this does not resolve ".."/symlinks, but the physical-path check
-        # above already covers the case where the target directory exists.
-        TARGET_CHECK="$TARGET_CANON"
-        if [ -z "$TARGET_CHECK" ]; then
-            case "$TARGET_DIR" in
-                /*) TARGET_CHECK="$TARGET_DIR" ;;
-                *)  TARGET_CHECK="$SOURCE_CANON/$TARGET_DIR" ;;
-            esac
-        fi
         SOURCE_PREFIX="${SOURCE_CANON%/}/"
-        TARGET_CHECK_SLASH="${TARGET_CHECK%/}/"
-        if [ "$TARGET_CHECK_SLASH" = "$SOURCE_PREFIX" ] || [[ "$TARGET_CHECK_SLASH" == "$SOURCE_PREFIX"* ]]; then
+        if [[ "${TARGET_CANON%/}/" == "$SOURCE_PREFIX"* ]]; then
             echo "" >&2
             echo -e "${RED}Error: the target directory must not be inside the cephalo template directory.${NC}" >&2
             echo -e "${RED}  Template: $SOURCE_CANON${NC}" >&2
-            echo -e "${RED}  Target:   $TARGET_CHECK${NC}" >&2
+            echo -e "${RED}  Target:   $TARGET_CANON${NC}" >&2
             echo -e "${RED}  Choose a target outside the template folder, or run without --target to set up here.${NC}" >&2
             exit 2
         fi
+        # Continue with the canonical path, so mkdir -p below never creates
+        # stray directories for spellings like "a/zzz/../Thesis".
+        TARGET_DIR="$TARGET_CANON"
     fi
 fi
 
