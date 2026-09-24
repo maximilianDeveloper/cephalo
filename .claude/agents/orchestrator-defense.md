@@ -19,7 +19,7 @@ All paths assume the active working directory is `03_Defense/` — i.e., Claude 
 
 **Defense project (your workspace):**
 - Project root: `03_Defense/`
-- State: `03_Defense/00_Status.md`, `00_Decisions.md`
+- State: `00_Status.md`, `00_Decisions.md`
 - phase directories: `01_Slides/`, `02_Speaker_Notes/`, `03_Defense_Prep/`, `04_Handout/`, `05_Rehearsals/`, `06_Defense_Day/`
 
 **Main work (READ-ONLY reference):**
@@ -33,16 +33,16 @@ All paths assume the active working directory is `03_Defense/` — i.e., Claude 
 - Styleguide: `../00_Shared_Materials/styleguide.md` (only relevant for slide formatting)
 
 **Additional working files (written during this workflow):**
-- Expected examiner questions: `03_Defense/03_Defense_Prep/expected_questions.md`
-- Weaknesses of the submitted work: `03_Defense/03_Defense_Prep/weaknesses_of_work.md`
-- Rehearsal log: `03_Defense/05_Rehearsals/rehearsal_log.md`
+- Expected examiner questions: `03_Defense_Prep/expected_questions.md`
+- Weaknesses of the submitted work: `03_Defense_Prep/weaknesses_of_work.md`
+- Rehearsal log: `05_Rehearsals/rehearsal_log.md`
 
 ## Chat start ritual
 
 At the start of every chat, read these files in order before doing anything else:
 
-1. `03_Defense/00_Status.md` — state of preparation
-2. `03_Defense/<current_phase>/handover.md` — last phase state
+1. `00_Status.md` — state of preparation
+2. `<current_phase>/handover.md` — last phase state
 3. `00_Decisions.md` — defense date, examining committee, formal requirements
 4. **`../02_Main_Work/00_Status.md`** — summary of the submitted work (mandatory extra read for defense work; you cannot prepare a defense without knowing the state of the work being defended)
 5. `shared/styleguide.md` — only for slide formatting
@@ -71,7 +71,7 @@ At the start of every chat, read these files in order before doing anything else
 
 If you notice errors or shortcomings in the thesis during preparation:
 - **Do NOT** correct the work
-- Log the item in `03_Defense/03_Defense_Prep/weaknesses_of_work.md`
+- Log the item in `03_Defense_Prep/weaknesses_of_work.md`
 - Prepare a response strategy for potential examiner questions about it
 
 Mantra: "The work is what it is. The task now is to defend it."
@@ -121,9 +121,9 @@ If time runs short: handout and backup slides can be dropped, rehearsals cannot.
 
 At the end of every chat, perform these steps:
 
-1. **Update `03_Defense/<current_phase>/handover.md`** — what was produced, open items, next chat's start point
-2. **Update `03_Defense/00_Status.md`** — phase status, timeline against the defense date
-3. **Log patterns** into `03_Defense/00_Feedback_log.md` if recurring issues appeared (e.g., slides consistently too dense)
+1. **Update `<current_phase>/handover.md`** — what was produced, open items, next chat's start point
+2. **Update `00_Status.md`** — phase status, timeline against the defense date
+3. **Log patterns** into `00_Feedback_log.md` if recurring issues appeared (e.g., slides consistently too dense)
 4. **Suggest a Git commit** — prefix `defense/<phase>:`
 5. **State the next task** — what the next chat should pick up
 
