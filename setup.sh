@@ -631,6 +631,8 @@ if [ -n "$TARGET_DIR" ]; then
 
     # Copy the cephalo template into the target.
     # We copy visible and dot-files, but exclude .git (user will init fresh).
+    # Virtual environments (.venv/, venv/) are skipped at any depth, as in
+    # setup.ps1 and .gitignore: their scripts point back into the template.
     echo ""
     echo -e "${CYAN}Copying cephalo template to target...${NC}"
     # Use a tar-pipe to reliably include dotfiles and respect excludes
@@ -643,7 +645,8 @@ if [ -n "$TARGET_DIR" ]; then
         tar --exclude='./.git' --exclude='./.git/*' \
             --exclude='./.claude/worktrees' --exclude='./.claude/worktrees/*' \
             --exclude='./.claude/settings.local.json' \
-            --exclude='./.venv' --exclude='./.venv/*' \
+            --exclude='.venv' --exclude='*/.venv' --exclude='*/.venv/*' \
+            --exclude='venv' --exclude='*/venv' --exclude='*/venv/*' \
             --exclude='__pycache__' --exclude='*/__pycache__' --exclude='*/__pycache__/*' \
             --exclude='*.pyc' \
             -cf - .
