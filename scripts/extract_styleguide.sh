@@ -246,9 +246,14 @@ def extract_pdf_text(pdf_path, out_path):
 
 
 def safe_extract_zip(zip_path, target_dir):
-    """Safely extract ZIP contents, blocking path-traversal (ZipSlip)."""
+    """Safely extract ZIP contents, blocking path-traversal (ZipSlip) and zip bombs."""
     target_abs = target_dir.resolve()
     with zipfile.ZipFile(zip_path) as zf:
+        # Cap entry count and unpacked size. The declared sizes can be
+        # trusted: zipfile never extracts more bytes than an entry declares.
+        infos = zf.infolist()
+        if len(infos) > 10000 or sum(i.file_size for i in infos) > 512 * 1024 * 1024:
+            raise ValueError("archive too large when unpacked (limit: 512 MiB, 10000 entries)")
         for member in zf.namelist():
             # Reject absolute paths and any '..' components
             if member.startswith('/') or member.startswith('\\'):

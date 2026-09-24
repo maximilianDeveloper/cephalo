@@ -69,7 +69,7 @@ What it does:
 1. Scans the directory recursively for `.pdf` files (case-insensitive, so `.PDF` is matched the same way on every platform)
 2. For each file, detects whether it is a real PDF or a ZIP archive disguised as `.pdf` (some institutional portals do this)
 3. Real PDFs: extracts text via `pypdf` (preferred) or `pdftotext` (fallback)
-4. Disguised ZIPs: safely extracts contained `.txt` files and text from contained PDFs (path-traversal attacks are blocked)
+4. Disguised ZIPs: safely extracts contained `.txt` files and text from contained PDFs (path-traversal attacks are blocked, and archives that would unpack to more than 512 MiB or 10,000 entries are refused)
 5. Writes one `.txt` file per input into the output directory; if flattening two different input paths would produce the same output filename, a numeric suffix is added instead of silently overwriting one of them
 
 After running, invoke the style-resolver agent in Claude Code:
