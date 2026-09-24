@@ -77,6 +77,11 @@ GERMAN_NON_AUTHOR_CAPS = {
     "Studie", "Untersuchung", "Forschung", "Arbeit",
 }
 
+# Stoplist words that are also common surnames. In parentheses before a year
+# ("(Winter, 2017)") they are far more likely a citation than prose, so the
+# parenthetical stage does not filter them: a missing entry is still reported.
+SURNAME_LIKE_STOPWORDS = {"Sommer", "Winter", "Herbst", "Freitag", "Montag", "Mai", "August"}
+
 
 def read_docx_paragraphs(path: Path) -> list[str]:
     """Read all paragraph text from a .docx file."""
@@ -197,10 +202,12 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
                 surname = next((t for t in reversed(part.split()) if t[:1].isupper()), "")
                 # Safety net: skip known non-author capitalized words
                 # (e.g., "(März 2021)", "(Tabelle 3, 2020)"). All-caps
-                # acronyms are kept here: in parentheses before a year,
-                # "(OECD, 2019)" is a citation, and a missing entry for it
+                # acronyms and surname-like stopwords are kept here: in
+                # parentheses before a year, "(OECD, 2019)" or
+                # "(Winter, 2017)" is a citation, and a missing entry for it
                 # must still be reported.
-                if len(surname) > 1 and (surname not in stop or surname.isupper()):
+                if len(surname) > 1 and (surname not in stop or surname.isupper()
+                                         or surname in SURNAME_LIKE_STOPWORDS):
                     authors.add(surname)
     
     # Pattern 2: narrative citations (Author (YYYY))
