@@ -122,6 +122,14 @@ function Ask-Choice($Question, $Options) {
     }
     do {
         $answer = Read-Host "Choice (1-$($Options.Length))"
+        if ($null -eq $answer) {
+            # EOF (stdin closed, e.g. an unattended run without -NonInteractive).
+            # An empty Enter returns "", not $null, and is handled below.
+            Write-Host ""
+            Write-Host "Error: input closed before a choice was made." -ForegroundColor Red
+            Write-Host "For unattended runs, pass -WorkType, -Structure, -Scaffolding and -NonInteractive." -ForegroundColor Red
+            exit 2
+        }
         $n = 0
         $ok = [int]::TryParse($answer, [ref]$n)
         $valid = $ok -and $n -ge 1 -and $n -le $Options.Length
@@ -532,6 +540,13 @@ if ($NonInteractive) {
     Write-Host "(Non-interactive mode: proceeding without confirmation)" -ForegroundColor Gray
 } else {
     $confirm = Read-Host "Proceed? (y/j = yes, n = no)"
+    if ($null -eq $confirm) {
+        # EOF (stdin closed): fail instead of reporting a successful "Cancelled."
+        Write-Host ""
+        Write-Host "Error: input closed before confirmation." -ForegroundColor Red
+        Write-Host "For unattended runs, pass -WorkType, -Structure, -Scaffolding and -NonInteractive." -ForegroundColor Red
+        exit 2
+    }
     if ($confirm -ne "y" -and $confirm -ne "j") {
         Write-Host "Cancelled." -ForegroundColor Yellow
         exit 0
