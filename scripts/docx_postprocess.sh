@@ -206,7 +206,9 @@ if not content_types:
 # Stable ordering of the rest
 others.sort(key=lambda e: e[1])
 
-with zipfile.ZipFile(out_path, 'w', zipfile.ZIP_DEFLATED) as zf:
+# strict_timestamps=False: Word dates every entry 1980-01-01 00:00, which the
+# restored mtime can turn into 1979-12-31 in some time zones (e.g. Asia/Singapore).
+with zipfile.ZipFile(out_path, 'w', zipfile.ZIP_DEFLATED, strict_timestamps=False) as zf:
     # First: Content_Types, stored
     abs_path, rel_path = content_types[0]
     zf.write(abs_path, rel_path, compress_type=zipfile.ZIP_STORED)
