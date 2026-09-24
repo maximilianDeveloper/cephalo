@@ -614,8 +614,10 @@ if [ -n "$TARGET_DIR" ]; then
     fi
 
     # Handle non-empty existing target
+    TARGET_HAD_FILES=false
     if [ -d "$TARGET_DIR" ]; then
         if [ "$(ls -A "$TARGET_DIR" 2>/dev/null)" ]; then
+            TARGET_HAD_FILES=true
             echo ""
             echo -e "${YELLOW}Warning: target directory already exists and is not empty:${NC}"
             echo -e "${YELLOW}  $TARGET_DIR${NC}"
@@ -672,7 +674,12 @@ if [ -n "$TARGET_DIR" ]; then
         echo -e "${RED}Error: copying the template failed (see the tar messages above).${NC}" >&2
         echo -e "${RED}  Source: $SOURCE_DIR_BEFORE_MOVE${NC}" >&2
         echo -e "${RED}  Target: $TARGET_DIR${NC}" >&2
-        echo -e "${RED}  Delete the partial target directory, then re-run setup.${NC}" >&2
+        if $TARGET_HAD_FILES; then
+            # Never advise deleting a directory that also holds the user's files.
+            echo -e "${RED}  The target already contained your files: remove the copied template files, or re-run with an empty target.${NC}" >&2
+        else
+            echo -e "${RED}  Delete the partial target directory, then re-run setup.${NC}" >&2
+        fi
         exit 3
     fi
 
