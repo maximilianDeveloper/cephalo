@@ -146,12 +146,14 @@ if PRESENT_RE.search(content):
     # Element exists but disables hyphenation — rewrite it in place
     # (same position, so no element-ordering concerns).
     content = PRESENT_RE.sub('<w:autoHyphenation/>', content, count=1)
-# Preferred: insert after displayBackgroundShape
-elif '<w:displayBackgroundShape/>' in content:
-    content = content.replace(
-        '<w:displayBackgroundShape/>',
-        '<w:displayBackgroundShape/><w:autoHyphenation/>',
-        1,
+# Preferred: insert directly after defaultTabStop, its schema predecessor
+# (python-docx, Word and LibreOffice all write defaultTabStop)
+elif re.search(r'<w:defaultTabStop\b[^>]*/>', content):
+    content = re.sub(
+        r'(<w:defaultTabStop\b[^>]*/>)',
+        r'\1<w:autoHyphenation/>',
+        content,
+        count=1,
     )
 else:
     # Fallback: insert as first child of <w:settings ...>
