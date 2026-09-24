@@ -99,9 +99,12 @@ phases:
   phase_0_setup:
     steps:
       - step: 0.0
-        name: Create project directory
+        name: Verify project directory
         manual: true
-        task: 03_Defense/ with sub-directories 01_Slides, 02_Speaker_Notes, etc.
+        task: |
+          setup.sh / setup.ps1 created 03_Defense/ with sub-directories 01_Slides,
+          02_Speaker_Notes, etc. (with minimal scaffolding, create the missing ones).
+          Git lives at the multi-project root; never run git init in 03_Defense/.
       
       - step: 0.1
         name: Confirm submitted work is the basis
@@ -115,12 +118,14 @@ phases:
           If no: STOP. Submit thesis officially first.
       
       - step: 0.2
-        name: Create central files
+        name: Verify central files, record the defense basics
         agent: orchestrator-defense
         task: |
+          Created by setup (verify; if missing, copy from the template):
           - 00_Status.md from templates/status.md
           - 00_Decisions.md from templates/decisions.md (initial: defense date, examining committee)
           - 00_Feedback_log.md from templates/feedback_log.md
+          Create:
           - README.md describing the sub-project's purpose
       
       - step: 0.3
