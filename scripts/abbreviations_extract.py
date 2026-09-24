@@ -17,6 +17,7 @@ Usage:
     python scripts/abbreviations_extract.py path/to/file.docx
 """
 
+import os
 import re
 import sys
 from pathlib import Path
@@ -119,6 +120,13 @@ def read_docx_text(path: Path) -> str:
     except PackageNotFoundError:
         print(f"Error: {path} is not a valid .docx file (corrupt or renamed?)", file=sys.stderr)
         sys.exit(1)
+    except Exception as exc:
+        # A ZIP that is not a readable Word package: BadZipFile, zlib.error,
+        # KeyError (missing part), ValueError (not a Word file),
+        # XMLSyntaxError, OSError, ...
+        print(f"Error: cannot read {path} as .docx ({type(exc).__name__}: {exc})",
+              file=sys.stderr)
+        sys.exit(1)
     chunks: list[str] = []
     
     # Paragraphs in the main body
@@ -195,12 +203,21 @@ def main():
         sys.exit(1)
 
     doc_path = Path(sys.argv[1])
-    if not doc_path.exists():
-        print(f"Error: file not found: {doc_path}", file=sys.stderr)
+    # Probe with open() rather than Path.exists(): exists() is True for a
+    # directory and raises PermissionError when a parent is not searchable.
+    try:
+        with open(doc_path, "rb"):
+            pass
+    except OSError as exc:
+        # Windows reports a directory as "Permission denied"
+        reason = "is a directory" if os.path.isdir(doc_path) else exc.strerror or exc
+        print(f"Error: cannot open {doc_path}: {reason}", file=sys.stderr)
         sys.exit(1)
     
     if doc_path.suffix.lower() != ".docx":
-        print(f"Error: expected a .docx file, got {doc_path.suffix}", file=sys.stderr)
+        print(f"Error: expected a .docx file, got "
+              f"{doc_path.suffix or 'a file without extension'}: {doc_path}",
+              file=sys.stderr)
         sys.exit(1)
     
     text = read_docx_text(doc_path)
