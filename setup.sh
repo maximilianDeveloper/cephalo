@@ -307,8 +307,11 @@ Positional arguments (all optional; missing values trigger interactive prompts):
 
   SCAFFOLDING  "full" or "minimal"
 
-When all three positional arguments are supplied, the run is fully
-non-interactive: no confirmation prompt, safe with closed stdin (CI).
+When all three positional arguments are supplied, the configuration and
+confirmation prompts are skipped and the run is safe with closed stdin (CI).
+On a terminal, the script still waits for Enter before closing and, after
+a --target copy, offers to delete the original template folder. Redirect
+stdin (</dev/null) for fully unattended runs.
 
 Optional flags:
 
