@@ -51,7 +51,8 @@ Some institutional course files are ZIP archives with JPEGs/TXTs disguised as `.
 ```bash
 file source.pdf
 # "PDF document"        -> real PDF, pdftotext works
-# "Zip archive data"    -> NOT a real PDF, unzip needed
+# "Zip archive data"    -> NOT a real PDF: extract only with scripts/extract_styleguide.sh
+#                          (see research-agent), never with unzip or another extractor
 ```
 
 Filenames can be misleading: a file named with the topic might actually contain a different chapter or even a different work. Always verify content.

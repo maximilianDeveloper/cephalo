@@ -33,9 +33,19 @@ The name is slightly misleading: you do not browse the internet or find new sour
 
 1. **Identify and load the source.**
    - Check file type: `file <path>` — some institutional files are ZIP archives disguised as PDFs
-   - For ZIP archives: extract with `scripts/extract_styleguide.sh`, never with a bare
-     `unzip`. The script rejects entries carrying absolute paths or `..` components — a
-     prepared archive would otherwise write outside the target directory
+   - For ZIP archives (including one named `.pdf`): copy only that file into an empty
+     scratch folder and run `scripts/extract_styleguide.sh <scratch-folder> <scratch-folder>/out`.
+     Always pass an explicit output folder, never the default `_styleguide_rawtext/` — the
+     style-resolver reads that folder. The script processes only `.pdf`-named files and keeps
+     only `.txt`/`.pdf` members of an archive: its output has no page markers, and images
+     (scanned pages) and real `.zip`/`.epub` files are ignored. If it finds no usable text, or
+     you cannot attribute quotes to pages, do not extract the archive any other way: mark the
+     source `❓` in the extract and ask the user for a readable PDF
+   - Never use any other extractor (`unzip`, `tar`/`bsdtar`, `7z`, Python
+     `zipfile`/`shutil.unpack_archive`, PowerShell `Expand-Archive`). The script rejects
+     entries carrying absolute paths or `..` components — a prepared archive would otherwise
+     write outside the target directory. If the script cannot handle the file, stop and ask
+     the user
    - For real PDFs: read content
    - For e-books: use page numbers from the print edition when available, not e-book pagination
 
