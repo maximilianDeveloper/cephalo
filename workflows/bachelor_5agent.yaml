@@ -180,6 +180,8 @@ phases:
       format-verifier (fast) and build scripts only.
       writer-agent (capable) is activated ONLY for genuine content corrections.
       Expected iterations: many small passes.
+      format-verifier is model: inherit — run Phase B chats on a fast main
+      model (e.g. switch with /model), otherwise the savings do not materialize.
     
     active_agents: [format-verifier, orchestrator]
     writer_agent_deactivated: true
