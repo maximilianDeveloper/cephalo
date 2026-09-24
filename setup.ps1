@@ -874,7 +874,12 @@ if ($Structure -eq "Flat") {
 }
 Write-Host ""
 $stepNo++
-Write-Host "$stepNo. Open this directory in Claude Code and invoke the style-resolver:"
+if ($Structure -match "^Multi-project") {
+    Write-Host "$stepNo. Open a sub-project (e.g. 01_Proposal\) in Claude Code - not this root -"
+    Write-Host "   and invoke the style-resolver:"
+} else {
+    Write-Host "$stepNo. Open this directory in Claude Code and invoke the style-resolver:"
+}
 Write-Host "   (see README.md, Quick start step 4)"
 Write-Host ""
 

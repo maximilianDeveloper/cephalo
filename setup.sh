@@ -992,7 +992,12 @@ else
 fi
 echo ""
 STEP_NO=$((STEP_NO + 1))
-echo "$STEP_NO. Open this directory in Claude Code and invoke the style-resolver"
+if [[ "$STRUCTURE" =~ ^Multi-project ]]; then
+    echo "$STEP_NO. Open a sub-project (e.g. 01_Proposal/) in Claude Code — not this root —"
+    echo "   and invoke the style-resolver"
+else
+    echo "$STEP_NO. Open this directory in Claude Code and invoke the style-resolver"
+fi
 echo ""
 
 if $IS_MINIMAL; then
