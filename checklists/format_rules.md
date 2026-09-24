@@ -21,7 +21,7 @@ For every category below: **read concrete values from `styleguide.md`**, not fro
 - [ ] Line spacing (styleguide: `body.line_spacing`)
 - [ ] Page margins (styleguide: `document.margins`)
 - [ ] Body alignment (styleguide: `body.alignment`)
-- [ ] Hyphenation active (styleguide: `document.hyphenation`)
+- [ ] Hyphenation as specified (styleguide: `document.hyphenation`)
 - [ ] Forbidden pronouns (styleguide: `style.forbidden_pronouns`)
 - [ ] Page count within range (styleguide: `document.page_count`)
 - [ ] Paragraph spacing (styleguide: `body.paragraph_spacing`)
@@ -106,12 +106,13 @@ python scripts/bibliography_check.py workspace/output/document.docx
 python scripts/abbreviations_extract.py workspace/output/document.docx
 
 # Pronoun check (use forbidden pronouns from styleguide)
-pandoc workspace/output/document.docx -o /dev/stdout --to plain | \
-  grep -iE " (<forbidden_pronouns_from_styleguide>) "
+pandoc workspace/output/document.docx -o /dev/stdout --to plain --wrap=none | \
+  grep -inwE "(<forbidden_pronouns_from_styleguide>)"
 
 # Page-range notation consistency check
-pandoc workspace/output/document.docx -o /dev/stdout --to plain | \
-  grep -oE "p\.\s[0-9]+(\s(to|–|-)\s[0-9]+)?" | sort -u
+# (the character class also holds a non-breaking space; "S." covers German "Seite")
+pandoc workspace/output/document.docx -o /dev/stdout --to plain --wrap=none | \
+  grep -oE "(pp?|S)\.[[:space:] ]*[0-9]+([[:space:] ]*(to|bis|–|-)[[:space:] ]*[0-9]+)?" | sort | uniq -c
 # Compare results against styleguide.md
 ```
 

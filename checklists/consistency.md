@@ -84,14 +84,14 @@ To be performed after the last written chapter (introduction, written last).
 - [ ] Page count within range (styleguide.md -> `document.page_count`)
 - [ ] Title page fully filled in (no placeholders!)
 - [ ] Pagination matches the styleguide (`pagination.front_matter` / `pagination.main_text` / `pagination.position` — see `checklists/format_rules.md`)
-- [ ] Hyphenation enabled (Word: Layout -> Hyphenation -> Automatic)
+- [ ] Hyphenation as specified (styleguide: `document.hyphenation`; in Word: Layout -> Hyphenation)
 - [ ] Body alignment matches the styleguide (`body.alignment`)
 - [ ] Styleguide check complete (see `checklists/format_rules.md`)
 
 ### B.5 Three-way consistency check (presentations only)
 
 - [ ] PPTX <-> PDF export <-> speaker notes contain identical numbers, quotes, statements
-- [ ] Pie chart format: "0.0%" (not "0%") to avoid rounding errors
+- [ ] Pie chart percentages: the labelled values sum to 100% (one decimal, e.g. "0.0%", narrows rounding gaps but does not remove them; note any rounding)
 - [ ] Timing test: presentation within the target range your institution or course specifies (check the assignment briefing / styleguide)
 
 ### B.6 Git status (long-form / multi-project)
