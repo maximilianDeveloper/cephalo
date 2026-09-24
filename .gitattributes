@@ -1,0 +1,3 @@
+# Keep LF in shell scripts even when a Windows checkout uses core.autocrlf=true:
+# bash (WSL, Git Bash) fails on CRLF line endings.
+*.sh text eol=lf
