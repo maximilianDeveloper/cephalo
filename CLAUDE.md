@@ -31,7 +31,7 @@ project-root/
     │   ├── chapters/            ← chapter drafts
     │   └── slides/              ← presentations only
     ├── methods/                 ← empirical master/dissertation only
-    ├── data/                    ← empirical master/dissertation only
+    ├── data/                    ← empirical master/dissertation; presentations (chart data)
     │   ├── raw/                 ← read-only, never modified
     │   ├── processed/
     │   ├── scripts/             ← analysis scripts (R, Python, etc.)
@@ -116,7 +116,7 @@ Long-form works go through two distinct phases:
 
 **Phase A (Content):** Writer and source-verifier agents (capable models) iterate on substance until the chapters are stable.
 
-**Phase B (Formatting):** format-verifier and utility scripts (fast models) iterate on presentation, citations, plagiarism checks. The writer agent is dormant unless a real content issue surfaces.
+**Phase B (Formatting):** format-verifier and utility scripts (fast models) iterate on presentation, citations, bibliography and abbreviation checks. The writer agent is dormant unless a real content issue surfaces.
 
 This split reduces cost by ~60–70% versus running capable models throughout. See `docs/phase_separation.md`.
 
