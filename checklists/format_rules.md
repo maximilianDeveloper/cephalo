@@ -35,20 +35,16 @@ For every category below: **read concrete values from `styleguide.md`**, not fro
 - [ ] Numbering convention (styleguide: `headings.numbering`)
 - [ ] Max nesting depth (styleguide: `headings.max_depth`)
 
-### Title page (institutional rules — typically stable)
+### Title page (elements per styleguide)
 
-- [ ] Full institution name
-- [ ] Examination type, course name, program of study
-- [ ] Title of the work
-- [ ] Author name, student ID
-- [ ] Supervisor (with academic title if known), date
-- [ ] ONLY required entries (no logo, no decoration)
+- [ ] Required elements present per styleguide (commonly: institution name; examination type, course name, program of study; title of the work; author name, student ID; supervisor, date)
+- [ ] Decoration/logo policy per styleguide (some institutions forbid any decoration or logo)
 
 ### Pagination
 
-- [ ] Title page: no visible page number (counted, not shown)
-- [ ] Front matter: Roman numerals (styleguide: `pagination.front_matter`)
-- [ ] Main text: Arabic from introduction onward (styleguide: `pagination.main_text`)
+- [ ] Title page numbering (styleguide: `pagination.title_page`; a common convention: counted but not shown)
+- [ ] Front matter (styleguide: `pagination.front_matter`; a common convention: Roman numerals)
+- [ ] Main text (styleguide: `pagination.main_text`; a common convention: Arabic from the introduction onward)
 - [ ] Position (styleguide: `pagination.position`)
 
 ### Table of contents
