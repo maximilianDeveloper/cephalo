@@ -48,8 +48,9 @@ for f in files:
     print("OK", f)
 EOF
 
-# Reference integrity: every agent invoked in a workflow must be declared
-# (manual check: each agent name referenced in a workflow YAML must exist in .claude/agents/)
+# Reference integrity (agents declared and present, frontmatter names, archive
+# routing): run the Python block of the "Agent and workflow references" step
+# in .github/workflows/ci.yml; CI runs the same check
 
 # Shell syntax (one file per call: bash -n treats further names as arguments)
 for f in setup.sh scripts/docx_postprocess.sh scripts/extract_styleguide.sh; do
