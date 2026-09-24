@@ -632,19 +632,28 @@ if [ -n "$TARGET_DIR" ]; then
     echo -e "${CYAN}Copying cephalo template to target...${NC}"
     # Use a tar-pipe to reliably include dotfiles and respect excludes
     # across Linux / macOS / Git Bash, without needing rsync.
-    (
-        cd "$SOURCE_DIR_BEFORE_MOVE"
+    # tar's own messages stay visible (disk full, permissions, path too
+    # long). set -e is off inside an if-condition, hence the && chains: a
+    # failed cd must never let tar run in the wrong directory.
+    if ! (
+        cd "$SOURCE_DIR_BEFORE_MOVE" &&
         tar --exclude='./.git' --exclude='./.git/*' \
             --exclude='./.claude/worktrees' --exclude='./.claude/worktrees/*' \
             --exclude='./.claude/settings.local.json' \
             --exclude='./.venv' --exclude='./.venv/*' \
             --exclude='__pycache__' --exclude='*/__pycache__' --exclude='*/__pycache__/*' \
             --exclude='*.pyc' \
-            -cf - . 2>/dev/null
+            -cf - .
     ) | (
-        cd "$TARGET_DIR"
-        tar -xf - 2>/dev/null
-    )
+        cd "$TARGET_DIR" &&
+        tar -xf -
+    ); then
+        echo -e "${RED}Error: copying the template failed (see the tar messages above).${NC}" >&2
+        echo -e "${RED}  Source: $SOURCE_DIR_BEFORE_MOVE${NC}" >&2
+        echo -e "${RED}  Target: $TARGET_DIR${NC}" >&2
+        echo -e "${RED}  Delete the partial target directory, then re-run setup.${NC}" >&2
+        exit 3
+    fi
 
     # Basic sanity check after copy
     if [ ! -f "$TARGET_DIR/setup.sh" ] || [ ! -d "$TARGET_DIR/.claude" ]; then
