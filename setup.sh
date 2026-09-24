@@ -458,7 +458,6 @@ if [ -z "$TARGET_DIR" ] && ! $NON_INTERACTIVE && [ -t 0 ] && [ -t 1 ]; then
                 echo "and the project structure will be created inside it."
                 echo "Example: ~/Documents/Bachelorarbeit_KMU_OSS"
                 read -r -p "Target path: " TARGET_DIR
-                TARGET_DIR="${TARGET_DIR/#\~/$HOME}"  # expand leading ~
                 if [ -z "$TARGET_DIR" ]; then
                     echo -e "${YELLOW}Empty path — using current location instead.${NC}"
                     TARGET_DIR=""
@@ -472,8 +471,12 @@ fi
 
 # Validate and process TARGET_DIR if set
 if [ -n "$TARGET_DIR" ]; then
-    # Expand ~ if present and not yet expanded
-    TARGET_DIR="${TARGET_DIR/#\~/$HOME}"
+    # Expand a bare ~ or a leading ~/ if not yet expanded (e.g. typed at
+    # the prompt). ~user forms are left alone: replacing only the ~ would
+    # turn ~Documents/X into "$HOME" + "Documents/X", a sibling of HOME.
+    case "$TARGET_DIR" in
+        \~|\~/*) TARGET_DIR="$HOME${TARGET_DIR#\~}" ;;
+    esac
     
     # Reject obviously bad paths
     if [[ "$TARGET_DIR" == *$'\n'* ]] || [[ "$TARGET_DIR" == *$'\r'* ]]; then
