@@ -93,6 +93,20 @@ trap 'rm -rf "$WORK_DIR"' EXIT
 cd "$WORK_DIR"
 unzip -q "$DOC_ABS"
 
+# Refuse documents containing symbolic links: unzip restores symlink entries,
+# and following them would embed arbitrary local files in the re-zipped
+# document or write the settings patch outside the work directory. Checked
+# with Python (fails closed) rather than `find`, which may be missing.
+"$PY" - << 'PYEOF'
+import os
+import sys
+
+for dirpath, dirnames, filenames in os.walk('.'):
+    for name in dirnames + filenames:
+        if os.path.islink(os.path.join(dirpath, name)):
+            sys.exit('Error: document contains symbolic links; refusing to process it')
+PYEOF
+
 SETTINGS="word/settings.xml"
 
 if [ ! -f "$SETTINGS" ]; then
