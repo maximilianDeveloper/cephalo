@@ -94,17 +94,17 @@ python3 scripts/abbreviations_extract.py --help
 
 What it does:
 
-1. Reads all text from the DOCX: paragraphs, tables (including nested), headers, footers, and footnotes/endnotes (footnotes and endnotes are read via their raw XML, since python-docx does not expose them as a typed part)
+1. Reads the text of body paragraphs, tables (including nested), header/footer paragraphs, and footnotes/endnotes (footnotes and endnotes are read via their raw XML, since python-docx does not expose them as a typed part)
 2. Extracts candidate abbreviations:
    - All-caps sequences, 2-8 characters, digits allowed alongside at least one letter (`ABC`, `EU`, `NATO`, `ÖPNV`, `B2B`, `CO2`, `5G`, `BENELUX`)
    - Dotted forms (`U.S.A.`, `A.B.C`) — normalized to their letters (`USA`, `ABC`)
-   - Mixed-case forms with at least two internal capitals, 3-8 characters (`GmbH`, `BaFin`, `AfD`) — note that 2-character mixed-case forms like `pH` are not matched
+   - Mixed-case forms, 3-8 letters, with at least two capitals in any position (`GmbH`, `BaFin`, `AfD`, `mRNA`; CamelCase names like `LinkedIn` are reported too) — note that 2-character mixed-case forms like `pH` are not matched
 3. Filters out common abbreviations (`e.g.`, `i.e.`, `USA`, etc.)
 4. Prints the remaining project-specific list
 
 Use the output to cross-check the document's existing list of abbreviations. Add missing entries, remove unused ones. The common-abbreviations filter removes dots on both sides before comparing, so dotted forms like `U.S.A.` are correctly recognized as `USA` and filtered. The comparison is case-sensitive, so acronyms such as `MS`, `NO` or `CO` are not hidden by the entries `Ms`, `no` or `Co`; only dotted entries also match their all-caps form, so a sentence-initial `Z.B.` or `E.G.` is filtered too (and so is the acronym `EG`).
 
-Not extracted: acronyms longer than 8 characters, and lowercase-led mixed-case forms under 3 characters (`pH`). If you use such abbreviations, check for them manually — their absence from the tool's output is not proof they're unused.
+Not extracted: acronyms longer than 8 characters, and lowercase-led mixed-case forms under 3 characters (`pH`). Not read outside footnotes/endnotes: text boxes, content controls (used by some citation managers and cover-page templates), unaccepted tracked insertions (accept all changes before running the script), simple fields, and tables inside headers/footers. If you use such abbreviations or elements, check for them manually — their absence from the tool's output is not proof they're unused.
 
 ### `bibliography_check.py`
 

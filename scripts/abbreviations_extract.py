@@ -114,8 +114,10 @@ def extract_abbreviations(text: str) -> set[str]:
 
 def read_docx_text(path: Path) -> str:
     """
-    Read text from a .docx file, including all locations where abbreviations
-    might appear: paragraphs, tables, headers, footers, and footnotes.
+    Read text from a .docx file: body paragraphs, tables (including nested),
+    header/footer paragraphs, and footnotes/endnotes. Outside the notes, text
+    boxes, content controls, unaccepted tracked insertions, simple fields and
+    tables inside headers/footers are not read.
 
     Footnotes and endnotes are reached via the low-level XML: python-docx
     does not expose them on the Document object and loads their parts as
