@@ -102,7 +102,7 @@ What it does:
 3. Filters out common abbreviations (`e.g.`, `i.e.`, `USA`, etc.)
 4. Prints the remaining project-specific list
 
-Use the output to cross-check the document's existing list of abbreviations. Add missing entries, remove unused ones. The common-abbreviations filter normalizes dots and case on both sides before comparing, so dotted forms like `U.S.A.` are correctly recognized as `USA` and filtered.
+Use the output to cross-check the document's existing list of abbreviations. Add missing entries, remove unused ones. The common-abbreviations filter removes dots on both sides before comparing, so dotted forms like `U.S.A.` are correctly recognized as `USA` and filtered. The comparison is case-sensitive, so acronyms such as `MS`, `NO` or `CO` are not hidden by the entries `Ms`, `no` or `Co`; only dotted entries also match their all-caps form, so a sentence-initial `Z.B.` or `E.G.` is filtered too (and so is the acronym `EG`).
 
 Not extracted: acronyms longer than 8 characters, and lowercase-led mixed-case forms under 3 characters (`pH`). If you use such abbreviations, check for them manually — their absence from the tool's output is not proof they're unused.
 

@@ -223,14 +223,18 @@ def main():
     text = read_docx_text(doc_path)
     found = extract_abbreviations(text)
     
-    # Filter out common abbreviations. Both sides must be normalized identically:
-    # the extract_abbreviations() function strips dots and uppercases for all-caps
-    # candidates; we apply the same normalization here to the COMMON_ABBREVIATIONS
-    # set. Mixed-case candidates (GmbH) are kept as-is and matched case-sensitively.
-    common_normalized = {c.replace(".", "").upper() for c in COMMON_ABBREVIATIONS}
+    # Filter out common abbreviations. extract_abbreviations() strips the dots
+    # from dotted candidates (U.S.A. -> USA), so dots are removed on both sides.
+    # The comparison is case-sensitive: title- or lowercase entries such as
+    # "Co" or "no" must not hide the acronyms CO or NO. Dotted entries also
+    # match their all-caps form, since a sentence-initial "Z.B." or "E.G." is
+    # extracted as ZB / EG.
+    common_normalized = {c.replace(".", "") for c in COMMON_ABBREVIATIONS}
+    common_normalized |= {c.replace(".", "").upper()
+                          for c in COMMON_ABBREVIATIONS if "." in c}
     project_specific = sorted(
         a for a in found
-        if a.replace(".", "").upper() not in common_normalized
+        if a.replace(".", "") not in common_normalized
     )
     
     print(f"Project-specific abbreviations found in {doc_path.name}:")
