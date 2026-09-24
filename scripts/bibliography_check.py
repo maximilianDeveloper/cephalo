@@ -172,7 +172,7 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
                 match = re.match(
                     r"^((?i:vgl\.\s+|cf\.\s+|see\s+|siehe\s+|nach\s+|zit\.\s+nach\s+)?"
                     + prefix + r"[A-ZÄÖÜ][\wäöüß'’-]+"
-                    + r"(?:\s+(?:&|und|and)\s+" + prefix + r"[A-ZÄÖÜ][\wäöüß'’-]+)?"
+                    + r"(?:(?:\s+(?:&|und|and)\s+|\s*/\s*)" + prefix + r"[A-ZÄÖÜ][\wäöüß'’-]+)?"
                     + r"(?:\s+(?:et\s+al\.?|u\.\s*a\.))?)"
                     + r"\s+\d{4}",
                     fragment,
@@ -184,8 +184,8 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
             name_part = re.sub(r"^(cf\.\s+|see\s+|vgl\.\s+|siehe\s+|nach\s+|zit\.\s+nach\s+)", "", name_part, flags=re.IGNORECASE)
             # Remove "et al." / German "u. a."
             name_part = re.sub(r"\s+(?:et\s+al\.?|u\.\s*a\.)", "", name_part, flags=re.IGNORECASE)
-            # Split on & or , or "and"/"und"
-            for part in re.split(r"\s*[&,]\s*|\s+(?:and|und)\s+", name_part):
+            # Split on & or , or / or "and"/"und"
+            for part in re.split(r"\s*[&,/]\s*|\s+(?:and|und)\s+", name_part):
                 # The surname is the last capitalized token ("van den Berg" ->
                 # Berg); numbers ("Tabelle 3") and lowercase words never
                 # qualify, single letters ("N = 1200") are rejected
@@ -223,6 +223,8 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
                 continue
             tokens = name.split()
             surname = next((t for t in reversed(tokens) if t[:1].isupper()), tokens[-1])
+            # English possessive: "Smith's (2020) study" -> Smith
+            surname = re.sub(r"['’]s$", "", surname)
             # Safety net: skip known non-author capitalized words
             # (e.g., "Die EU (2020)", "Das Kapitel (2020)")
             if surname in stop:
