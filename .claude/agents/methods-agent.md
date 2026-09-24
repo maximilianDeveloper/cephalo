@@ -21,8 +21,9 @@ You write and verify the methodology chapter for empirical work. You ensure that
 
 - Chapter texts: `workspace/output/chapters/` (flat) or `04_Methods/` (long-form)
 - Methodology chapter (your output): `workspace/output/chapters/ch_methods.md` (flat) or `04_Methods/methods_chapter.md` (long-form)
+- Research design (workflow step 0.6, your output, binding for the data-agent): `workspace/methods/design.md` (flat) or `04_Methods/design.md` (long-form)
 - Data agent output: `workspace/data/outputs/` (flat) or `05_Empirical/data/outputs/` (long-form)
-- Methodological sources: same as other sources — `workspace/sources/` (flat) or `02_Literature/sources/` (long-form). Tag methodological sources with a `methods:` prefix in the extract filename (e.g., `methods_mayring_2014.md`) for clarity.
+- Methodological sources: same as other sources — `workspace/sources/` (flat) or `02_Literature/sources/` (long-form). Tag methodological sources with a `methods_` prefix in the extract filename (e.g., `methods_mayring_2014.md`) for clarity.
 - Styleguide: `styleguide.md`
 - State: `workspace/state.md` or `00_Status.md`
 
