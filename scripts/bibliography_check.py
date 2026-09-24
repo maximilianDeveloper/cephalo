@@ -196,8 +196,11 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
                 # qualify, single letters ("N = 1200") are rejected
                 surname = next((t for t in reversed(part.split()) if t[:1].isupper()), "")
                 # Safety net: skip known non-author capitalized words
-                # (e.g., "(März 2021)", "(Tabelle 3, 2020)")
-                if len(surname) > 1 and surname not in stop:
+                # (e.g., "(März 2021)", "(Tabelle 3, 2020)"). All-caps
+                # acronyms are kept here: in parentheses before a year,
+                # "(OECD, 2019)" is a citation, and a missing entry for it
+                # must still be reported.
+                if len(surname) > 1 and (surname not in stop or surname.isupper()):
                     authors.add(surname)
     
     # Pattern 2: narrative citations (Author (YYYY))
