@@ -16,6 +16,7 @@ Usage:
 
 import re
 import sys
+import unicodedata
 from pathlib import Path
 
 # Encoding guard for Windows consoles (CP1252 by default).
@@ -79,7 +80,9 @@ def read_docx_paragraphs(path: Path) -> list[str]:
     """Read all paragraph text from a .docx file."""
     try:
         doc = Document(str(path))
-        return [p.text for p in doc.paragraphs]
+        # NFC: decomposed umlauts (e.g. pasted from a PDF) would never match
+        # their precomposed form or the [ÄÖÜ]/\w name classes
+        return [unicodedata.normalize("NFC", p.text) for p in doc.paragraphs]
     except PackageNotFoundError:
         print(f"Error: {path} is not a valid .docx file (corrupt or renamed?)", file=sys.stderr)
     except Exception as exc:
