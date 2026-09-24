@@ -271,6 +271,7 @@ phases:
       - All content chapters complete with ✅ source verification
       - Methods and empirical chapters consistent (data-agent confirmed)
       - No outstanding ⚠️ or ❓ items
+      - Last 3 iterations were format-only (content has stabilized)
       - All ❓ items in styleguide.md clarified
     
     actions:

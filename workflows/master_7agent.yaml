@@ -187,6 +187,8 @@ phases:
       - all_chapters_source_verified: "✅"
       - methods_data_consistent: true
       - open_content_warnings: 0
+      - last_3_iterations_format_only: true
+      - styleguide_open_questions: 0
     documentation: docs/phase_separation.md
     
     rollback_b_to_a:

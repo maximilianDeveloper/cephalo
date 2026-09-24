@@ -241,6 +241,7 @@ phases:
     triggers:
       - All content chapters (incl. introduction) complete with ✅ source verification
       - No outstanding content ⚠️ or ❓ items
+      - Last 3 iterations were format-only (content has stabilized)
       - All ❓ items in styleguide.md clarified
     
     actions:

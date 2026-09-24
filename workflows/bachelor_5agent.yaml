@@ -140,16 +140,18 @@ phases:
       - all_chapters_source_verified: "✅"
       - open_content_warnings: 0
       - last_3_iterations_format_only: true
+      - styleguide_open_questions: 0
     verification_method: |
       The orchestrator checks these criteria before transitioning:
-        - all_chapters_content_complete: read workspace/state.md; every chapter row 
-          has "drafted: ✅" and "verified: ✅"
+        - all_chapters_content_complete: read workspace/state.md; every row of the
+          Chapter status table has ✅ in the Written and Source-verified columns
         - all_chapters_source_verified: grep chapter files for any ⚠️ or ❓ markers
         - open_content_warnings: count ⚠️ entries in workspace/state.md and in each 
           chapter's handover.md (if present); must be 0
         - last_3_iterations_format_only: inspect the last 3 commits (git log); 
           if all touched only styleguide-governed items (citations, typography, 
           spacing), criterion is met
+        - styleguide_open_questions: count open ❓ items in styleguide.md; must be 0
       If any criterion fails, the orchestrator reports the failing criterion 
       and does not transition.
     documentation: docs/phase_separation.md
