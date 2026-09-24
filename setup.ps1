@@ -549,7 +549,7 @@ if ($NonInteractive) {
         Write-Host "For unattended runs, pass -WorkType, -Structure, -Scaffolding and -NonInteractive." -ForegroundColor Red
         exit 2
     }
-    if ($confirm -ne "y" -and $confirm -ne "j") {
+    if ($confirm -notmatch '^(y|j|yes|ja)$') {
         Write-Host "Cancelled." -ForegroundColor Yellow
         exit 0
     }
