@@ -224,6 +224,16 @@ function Resolve-CephaloConfiguration {
     # this both early (before the -Target template copy) and again after the
     # interactive prompts.
 
+    # An empty value can only get here under -NonInteractive (the prompts fill
+    # in every missing value otherwise); name the missing parameters instead of
+    # reporting an "invalid" empty value.
+    if ($script:WorkType -eq "" -or $script:Structure -eq "" -or $script:Scaffolding -eq "") {
+        Write-Host ""
+        Write-Host "Error: -NonInteractive requires -WorkType, -Structure and -Scaffolding." -ForegroundColor Red
+        Write-Host "  Example: .\setup.ps1 -WorkType `"Bachelor thesis`" -Structure Long-form -Scaffolding full -NonInteractive" -ForegroundColor Red
+        exit 2
+    }
+
     $validWorkTypes = @("Seminar paper", "Presentation", "Bachelor thesis", "Master thesis", "Dissertation")
     if ($validWorkTypes -notcontains $script:WorkType) {
         Write-Host ""
@@ -280,7 +290,8 @@ Write-Host ""
 # ==========================================================
 # Early validation (before any template copy)
 # ==========================================================
-# When all three configuration values were supplied as parameters, validate
+# When all three configuration values were supplied as parameters, or under
+# -NonInteractive (where nothing will prompt for a missing value), validate
 # them BEFORE the -Target template copy below: a typo in -WorkType/-Structure/
 # -Scaffolding must fail fast instead of leaving a stray template copy at the
 # target (which would then also block the corrected non-interactive retry with
@@ -288,7 +299,7 @@ Write-Host ""
 # validates its positional arguments up front. Interactive runs with missing
 # values are validated after the prompts instead.
 
-if ($WorkType -ne "" -and $Structure -ne "" -and $Scaffolding -ne "") {
+if ($NonInteractive -or ($WorkType -ne "" -and $Structure -ne "" -and $Scaffolding -ne "")) {
     Resolve-CephaloConfiguration
 }
 
