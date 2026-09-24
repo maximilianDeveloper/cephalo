@@ -112,7 +112,7 @@ phases:
       
       - step: 2
         agent: source-verifier
-        input: Chapter text + workspace/sources/extracts/
+        input: Chapter text + original quotes recorded in workspace/state.md (source registry) + primary sources in workspace/sources/
         action: Sentence-by-sentence verification incl. plagiarism check (verification step 8 in source-verifier.md)
         feedback_loop_max: 2
       
