@@ -94,6 +94,22 @@
 
 ---
 
+## Title page (`title_page.*`)
+
+- **`elements`:** [required entries — e.g., institution, exam type, title, author, student ID, supervisor, date]
+- **`decoration`:** [logo/decoration allowed / forbidden]
+
+---
+
+## Tables and figures (`captions.*`, `numbers.*`)
+
+- **`captions.table_position`:** [above / below the table]
+- **`captions.figure_position`:** [above / below the figure]
+- **`captions.source_position`:** [e.g., below the table or figure]
+- **`numbers.decimal_separator`:** [`.` / `,`]
+
+---
+
 ## Style rules (`style.*`)
 
 - **`forbidden_pronouns`:** [list — e.g., "I", "we", "one", "you" or local-language equivalents]

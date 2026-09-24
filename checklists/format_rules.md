@@ -37,8 +37,8 @@ For every category below: **read concrete values from `styleguide.md`**, not fro
 
 ### Title page (elements per styleguide)
 
-- [ ] Required elements present per styleguide (commonly: institution name; examination type, course name, program of study; title of the work; author name, student ID; supervisor, date)
-- [ ] Decoration/logo policy per styleguide (some institutions forbid any decoration or logo)
+- [ ] Required elements present per styleguide (`title_page.elements`; commonly: institution name; examination type, course name, program of study; title of the work; author name, student ID; supervisor, date)
+- [ ] Decoration/logo policy per styleguide (`title_page.decoration`; some institutions forbid any decoration or logo)
 
 ### Pagination
 
