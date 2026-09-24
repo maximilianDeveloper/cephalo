@@ -26,7 +26,7 @@ Text in chapter:
 > "The central challenge lies in the particularly pronounced uncertainty inherent to this early phase."
 
 Analysis:
-- "the particularly pronounced uncertainty inherent to this early phase" = 10 verbatim words → ⚠️ (8-14 band)
+- "the particularly pronounced uncertainty inherent to this early phase" = 9 verbatim words → ⚠️ (8-14 band)
 - Only "is" → "lies in" was changed; the sentence structure is transferred wholesale
 - Overall rating: ⚠️ — Action: reformulate
 
@@ -117,7 +117,7 @@ More effective:
 
 ### Pattern 2: Plagiarism despite citation
 
-Citation at the end does not save 14+ verbatim words:
+Citation at the end does not save a verbatim run of 8+ words (here: 12):
 > "...**consists in the pronounced information asymmetry between founders and potential capital providers** (cf. Author A et al., 2020, p. 975)."
 
 If the bolded words appear verbatim in the original, the citation is NOT enough.
