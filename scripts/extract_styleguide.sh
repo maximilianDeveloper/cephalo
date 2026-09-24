@@ -176,6 +176,7 @@ import sys
 import subprocess
 import tempfile
 import zipfile
+import zlib
 from pathlib import Path
 
 # Encoding guard for Windows consoles (CP1252 by default) — same pattern as
@@ -319,6 +320,13 @@ for pdf in pdf_files:
                 safe_extract_zip(pdf, tmp_path)
             except ValueError as e:
                 print(f"    Blocked (security): {e}", file=sys.stderr)
+                errors += 1
+                continue
+            except (zipfile.BadZipFile, zlib.error, RuntimeError,
+                    NotImplementedError, EOFError, OSError) as e:
+                # Corrupt, encrypted or unsupported archive: report it and
+                # continue with the next file instead of aborting the run.
+                print(f"  ERR {rel_path} - could not unpack archive ({type(e).__name__}: {e})", file=sys.stderr)
                 errors += 1
                 continue
             # Collect .txt members and extract text from contained PDFs
