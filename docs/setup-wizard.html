@@ -607,8 +607,8 @@ List any open questions for me to resolve before we proceed.</code></pre>
     ln.innerHTML=win
       ? 'Rather not touch a terminal? Click <b>Download launcher</b>, save <code>cephalo-setup.cmd</code> into your cephalo folder, and double-click it.'
       : (state.os==='macos'
-        ? 'Rather not touch a terminal? Click <b>Download launcher</b>, save <code>cephalo-setup.command</code> into your cephalo folder, then right-click it &rarr; Open.'
-        : 'Rather not touch a terminal? Click <b>Download launcher</b>, save <code>cephalo-setup.sh</code> into your cephalo folder, then make it executable and run it.');
+        ? 'Rather not type the command? Click <b>Download launcher</b>, save <code>cephalo-setup.command</code> into your cephalo folder, then open Terminal, type <code>bash</code> and a space, drag the file into the window and press Enter.'
+        : 'Rather not type the command? Click <b>Download launcher</b>, save <code>cephalo-setup.sh</code> into your cephalo folder, then open a terminal, type <code>bash</code> and a space, drag the file into the window and press Enter.');
 
     // structure lock for flat-only work types
     var flatOnly=!!FLAT_ONLY[state.work];
@@ -712,7 +712,8 @@ List any open questions for me to resolve before we proceed.</code></pre>
     return {name:(state.os==="macos"?"cephalo-setup.command":"cephalo-setup.sh"),crlf:false,text:[
       "#!/bin/bash",
       "# cephalo launcher -- save this file INTO your cephalo folder (next to setup.sh).",
-      "# macOS: right-click this file -> Open.   Linux: run it (chmod +x if your file manager needs it).",
+      "# A downloaded file is not executable, so run it this way: open a terminal, type bash and a space,",
+      "# drag this file into the window, press Enter.",
       'cd "$(dirname "$0")" || exit 1',
       'if [ ! -f "./setup.sh" ]; then',
       '  echo "Could not find setup.sh next to this launcher."',
