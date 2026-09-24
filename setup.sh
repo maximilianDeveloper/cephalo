@@ -405,8 +405,10 @@ if [ -n "$WORK_TYPE" ]; then
         [ "$WORK_TYPE" = "$v" ] && valid=1 && break
     done
     if [ "$valid" -eq 0 ]; then
+        # Comma-join: the values contain spaces (same format as setup.ps1).
+        printf -v valid_list '%s, ' "${VALID_WORK_TYPES[@]}"
         echo "Error: invalid WORK_TYPE '$WORK_TYPE'." >&2
-        echo "Valid options: ${VALID_WORK_TYPES[*]}" >&2
+        echo "Valid options: ${valid_list%, }" >&2
         echo "See: $0 --help" >&2
         exit 2
     fi
