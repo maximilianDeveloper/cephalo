@@ -6,7 +6,7 @@ cephalo ships five utility scripts in `scripts/`. They are optional — the agen
 |--------|---------|-------------|
 | `extract_styleguide.sh` | Convert institutional guideline PDFs to plain text for the style-resolver | Once per project during setup |
 | `abbreviations_extract.py` | Derive the list of abbreviations from a finished DOCX | Phase B, final stages |
-| `bibliography_check.py` | Minus-test: every citation is in the bibliography, every bibliography entry is cited | Phase B, final stages |
+| `bibliography_check.py` | Minus-test by author surname: every cited author is in the bibliography, every entry's lead author is cited | Phase B, final stages |
 | `docx_postprocess.sh` | Enable automatic hyphenation in a DOCX (python-docx doesn't set this) | Phase B, before final export |
 | `cross_session_audit.py` | Cross-worktree audit: surfaces notes and changes from other worktrees/sessions that never reached the master branch | Multi-worktree projects, at session start or weekly |
 
@@ -108,7 +108,7 @@ Not extracted: acronyms longer than 8 characters, and lowercase-led mixed-case f
 
 ### `bibliography_check.py`
 
-Performs a bibliography minus-test: every cited author should appear in the bibliography, every bibliography entry should be cited.
+Performs a bibliography minus-test by author surname: every surname cited in the text should appear among the authors in the bibliography, and the lead author of every bibliography entry should be cited in the text. Years are not compared (see the limitations below).
 
 ```bash
 python3 scripts/bibliography_check.py workspace/output/document.docx
@@ -118,15 +118,18 @@ python3 scripts/bibliography_check.py --help
 What it does:
 
 1. Splits the document into body and bibliography (detects the section by header)
-2. Extracts author surnames from in-text citations — supports parenthetical and narrative forms, `et al.`, joint authors, hyphenated surnames, surnames starting with Ä/Ö/Ü, year-suffix citations (`Schulz (2022a)`, `(Wagner, 2022a)`), name prefixes including `van der`/`van den`/`von`/`de la`/`ter`/`ten`, and the citation-lead words `vgl.`/`cf.`/`see`/`siehe`/`nach`/`zit. nach`
+2. Extracts author surnames from in-text citations — supports parenthetical and narrative forms (also with a locator, `Müller (2020, S. 15)`), `et al.`/`u. a.`, joint authors (also `Müller/Schmidt`), hyphenated surnames, surnames starting with Ä/Ö/Ü, typographic apostrophes (`O’Brien`), year-suffix citations (`Schulz (2022a)`, `(Wagner, 2022a)`), name prefixes including `van der`/`van den`/`von`/`de la`/`ter`/`ten`, and the citation-lead words `vgl.`/`cf.`/`see`/`siehe`/`nach`/`zit. nach`
 3. Extracts author surnames from bibliography entries, using the same surname-prefix and umlaut handling as the in-text extraction
 4. Reports asymmetries in both directions
 
-Exit code 0 = no asymmetries, 1 = asymmetries found, 2 = bibliography section not detected or another error occurred (e.g. bad arguments, file not found).
+Exit code 0 = no asymmetries, 1 = asymmetries found, 2 = bibliography section not detected or another error occurred (e.g. bad arguments, file not found, a file that cannot be read as a DOCX).
 
 The check uses heuristics and may produce false positives — and, in a few known edge cases, false negatives (a silent "no asymmetries" when there actually is one):
 
-- **Multi-word institutional/corporate authors** (`Statistisches Bundesamt`, `World Health Organization`, ...) are not parsed from bibliography entries — the entry-head pattern expects a single-token name before the period, so a source cited as `(Statistisches Bundesamt, 2020)` is reported as "cited but not in bibliography" even when the entry is present. Single-word institutional authors (`WHO`, `OECD`, `UNESCO`) are handled correctly in both directions.
+- **Surnames, not works**: the check compares author surnames only. Years are not compared, so a citation with a wrong year, or an uncited second work by an author who is cited elsewhere, is not reported.
+- **Only body paragraphs are read**: citations in footnotes or endnotes, in tables, in content controls (Word's built-in citation tool, Citavi fields) and in unaccepted tracked insertions are not seen, so their sources are reported as "in bibliography but not cited". A bibliography placed in a table or a content control is not read either; the check then stops with "no bibliography section found". Accept tracked changes before running the check.
+- **Everything after the bibliography heading is bibliography**: the first paragraph that matches a bibliography heading starts the bibliography, and every paragraph after it is treated as an entry, including an appendix or the declaration of authorship. Remove those parts first, or run the check on a copy that ends with the bibliography.
+- **Multi-word institutional/corporate authors** (`Statistisches Bundesamt`, `World Health Organization`, ...) are not parsed from bibliography entries — the entry-head pattern expects a single-token name before the period, so a source cited as `(Statistisches Bundesamt, 2020)` is reported as "cited but not in bibliography" even when the entry is present. Conversely, an uncited multi-word institutional entry is never reported as "in bibliography but not cited" (a silent false negative). Single-word institutional authors (`WHO`, `UNESCO`) are handled correctly in both directions. Words on the script's stoplist of capitalized prose words (`GERMAN_NON_AUTHOR_CAPS`, e.g. `OECD`, `EU`, `UN`, `NATO`, `BGH`) count as citations only when a bibliography entry starts with that word, so a citation of such a body that is missing from the bibliography is not reported.
 - **Unusual bibliography headings**: numbered (`7 Literaturverzeichnis`, `7.1 Literatur`) and punctuated (`References:`) headings are tolerated — the detection strips typed numbering and trailing punctuation before matching against `BIBLIOGRAPHY_HEADERS` (case-insensitive). Only a genuinely different heading word fails detection; if that happens, add your exact heading text to `BIBLIOGRAPHY_HEADERS` in the script.
 
 Use the output as a starting point for manual verification, not as a final verdict.

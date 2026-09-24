@@ -2,11 +2,13 @@
 """
 bibliography_check.py
 
-Bibliography minus-test:
-- Every in-text citation must appear in the bibliography
-- Every bibliography entry must be cited in the text
+Bibliography minus-test, by author surname:
+- Every surname cited in the text must appear among the bibliography's authors
+- The lead author of every bibliography entry must be cited in the text
 
-The diff of both lists must be empty.
+The diff of both lists must be empty. Years are not compared: a citation
+with a wrong year, or an uncited second work by an author who is cited
+elsewhere, is not reported.
 
 Usage:
     python scripts/bibliography_check.py workspace/output/document.docx
