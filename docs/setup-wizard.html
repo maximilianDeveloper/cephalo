@@ -789,6 +789,23 @@ List any open questions for me to resolve before we proceed.</code></pre>
     else if(!e.shiftKey && document.activeElement===last){ e.preventDefault(); first.focus(); }
   });
 
+  // Back/forward navigation (and a Firefox reload) restores the form controls without
+  // firing change events: re-read them so the highlight, the command and the launcher agree.
+  function syncFromDom(){
+    ['os','work','struct','scaf'].forEach(function(k){
+      var i=document.querySelector('input[name="'+k+'"]:checked');
+      if(i) state[k]=i.value;
+    });
+    if(FLAT_ONLY[state.work]){
+      state.struct="Flat";
+      var flat=document.querySelector('#struct input[value="Flat"]');
+      if(flat) flat.checked=true;
+    }
+    state.target=document.getElementById('target').value;
+  }
+  window.addEventListener('pageshow',function(){ syncFromDom(); render(); });
+
+  syncFromDom();
   render();
 })();
 </script>
