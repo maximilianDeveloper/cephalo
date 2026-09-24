@@ -101,25 +101,32 @@ phases:
   phase_0_setup:
     steps:
       - step: 0.0
-        name: Create project directory
+        name: Verify project directory
         manual: true
         task: |
-          01_Proposal/ as a sub-directory in the multi-project root.
-          Sub-directories: 01_Research, 02_Outline, 03_Drafting, 04_Submission.
-      
+          setup.sh / setup.ps1 created 01_Proposal/ in the multi-project root
+          with sub-directories 01_Research, 02_Outline, 03_Drafting, 04_Submission
+          (with minimal scaffolding, only 01_Proposal/ — create the rest if missing).
+          Git lives at the multi-project root; never run git init in 01_Proposal/.
+
       - step: 0.1
-        name: Create central files
+        name: Verify central files, create README
         agent: orchestrator-longform
         task: |
+          Created by setup (verify; if missing, copy from the template):
           - 00_Status.md from templates/status.md
           - 00_Decisions.md from templates/decisions.md
-          - 00_Feedback_log.md (empty)
+          - 00_Feedback_log.md from templates/feedback_log.md
+          Create:
           - README.md describing the sub-project's purpose
-      
+
       - step: 0.2
-        name: Symlink to shared materials
+        name: Verify symlink to shared materials
         manual: true
         task: |
+          setup.sh / setup.ps1 created shared/ -> ../00_Shared_Materials (or a
+          copy if symlinks were not permitted; see CLAUDE.md, "Platform caveats").
+          Only if shared/ is missing, create it:
           Windows (Developer Mode enabled — Settings -> For developers — or an
           elevated PowerShell):
             New-Item -ItemType SymbolicLink -Path "shared" -Target "..\00_Shared_Materials"

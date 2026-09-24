@@ -94,26 +94,33 @@ phases:
     
     steps:
       - step: 0.0
-        name: Create directory structure
-        manual: true
-        task: structure per docs/longform_structure.md ("Directory layout" section)
-      
-      - step: 0.1
-        name: Initialize Git
+        name: Verify directory structure
         manual: true
         task: |
-          git init
-          # copy .gitignore and .gitattributes
-          git lfs install
-      
+          Created by setup.sh / setup.ps1 per docs/longform_structure.md
+          ("Directory layout" section). With minimal scaffolding only
+          guidelines/ exists; add the phase directories as needed.
+
+      - step: 0.1
+        name: Verify Git
+        manual: true
+        task: |
+          setup.sh / setup.ps1 already ran git init (plus git lfs install if
+          Git LFS is installed) and wrote .gitignore and .gitattributes at the
+          project root (multi-project: the multi-project root). Check with
+          git status. Never run git init inside a sub-project such as
+          02_Main_Work/ (that creates a nested repository). If setup
+          reported Git LFS as missing, install it, then run git lfs install.
+
       - step: 0.2
-        name: Create central files
+        name: Verify and fill central files
         agent: orchestrator-longform
         task: |
-          Copy templates into the project root:
-          - templates/status.md  -> 00_Status.md (fill initially)
-          - templates/decisions.md -> 00_Decisions.md (with research question)
-          - Create empty 00_Feedback_log.md
+          setup.sh / setup.ps1 created these in the project root (if one is
+          missing, copy it from its template):
+          - 00_Status.md (from templates/status.md): fill initially
+          - 00_Decisions.md (from templates/decisions.md): add research question
+          - 00_Feedback_log.md (from templates/feedback_log.md): keep as is
       
       - step: 0.3
         name: Materials pre-check

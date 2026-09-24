@@ -113,18 +113,26 @@ phases:
     
     steps:
       - step: 0.0
-        name: Create directory structure
+        name: Verify directory structure
         manual: true
-        task: structure per docs/longform_structure.md
-      
+        task: created by setup.sh / setup.ps1 per docs/longform_structure.md
+
       - step: 0.1
-        name: Initialize Git
+        name: Verify Git
         manual: true
-      
+        task: |
+          setup.sh / setup.ps1 already ran git init at the project root
+          (multi-project: the multi-project root). Check with git status.
+          Never run git init inside a sub-project such as 02_Main_Work/.
+
       - step: 0.2
-        name: Create central files
+        name: Verify and fill central files
         agent: orchestrator-longform
-      
+        task: |
+          00_Status.md, 00_Decisions.md and 00_Feedback_log.md were created by
+          setup from templates/ (feedback log: templates/feedback_log.md).
+          Fill 00_Status.md; add the research question to 00_Decisions.md.
+
       - step: 0.3
         name: Materials pre-check
         agent: orchestrator-longform
