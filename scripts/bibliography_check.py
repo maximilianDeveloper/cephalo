@@ -48,7 +48,8 @@ BIBLIOGRAPHY_HEADERS = [
 
 
 # Capitalized words that look like surnames in German academic prose but aren't.
-# Used as a safety-net filter in all author-extraction patterns.
+# Used as a safety-net filter in all author-extraction patterns. A word that
+# leads a bibliography entry ("OECD. (2019). ...") is exempt from it.
 # 
 # Keep this list conservative: adding a real surname here would silently drop
 # genuine citations. Only add words where the false-positive cost clearly
@@ -124,7 +125,7 @@ def split_text_and_bibliography(paragraphs: list[str]) -> tuple[str, list[str]]:
     return body, bibliography
 
 
-def extract_in_text_authors(body: str) -> set[str]:
+def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> set[str]:
     """
     Extract author surnames from in-text citations.
     
@@ -144,8 +145,15 @@ def extract_in_text_authors(body: str) -> set[str]:
     
     The recognition is heuristic and may produce false positives. The output
     is intended for cross-checking, not as ground truth.
+    
+    keep: surnames exempt from GERMAN_NON_AUTHOR_CAPS (the lead authors of
+    the bibliography entries), so that "(OECD, 2019)" still counts when
+    the bibliography lists "OECD. (2019)".
     """
     authors = set()
+    stop = GERMAN_NON_AUTHOR_CAPS - keep
+    # Lowercase name particles: van der Berg, de la Rosa, von Wagner, ter Horst
+    prefix = r"(?:(?:van|von|de|del|della|di|la|le|du|dos|das|ter|ten)\s+(?:der\s+|den\s+|de\s+|la\s+)?)?"
     
     # Stage 1: find parenthesized blocks containing a year (YYYY)
     paren_blocks = re.findall(r"\(([^()]*\d{4}[^()]*)\)", body)
@@ -160,11 +168,13 @@ def extract_in_text_authors(body: str) -> set[str]:
             match = re.match(r"^((?:cf\.\s+|see\s+|vgl\.\s+|siehe\s+|nach\s+|zit\.\s+nach\s+)?[^,]+(?:\s+(?:et\s+al\.?|u\.\s*a\.))?(?:\s*(?:,\s*)?(?:&|and|und)\s+[\w'’-]+|,\s*[\w'’-]+)*),\s*\d{4}", fragment)
             if not match:
                 # Try German style: "Author YYYY" without comma
+                # (lead word in any case: "(Vgl. Smith 2020)")
                 match = re.match(
-                    r"^((?:vgl\.\s+|cf\.\s+|see\s+|siehe\s+|nach\s+|zit\.\s+nach\s+)?[A-ZÄÖÜ][\wäöüß'’-]+"
-                    r"(?:\s+(?:&|und|and)\s+[A-ZÄÖÜ][\wäöüß'’-]+)?"
-                    r"(?:\s+(?:et\s+al\.?|u\.\s*a\.))?)"
-                    r"\s+\d{4}",
+                    r"^((?i:vgl\.\s+|cf\.\s+|see\s+|siehe\s+|nach\s+|zit\.\s+nach\s+)?"
+                    + prefix + r"[A-ZÄÖÜ][\wäöüß'’-]+"
+                    + r"(?:\s+(?:&|und|and)\s+" + prefix + r"[A-ZÄÖÜ][\wäöüß'’-]+)?"
+                    + r"(?:\s+(?:et\s+al\.?|u\.\s*a\.))?)"
+                    + r"\s+\d{4}",
                     fragment,
                 )
             if not match:
@@ -176,9 +186,13 @@ def extract_in_text_authors(body: str) -> set[str]:
             name_part = re.sub(r"\s+(?:et\s+al\.?|u\.\s*a\.)", "", name_part, flags=re.IGNORECASE)
             # Split on & or , or "and"/"und"
             for part in re.split(r"\s*[&,]\s*|\s+(?:and|und)\s+", name_part):
-                name = part.strip()
-                if name and not name.isdigit() and name[0:1].isupper():
-                    surname = name.split()[-1] if " " in name else name
+                # The surname is the last capitalized token ("van den Berg" ->
+                # Berg); numbers ("Tabelle 3") and lowercase words never
+                # qualify, single letters ("N = 1200") are rejected
+                surname = next((t for t in reversed(part.split()) if t[:1].isupper()), "")
+                # Safety net: skip known non-author capitalized words
+                # (e.g., "(März 2021)", "(Tabelle 3, 2020)")
+                if len(surname) > 1 and surname not in stop:
                     authors.add(surname)
     
     # Pattern 2: narrative citations (Author (YYYY))
@@ -193,7 +207,6 @@ def extract_in_text_authors(body: str) -> set[str]:
     #     Müller (2020: 15), Smith (2019, 2020)
     #   - German author-year style: Schmidt 2020 (no parentheses, handled below)
     name_token = r"[A-ZÄÖÜ](?:[^\W\d_]|['’-])+"
-    prefix = r"(?:(?:van|von|de|del|della|di|la|le|du|dos|das|ter|ten)\s+(?:der\s+|den\s+|de\s+|la\s+)?)?"
     # Joint form OR et-al form
     joint = r"\s+(?:&|and|und)\s+" + prefix + name_token
     et_al = r"\s+(?:et\s+al\.?|u\.\s*a\.)"
@@ -212,7 +225,7 @@ def extract_in_text_authors(body: str) -> set[str]:
             surname = next((t for t in reversed(tokens) if t[:1].isupper()), tokens[-1])
             # Safety net: skip known non-author capitalized words
             # (e.g., "Die EU (2020)", "Das Kapitel (2020)")
-            if surname in GERMAN_NON_AUTHOR_CAPS:
+            if surname in stop:
                 continue
             authors.add(surname)
     
@@ -252,7 +265,7 @@ def extract_in_text_authors(body: str) -> set[str]:
             tokens = name.split()
             surname = next((t for t in reversed(tokens) if t[:1].isupper()), tokens[-1])
             # Safety net: skip known non-author capitalized words
-            if surname in GERMAN_NON_AUTHOR_CAPS:
+            if surname in stop:
                 continue
             authors.add(surname)
     
@@ -361,8 +374,8 @@ def main():
         print("Add the appropriate header for your language to BIBLIOGRAPHY_HEADERS in this script.")
         sys.exit(2)
     
-    cited_authors = extract_in_text_authors(body)
     bib_first_authors, bib_all_authors = extract_bibliography_authors(bibliography)
+    cited_authors = extract_in_text_authors(body, keep=frozenset(bib_first_authors))
     
     # Asymmetry check:
     # - cited_only: cited in text but no matching lead author in bibliography
