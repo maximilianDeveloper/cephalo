@@ -156,8 +156,12 @@ def _dict_to_worktree(d: dict) -> WorktreeInfo:
 
 
 def get_uncommitted(worktree_path: Path) -> list[str]:
-    """Return porcelain status lines for the worktree, raising on error."""
-    out = run_git(["status", "--porcelain"], worktree_path)
+    """Return porcelain status lines for the worktree, raising on error.
+
+    --no-optional-locks: do not refresh the worktree's index under index.lock,
+    which could make a parallel session's git command in that worktree fail.
+    """
+    out = run_git(["--no-optional-locks", "status", "--porcelain"], worktree_path)
     return [line for line in out.splitlines() if line]
 
 
