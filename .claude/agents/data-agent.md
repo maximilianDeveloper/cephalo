@@ -49,7 +49,7 @@ All three must match. On discrepancy: raw data is truth. Adjust table and text.
 
 Lessons from project experience:
 - **Pie chart format**: `0%` rounds to whole numbers — sums can total 101%. Always use `0.0%`.
-- **Decimal separator**: per styleguide, used consistently
+- **Decimal separator**: per styleguide (`numbers.decimal_separator`), used consistently
 - **Thousands separator**: consistent (space, period, comma, or none — but consistent)
 - **Units**: include with all values, or define in the table header
 
@@ -57,8 +57,8 @@ Lessons from project experience:
 
 ### Requirements
 
-- Table number + meaningful title (placement per styleguide)
-- Source attribution below the table (also for "own work")
+- Table number + meaningful title (placement per styleguide: `captions.table_position`)
+- Source attribution, placement per styleguide (`captions.source_position`; also for "own work")
 - Consistent decimal places per column
 - Sums shown where meaningful, with rounding-error verification
 - Footnotes for irregularities (e.g., missing values, outliers)
@@ -71,7 +71,7 @@ Per styleguide. If the styleguide is silent, do not pick a convention yourself: 
 
 ### Requirements
 
-- Figure number + meaningful title (placement per styleguide; conventions differ — APA 7 places the caption above the figure)
+- Figure number + meaningful title (placement per styleguide: `captions.figure_position`; conventions differ — APA 7 places the caption above the figure)
 - Source attribution
 - Axis labels complete (incl. units)
 - Legend present

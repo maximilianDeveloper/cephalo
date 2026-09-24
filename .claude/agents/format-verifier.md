@@ -51,8 +51,8 @@ Verify the following categories. Concrete values (font size, page-range notation
 - [ ] Max depth per styleguide
 
 ## Title page (elements per styleguide)
-- [ ] Required elements present per styleguide (commonly: institution, course/degree/exam type, title, author, student ID, supervisor, date)
-- [ ] Decoration/logo policy per styleguide (some institutions forbid any decoration or logo)
+- [ ] Required elements present per styleguide (`title_page.elements`; commonly: institution, course/degree/exam type, title, author, student ID, supervisor, date)
+- [ ] Decoration/logo policy per styleguide (`title_page.decoration`; some institutions forbid any decoration or logo)
 
 ## Pagination
 - [ ] Numbering scheme per styleguide (a common convention: title page counted but unnumbered, front matter in Roman numerals, main text in Arabic from the introduction onward)
@@ -95,8 +95,8 @@ This enables `<w:autoHyphenation/>` in the document's settings.xml — python-do
 
 **Pronoun check** (styleguide-configured):
 ```bash
-pandoc workspace/output/document.docx -o /dev/stdout --to plain | \
-  grep -iE " (<forbidden_pronouns_from_styleguide>) "
+pandoc workspace/output/document.docx -o /dev/stdout --to plain --wrap=none | \
+  grep -inwE "(<forbidden_pronouns_from_styleguide>)"
 ```
 (Requires `pandoc` — an optional tool per `checklists/precheck.md`, section
 "Technical checks". If it is not installed, extract the text with python-docx

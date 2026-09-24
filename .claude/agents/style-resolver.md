@@ -112,10 +112,11 @@ The generated `styleguide.md` follows the template in `templates/styleguide.md`.
 
 - Metadata (source documents, extraction date)
 - In-text citations (format, et-al. rules, "see / cf." conventions)
-- Page ranges (notation: "15–16" vs. "15-16" vs. "15 to 16")
+- Page ranges (`in_text.page_range`; notation: "15–16" vs. "15-16" vs. "15 to 16")
 - Bibliography (alignment, hanging indent, separator conventions, DOI/URL policy)
 - Document formalia (font, line spacing, margins, alignment)
 - Headings (sizes, numbering conventions, max depth)
+- Pagination, title page, tables and figures (`pagination.*`, `title_page.*`, `captions.*`, `numbers.*`)
 - Style rules (forbidden pronouns, block quote threshold, footnote policy)
 - **Open questions (`❓` items)** — always include this section even if empty
 
@@ -165,7 +166,7 @@ The style-resolver runs:
 > Guideline text: "Page ranges are written with a hyphen."
 > Example in guideline: `(Author, 2020, S. 15–16)` (note: en-dash, not hyphen)
 > 
-> Extraction: `page_range.separator: ❓ contradictory`
+> Extraction: `in_text.page_range: ❓ contradictory`
 >   - Prose says hyphen (-)
 >   - Example uses en-dash (–)
 >   - User must clarify; most likely en-dash is intended given examples
@@ -174,7 +175,7 @@ The style-resolver runs:
 
 > Guideline mentions direct quotations but does not specify the threshold for block quotes.
 > 
-> Extraction: `block_quote.threshold: ❓ not specified in guidelines`
+> Extraction: `style.block_quote_word_threshold: ❓ not specified in guidelines`
 >   - APA 7 default is 40 words; user may confirm or override
 
 These examples illustrate the disciplined extraction process. Accuracy and explicit uncertainty beat confident guesses every time.
