@@ -910,8 +910,21 @@ else
     echo -e "  ${GRAY}. .gitignore (exists)${NC}"
 fi
 
-if [ ! -f ".gitattributes" ]; then
-    cat > .gitattributes <<'EOF'
+# The LFS rules are written with a new .gitattributes, or appended to an
+# existing one that has none yet (e.g. the template's own line-ending
+# rules). Once present they are left alone, so re-runs never duplicate them.
+if [ -f ".gitattributes" ] && grep -q 'filter=lfs' .gitattributes; then
+    echo -e "  ${GRAY}. .gitattributes (exists)${NC}"
+else
+    GITATTRIBUTES_NOTE=""
+    if [ -f ".gitattributes" ]; then
+        GITATTRIBUTES_NOTE=" (LFS rules added)"
+        # Start the appended block on a line of its own.
+        if [ -n "$(tail -c 1 .gitattributes)" ]; then
+            echo "" >> .gitattributes
+        fi
+    fi
+    cat >> .gitattributes <<'EOF'
 *.docx filter=lfs diff=lfs merge=lfs -text
 *.pptx filter=lfs diff=lfs merge=lfs -text
 *.pdf filter=lfs diff=lfs merge=lfs -text
@@ -919,9 +932,7 @@ if [ ! -f ".gitattributes" ]; then
 *.png filter=lfs diff=lfs merge=lfs -text
 *.jpg filter=lfs diff=lfs merge=lfs -text
 EOF
-    echo -e "  ${GREEN}+ .gitattributes${NC}"
-else
-    echo -e "  ${GRAY}. .gitattributes (exists)${NC}"
+    echo -e "  ${GREEN}+ .gitattributes${GITATTRIBUTES_NOTE}${NC}"
 fi
 
 if [ ! -d ".git" ]; then
