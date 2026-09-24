@@ -188,16 +188,18 @@ def extract_in_text_authors(body: str) -> set[str]:
     #   - joint authors: Smith and Jones, Müller-Schmidt & Weiss
     #   - et al. narrative: Brown et al. (2021)
     #   - same-author-same-year suffixes: Schulz (2022a)
+    #   - locator or further years inside the parentheses: Müller (2020, S. 15),
+    #     Müller (2020: 15), Smith (2019, 2020)
     #   - German author-year style: Schmidt 2020 (no parentheses, handled below)
     name_token = r"[A-ZÄÖÜ][a-zäöüßA-ZÄÖÜ'-]+"
     prefix = r"(?:(?:van|von|de|del|della|di|la|le|du|dos|das|ter|ten)\s+(?:der\s+|den\s+|de\s+|la\s+)?)?"
     # Joint form OR et-al form
     joint = r"\s+(?:&|and|und)\s+" + prefix + name_token
     et_al = r"\s+et\s+al\.?"
-    # Narrative with parentheses: Author (YYYY)
+    # Narrative with parentheses: Author (YYYY[, locator])
     narrative_paren = (
         r"(" + prefix + name_token
-        + r"(?:" + joint + r"|" + et_al + r")?)\s+\(\d{4}[a-z]?\)"
+        + r"(?:" + joint + r"|" + et_al + r")?)\s+\(\d{4}[a-z]?(?:[,:;][^()]*)?\)"
     )
     for match in re.findall(narrative_paren, body):
         cleaned = re.sub(r"\s+et\s+al\.?", "", match, flags=re.IGNORECASE)
