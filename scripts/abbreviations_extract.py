@@ -20,6 +20,7 @@ Usage:
 import os
 import re
 import sys
+import unicodedata
 from pathlib import Path
 
 # Encoding guard for Windows consoles (CP1252 by default).
@@ -67,6 +68,11 @@ def extract_abbreviations(text: str) -> set[str]:
 
     German umlauts (Ä Ö Ü, and ß for lowercase parts) are treated as letters.
     """
+    # Compose decomposed umlauts (U+0308 after the base letter, e.g. text
+    # pasted from PDFs): the combining mark is not a word character, so
+    # ÖPNV would otherwise be cut to PNV.
+    text = unicodedata.normalize("NFC", text)
+
     # Character classes for uppercase and lowercase that include umlauts
     upper = r"A-ZÄÖÜ"
     lower = r"a-zäöüß"
