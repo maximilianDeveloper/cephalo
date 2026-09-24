@@ -7,8 +7,8 @@ never integrated into the current main worktree.
 Three layers (numbering matches the report sections):
 1. Main diff: which `_*.md` files exist in worktrees but NOT in the main worktree?
 2. Reference validation: scans main-branch files for backticked cross-refs to
-   other `.md` files (paths with a `0N_`, `scripts/`, or `workspace/` prefix)
-   and checks that the targets exist.
+   other `.md` files (paths with a two-digit `NN_`, `scripts/`, or `workspace/`
+   prefix) and checks that the targets exist.
 3. Uncommitted changes per worktree.
 
 The report also includes a worktree overview: all worktrees, their HEADs,
@@ -253,18 +253,19 @@ def find_dangling_refs(main_path: Path) -> list[tuple[Path, str, str]]:
     framework docs would create false positives. Framework docs themselves
     are also excluded from the source-side scan.
 
-    Recognized refs are backticked `.md` paths starting with `0N_...`
-    (long-form / multi-project layouts), `scripts/`, or `workspace/`
-    (flat layout).
+    Recognized refs are backticked `.md` paths starting with `NN_...`
+    (two ASCII digits; long-form / multi-project layouts), `scripts/`, or
+    `workspace/` (flat layout).
     """
     import re
 
     # Path must contain at least one '/' or '\' to be considered a real ref.
     # Otherwise we match every generic mention like `00_Status.md` and produce
-    # noise from CHANGELOG.md / README.md. Recognized prefixes: `0N_...`
-    # (long-form / multi-project), `scripts/`, and `workspace/` (flat).
+    # noise from CHANGELOG.md / README.md. Recognized prefixes: `NN_...`
+    # (two ASCII digits, as in the sub-project root check below; long-form /
+    # multi-project), `scripts/`, and `workspace/` (flat).
     REF_PATTERN = re.compile(
-        r"`((?:0[0-9]_[^`]*[/\\][^`]*?|(?:scripts|workspace)[/\\][^`]*?)\.md)`"
+        r"`((?:[0-9]{2}_[^`]*[/\\][^`]*?|(?:scripts|workspace)[/\\][^`]*?)\.md)`"
     )
     findings: list[tuple[Path, str, str]] = []
 
@@ -296,7 +297,7 @@ def find_dangling_refs(main_path: Path) -> list[tuple[Path, str, str]]:
                     main_path / relpath.parent / target,
                 ]
                 first_part = relpath.parts[0] if relpath.parts else ""
-                if re.match(r"^\d{2}_", first_part):
+                if re.match(r"^[0-9]{2}_", first_part):
                     candidates.append(main_path / first_part / target)
                 if not any(p.exists() for p in candidates):
                     findings.append(
