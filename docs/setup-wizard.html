@@ -698,8 +698,13 @@ List any open questions for me to resolve before we proceed.</code></pre>
         "  exit /b 1",
         ")",
         'powershell -NoProfile -ExecutionPolicy Bypass -File ".\\setup.ps1" '+args,
-        "echo.",
-        "echo Done. You can close this window.",
+        "if errorlevel 1 (",
+        "  echo.",
+        "  echo Setup failed - see the messages above.",
+        ") else (",
+        "  echo.",
+        "  echo Done. You can close this window.",
+        ")",
         "pause"
       ]};
     }
@@ -717,8 +722,15 @@ List any open questions for me to resolve before we proceed.</code></pre>
       "fi",
       "chmod +x ./setup.sh 2>/dev/null",
       "./setup.sh "+sh,
+      "rc=$?",
       'echo ""',
-      'echo "Done. You can close this window."'
+      'if [ "$rc" -eq 0 ]; then',
+      '  echo "Done. You can close this window."',
+      "else",
+      '  echo "Setup failed (exit $rc) - see the messages above."',
+      '  read -r -p "Press Enter to close..." _',
+      "fi",
+      'exit "$rc"'
     ]};
   }
   var dlBtn=document.getElementById('download');
