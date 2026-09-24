@@ -82,6 +82,14 @@ GERMAN_NON_AUTHOR_CAPS = {
 # parenthetical stage does not filter them: a missing entry is still reported.
 SURNAME_LIKE_STOPWORDS = {"Sommer", "Winter", "Herbst", "Freitag", "Montag", "Mai", "August"}
 
+# Lowercase words that may precede a surname inside a parenthetical citation:
+# name particles and short fillers after a lead word ("see also", "vgl. z. B.").
+PAREN_LOWERCASE_OK = {
+    "van", "von", "de", "del", "della", "di", "la", "le", "du", "dos", "das",
+    "ter", "ten", "der", "den",
+    "also", "auch", "z.", "z.b.", "e.g.",
+}
+
 
 def read_docx_paragraphs(path: Path) -> list[str]:
     """Read all paragraph text from a .docx file."""
@@ -199,7 +207,16 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
                 # The surname is the last capitalized token ("van den Berg" ->
                 # Berg); numbers ("Tabelle 3") and lowercase words never
                 # qualify, single letters ("N = 1200") are rejected
-                surname = next((t for t in reversed(part.split()) if t[:1].isupper()), "")
+                tokens = part.split()
+                idx = next((i for i in range(len(tokens) - 1, -1, -1) if tokens[i][:1].isupper()), None)
+                if idx is None:
+                    continue
+                # Lowercase words before the surname must be name particles or
+                # fillers ("see also Smith", "vgl. z. B. Smith"); otherwise the
+                # fragment is prose ("eigene Darstellung", "etwa Deutschland").
+                if any(t[:1].islower() and t.lower() not in PAREN_LOWERCASE_OK for t in tokens[:idx]):
+                    continue
+                surname = tokens[idx]
                 # Safety net: skip known non-author capitalized words
                 # (e.g., "(März 2021)", "(Tabelle 3, 2020)"). All-caps
                 # acronyms and surname-like stopwords are kept here: in
