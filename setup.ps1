@@ -809,7 +809,7 @@ if (!(Test-Path ".gitattributes")) {
 } else {
     $ExistingGitattributes = [string](Get-Content -LiteralPath ".gitattributes" -Raw -Encoding UTF8)
     if ($ExistingGitattributes -notmatch "filter=lfs") {
-        if ($ExistingGitattributes -ne "" -and -not $ExistingGitattributes.EndsWith("`n", [System.StringComparison]::Ordinal)) {
+        if ($ExistingGitattributes -and -not $ExistingGitattributes.EndsWith("`n", [System.StringComparison]::Ordinal)) {
             $ExistingGitattributes += "`n"
         }
         Write-Utf8NoBom ".gitattributes" ($ExistingGitattributes + $GitattributesContentLf)
