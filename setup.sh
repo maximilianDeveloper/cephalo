@@ -14,6 +14,9 @@
 # the current directory, or copies the template to --target PATH).
 
 set -euo pipefail
+# An exported CDPATH would redirect the relative cd calls below (e.g. into
+# the sub-projects) to same-named directories elsewhere.
+unset CDPATH
 
 # ==========================================================
 # Graceful interrupt handling (Ctrl+C, SIGTERM)
