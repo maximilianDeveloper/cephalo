@@ -5,10 +5,14 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   lint-and-smoke:
     name: Lint & setup smoke (Ubuntu, Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -48,7 +52,7 @@ jobs:
       - name: Agent and workflow references
         run: |
           python - <<'EOF'
-          import glob, os, yaml
+          import glob, os, re, yaml
           errors = []
           agent_files = sorted(glob.glob(".claude/agents/*.md"))
           assert len(agent_files) == 10, f"expected 10 agent files, found {len(agent_files)}"
@@ -56,6 +60,20 @@ jobs:
               front = yaml.safe_load(open(f, encoding="utf-8").read().split("---")[1])
               if front.get("name") != os.path.basename(f)[:-3]:
                   errors.append(f"{f}: frontmatter name {front.get('name')!r} does not match the file name")
+          # Archives are unpacked only through scripts/extract_styleguide.sh (safe_extract_zip):
+          # no agent or checklist may show another extractor as a command, in a code span
+          # or in a code block (naming one in prose, e.g. to forbid it, is fine).
+          cmd = r"\b(?:unzip|7z|bsdtar)\s+\S|\btar\s+-?[a-z]*x|\.extractall\(|unpack_archive\(|\bExpand-Archive\s+\S"
+          in_span = re.compile(r"`[^`]*?(?:" + cmd + r")[^`]*`")
+          in_block = re.compile(r"^\s*(?:\$\s*)?(?:" + cmd + r")")
+          for f in agent_files + sorted(glob.glob("checklists/*.md")):
+              fenced = False
+              for n, line in enumerate(open(f, encoding="utf-8").read().splitlines(), 1):
+                  if line.lstrip().startswith("```"):
+                      fenced = not fenced
+                      continue
+                  if in_span.search(line) or (fenced and in_block.search(line)):
+                      errors.append(f"{f}:{n}: archive extraction outside scripts/extract_styleguide.sh")
           def refs(node):
               if isinstance(node, dict):
                   for k, v in node.items():
@@ -98,6 +116,7 @@ jobs:
           test -d /tmp/ci_flat/workspace/sources/_guidelines
           test -f /tmp/ci_long/00_Status.md
           test -d /tmp/ci_multi/00_Shared_Materials/guidelines
+          for sub in 01_Proposal 02_Main_Work 03_Defense; do test -L "/tmp/ci_multi/$sub/shared"; done
 
       - name: Invalid arguments fail fast (exit 2, no stray target)
         run: |
@@ -156,9 +175,96 @@ jobs:
             test "$got" = "$want " || { echo "Next steps numbered '$got' for $args"; exit 1; }
           done
 
+      - name: Shell scripts stay LF in a core.autocrlf=true clone
+        run: |
+          rm -rf /tmp/ci_crlf
+          git -c core.autocrlf=true clone -q . /tmp/ci_crlf
+          for f in /tmp/ci_crlf/setup.sh /tmp/ci_crlf/scripts/*.sh; do
+            if grep -q $'\r' "$f"; then echo "CRLF in $f"; exit 1; fi
+            bash -n "$f"
+          done
+
+      - name: setup-wizard inline JavaScript parses
+        run: |
+          python - <<'EOF'
+          import re
+          page = open("docs/setup-wizard.html", encoding="utf-8").read()
+          scripts = re.findall(r"<script\b[^>]*>(.*?)</script>", page, re.S)
+          assert scripts, "no inline script found"
+          open("/tmp/ci_wizard.js", "w", encoding="utf-8").write("\n;\n".join(scripts))
+          EOF
+          node --check /tmp/ci_wizard.js
+
+      - name: Utility scripts on generated files (exit codes, safety checks)
+        run: |
+          W=/tmp/ci_util; rm -rf "$W"; mkdir -p "$W/good" "$W/evil"
+          python - "$W" <<'EOF'
+          import os, sys, zipfile
+          from docx import Document
+          w = sys.argv[1]
+          d = Document()
+          d.add_paragraph("Schmidt 2020, S. 15 führt aus. Müller (2021) stimmt zu. Die WHO (2019) auch. "
+                          "Im Jahr 2020 stieg es. Die EU (2020) beschloss es. Das Kapitel (2020) zeigt es.")
+          d.add_paragraph("U.S.A. and B2B, CO2, 5G, BENELUX, GmbH; e.g. z. B. 2020.")
+          d.add_heading("Literaturverzeichnis", 1)
+          for entry in ("Schmidt, K. (2020). A.", "Müller, J. (2021). B.", "WHO. (2019). C."):
+              d.add_paragraph(entry)
+          d.save(os.path.join(w, "ok.docx"))
+          d.add_paragraph("Uncited, U. (2019). D.")
+          d.save(os.path.join(w, "findings.docx"))
+          with zipfile.ZipFile(os.path.join(w, "notword.docx"), "w") as z:
+              z.writestr("hello.txt", "a ZIP, but not a Word document")
+          with zipfile.ZipFile(os.path.join(w, "good", "guide.pdf"), "w") as z:
+              z.writestr("rules.txt", "Example rule text")
+          with zipfile.ZipFile(os.path.join(w, "evil", "guide.pdf"), "w") as z:
+              z.writestr("../../escaped.txt", "x")
+          EOF
+          expect() {
+            want=$1; shift
+            set +e; "$@" >"$W/out.txt" 2>&1; code=$?; set -e
+            if [ "$code" -ne "$want" ]; then cat "$W/out.txt"; echo "expected exit $want, got $code: $*"; exit 1; fi
+          }
+          # bibliography_check.py: 0 = consistent, 1 = findings, 2 = unreadable input (one line)
+          expect 0 python scripts/bibliography_check.py "$W/ok.docx"
+          expect 1 python scripts/bibliography_check.py "$W/findings.docx"
+          grep -q Uncited "$W/out.txt"
+          expect 2 python scripts/bibliography_check.py "$W/notword.docx"
+          test "$(wc -l < "$W/out.txt")" -eq 1
+          # abbreviations_extract.py: dotted, digit and mixed-case forms; clean error otherwise
+          expect 0 python scripts/abbreviations_extract.py "$W/ok.docx"
+          for a in B2B CO2 5G BENELUX GmbH; do grep -qx "  $a" "$W/out.txt"; done
+          if grep -qx "  US" "$W/out.txt"; then echo "U.S.A. was truncated to US"; exit 1; fi
+          expect 1 python scripts/abbreviations_extract.py "$W/notword.docx"
+          test "$(wc -l < "$W/out.txt")" -eq 1
+          # docx_postprocess.sh: hyphenation on, package still valid, [Content_Types].xml first
+          expect 0 bash scripts/docx_postprocess.sh "$W/ok.docx"
+          python - "$W/ok.docx" <<'EOF'
+          import sys, zipfile, docx
+          docx.Document(sys.argv[1])
+          z = zipfile.ZipFile(sys.argv[1])
+          assert z.testzip() is None
+          assert z.infolist()[0].filename == "[Content_Types].xml"
+          assert "<w:autoHyphenation/>" in z.read("word/settings.xml").decode()
+          EOF
+          # extract_styleguide.sh: a ZIP disguised as PDF is unpacked; path traversal is blocked
+          expect 0 bash scripts/extract_styleguide.sh "$W/good" "$W/out_good"
+          grep -q "Example rule text" "$W/out_good/guide.txt"
+          expect 1 bash scripts/extract_styleguide.sh "$W/evil" "$W/out_evil"
+          grep -q "Blocked (security)" "$W/out.txt"
+          # cross_session_audit.py: 0 = clean, 1 = findings, 2 = not a repository
+          g() { git -c user.name=ci -c user.email=ci@example.com "$@"; }
+          g init -q "$W/repo" && g -C "$W/repo" commit -q --allow-empty -m init
+          expect 0 python scripts/cross_session_audit.py --repo-root "$W/repo"
+          g -C "$W/repo" worktree add -q -b side "$W/side"
+          echo "# note" > "$W/side/_note.md"
+          expect 1 python scripts/cross_session_audit.py --repo-root "$W/side"
+          grep -qF "**Main worktree:** \`$W/repo\`" "$W/out.txt"
+          expect 2 python scripts/cross_session_audit.py --repo-root "$W/good"
+
   windows:
     name: PowerShell 5.1 parse & setup smoke (Windows)
     runs-on: windows-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -201,7 +307,10 @@ jobs:
         continue-on-error: true
         run: |
           if (Get-Module -ListAvailable PSScriptAnalyzer) {
-            Invoke-ScriptAnalyzer -Path .\setup.ps1 -Severity Error
+            # Invoke-ScriptAnalyzer only emits records; turn findings into a failing exit code.
+            $findings = Invoke-ScriptAnalyzer -Path .\setup.ps1 -Severity Error
+            $findings | Format-Table -AutoSize | Out-String | Write-Host
+            if ($findings) { exit 1 }
           } else {
             Write-Host "PSScriptAnalyzer not available - skipped"
           }
