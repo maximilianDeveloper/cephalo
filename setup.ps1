@@ -391,10 +391,12 @@ if ($Target -ne "") {
     }
     
     # Handle existing target
+    $TargetWasEmpty = $true
     if (Test-Path $Target) {
         if (Test-Path $Target -PathType Container) {
             $existing = Get-ChildItem -Path $Target -Force -ErrorAction SilentlyContinue
             if ($existing) {
+                $TargetWasEmpty = $false
                 Write-Host ""
                 Write-Host "Warning: target directory already exists and is not empty:" -ForegroundColor Yellow
                 Write-Host "  $Target" -ForegroundColor Yellow
@@ -440,19 +442,23 @@ if ($Target -ne "") {
     # The top-level filter above only excludes matches at the copy root;
     # Copy-Item -Recurse still pulls in nested __pycache__/.venv/etc. that
     # live inside copied subdirectories (e.g. .claude\worktrees,
-    # .claude\settings.local.json). Sweep those out of the target too.
-    Get-ChildItem -Path $Target -Recurse -Force -Directory -ErrorAction SilentlyContinue |
-        Where-Object { $_.Name -in @("__pycache__", ".venv", "venv") } |
-        ForEach-Object { Remove-Item -Path $_.FullName -Recurse -Force -ErrorAction SilentlyContinue }
-    Get-ChildItem -Path $Target -Recurse -Force -File -Filter "*.pyc" -ErrorAction SilentlyContinue |
-        Remove-Item -Force -ErrorAction SilentlyContinue
-    $TargetClaudeWorktrees = Join-Path $Target ".claude\worktrees"
-    if (Test-Path $TargetClaudeWorktrees) {
-        Remove-Item -Path $TargetClaudeWorktrees -Recurse -Force -ErrorAction SilentlyContinue
-    }
-    $TargetClaudeLocalSettings = Join-Path $Target ".claude\settings.local.json"
-    if (Test-Path $TargetClaudeLocalSettings) {
-        Remove-Item -Path $TargetClaudeLocalSettings -Force -ErrorAction SilentlyContinue
+    # .claude\settings.local.json). Sweep those out of the target too, but
+    # only if the target was empty or new: in a non-empty target the user
+    # confirmed, these names may be the user's own files (e.g. a venv).
+    if ($TargetWasEmpty) {
+        Get-ChildItem -Path $Target -Recurse -Force -Directory -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -in @("__pycache__", ".venv", "venv") } |
+            ForEach-Object { Remove-Item -Path $_.FullName -Recurse -Force -ErrorAction SilentlyContinue }
+        Get-ChildItem -Path $Target -Recurse -Force -File -Filter "*.pyc" -ErrorAction SilentlyContinue |
+            Remove-Item -Force -ErrorAction SilentlyContinue
+        $TargetClaudeWorktrees = Join-Path $Target ".claude\worktrees"
+        if (Test-Path $TargetClaudeWorktrees) {
+            Remove-Item -Path $TargetClaudeWorktrees -Recurse -Force -ErrorAction SilentlyContinue
+        }
+        $TargetClaudeLocalSettings = Join-Path $Target ".claude\settings.local.json"
+        if (Test-Path $TargetClaudeLocalSettings) {
+            Remove-Item -Path $TargetClaudeLocalSettings -Force -ErrorAction SilentlyContinue
+        }
     }
 
     # Sanity check after copy
