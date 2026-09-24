@@ -78,10 +78,17 @@ def read_docx_paragraphs(path: Path) -> list[str]:
     """Read all paragraph text from a .docx file."""
     try:
         doc = Document(str(path))
+        return [p.text for p in doc.paragraphs]
     except PackageNotFoundError:
         print(f"Error: {path} is not a valid .docx file (corrupt or renamed?)", file=sys.stderr)
-        sys.exit(2)
-    return [p.text for p in doc.paragraphs]
+    except Exception as exc:
+        # Damaged or non-Word packages fail in many ways (KeyError, ValueError,
+        # BadZipFile, zlib.error, XMLSyntaxError, OSError, ...). Report them as
+        # an operational error (exit 2): an uncaught traceback would exit 1,
+        # which means "asymmetries found".
+        detail = " ".join(str(exc).split())
+        print(f"Error: {path} could not be read as a .docx file ({type(exc).__name__}: {detail})", file=sys.stderr)
+    sys.exit(2)
 
 
 def split_text_and_bibliography(paragraphs: list[str]) -> tuple[str, list[str]]:
@@ -328,7 +335,8 @@ def main():
         sys.exit(2)
 
     if sys.argv[1] in ("-h", "--help"):
-        print(__doc__.strip())
+        # __doc__ is None under python -OO
+        print((__doc__ or "Usage: python scripts/bibliography_check.py <file.docx>").strip())
         sys.exit(0)
 
     doc_path = Path(sys.argv[1])
