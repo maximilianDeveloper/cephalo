@@ -431,14 +431,16 @@ if ($Target -ne "") {
     # Copy cephalo template, excluding .git and local build/runtime artifacts
     # that the repo's own .gitignore protects (__pycache__, *.pyc, venvs, and
     # Claude Code's own worktrees/local settings). These must not leak into
-    # a freshly scaffolded project.
+    # a freshly scaffolded project. The setup-wizard launcher
+    # (cephalo-setup.*) is skipped too: it embeds the absolute path it was
+    # generated for and would otherwise be committed with the project.
     Write-Verbose "Copying template from '$SourceDir' to target '$Target'"
     Write-Host ""
     Write-Host "Copying cephalo template to target..." -ForegroundColor Cyan
     $ExcludedTopLevelNames = @(".git", "__pycache__", ".venv", "venv")
     try {
         Get-ChildItem -Path $SourceDir -Force | Where-Object {
-            $ExcludedTopLevelNames -notcontains $_.Name -and $_.Extension -ne ".pyc"
+            $ExcludedTopLevelNames -notcontains $_.Name -and $_.Extension -ne ".pyc" -and $_.Name -notlike "cephalo-setup.*"
         } | ForEach-Object {
             Copy-Item -Path $_.FullName -Destination $Target -Recurse -Force -ErrorAction Stop
         }
