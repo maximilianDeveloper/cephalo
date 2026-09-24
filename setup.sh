@@ -176,16 +176,18 @@ create_symlink() {
     #   (a) `ln -s` made a directory copy (Git Bash default) — already there.
     #   (b) `ln -s` produced nothing — we need to copy ourselves.
     # For case (b), the target path is relative to the LINK'S location,
-    # not to CWD, so we resolve it that way before copying.
+    # not to CWD, so we resolve it that way before copying. `|| true`: a
+    # failing cp must reach the "symlink AND copy failed" message below
+    # instead of aborting the whole setup under set -e.
     if [ ! -e "$link" ]; then
         local link_parent
         link_parent=$(dirname "$link")
         local resolved_target="$link_parent/$target"
         if [ -d "$resolved_target" ] || [ -f "$resolved_target" ]; then
-            cp -r "$resolved_target" "$link" 2>/dev/null
+            cp -r "$resolved_target" "$link" 2>/dev/null || true
         elif [ -d "$target" ] || [ -f "$target" ]; then
             # Fallback: target may be given relative to CWD
-            cp -r "$target" "$link" 2>/dev/null
+            cp -r "$target" "$link" 2>/dev/null || true
         fi
     fi
     
@@ -912,8 +914,14 @@ if [ ! -d ".git" ]; then
     if command -v git &> /dev/null; then
         if git init > /dev/null 2>&1; then
             if command -v git-lfs &> /dev/null; then
-                git lfs install > /dev/null 2>&1
-                echo -e "  ${GREEN}+ Git repository initialized (with LFS)${NC}"
+                # Optional step: a failing `git lfs install` only warns
+                # (parity with setup.ps1) instead of aborting under set -e.
+                if git lfs install > /dev/null 2>&1; then
+                    echo -e "  ${GREEN}+ Git repository initialized (with LFS)${NC}"
+                else
+                    echo -e "  ${GREEN}+ Git repository initialized${NC}"
+                    echo -e "  ${YELLOW}! Git LFS present but 'git lfs install' failed. Large files will not use LFS.${NC}"
+                fi
             else
                 echo -e "  ${GREEN}+ Git repository initialized${NC}"
                 echo -e "  ${YELLOW}! Git LFS not installed. Recommended: brew install git-lfs / apt install git-lfs${NC}"
