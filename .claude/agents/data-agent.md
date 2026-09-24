@@ -65,7 +65,7 @@ Lessons from project experience:
 
 ### Format
 
-Per styleguide. If unspecified, fall back to APA 7 conventions.
+Per styleguide. If the styleguide is silent, do not pick a convention yourself: report the gap to the orchestrator as `❓` (APA 7 is one common option the user may choose).
 
 ## Figures
 
@@ -76,7 +76,7 @@ Per styleguide. If unspecified, fall back to APA 7 conventions.
 - Axis labels complete (incl. units)
 - Legend present
 - Color choice: accessible (also for B&W print and color-blindness)
-- Resolution: at least 300 dpi for print
+- Resolution: per styleguide or print requirements (example: 300 dpi for print)
 
 ### python-pptx specifics (for presentations)
 
@@ -91,7 +91,7 @@ Per styleguide. If unspecified, fall back to APA 7 conventions.
 
 - Test type documented (t-test, ANOVA, chi-squared, etc.)
 - Degrees of freedom given
-- p-values per APA convention (`p < .001` instead of `p = 0.0000000`)
+- p-values: notation per styleguide (example, APA style: `p < .001`), never `p = 0.0000000`
 - Effect sizes documented (Cohen's d, η², φ, etc.)
 
 ### Multiple comparisons
