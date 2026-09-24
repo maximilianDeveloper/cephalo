@@ -412,7 +412,7 @@ List any open questions for me to resolve before we proceed.</code></pre>
 <hr>
 <h2>Step 0: Decide where your project lives</h2>
 <p>When you run the setup script, it will ask where to create the project. You have two options:</p>
-<ol><li><strong>Here</strong> — the project is created inside the extracted cephalo folder itself. Fast, but the folder will keep its download name (e.g. <code>cephalo-v1.0.0/</code> or <code>cephalo-main/</code>), which is not a great name for your thesis.</li><li><strong>In a different directory</strong> — enter a path like <code>~/Documents/Bachelorarbeit_KMU_OSS</code>. The cephalo template is copied there, and the project is created inside. At the end, the script offers to delete the original download.</li></ol>
+<ol><li><strong>Here</strong> — the project is created inside the extracted cephalo folder itself. Fast, but the folder will keep its download name (e.g. <code>cephalo-1.0.0/</code> or <code>cephalo-main/</code>), which is not a great name for your thesis.</li><li><strong>In a different directory</strong> — enter a path like <code>~/Documents/Bachelorarbeit_KMU_OSS</code>. The cephalo template is copied there, and the project is created inside. At the end, the script offers to delete the original download.</li></ol>
 <p>Option 2 is recommended for real work. Option 1 is fine for quick testing.</p>
 <p>Non-interactive:</p>
 <pre><code>./setup.sh &quot;Bachelor thesis&quot; &quot;Long-form&quot; full --target ~/Documents/Bachelorarbeit</code></pre>
@@ -453,7 +453,7 @@ List any open questions for me to resolve before we proceed.</code></pre>
 <hr>
 <h2>Common first-day mistakes</h2>
 <h3>Skipping the style-resolver</h3>
-<p>If you skip step 3, agents fall back on built-in defaults that may not match your institution&#x27;s rules. You&#x27;ll discover this much later when revisions pile up. Always run the resolver first.</p>
+<p>If you skip step 3, there is no <code>styleguide.md</code>, and the agents have no built-in formatting defaults to fall back on: the orchestrator stops to run the style-resolver first, and the writer and format-verifier can only flag formatting questions instead of checking them. Always run the resolver first.</p>
 <h3>Trusting filenames</h3>
 <p>Institutional course files sometimes have misleading names. A <code>.pdf</code> may actually be a ZIP archive of JPEGs. The research-agent should inspect file contents, not filenames. If you upload sources manually, verify what&#x27;s actually inside.</p>
 <h3>Ignoring open <code>❓</code> items</h3>
@@ -463,7 +463,7 @@ List any open questions for me to resolve before we proceed.</code></pre>
 <hr>
 <h2>Migration from existing work</h2>
 <p>If you already have a draft (in Word, Markdown, etc.):</p>
-<ol><li>Run setup as above</li><li>Place existing chapters in the appropriate phase directories (long-form) or <code>workspace/output/chapters/</code> (flat)</li><li>Create an initial <code>00_Status.md</code> summarizing where you stand</li><li>Run the style-resolver</li><li>Start a chat asking the source-verifier to verify your existing chapters</li></ol>
+<ol><li>Run setup as above</li><li>Place existing chapters in the appropriate phase directories (long-form) or <code>workspace/output/chapters/</code> (flat)</li><li>Create an initial <code>00_Status.md</code> (long-form) or <code>workspace/state.md</code> (flat) summarizing where you stand</li><li>Run the style-resolver</li><li>Start a chat asking the source-verifier to verify your existing chapters</li></ol>
 <p>The agents work with what&#x27;s already there. You don&#x27;t need to rewrite anything that already exists.</p>
 <hr>
 <h2>Troubleshooting</h2>
@@ -472,8 +472,8 @@ List any open questions for me to resolve before we proceed.</code></pre>
 <pre><code>Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\setup.ps1</code></pre>
 <p><strong><code>git: command not found</code></strong> — install Git. On Windows: download Git for Windows (includes Git Bash, which is needed for the <code>.sh</code> helper scripts). On Linux/macOS: <code>apt install git</code> / <code>brew install git</code>.</p>
-<p><strong><code>New-Item: Administrator privilege required</code></strong> on Windows (Multi-project setup) — symlinks need Admin rights or Developer Mode. The easier fix: Settings -&gt; For developers -&gt; Developer Mode: on. Then re-run setup.</p>
-<p><strong><code>ModuleNotFoundError: No module named &#x27;docx&#x27;</code></strong> — the Python utility scripts need their dependencies. From the project root: <code>pip install -r requirements.txt</code>. If you see <code>No module named &#x27;docx&#x27;</code> specifically, you may have the wrong package — uninstall <code>docx</code> (the abandoned one) and install <code>python-docx</code>.</p>
+<p><strong><code>New-Item: Administrator privilege required</code></strong> on Windows (Multi-project setup) — symlinks need Admin rights or Developer Mode. The easier fix: Settings -&gt; For developers -&gt; Developer Mode: on. Then delete the three <code>shared/</code> copies the setup created instead (<code>01_Proposal/shared</code>, <code>02_Main_Work/shared</code>, <code>03_Defense/shared</code>) and re-run setup; a re-run keeps existing copies as they are.</p>
+<p><strong><code>Error: python-docx not installed.</code></strong> (or <code>ModuleNotFoundError: No module named &#x27;docx&#x27;</code>) — the Python utility scripts need their dependencies. From the project root: <code>pip install -r requirements.txt</code>. If you see <code>No module named &#x27;docx&#x27;</code> specifically, you may have the wrong package — uninstall <code>docx</code> (the abandoned one) and install <code>python-docx</code>.</p>
 <p><strong>Setup finishes but no workflow is mentioned</strong> — check the script output. The last lines name the active workflow. Invalid arguments make the script exit with an error message naming the valid options — fix the argument and re-run.</p>
 <p><strong>Something else went wrong</strong> — re-run with verbose output: <code>bash -x setup.sh</code> (Linux/macOS) or add <code>-Verbose</code> to the PowerShell invocation. Open an issue with the output.</p>
 <hr>

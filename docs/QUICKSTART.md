@@ -12,7 +12,7 @@ For full architecture and concepts, see `README.md`.
 
 When you run the setup script, it will ask where to create the project. You have two options:
 
-1. **Here** — the project is created inside the extracted cephalo folder itself. Fast, but the folder will keep its download name (e.g. `cephalo-v1.0.0/` or `cephalo-main/`), which is not a great name for your thesis.
+1. **Here** — the project is created inside the extracted cephalo folder itself. Fast, but the folder will keep its download name (e.g. `cephalo-1.0.0/` or `cephalo-main/`), which is not a great name for your thesis.
 2. **In a different directory** — enter a path like `~/Documents/Bachelorarbeit_KMU_OSS`. The cephalo template is copied there, and the project is created inside. At the end, the script offers to delete the original download.
 
 Option 2 is recommended for real work. Option 1 is fine for quick testing.
@@ -123,7 +123,7 @@ In order:
 
 ### Skipping the style-resolver
 
-If you skip step 3, agents fall back on built-in defaults that may not match your institution's rules. You'll discover this much later when revisions pile up. Always run the resolver first.
+If you skip step 3, there is no `styleguide.md`, and the agents have no built-in formatting defaults to fall back on: the orchestrator stops to run the style-resolver first, and the writer and format-verifier can only flag formatting questions instead of checking them. Always run the resolver first.
 
 ### Trusting filenames
 
@@ -145,7 +145,7 @@ If you already have a draft (in Word, Markdown, etc.):
 
 1. Run setup as above
 2. Place existing chapters in the appropriate phase directories (long-form) or `workspace/output/chapters/` (flat)
-3. Create an initial `00_Status.md` summarizing where you stand
+3. Create an initial `00_Status.md` (long-form) or `workspace/state.md` (flat) summarizing where you stand
 4. Run the style-resolver
 5. Start a chat asking the source-verifier to verify your existing chapters
 
@@ -165,9 +165,9 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 
 **`git: command not found`** — install Git. On Windows: download Git for Windows (includes Git Bash, which is needed for the `.sh` helper scripts). On Linux/macOS: `apt install git` / `brew install git`.
 
-**`New-Item: Administrator privilege required`** on Windows (Multi-project setup) — symlinks need Admin rights or Developer Mode. The easier fix: Settings -> For developers -> Developer Mode: on. Then re-run setup.
+**`New-Item: Administrator privilege required`** on Windows (Multi-project setup) — symlinks need Admin rights or Developer Mode. The easier fix: Settings -> For developers -> Developer Mode: on. Then delete the three `shared/` copies the setup created instead (`01_Proposal/shared`, `02_Main_Work/shared`, `03_Defense/shared`) and re-run setup; a re-run keeps existing copies as they are.
 
-**`ModuleNotFoundError: No module named 'docx'`** — the Python utility scripts need their dependencies. From the project root: `pip install -r requirements.txt`. If you see `No module named 'docx'` specifically, you may have the wrong package — uninstall `docx` (the abandoned one) and install `python-docx`.
+**`Error: python-docx not installed.`** (or `ModuleNotFoundError: No module named 'docx'`) — the Python utility scripts need their dependencies. From the project root: `pip install -r requirements.txt`. If you see `No module named 'docx'` specifically, you may have the wrong package — uninstall `docx` (the abandoned one) and install `python-docx`.
 
 **Setup finishes but no workflow is mentioned** — check the script output. The last lines name the active workflow. Invalid arguments make the script exit with an error message naming the valid options — fix the argument and re-run.
 
