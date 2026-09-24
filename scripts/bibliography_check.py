@@ -157,13 +157,13 @@ def extract_in_text_authors(body: str) -> set[str]:
             # A citation fragment typically has "Author(s), YYYY[, p. X]"
             # (English/APA style — comma before year)
             # or "Author(s) YYYY[, S. X]" (German author-year style — no comma)
-            match = re.match(r"^((?:cf\.\s+|see\s+|vgl\.\s+|siehe\s+|nach\s+|zit\.\s+nach\s+)?[^,]+(?:\s+et\s+al\.?)?(?:\s*(?:,\s*)?(?:&|and|und)\s+[\w'-]+|,\s*[\w'-]+)*),\s*\d{4}", fragment)
+            match = re.match(r"^((?:cf\.\s+|see\s+|vgl\.\s+|siehe\s+|nach\s+|zit\.\s+nach\s+)?[^,]+(?:\s+(?:et\s+al\.?|u\.\s*a\.))?(?:\s*(?:,\s*)?(?:&|and|und)\s+[\w'-]+|,\s*[\w'-]+)*),\s*\d{4}", fragment)
             if not match:
                 # Try German style: "Author YYYY" without comma
                 match = re.match(
                     r"^((?:vgl\.\s+|cf\.\s+|see\s+|siehe\s+|nach\s+|zit\.\s+nach\s+)?[A-ZÄÖÜ][\wäöüß'-]+"
                     r"(?:\s+(?:&|und|and)\s+[A-ZÄÖÜ][\wäöüß'-]+)?"
-                    r"(?:\s+et\s+al\.?)?)"
+                    r"(?:\s+(?:et\s+al\.?|u\.\s*a\.))?)"
                     r"\s+\d{4}",
                     fragment,
                 )
@@ -172,8 +172,8 @@ def extract_in_text_authors(body: str) -> set[str]:
             name_part = match.group(1)
             # Strip leading prefixes
             name_part = re.sub(r"^(cf\.\s+|see\s+|vgl\.\s+|siehe\s+|nach\s+|zit\.\s+nach\s+)", "", name_part, flags=re.IGNORECASE)
-            # Remove "et al."
-            name_part = re.sub(r"\s+et\s+al\.?", "", name_part, flags=re.IGNORECASE)
+            # Remove "et al." / German "u. a."
+            name_part = re.sub(r"\s+(?:et\s+al\.?|u\.\s*a\.)", "", name_part, flags=re.IGNORECASE)
             # Split on & or , or "and"/"und"
             for part in re.split(r"\s*[&,]\s*|\s+(?:and|und)\s+", name_part):
                 name = part.strip()
@@ -186,7 +186,7 @@ def extract_in_text_authors(body: str) -> set[str]:
     #   - hyphenated surnames: Müller-Schmidt
     #   - name prefixes: van der Berg, de la Rosa, von Wagner
     #   - joint authors: Smith and Jones, Müller-Schmidt & Weiss
-    #   - et al. narrative: Brown et al. (2021)
+    #   - et al. narrative: Brown et al. (2021), German Müller u. a. (2021)
     #   - same-author-same-year suffixes: Schulz (2022a)
     #   - locator or further years inside the parentheses: Müller (2020, S. 15),
     #     Müller (2020: 15), Smith (2019, 2020)
@@ -195,14 +195,14 @@ def extract_in_text_authors(body: str) -> set[str]:
     prefix = r"(?:(?:van|von|de|del|della|di|la|le|du|dos|das|ter|ten)\s+(?:der\s+|den\s+|de\s+|la\s+)?)?"
     # Joint form OR et-al form
     joint = r"\s+(?:&|and|und)\s+" + prefix + name_token
-    et_al = r"\s+et\s+al\.?"
+    et_al = r"\s+(?:et\s+al\.?|u\.\s*a\.)"
     # Narrative with parentheses: Author (YYYY[, locator])
     narrative_paren = (
         r"(" + prefix + name_token
         + r"(?:" + joint + r"|" + et_al + r")?)\s+\(\d{4}[a-z]?(?:[,:;][^()]*)?\)"
     )
     for match in re.findall(narrative_paren, body):
-        cleaned = re.sub(r"\s+et\s+al\.?", "", match, flags=re.IGNORECASE)
+        cleaned = re.sub(et_al, "", match, flags=re.IGNORECASE)
         for part in re.split(r"\s+(?:&|and|und)\s+", cleaned):
             name = part.strip()
             if not name:
@@ -243,7 +243,7 @@ def extract_in_text_authors(body: str) -> set[str]:
         r"|\s*\((?:S\.|p\.|pp\.)\s*\d)"          # "Schmidt 2020 (S. 15)"
     )
     for match in re.findall(german_narrative_strict, body):
-        cleaned = re.sub(r"\s+et\s+al\.?", "", match, flags=re.IGNORECASE)
+        cleaned = re.sub(et_al, "", match, flags=re.IGNORECASE)
         for part in re.split(r"\s+(?:&|and|und)\s+", cleaned):
             name = part.strip()
             if not name:
