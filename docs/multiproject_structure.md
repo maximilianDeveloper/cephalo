@@ -74,6 +74,7 @@ project_root/                          ← Git repo root (one repo for all)
 ├── 03_Defense/                        ← sub-project 3
 │   ├── 00_Status.md
 │   ├── 00_Decisions.md
+│   ├── 00_Feedback_log.md
 │   ├── shared/                        ← symlink to ../00_Shared_Materials
 │   ├── 01_Slides/
 │   ├── 02_Speaker_Notes/
@@ -244,6 +245,9 @@ PowerShell:
 ```powershell
 # Run from the multi-project root
 foreach ($sub in @("01_Proposal", "02_Main_Work", "03_Defense")) {
+    # Skip a real link: it is already current, and Windows PowerShell 5.1 can
+    # delete the link target's contents (00_Shared_Materials) on Remove-Item -Recurse.
+    if ((Get-Item "$sub\shared" -Force -ErrorAction SilentlyContinue).LinkType) { continue }
     if (Test-Path "$sub\shared") {
         Remove-Item "$sub\shared" -Recurse -Force
     }
@@ -255,6 +259,7 @@ Git Bash:
 ```bash
 # Run from the multi-project root
 for sub in 01_Proposal 02_Main_Work 03_Defense; do
+    [ -L "$sub/shared" ] && continue    # real symlink: already current
     rm -rf "$sub/shared"
     cp -r 00_Shared_Materials "$sub/shared"
 done
