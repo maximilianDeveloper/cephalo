@@ -28,7 +28,8 @@ jobs:
         run: python -m py_compile scripts/abbreviations_extract.py scripts/bibliography_check.py scripts/cross_session_audit.py
 
       - name: Shell syntax
-        run: bash -n setup.sh scripts/docx_postprocess.sh scripts/extract_styleguide.sh
+        # One file per call: `bash -n a b c` parses only a (b and c become its arguments).
+        run: for f in setup.sh scripts/docx_postprocess.sh scripts/extract_styleguide.sh; do bash -n "$f"; done
 
       - name: shellcheck
         run: shellcheck setup.sh scripts/docx_postprocess.sh scripts/extract_styleguide.sh
@@ -44,8 +45,45 @@ jobs:
               print("OK", f)
           EOF
 
+      - name: Agent and workflow references
+        run: |
+          python - <<'EOF'
+          import glob, os, yaml
+          errors = []
+          agent_files = sorted(glob.glob(".claude/agents/*.md"))
+          assert len(agent_files) == 10, f"expected 10 agent files, found {len(agent_files)}"
+          for f in agent_files:
+              front = yaml.safe_load(open(f, encoding="utf-8").read().split("---")[1])
+              if front.get("name") != os.path.basename(f)[:-3]:
+                  errors.append(f"{f}: frontmatter name {front.get('name')!r} does not match the file name")
+          def refs(node):
+              if isinstance(node, dict):
+                  for k, v in node.items():
+                      if k == "agent" and isinstance(v, str):
+                          yield v
+                      elif k in ("agents", "active_agents", "optional_agents") and isinstance(v, list):
+                          yield from (a for a in v if isinstance(a, str))
+                      else:
+                          yield from refs(v)
+              elif isinstance(node, list):
+                  for v in node:
+                      yield from refs(v)
+          for f in sorted(glob.glob("workflows/*.yaml")):
+              wf = yaml.safe_load(open(f, encoding="utf-8"))
+              declared = wf.get("agents", {})
+              for key, spec in declared.items():
+                  if not os.path.isfile(spec["file"]):
+                      errors.append(f"{f}: agent {key!r} points to missing {spec['file']}")
+              for name in refs({k: v for k, v in wf.items() if k != "agents"}):
+                  if name not in declared:
+                      errors.append(f"{f}: agent {name!r} is used but not declared")
+          print("\n".join(errors) or "OK: agent definitions and workflow references")
+          raise SystemExit(1 if errors else 0)
+          EOF
+
       - name: Script --help smokes
         run: |
+          python scripts/abbreviations_extract.py --help
           python scripts/bibliography_check.py --help
           python scripts/cross_session_audit.py --help
           bash scripts/docx_postprocess.sh --help
@@ -69,6 +107,54 @@ jobs:
           set -e
           test "$code" -eq 2
           test ! -e /tmp/ci_typo
+          # More typos: each must exit 2 without creating the target and without
+          # scaffolding into the template checkout itself.
+          expect_2() {
+            set +e; bash setup.sh "$@" </dev/null >/dev/null 2>&1; code=$?; set -e
+            if [ "$code" -ne 2 ]; then echo "expected exit 2, got $code for: $*"; exit 1; fi
+            test ! -e /tmp/ci_typo && test ! -e ci_inside && test ! -e 00_Status.md && test ! -e workspace
+          }
+          expect_2 "Bachelorarbeit" "Long-form" full --target /tmp/ci_typo
+          expect_2 "Bachelor thesis" "Long-form" fulll --target /tmp/ci_typo
+          expect_2 "Bachelor thesis" "Long-form" full --taget /tmp/ci_typo
+          expect_2 "Bachelor thesis" "Long-form" full /tmp/ci_typo
+          expect_2 "Bachelor thesis" "Long-form" full --target=
+          expect_2 "Bachelor thesis" "Long-form" full --target ci_inside
+
+      - name: Setup regressions (re-run, generated files, menus, numbering)
+        run: |
+          # A re-run must keep existing state files (this once caused data loss).
+          for f in 00_Status.md 00_Decisions.md 00_Feedback_log.md; do echo "ci-marker" >> "/tmp/ci_long/$f"; done
+          (cd /tmp/ci_long && bash setup.sh "Bachelor thesis" "Long-form" full </dev/null >/dev/null)
+          for f in 00_Status.md 00_Decisions.md 00_Feedback_log.md; do grep -q ci-marker "/tmp/ci_long/$f"; done
+          # Generated projects: LFS rules next to the template's eol rule, once;
+          # state files come from templates/, not from the minimal fallback.
+          test "$(grep -c 'filter=lfs' /tmp/ci_long/.gitattributes)" -eq 6
+          grep -q '^\*\.sh text eol=lf' /tmp/ci_long/.gitattributes
+          for sub in 01_Proposal 02_Main_Work 03_Defense; do
+            cmp templates/status.md "/tmp/ci_multi/$sub/00_Status.md"
+            cmp templates/decisions.md "/tmp/ci_multi/$sub/00_Decisions.md"
+            cmp templates/feedback_log.md "/tmp/ci_multi/$sub/00_Feedback_log.md"
+          done
+          # The .gitignore that setup writes when none exists equals the template's.
+          rm /tmp/ci_flat/.gitignore
+          (cd /tmp/ci_flat && bash setup.sh "Seminar paper" "Flat" full </dev/null >/dev/null)
+          cmp .gitignore /tmp/ci_flat/.gitignore
+          # Invalid menu input is answered with a hint; closed stdin then exits 2.
+          set +e
+          printf '9\nabc\n' | bash setup.sh >/dev/null 2>/tmp/ci_menu.err
+          code=$?
+          set -e
+          test "$code" -eq 2
+          test "$(grep -c 'Please enter a number between 1 and 5.' /tmp/ci_menu.err)" -eq 2
+          # "Next steps" are numbered without gaps.
+          for args in "Seminar paper|Flat|full" "Bachelor thesis|Long-form|minimal" "Master thesis|Multi-project|full"; do
+            IFS='|' read -r w s c <<< "$args"
+            rm -rf /tmp/ci_steps
+            got=$(bash setup.sh "$w" "$s" "$c" --target /tmp/ci_steps </dev/null | sed -n '/Next steps/,$p' | sed 's/\x1b\[[0-9;]*m//g' | grep -oE '^ *[0-9]+\.' | tr -d ' .' | tr '\n' ' ')
+            want=$(seq -s ' ' 1 "$(echo "$got" | wc -w)")
+            test "$got" = "$want " || { echo "Next steps numbered '$got' for $args"; exit 1; }
+          done
 
   windows:
     name: PowerShell 5.1 parse & setup smoke (Windows)
