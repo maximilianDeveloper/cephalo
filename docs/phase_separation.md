@@ -42,6 +42,8 @@ cephalo splits the project lifecycle into two distinct phases:
 
 Format work uses fast (cheap) models exclusively. For a typical bachelor thesis, this cuts overall token spending by an estimated 60-70% versus running capable models throughout.
 
+The saving depends on how you run Phase B: `format-verifier` and the orchestrators are defined with `model: inherit`, so they use whatever model the main chat runs. Start Phase B chats on a fast model (for example with `/model`), or pin `format-verifier` to a fast model in its frontmatter; otherwise Phase B runs on your default model.
+
 ### Quality stability
 
 Content work uses capable models because the judgment required (paraphrasing, source fidelity, term selection) genuinely needs them. Format work uses fast models because the judgment required (does this comma match the styleguide?) doesn't.
@@ -77,7 +79,7 @@ Sometimes a format pass surfaces a real content issue (e.g., a missing citation 
 1. Pause Phase B
 2. Re-activate the writer-agent for the specific fix
 3. Run source-verifier on the affected passage
-4. Document the rollback in `00_Decisions.md`
+4. Document the rollback in `00_Decisions.md` (long-form) or `workspace/state.md` (flat)
 5. Resume Phase B
 
 Rollbacks should be rare. If they happen often, the project transitioned to B prematurely — the criteria above were not actually met.
