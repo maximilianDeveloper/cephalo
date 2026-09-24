@@ -63,6 +63,7 @@ class WorktreeInfo:
     branch: str
     head: str
     is_main: bool = False
+    is_bare: bool = False
     uncommitted: list[str] = field(default_factory=list)
     underscore_files: list[Path] = field(default_factory=list)
 
@@ -78,7 +79,9 @@ def run_git(args: list[str], cwd: Path) -> str:
         errors="replace",
     )
     if result.returncode != 0:
-        raise RuntimeError(f"git {' '.join(args)} failed: {result.stderr}")
+        # One line: git's stderr can span several lines (e.g. dubious ownership).
+        stderr = " ".join(result.stderr.split())
+        raise RuntimeError(f"git {' '.join(args)} failed in {cwd}: {stderr}")
     return result.stdout
 
 
@@ -125,15 +128,13 @@ def _dict_to_worktree(d: dict) -> WorktreeInfo:
         path=Path(d["path"]),
         branch=d.get("branch", "(detached)"),
         head=d.get("head", "?"),
+        is_bare=d.get("bare", False),
     )
 
 
 def get_uncommitted(worktree_path: Path) -> list[str]:
-    """Return porcelain status lines for the worktree."""
-    try:
-        out = run_git(["status", "--porcelain"], worktree_path)
-    except RuntimeError:
-        return []
+    """Return porcelain status lines for the worktree, raising on error."""
+    out = run_git(["status", "--porcelain"], worktree_path)
     return [line for line in out.splitlines() if line]
 
 
@@ -184,7 +185,8 @@ def file_mtime(path: Path) -> str:
 def collect_worktree_data(worktrees: list[WorktreeInfo]) -> None:
     """Populate uncommitted + underscore_files for each worktree (in place)."""
     for wt in worktrees:
-        if not wt.path.exists():
+        # A bare main repository has no working tree to inspect.
+        if wt.is_bare or not wt.path.exists():
             continue
         wt.uncommitted = get_uncommitted(wt.path)
         wt.underscore_files = find_underscore_files(wt.path)
@@ -432,24 +434,26 @@ def main() -> int:
     try:
         repo_root = find_repo_root(args.repo_root)
         worktrees = list_worktrees(repo_root)
+        collect_worktree_data(worktrees)
+        master_only_diff = find_master_only_diff(worktrees)
+
+        main_wt = next((wt for wt in worktrees if wt.is_main), None)
+        dangling = find_dangling_refs(main_wt.path) if main_wt else []
+
+        report = generate_report(repo_root, worktrees, master_only_diff, dangling)
+        print(report)
+
+        if args.report_file:
+            args.report_file.parent.mkdir(parents=True, exist_ok=True)
+            args.report_file.write_text(report, encoding="utf-8")
+            print(f"\n[Report written: {args.report_file}]", file=sys.stderr)
     except (RuntimeError, OSError) as e:
-        # RuntimeError: git returned nonzero (e.g. not a git repo).
-        # OSError: subprocess-level failure (git binary not on PATH, cwd invalid).
+        # RuntimeError: git returned nonzero (e.g. not a git repo, or the
+        # status of a worktree could not be read).
+        # OSError: subprocess-level failure (git binary not on PATH, cwd
+        # invalid), an unreadable worktree, or an unwritable --report-file.
         print(f"Error: {e}", file=sys.stderr)
         return 2
-    collect_worktree_data(worktrees)
-    master_only_diff = find_master_only_diff(worktrees)
-
-    main_wt = next((wt for wt in worktrees if wt.is_main), None)
-    dangling = find_dangling_refs(main_wt.path) if main_wt else []
-
-    report = generate_report(repo_root, worktrees, master_only_diff, dangling)
-    print(report)
-
-    if args.report_file:
-        args.report_file.parent.mkdir(parents=True, exist_ok=True)
-        args.report_file.write_text(report, encoding="utf-8")
-        print(f"\n[Report written: {args.report_file}]", file=sys.stderr)
 
     # Exit code: 0 if there are no findings, 1 if findings exist (for CI / hooks).
     # Operational errors (the audit could not run) return 2, see above,
