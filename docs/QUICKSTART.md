@@ -123,7 +123,7 @@ In order:
 
 ### Skipping the style-resolver
 
-If you skip step 3, there is no `styleguide.md`, and the agents have no built-in formatting defaults to fall back on: the orchestrator stops to run the style-resolver first, and the writer and format-verifier can only flag formatting questions instead of checking them. Always run the resolver first.
+If you skip step 3, there is no `styleguide.md`: the orchestrator stops to run the style-resolver first, the format-verifier stops, and the writer can only flag formatting questions instead of applying rules (the typographic fallbacks in `checklists/format_rules.md` apply only to an existing but incomplete styleguide). Always run the resolver first.
 
 ### Trusting filenames
 

@@ -453,7 +453,7 @@ List any open questions for me to resolve before we proceed.</code></pre>
 <hr>
 <h2>Common first-day mistakes</h2>
 <h3>Skipping the style-resolver</h3>
-<p>If you skip step 3, there is no <code>styleguide.md</code>, and the agents have no built-in formatting defaults to fall back on: the orchestrator stops to run the style-resolver first, and the writer and format-verifier can only flag formatting questions instead of checking them. Always run the resolver first.</p>
+<p>If you skip step 3, there is no <code>styleguide.md</code>: the orchestrator stops to run the style-resolver first, the format-verifier stops, and the writer can only flag formatting questions instead of applying rules (the typographic fallbacks in <code>checklists/format_rules.md</code> apply only to an existing but incomplete styleguide). Always run the resolver first.</p>
 <h3>Trusting filenames</h3>
 <p>Institutional course files sometimes have misleading names. A <code>.pdf</code> may actually be a ZIP archive of JPEGs. The research-agent should inspect file contents, not filenames. If you upload sources manually, verify what&#x27;s actually inside.</p>
 <h3>Ignoring open <code>❓</code> items</h3>
