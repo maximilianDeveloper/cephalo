@@ -189,7 +189,7 @@ Present the outstanding items as a numbered list with source citations so the us
 - At each chat closure: generate commit suggestion (do not self-commit)
 - Read `git status` and `git diff --stat` for the handover
 - For destructive changes (e.g., `git reset`): ALWAYS ask
-- DOCX/PPTX files: only in `08_Formal_Review/submissions/`, nowhere else
+- DOCX/PPTX files: only in the submission directory (`08_Formal_Review/submissions/`; in the proposal sub-project `04_Submission/`) and, for the accepted proposal copy, the main work's `01_Proposal_Reference/`, nowhere else
 
 ## When to stop and ask the user
 
