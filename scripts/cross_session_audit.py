@@ -437,7 +437,8 @@ def generate_report(
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__.strip().split("\n\n")[0])
+    # `__doc__` is None under `python -OO`.
+    parser = argparse.ArgumentParser(description=(__doc__ or "").strip().split("\n\n")[0])
     parser.add_argument(
         "--report-file",
         type=Path,
