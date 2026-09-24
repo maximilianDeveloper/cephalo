@@ -56,7 +56,7 @@ constraints:
   page_count: 50-80           # default; styleguide may override
   sources_min: 30
   sources_max: 60
-  outline_depth_max: 3
+  outline_depth_max: 3        # default; styleguide headings.max_depth overrides
   empirical: true             # methods + data agents only used if empirical
   feedback_loop_max: 3
   feedback_loop_escalation:

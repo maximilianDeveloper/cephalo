@@ -48,7 +48,7 @@ constraints:
   page_count: 30-40
   sources_min: 15
   sources_max: 25
-  outline_depth_max: 3
+  outline_depth_max: 3     # default; styleguide headings.max_depth overrides
   feedback_loop_max: 3
   feedback_loop_escalation:
     # See orchestrator-longform.md -> "Feedback-loop escalation" for the full

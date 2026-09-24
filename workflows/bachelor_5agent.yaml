@@ -49,7 +49,7 @@ constraints:
   page_count: 30-40        # default; styleguide may override
   sources_min: 15
   sources_max: 25
-  outline_depth_max: 3
+  outline_depth_max: 3     # default; styleguide headings.max_depth overrides
   chapter_weighting:
     introduction: 20%
     body: 70%

@@ -129,8 +129,9 @@ phases:
     
     rules:
       - Number formatting: decimal separator consistent (comma or period per styleguide)
-      - Pie chart format: NEVER "0%" — always "0.0%" to avoid rounding errors
-        (development lesson: sums can otherwise total 101%)
+      - Pie chart format: keep at least one decimal (e.g. "0.0%", not "0%") AND check
+          that the labelled values sum to 100% — one decimal alone does not guarantee it
+          (development lesson — sums can total 99.9% or 101%); otherwise add a rounding note
       - Units on all values (EUR, %, n=...)
       - If companion exists: numbers consistent there too
     
@@ -150,7 +151,7 @@ phases:
         - Final PPTX export
         - Final PDF (for submission)
         - Speaker notes export (if required)
-        - Rehearsal with timing (15-20 min target)
+        - Rehearsal with timing (target per assignment / styleguide.md, e.g. 15-20 min)
 
 # python-pptx specifics (from project experience)
 
