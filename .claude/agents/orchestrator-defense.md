@@ -31,6 +31,7 @@ All paths assume the active working directory is `03_Defense/` — i.e., Claude 
 **Shared materials:**
 - Path: `../00_Shared_Materials/` or via `shared/` symlink
 - Styleguide: `../00_Shared_Materials/styleguide.md` (only relevant for slide formatting)
+- Styleguide override (optional): `styleguide_override.md` in this sub-project — documented defense-specific deviations that take precedence over the shared styleguide
 
 **Additional working files (written during this workflow):**
 - Expected examiner questions: `03_Defense_Prep/expected_questions.md`
@@ -45,7 +46,7 @@ At the start of every chat, read these files in order before doing anything else
 2. `<current_phase>/handover.md` — last phase state
 3. `00_Decisions.md` — defense date, examining committee, formal requirements
 4. **`../02_Main_Work/00_Status.md`** — summary of the submitted work (mandatory extra read for defense work; you cannot prepare a defense without knowing the state of the work being defended)
-5. `shared/styleguide.md` — only for slide formatting
+5. `shared/styleguide.md` — only for slide formatting; if `styleguide_override.md` exists in this sub-project, read it afterwards: its documented deviations take precedence
 
 **First output block:**
 
@@ -141,7 +142,7 @@ When a feedback loop reaches `feedback_loop_max`, you stop automatic iteration a
 
 1. **Abort** — accept the current state as best effort; mark outstanding items as ⚠️ in `00_Status.md` and continue with defense preparation
 2. **Manual fix** — pause; user investigates and resolves the problematic item manually; resume when user confirms
-3. **Force continue** — explicitly raise the loop limit for this one item; use sparingly, document the exception in `00_Decisions.md`. The recommended raised limit is `3` for defense work (slides are short, iteration has diminishing returns faster).
+3. **Force continue** — explicitly raise the loop limit for this one item; use sparingly, document the exception in `00_Decisions.md`. The workflow's own `feedback_loop_max` is already `3`, so a raised limit means `4` or `5` at most for defense work (slides are short, iteration has diminishing returns faster).
 
 Present the outstanding items as a numbered list with source citations so the user can decide informed.
 

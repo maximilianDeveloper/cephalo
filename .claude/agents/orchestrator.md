@@ -78,8 +78,7 @@ See `docs/phase_separation.md` for details.
 
 ### Feedback loop control
 
-- Max 2 loops for `seminar_2agent` workflow
-- Max 3 loops for all other workflows
+- Loop limit: `feedback_loop_max` from the active workflow file (2 for the short works `seminar_2agent` and `presentation_3agent`, 3 for the thesis workflows)
 - After loop limit reached: escalate to user with outstanding issue list (see "Feedback-loop escalation" below)
 - Log cross-chapter patterns in `workspace/feedback.md` (if the file exists)
 
