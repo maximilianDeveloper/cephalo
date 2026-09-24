@@ -132,8 +132,19 @@ phases:
             New-Item -ItemType SymbolicLink -Path "shared" -Target "..\00_Shared_Materials"
           macOS/Linux:
             ln -s ../00_Shared_Materials shared
-      
+
       - step: 0.3
+        name: Materials pre-check
+        agent: orchestrator-longform
+        checklist: checklists/precheck.md
+        blocking: true
+        note: |
+          The proposal runs before the main work, so no earlier pre-check has
+          covered the materials. Apply sections "1. Examination materials" and
+          "2. Sources" (incl. "File disguise check") to shared/guidelines/ and
+          to every source the proposal will cite.
+
+      - step: 0.4
         name: Verify or extract styleguide
         agent: style-resolver
         blocking: true
