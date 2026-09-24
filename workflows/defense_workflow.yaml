@@ -194,7 +194,7 @@ phases:
     
     goals:
       - Per slide: what exactly do I say?
-      - Time budget per slide (stay within 15-20 min total)
+      - Time budget per slide (stay within the talk length recorded in 00_Decisions.md, typically 15-20 min)
       - Connecting transitions between slides
     
     output:
