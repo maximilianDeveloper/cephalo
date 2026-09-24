@@ -881,6 +881,8 @@ desktop.ini
 ~$*.docx
 ~$*.pptx
 ~$*.xlsx
+~WRL*.tmp
+.~lock.*#
 
 # Editor directories
 .vscode/
