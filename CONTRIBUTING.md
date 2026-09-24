@@ -24,7 +24,7 @@ Before proposing larger changes, please read through these. They came out of rea
 
 **3. Phase separation.** Content work (Phase A, capable models) and formatting work (Phase B, fast models) must stay separated. Mixing them eliminates the cost saving that phase separation provides.
 
-**4. Structural isolation of guidelines.** Institutional guideline documents live in an underscore-prefixed directory (`_guidelines/` in flat, `guidelines/` at the top level in long-form) so the research-agent does not mistake them for citable sources.
+**4. Structural isolation of guidelines.** Institutional guideline documents live in a dedicated directory, separate from the citable sources (`workspace/sources/_guidelines/` in flat, where the leading underscore marks it as non-citable; top-level `guidelines/` in long-form; `00_Shared_Materials/guidelines/` in multi-project), so the research-agent does not mistake them for citable sources.
 
 **5. Templates over hardcoding.** If a setup script writes a file, the file's contents should come from `templates/`. Inline content in scripts drifts.
 
@@ -35,16 +35,29 @@ Before tagging a new version, run the full checklist below. The static checks ca
 ### Static checks (from the repository root)
 
 ```bash
-# YAML parse: all 8 workflows must load
-for f in workflows/*.yaml; do
-    python3 -c "import yaml; yaml.safe_load(open('$f'))" || echo "FAILED: $f"
-done
+# Dependencies (as in CI)
+python3 -m pip install -r requirements.txt pyyaml
+
+# YAML parse: all 8 workflows must load (explicit UTF-8, as in CI)
+python3 - <<'EOF'
+import glob, yaml
+files = sorted(glob.glob("workflows/*.yaml"))
+assert len(files) == 8, f"expected 8 workflow files, found {len(files)}"
+for f in files:
+    yaml.safe_load(open(f, encoding="utf-8"))
+    print("OK", f)
+EOF
 
 # Reference integrity: every agent invoked in a workflow must be declared
 # (manual check: each agent name referenced in a workflow YAML must exist in .claude/agents/)
 
-# Shell syntax
-bash -n setup.sh scripts/docx_postprocess.sh scripts/extract_styleguide.sh
+# Shell syntax (one file per call: bash -n treats further names as arguments)
+for f in setup.sh scripts/docx_postprocess.sh scripts/extract_styleguide.sh; do
+    bash -n "$f" || echo "FAILED: $f"
+done
+
+# Shell lint (as in CI)
+shellcheck setup.sh scripts/docx_postprocess.sh scripts/extract_styleguide.sh
 
 # Python syntax
 python3 -m py_compile scripts/abbreviations_extract.py scripts/bibliography_check.py scripts/cross_session_audit.py
@@ -105,7 +118,7 @@ On each platform, run all four target scenarios:
    ```
    Expected: exits 2, yellow warning printed, target folder untouched.
 
-4. **Target = source:** run `./setup.sh "X" "Y" full --target $(pwd)`. Expected: falls back to "proceeding here" mode without copy.
+4. **Target = source:** in a throwaway copy of the template, run `./setup.sh "Seminar paper" "Flat" full --target "$(pwd)"`. Expected: prints "Target path equals current location — proceeding here." and sets up in place without copy.
 
 If any of these fail on any platform, the release is blocked.
 
