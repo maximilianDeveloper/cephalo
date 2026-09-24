@@ -136,8 +136,8 @@ phases:
       - If companion exists: numbers consistent there too
     
     steps:
-      - Export PPTX to PDF (python-pptx or LibreOffice)
-      - Automated comparison of numbers across PPTX <-> PDF <-> companion
+      - Export PPTX to PDF (PowerPoint, or LibreOffice via soffice --headless --convert-to pdf)
+      - Compare numbers across PPTX <-> PDF <-> companion (manually, or with a helper script you provide)
       - Manual check of speaker notes (do they contain the key numbers?)
       - Correct discrepancies until all three versions are identical
 
