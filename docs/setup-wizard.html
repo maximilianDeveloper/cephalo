@@ -688,6 +688,7 @@ List any open questions for me to resolve before we proceed.</code></pre>
       var args='-WorkType "'+w+'" -Structure "'+s+'" -Scaffolding '+c+(tgt?' -Target "'+tgt+'"':'')+' -NonInteractive';
       return {name:"cephalo-setup.cmd",crlf:true,text:[
         "@echo off",
+        "chcp 65001 >nul",   // this file is UTF-8, but cmd.exe decodes batch lines in the console code page: switch it so non-ASCII targets survive
         "REM cephalo launcher -- save this file INTO your cephalo folder (next to setup.ps1), then double-click it.",
         'cd /d "%~dp0"',
         'if not exist ".\\setup.ps1" (',
