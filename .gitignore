@@ -19,16 +19,14 @@ __pycache__/
 .venv/
 venv/
 
-# Personal data — never commit raw data with personal identifiers
-**/data/raw/*.csv
-**/data/raw/*.xlsx
-**/data/raw/*_personal*
-**/data/raw/*_identified*
-**/data/processed/
+# Research data — never commit it: raw data may carry personal identifiers
+**/data/raw/*
+**/data/processed/*
 
 # Keep placeholders
 !**/data/raw/.gitkeep
 !**/data/raw/README.md
+!**/data/processed/.gitkeep
 
 # Claude Code runtime artifacts
 .claude/worktrees/
