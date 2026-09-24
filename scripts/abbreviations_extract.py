@@ -168,9 +168,19 @@ def read_docx_text(path: Path) -> str:
                     print(f"Warning: could not read {part.partname}: {exc}",
                           file=sys.stderr)
                     continue
-                for t in root.iter(qn("w:t")):
-                    if t.text:
-                        chunks.append(t.text)
+                # Join the runs of each note paragraph, as python-docx does for
+                # body paragraphs: Word often splits one word across runs, so
+                # one chunk per w:t would cut UNESCO into UNES + CO. Tabs,
+                # breaks and non-breaking hyphens become a space separator.
+                for para in root.iter(qn("w:p")):
+                    text = "".join(
+                        (el.text or "") if el.tag == qn("w:t") else " "
+                        for el in para.iter(qn("w:t"), qn("w:tab"), qn("w:ptab"),
+                                            qn("w:br"), qn("w:cr"),
+                                            qn("w:noBreakHyphen"))
+                    )
+                    if text.strip():
+                        chunks.append(text)
 
     return "\n".join(chunks)
 
