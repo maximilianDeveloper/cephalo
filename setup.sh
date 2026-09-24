@@ -450,7 +450,8 @@ if [ -z "$TARGET_DIR" ] && ! $NON_INTERACTIVE && [ -t 0 ] && [ -t 1 ]; then
     echo "  2. Choose a different directory"
     echo ""
     while true; do
-        read -r -p "Your choice [1-2, default 1]: " loc_choice
+        # EOF (Ctrl+D) counts as an empty answer, i.e. the default.
+        read -r -p "Your choice [1-2, default 1]: " loc_choice || loc_choice=""
         loc_choice="${loc_choice:-1}"
         case "$loc_choice" in
             1) break ;;
@@ -459,7 +460,7 @@ if [ -z "$TARGET_DIR" ] && ! $NON_INTERACTIVE && [ -t 0 ] && [ -t 1 ]; then
                 echo "Enter a target path. The cephalo template will be copied there,"
                 echo "and the project structure will be created inside it."
                 echo "Example: ~/Documents/Bachelorarbeit_KMU_OSS"
-                read -r -p "Target path: " TARGET_DIR
+                read -r -p "Target path: " TARGET_DIR || TARGET_DIR=""
                 if [ -z "$TARGET_DIR" ]; then
                     echo -e "${YELLOW}Empty path — using current location instead.${NC}"
                     TARGET_DIR=""
@@ -582,10 +583,10 @@ else
         echo "  $0 \"<work-type>\" \"<structure>\" <full|minimal>" >&2
         exit 2
     fi
-    if [[ "$confirm" != "y" && "$confirm" != "j" ]]; then
-        echo "Cancelled."
-        exit 0
-    fi
+    case "$confirm" in
+        [yYjJ]|[yY][eE][sS]|[jJ][aA]) : ;;
+        *) echo "Cancelled."; exit 0 ;;
+    esac
 fi
 
 # ==========================================================
@@ -611,7 +612,7 @@ if [ -n "$TARGET_DIR" ]; then
             echo -e "${YELLOW}  $TARGET_DIR${NC}"
             echo ""
             if ! $NON_INTERACTIVE && [ -t 0 ] && [ -t 1 ]; then
-                read -r -p "Continue and copy into this directory? [y/N]: " overwrite_ans
+                read -r -p "Continue and copy into this directory? [y/N]: " overwrite_ans || overwrite_ans=""
                 case "$overwrite_ans" in
                     [yYjJ]|[yY][eE][sS]|[jJ][aA]) : ;;
                     *) echo "Aborted."; exit 1 ;;
@@ -987,7 +988,7 @@ if [ -n "$SOURCE_DIR_BEFORE_MOVE" ] && [ -d "$SOURCE_DIR_BEFORE_MOVE" ]; then
     echo -e "${GRAY}  $SOURCE_DIR_BEFORE_MOVE${NC}"
     echo ""
     if [ -t 0 ] && [ -t 1 ]; then
-        read -r -p "Delete it now? [y/N]: " del_ans
+        read -r -p "Delete it now? [y/N]: " del_ans || del_ans=""
         case "$del_ans" in
             [yYjJ]|[yY][eE][sS]|[jJ][aA])
                 # Safety: only delete if it still looks like a cephalo template,
