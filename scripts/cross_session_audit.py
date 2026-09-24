@@ -26,6 +26,7 @@ Exit codes: 0 = no findings, 1 = findings (for CI / hooks),
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
 import sys
 from dataclasses import dataclass, field
@@ -56,6 +57,27 @@ FRAMEWORK_DOC_FILES = {
 }
 FRAMEWORK_DOC_DIRS = {"docs", "templates", "checklists", "workflows"}
 
+# Repository-local variables (`git rev-parse --local-env-vars`) that git exports
+# to hooks. Inherited, they would make `git status` in the other worktrees read
+# the calling worktree's index or repository, so they are not passed on. The
+# `git -c` overrides GIT_CONFIG_PARAMETERS / GIT_CONFIG_COUNT are kept, as git
+# itself does for submodules (e.g. a safe.directory set that way still applies).
+GIT_LOCAL_ENV_VARS = {
+    "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+    "GIT_CONFIG",
+    "GIT_OBJECT_DIRECTORY",
+    "GIT_DIR",
+    "GIT_WORK_TREE",
+    "GIT_IMPLICIT_WORK_TREE",
+    "GIT_GRAFT_FILE",
+    "GIT_INDEX_FILE",
+    "GIT_NO_REPLACE_OBJECTS",
+    "GIT_REPLACE_REF_BASE",
+    "GIT_PREFIX",
+    "GIT_SHALLOW_FILE",
+    "GIT_COMMON_DIR",
+}
+
 
 @dataclass
 class WorktreeInfo:
@@ -73,6 +95,7 @@ def run_git(args: list[str], cwd: Path) -> str:
     result = subprocess.run(
         ["git", *args],
         cwd=str(cwd),
+        env={k: v for k, v in os.environ.items() if k not in GIT_LOCAL_ENV_VARS},
         capture_output=True,
         text=True,
         encoding="utf-8",
