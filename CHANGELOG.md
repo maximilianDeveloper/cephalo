@@ -8,7 +8,7 @@ Dates follow ISO 8601 (`YYYY-MM-DD`).
 
 ---
 
-## [1.0.0] — 2026-08-06
+## [1.0.0] — 2026-09-24
 
 **First public release.** A browser-based setup assistant, a documentation and utility-script hardening pass, removal of hard-coded formatting rules from three agent definitions, a pre-publication review sweep (license text, distribution docs, GitHub project files), and a pre-publication security pass (see **Security** below). No workflow or template changes.
 
