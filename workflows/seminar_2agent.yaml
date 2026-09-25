@@ -151,5 +151,5 @@ minimal_setup_notes: |
   is not justified. Quality loss is modest.
   
   If the writer-agent frequently makes extraction errors during a project
-  (e.g., shifts technical terms), switch to presentation_3agent or
-  bachelor_5agent. Existing chats remain usable under the new workflow.
+  (e.g., shifts technical terms), switch to bachelor_5agent, which adds a
+  separate research-agent. Existing chats remain usable under the new workflow.
