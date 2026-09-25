@@ -295,11 +295,11 @@ phases:
     actions:
       - Git tag: proposal_accepted_<date>
       - Set 00_Status.md to "completed"
-      - Copy final DOCX to: 02_Main_Work/01_Proposal_Reference/proposal_final_<date>.docx
+      - Copy final DOCX to: ../02_Main_Work/01_Proposal_Reference/proposal_final_<date>.docx
       - 01_Proposal/ becomes read-only
       - Update README.md: "FROZEN — as of <date>"
     
     important: |
       From this point on, 01_Proposal/ is read-only. Any deviation of the 
       actual main work content from the proposal is documented in 
-      02_Main_Work/00_Decisions.md, not by retroactively editing the proposal.
+      ../02_Main_Work/00_Decisions.md, not by retroactively editing the proposal.
