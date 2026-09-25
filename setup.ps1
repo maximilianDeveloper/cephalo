@@ -519,6 +519,12 @@ if ($Target -ne "") {
                 Write-Host "Warning: target directory already exists and is not empty:" -ForegroundColor Yellow
                 Write-Host "  $Target" -ForegroundColor Yellow
                 Write-Host ""
+                Write-Host "Copying replaces files of the same name with the template's version:"
+                Write-Host "  .claude\agents\, workflows\, checklists\, templates\, scripts\, docs\,"
+                Write-Host "  CLAUDE.md, README.md and the template's other top-level files."
+                Write-Host "Files the template does not contain (00_Status.md, phase folders,"
+                Write-Host "guidelines\, styleguide.md, ...) are kept."
+                Write-Host ""
                 if (-not $NonInteractive) {
                     $overwriteAns = Read-Host "Continue and copy into this directory? [y/N]"
                     if ($overwriteAns -notmatch '^(y|Y|j|J|yes|Yes|ja|Ja)$') {

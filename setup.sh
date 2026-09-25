@@ -632,6 +632,12 @@ if [ -n "$TARGET_DIR" ]; then
             echo -e "${YELLOW}Warning: target directory already exists and is not empty:${NC}"
             echo -e "${YELLOW}  $TARGET_DIR${NC}"
             echo ""
+            echo "Copying replaces files of the same name with the template's version:"
+            echo "  .claude/agents/, workflows/, checklists/, templates/, scripts/, docs/,"
+            echo "  CLAUDE.md, README.md and the template's other top-level files."
+            echo "Files the template does not contain (00_Status.md, phase folders,"
+            echo "guidelines/, styleguide.md, ...) are kept."
+            echo ""
             if ! $NON_INTERACTIVE && [ -t 0 ] && [ -t 1 ]; then
                 read -r -p "Continue and copy into this directory? [y/N]: " overwrite_ans || overwrite_ans=""
                 case "$overwrite_ans" in
