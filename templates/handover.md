@@ -60,7 +60,7 @@ Please read:
 - <phase_directory>/handover.md (this handover)
 - 00_Decisions.md
 - 00_Feedback_log.md
-- styleguide.md
+- styleguide.md (multi-project sub-project: shared/styleguide.md)
 
 Today's task per handover: [specific task here]
 
