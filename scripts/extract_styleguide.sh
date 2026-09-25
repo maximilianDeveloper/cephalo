@@ -256,6 +256,13 @@ def extract_pdf_text(pdf_path, out_path):
             # "empty text".
             if texts and failed == len(texts):
                 raise last_err
+            if failed:
+                # Only some pages failed: their rules would be missing from the
+                # output unnoticed, so warn and count it as an error.
+                global errors
+                errors += 1
+                print(f"    WARN {pdf_path.name} - text of {failed} of {len(texts)} page(s) could not be "
+                      f"extracted ({last_err}); those pages are missing from the output", file=sys.stderr)
             out_path.write_text('\n\n'.join(texts), encoding='utf-8')
             return True
         except Exception as e:
