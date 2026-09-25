@@ -155,8 +155,9 @@ phases:
           items); re-extract only when the guidelines change.
       
       - step: 0.6
-        name: Methodological design
+        name: Methodological design (only if empirical)
         agent: methods
+        condition: empirical == true
         output: 04_Methods/design.md
         blocking: true
         note: |
