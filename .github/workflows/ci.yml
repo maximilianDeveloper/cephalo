@@ -318,6 +318,7 @@ jobs:
           a.add_heading("Monographien", 2)
           a.add_paragraph("Schmidt, K. (2020). A.")
           a.add_paragraph("Keller, T. (2018). B.")
+          a.add_heading("Gesetze, Verordnungen", 2)  # a sub-heading is not an entry
           a.add_heading("Anhang", 1)
           a.add_paragraph("Im Interview verwies die Befragte auf Keller (2018).")
           a.add_heading("Eidesstattliche Erklärung", 1)

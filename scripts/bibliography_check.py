@@ -193,7 +193,10 @@ def split_text_and_bibliography(
             break
 
     body = "\n".join(texts[:bib_start_idx] + texts[bib_end_idx:])
-    bibliography = [p for p in texts[bib_start_idx + 1:bib_end_idx] if p.strip()]
+    # Sub-headings belong to the section but are not entries: a heading such
+    # as "Gesetze, Verordnungen" would otherwise be read as an author.
+    bibliography = [p for p, level in paragraphs[bib_start_idx + 1:bib_end_idx]
+                    if p.strip() and level is None]
     return body, bibliography
 
 
