@@ -150,7 +150,7 @@ The multi-project structure uses symlinks from each sub-project into `00_Shared_
 
 This applies to BOTH setup scripts:
 
-**`setup.ps1` (PowerShell):** `New-Item -ItemType SymbolicLink` fails without elevation (in Windows PowerShell 5.1 even with Developer Mode on). The script catches this and retries with `mklink`, for which Developer Mode is enough; only if that fails too does it fall back to copying `00_Shared_Materials/` into each sub-project, with a visible warning.
+**`setup.ps1` (PowerShell):** on Windows the script first tries `mklink`, for which Developer Mode is enough, then `New-Item -ItemType SymbolicLink`, which needs elevation (in Windows PowerShell 5.1 even with Developer Mode on). Only if both fail does it fall back to copying `00_Shared_Materials/` into each sub-project, with a visible warning that shows the `New-Item` error.
 
 **`setup.sh` (Git Bash / MinGW64):** even more subtle. By default, `ln -s` in Git Bash silently creates a directory **copy** instead of failing — exit code 0, no error. The setup script detects this after the fact (checks whether a real symlink was created) and issues the same visible warning.
 
