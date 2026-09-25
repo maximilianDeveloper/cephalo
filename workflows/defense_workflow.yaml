@@ -72,7 +72,7 @@ directory_structure:
     - 02_Speaker_Notes/
     - 03_Defense_Prep/
     - 04_Handout/                # optional
-    - 05_Rehearsals/             # optional
+    - 05_Rehearsals/
     - 06_Defense_Day/            # final checklist, emergency notes
 
 # References to other sub-projects
@@ -291,8 +291,6 @@ phases:
   phase_05_rehearsals:
     directory: 05_Rehearsals/
     agents: [orchestrator-defense]
-    optional: true
-    recommended: true
     
     goals:
       - Stay within timing (run a timer!)
