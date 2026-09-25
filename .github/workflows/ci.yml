@@ -275,6 +275,48 @@ jobs:
           EOF
           node --check /tmp/ci_wizard.js
 
+      # README.md and docs/QUICKSTART.md are embedded in the setup assistant as
+      # rendered HTML: the words must match the Markdown sources (links, fence
+      # languages and list numbers aside). Relative Markdown links must resolve.
+      - name: Embedded README/QUICKSTART copies match; relative links resolve
+        run: |
+          python - <<'EOF'
+          import html, os, re, subprocess
+          errors = []
+          page = open("docs/setup-wizard.html", encoding="utf-8").read()
+          def words_md(t):
+              t = re.sub(r"<!--.*?-->", " ", t, flags=re.S)
+              t = re.sub(r"\]\([^)\s]*\)", "]", t)
+              t = re.sub(r"^(\s*)```\S*", r"\1```", t, flags=re.M)
+              t = re.sub(r"^\s*\d+\.\s", " ", t, flags=re.M)
+              return re.findall(r"\w+", t)
+          def words_html(t):
+              t = re.sub(r"<!--.*?-->", " ", t, flags=re.S)
+              t = re.sub(r"<[^>]+>", " ", t)
+              return re.findall(r"\w+", html.unescape(t))
+          for key, src in (("README", "README.md"), ("QUICKSTART", "docs/QUICKSTART.md")):
+              m = re.search(rf"<!--DOC_{key}_START-->(.*?)<!--DOC_{key}_END-->", page, re.S)
+              if not m:
+                  errors.append(f"docs/setup-wizard.html: DOC_{key} markers missing")
+                  continue
+              a, b = words_md(open(src, encoding="utf-8").read()), words_html(m.group(1))
+              if a != b:
+                  i = next((i for i, (x, y) in enumerate(zip(a, b)) if x != y), min(len(a), len(b)))
+                  errors.append(f"docs/setup-wizard.html: embedded {src} is out of date near "
+                                f"{' '.join(a[max(0, i - 5):i + 5])!r} (embedded: {' '.join(b[max(0, i - 5):i + 5])!r})")
+          for f in subprocess.run(["git", "ls-files", "*.md"], capture_output=True, text=True, check=True).stdout.split():
+              text = re.sub(r"```.*?```", "", open(f, encoding="utf-8").read(), flags=re.S)
+              for m in re.finditer(r"\]\(<?([^)\s>]+)>?(?:\s+\"[^\"]*\")?\)", text):
+                  target = m.group(1)
+                  if re.match(r"[a-z][a-z0-9+.-]*:", target, re.I) or target.startswith("#"):
+                      continue
+                  if not os.path.exists(os.path.join(os.path.dirname(f), target.split("#")[0])):
+                      errors.append(f"{f}: link target {target} does not exist")
+          if errors:
+              raise SystemExit("\n".join(errors))
+          print("embedded copies and relative links OK")
+          EOF
+
       # The target path is the only free-text field the setup assistant puts
       # into a command: run the generated commands against stub setup scripts
       # and check that the path arrives unchanged and nothing else runs.

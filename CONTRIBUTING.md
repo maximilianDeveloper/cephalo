@@ -153,6 +153,7 @@ The `bibliography_check.py` output should not contain false positives for German
 - Update `CHANGELOG.md` in the same PR (add an `[Unreleased]` section at the top if none exists yet).
 - If the change touches the setup scripts, confirm in the PR description which platforms you tested on.
 - If the change touches `scripts/bibliography_check.py`, include a test case showing the new behavior.
+- If the change touches `README.md` or `docs/QUICKSTART.md`, re-render the embedded copy in `docs/setup-wizard.html` (between the `DOC_README_*` / `DOC_QUICKSTART_*` markers); CI fails while the two differ.
 
 ## Versioning
 
