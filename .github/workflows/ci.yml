@@ -282,6 +282,11 @@ jobs:
           # extract_styleguide.sh: a ZIP disguised as PDF is unpacked; path traversal is blocked
           expect 0 bash scripts/extract_styleguide.sh "$W/good" "$W/out_good"
           grep -q "Example rule text" "$W/out_good/guide.txt"
+          # a text file left over from an earlier run is named, not deleted
+          echo old > "$W/out_good/removed_guide.txt"
+          expect 0 bash scripts/extract_styleguide.sh "$W/good" "$W/out_good"
+          grep -q "not written by this run.*removed_guide.txt" "$W/out.txt"
+          test -f "$W/out_good/removed_guide.txt"
           expect 1 bash scripts/extract_styleguide.sh "$W/evil" "$W/out_evil"
           grep -q "Blocked (security)" "$W/out.txt"
           # cross_session_audit.py: 0 = clean, 1 = findings, 2 = not a repository

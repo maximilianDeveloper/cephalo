@@ -71,6 +71,7 @@ What it does:
 3. Real PDFs: extracts text via `pypdf` (preferred) or `pdftotext` (fallback)
 4. Disguised ZIPs: safely extracts contained `.txt` files and text from contained PDFs (path-traversal attacks are blocked, and archives that would unpack to more than 512 MiB or 10,000 entries are refused)
 5. Writes one `.txt` file per input into the output directory; if flattening two different input paths would produce the same output filename, a numeric suffix is added instead of silently overwriting one of them
+6. Lists `.txt` files in the output directory that this run did not write (left over from an earlier run, e.g. for a guideline since replaced or removed). They are not deleted, but the style-resolver would read them too, so remove them first
 
 After running, invoke the style-resolver agent in Claude Code:
 

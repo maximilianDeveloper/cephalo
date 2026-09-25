@@ -105,6 +105,7 @@ if [ -z "$PYTHON_BIN" ]; then
     count=0
     errors=0
     used_names="|"
+    written="|"
     base="${GUIDELINES_DIR%/}"
     while IFS= read -r -d '' pdf; do
         # Flatten the relative path; strip only the FINAL .pdf extension
@@ -141,6 +142,7 @@ if [ -z "$PYTHON_BIN" ]; then
            && grep -q '[^[:space:]]' "$out_file"; then
             lines=$(($(wc -l < "$out_file")))
             echo "  OK  $(basename "$pdf")  ->  $name.txt ($lines lines)"
+            written="${written}${name}.txt|"
             count=$((count + 1))
         else
             rm -f "$out_file"
@@ -154,6 +156,20 @@ if [ -z "$PYTHON_BIN" ]; then
     echo "  Processed: $count document(s)"
     if [ "$errors" -gt 0 ]; then
         echo "  Errors:    $errors document(s)"
+    fi
+    # Text files from an earlier run (a guideline since replaced, renamed or
+    # removed) would still be read by the style-resolver: name them.
+    stale=""
+    for f in "$OUT_DIR"/*.txt; do
+        [ -e "$f" ] || continue
+        case "$written" in
+            *"|${f##*/}|"*) ;;
+            *) stale="$stale ${f##*/}" ;;
+        esac
+    done
+    if [ -n "$stale" ]; then
+        echo "Note: not written by this run (left over from an earlier run?):$stale" >&2
+        echo "      Delete them from $OUT_DIR before invoking the style-resolver, or it reads them too." >&2
     fi
     if [ "$count" -eq 0 ]; then
         echo ""
@@ -304,6 +320,7 @@ if not pdf_files:
     print(f"Warning: no PDF files found in {guidelines_dir}", file=sys.stderr)
 
 used_names = set()
+written = set()
 
 for pdf in pdf_files:
     # Flatten the relative path into one output name, stripping only the
@@ -332,6 +349,7 @@ for pdf in pdf_files:
             else:
                 lines = len(text.splitlines())
                 print(f"  OK  {pdf.name}  ->  {out_file.name} ({lines} lines)")
+                written.add(out_file.name)
                 count += 1
         else:
             print(f"  ERR {rel_path} - PDF extraction failed", file=sys.stderr)
@@ -372,6 +390,7 @@ for pdf in pdf_files:
                 out_file.write_text(combined, encoding='utf-8')
                 lines = len(combined.splitlines())
                 print(f"      -> {out_file.name} ({lines} lines)")
+                written.add(out_file.name)
                 count += 1
             else:
                 found = ', '.join(m.name for m in members[:10]) if members else 'none'
@@ -387,6 +406,14 @@ print("Done.")
 print(f"  Processed: {count} document(s)")
 if errors > 0:
     print(f"  Errors:    {errors} document(s)")
+# Text files from an earlier run (a guideline since replaced, renamed or
+# removed) would still be read by the style-resolver: name them.
+stale = sorted(p.name for p in out_dir.glob('*.txt') if p.name not in written)
+if stale:
+    print("Note: not written by this run (left over from an earlier run?): "
+          + ", ".join(stale[:10]) + (" ..." if len(stale) > 10 else ""), file=sys.stderr)
+    print(f"      Delete them from {out_dir} before invoking the style-resolver, or it reads them too.",
+          file=sys.stderr)
 if count == 0:
     print()
     print(f"Warning: no documents were successfully processed from {guidelines_dir}", file=sys.stderr)
