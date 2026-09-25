@@ -255,6 +255,30 @@ jobs:
             if git -C /tmp/ci_steps check-ignore -q "02_Main_Work/05_Empirical/data/$d/.gitkeep"; then echo "data/$d/.gitkeep is ignored"; exit 1; fi
           done
 
+      # setup.sh and setup.ps1 must scaffold the same project. pwsh (PowerShell 7,
+      # preinstalled on the runner) runs setup.ps1 here; the Windows job covers 5.1.
+      - name: setup.sh and setup.ps1 create identical projects (all 22 combinations)
+        run: |
+          P=/tmp/ci_parity; rm -rf "$P"; mkdir -p "$P"; i=0
+          for wt in "Seminar paper" "Presentation" "Bachelor thesis" "Master thesis" "Dissertation"; do
+            case "$wt" in "Seminar paper"|Presentation) structs="Flat" ;; *) structs="Flat Long-form Multi-project" ;; esac
+            for st in $structs; do
+              for sc in full minimal; do
+                i=$((i + 1))
+                bash setup.sh "$wt" "$st" "$sc" --target "$P/sh$i" </dev/null >/dev/null
+                pwsh -NoProfile -File ./setup.ps1 -WorkType "$wt" -Structure "$st" -Scaffolding "$sc" -Target "$P/ps$i" -NonInteractive >/dev/null
+                diff -r --no-dereference -x .git "$P/sh$i" "$P/ps$i" || { echo "differs: $wt / $st / $sc"; exit 1; }
+              done
+            done
+          done
+          test "$i" -eq 22
+          # Where .gitignore and .gitattributes are missing, both scripts write the same ones.
+          rm "$P"/sh1/.gitignore "$P"/sh1/.gitattributes "$P"/ps1/.gitignore "$P"/ps1/.gitattributes
+          (cd "$P/sh1" && bash setup.sh "Seminar paper" Flat full </dev/null >/dev/null)
+          (cd "$P/ps1" && pwsh -NoProfile -File ./setup.ps1 -WorkType "Seminar paper" -Structure Flat -Scaffolding full -NonInteractive >/dev/null)
+          diff -r --no-dereference -x .git "$P/sh1" "$P/ps1"
+          cmp .gitignore "$P/ps1/.gitignore"
+
       - name: Shell scripts stay LF in a core.autocrlf=true clone
         run: |
           rm -rf /tmp/ci_crlf
