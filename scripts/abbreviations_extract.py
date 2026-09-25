@@ -74,6 +74,10 @@ def extract_abbreviations(text: str) -> set[str]:
     # pasted from PDFs): the combining mark is not a word character, so
     # ÖPNV would otherwise be cut to PNV.
     text = unicodedata.normalize("NFC", text)
+    # Subscript digits (CO₂, PM₁₀) are word characters for \b but not in
+    # [0-9], so the whole acronym was dropped: read them as ASCII digits.
+    # Superscripts stay as they are (R², footnote markers).
+    text = text.translate(str.maketrans("₀₁₂₃₄₅₆₇₈₉", "0123456789"))
 
     # Character classes for uppercase and lowercase that include umlauts
     upper = r"A-ZÄÖÜ"

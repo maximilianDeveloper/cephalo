@@ -305,7 +305,7 @@ jobs:
           d = Document()
           d.add_paragraph("Schmidt 2020, S. 15 führt aus. Müller (2021) stimmt zu. Die WHO (2019) auch. "
                           "Im Jahr 2020 stieg es. Die EU (2020) beschloss es. Das Kapitel (2020) zeigt es.")
-          d.add_paragraph("U.S.A. and B2B, CO2, 5G, BENELUX, GmbH; e.g. z. B. 2020.")
+          d.add_paragraph("U.S.A. and B2B, CO2, PM\u2081\u2080, 5G, BENELUX, GmbH; e.g. z. B. 2020.")
           d.add_paragraph("Fischers' (2020) Modell.")  # possessive of a name ending in s
           d.add_paragraph("Wie O\u2019Brien (2021) zeigt.")  # typographic apostrophe; the entry has a straight one
           d.add_heading("Literaturverzeichnis", 1)
@@ -384,7 +384,7 @@ jobs:
           python -c "import sys; sys.path.insert(0, 'scripts'); import bibliography_check as b; b.BIBLIOGRAPHY_HEADERS.append('Works Consulted'); assert b.split_text_and_bibliography([('(Smith, 2020).', None), ('Works Consulted', 1), ('Smith, J. (2020). X.', None)])[1]"
           # abbreviations_extract.py: dotted, digit and mixed-case forms; clean error otherwise
           expect 0 python scripts/abbreviations_extract.py "$W/ok.docx"
-          for a in B2B CO2 5G BENELUX GmbH; do grep -qx "  $a" "$W/out.txt"; done
+          for a in B2B CO2 PM10 5G BENELUX GmbH; do grep -qx "  $a" "$W/out.txt"; done
           if grep -qx "  US" "$W/out.txt"; then echo "U.S.A. was truncated to US"; exit 1; fi
           expect 1 python scripts/abbreviations_extract.py "$W/notword.docx"
           test "$(wc -l < "$W/out.txt")" -eq 1

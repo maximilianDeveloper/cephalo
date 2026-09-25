@@ -97,7 +97,7 @@ What it does:
 
 1. Reads the text of body paragraphs, tables (including nested), header/footer paragraphs, and footnotes/endnotes (footnotes and endnotes are read via their raw XML, since python-docx does not expose them as a typed part)
 2. Extracts candidate abbreviations:
-   - All-caps sequences, 2-8 characters, digits allowed alongside at least one letter (`ABC`, `EU`, `NATO`, `ÖPNV`, `B2B`, `CO2`, `5G`, `BENELUX`)
+   - All-caps sequences, 2-8 characters, digits allowed alongside at least one letter (`ABC`, `EU`, `NATO`, `ÖPNV`, `B2B`, `CO2` — also written with a subscript digit, `CO₂` —, `5G`, `BENELUX`)
    - Dotted forms (`U.S.A.`, `A.B.C`) — normalized to their letters (`USA`, `ABC`)
    - Mixed-case forms, 3-8 letters, with at least two capitals in any position (`GmbH`, `BaFin`, `AfD`, `mRNA`; CamelCase names like `LinkedIn` are reported too) — note that 2-character mixed-case forms like `pH` are not matched
 3. Filters out common abbreviations (`e.g.`, `i.e.`, `USA`, etc.)
