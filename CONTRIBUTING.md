@@ -94,11 +94,11 @@ After each run, verify:
 On each Windows shell:
 
 1. **Git Bash, double-click start.** Double-click `setup.sh` in Explorer (or `bash setup.sh` without an already-open terminal). Press Ctrl+C before answering the first prompt. Expected: yellow cancellation message appears, window stays open with "Press Enter to close..."
-2. **PowerShell, "Run with PowerShell" from context menu.** Same test: Ctrl+C early. Expected: same yellow message and pause.
+2. **PowerShell, "Run with PowerShell" from context menu.** Same test: Ctrl+C early. Expected: the script stops without creating anything, and the window closes at once. PowerShell runs no trap on Ctrl+C (see the comment in `setup.ps1`), so there is no message or pause here; the yellow message and pause belong to terminating errors.
 
-If the window disappears silently, it's a regression of v6.1.3. Most users first learn about a tool by accidentally triggering Ctrl+C — a silent-close here is a confidence-killer.
+If the Git Bash window disappears silently, it's a regression of v6.1.3. Most users first learn about a tool by accidentally triggering Ctrl+C — a silent-close here is a confidence-killer.
 
-On Linux and macOS, running from an already-open shell: Ctrl+C should print the message and return to the prompt (no pause needed, since the terminal stays open anyway).
+On Linux and macOS, running from an already-open shell: Ctrl+C should print the message, wait at "Press Enter to close...", and return to the prompt after Enter.
 
 ### Target-directory tests (5 minutes, covers the v6.2 feature)
 
@@ -108,7 +108,7 @@ On each platform, run all four target scenarios:
    ```bash
    ./setup.sh "Seminar paper" "Flat" full --target /tmp/ceph_test_1
    ```
-   Expected: template copied, project created inside target, original kept (non-interactive).
+   Expected: template copied, project created inside target, original kept. In a terminal the script still asks "Delete it now?" at the end (answer N); with `</dev/null` appended it runs fully non-interactive.
 
 2. **Interactive "choose a different directory":** run `./setup.sh`, answer `2` at the location prompt, enter a fresh path. Expected: same result as above, plus final prompt "Delete it now?".
 

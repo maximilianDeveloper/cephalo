@@ -17,7 +17,7 @@ When you run the setup script, it will ask where to create the project. You have
 
 Option 2 is recommended for real work. Option 1 is fine for quick testing.
 
-Non-interactive:
+Non-interactive (in a terminal, `setup.sh` still offers to delete the template folder at the end; append `</dev/null` to skip that):
 ```bash
 ./setup.sh "Bachelor thesis" "Long-form" full --target ~/Documents/Bachelorarbeit
 ```

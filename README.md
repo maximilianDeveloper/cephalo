@@ -111,12 +111,12 @@ chmod +x setup.sh
 ```
 
 The script asks four questions:
-- **Where should the project be created?** — the current folder (e.g. your Downloads), or a target path you specify (e.g. `~/Documents/Bachelorarbeit_OSS`). A target path is recommended for real work; the cephalo template is copied there and the project is created inside.
+- **Where should the project be created?** — here, inside the extracted cephalo folder itself (e.g. `cephalo-1.0.0/` in your Downloads), or a target path you specify (e.g. `~/Documents/Bachelorarbeit_OSS`). A target path is recommended for real work; the cephalo template is copied there and the project is created inside.
 - What kind of work is this? (seminar paper, presentation, thesis, dissertation)
 - What project structure? (flat, long-form, multi-project)
 - How much structure should be pre-created? (standard scaffolding, or minimal — the rest is added later based on your guidelines)
 
-For non-interactive runs, pass the answers as arguments:
+For non-interactive runs, pass the answers as arguments. Run in a terminal with `--target`, `setup.sh` still offers to delete the template folder at the end; append `</dev/null` to skip that as well:
 
 ```bash
 ./setup.sh "Bachelor thesis" "Long-form" full --target ~/Documents/Thesis_OSS
@@ -278,7 +278,7 @@ This is an early project. Feedback on the agent definitions, workflow configurat
 
 ### Symlinks don't work on my Windows machine — what do I do?
 
-Creating symlinks on Windows requires Administrator privileges OR Developer Mode enabled (Settings -> For developers -> Developer Mode: on). Developer Mode is the less invasive option — enable it once and symlinks work without Admin rights.
+Creating symlinks on Windows requires Administrator privileges OR Developer Mode enabled (Settings -> For developers -> Developer Mode: on). Developer Mode is the less invasive option — enable it once and symlinks work without Admin rights. With `setup.sh` in Git Bash, also set `MSYS=winsymlinks:nativestrict`, or `ln -s` still makes copies.
 
 If neither is possible, the multi-project setup script falls back to copying `00_Shared_Materials/` into each sub-project. The setup succeeds, but updates to the styleguide will not propagate automatically. See `docs/multiproject_structure.md` for the diagnostic command (`Get-Item shared | Select-Object LinkType`) and a re-sync PowerShell snippet.
 

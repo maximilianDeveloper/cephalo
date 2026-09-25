@@ -313,7 +313,7 @@ One-time at project start:
 - [ ] Place institutional guidelines in `00_Shared_Materials/guidelines/`
 - [ ] Place course materials in `00_Shared_Materials/course_materials/`
 - [ ] Initialize Git (done by setup script)
-- [ ] Symlinks in each sub-project to `00_Shared_Materials/` (done by setup script if Developer Mode is enabled or the shell is elevated; otherwise the copy-fallback applies — see "Access to shared materials" above)
+- [ ] Symlinks in each sub-project to `00_Shared_Materials/` (done by setup script if Developer Mode is enabled or the shell is elevated — in Git Bash also with `MSYS=winsymlinks:nativestrict`; otherwise the copy-fallback applies — see "Access to shared materials" above)
 - [ ] Run style-resolver once -> `00_Shared_Materials/styleguide.md`
 - [ ] Reference manager collection for the main work, auto-export to `02_Main_Work/02_Literature/literature.bib`
 - [ ] Initial `00_Status.md` in all three sub-projects (done by setup script from templates)

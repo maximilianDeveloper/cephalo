@@ -305,8 +305,8 @@
 <pre><code>chmod +x setup.sh
 ./setup.sh</code></pre>
 <p>The script asks four questions:</p>
-<ul><li><strong>Where should the project be created?</strong> — the current folder (e.g. your Downloads), or a target path you specify (e.g. <code>~/Documents/Bachelorarbeit_OSS</code>). A target path is recommended for real work; the cephalo template is copied there and the project is created inside.</li><li>What kind of work is this? (seminar paper, presentation, thesis, dissertation)</li><li>What project structure? (flat, long-form, multi-project)</li><li>How much structure should be pre-created? (standard scaffolding, or minimal — the rest is added later based on your guidelines)</li></ul>
-<p>For non-interactive runs, pass the answers as arguments:</p>
+<ul><li><strong>Where should the project be created?</strong> — here, inside the extracted cephalo folder itself (e.g. <code>cephalo-1.0.0/</code> in your Downloads), or a target path you specify (e.g. <code>~/Documents/Bachelorarbeit_OSS</code>). A target path is recommended for real work; the cephalo template is copied there and the project is created inside.</li><li>What kind of work is this? (seminar paper, presentation, thesis, dissertation)</li><li>What project structure? (flat, long-form, multi-project)</li><li>How much structure should be pre-created? (standard scaffolding, or minimal — the rest is added later based on your guidelines)</li></ul>
+<p>For non-interactive runs, pass the answers as arguments. Run in a terminal with <code>--target</code>, <code>setup.sh</code> still offers to delete the template folder at the end; append <code>&lt;/dev/null</code> to skip that as well:</p>
 <pre><code>./setup.sh &quot;Bachelor thesis&quot; &quot;Long-form&quot; full --target ~/Documents/Thesis_OSS</code></pre>
 <pre><code>.\setup.ps1 -WorkType &quot;Bachelor thesis&quot; -Structure &quot;Long-form&quot; -Scaffolding full -Target ~\Documents\Thesis_OSS -NonInteractive</code></pre>
 <h3>3. Drop your institution&#x27;s guidelines into place</h3>
@@ -387,7 +387,7 @@ List any open questions for me to resolve before we proceed.</code></pre>
 <h3>Can I contribute?</h3>
 <p>This is an early project. Feedback on the agent definitions, workflow configurations, and error catalog is welcome — <code>CONTRIBUTING.md</code> explains how. Specifically: if your institution&#x27;s style guide produces unusual results with the style-resolver, a sample (anonymized) plus the problematic output is valuable.</p>
 <h3>Symlinks don&#x27;t work on my Windows machine — what do I do?</h3>
-<p>Creating symlinks on Windows requires Administrator privileges OR Developer Mode enabled (Settings -&gt; For developers -&gt; Developer Mode: on). Developer Mode is the less invasive option — enable it once and symlinks work without Admin rights.</p>
+<p>Creating symlinks on Windows requires Administrator privileges OR Developer Mode enabled (Settings -&gt; For developers -&gt; Developer Mode: on). Developer Mode is the less invasive option — enable it once and symlinks work without Admin rights. With <code>setup.sh</code> in Git Bash, also set <code>MSYS=winsymlinks:nativestrict</code>, or <code>ln -s</code> still makes copies.</p>
 <p>If neither is possible, the multi-project setup script falls back to copying <code>00_Shared_Materials/</code> into each sub-project. The setup succeeds, but updates to the styleguide will not propagate automatically. See <code>docs/multiproject_structure.md</code> for the diagnostic command (<code>Get-Item shared | Select-Object LinkType</code>) and a re-sync PowerShell snippet.</p>
 <p>Alternative: use the flat or long-form structure instead. Both avoid symlinks entirely.</p>
 <h3>My institution has no citation guide — what should I put in <code>styleguide.md</code>?</h3>
@@ -414,7 +414,7 @@ List any open questions for me to resolve before we proceed.</code></pre>
 <p>When you run the setup script, it will ask where to create the project. You have two options:</p>
 <ol><li><strong>Here</strong> — the project is created inside the extracted cephalo folder itself. Fast, but the folder will keep its download name (e.g. <code>cephalo-1.0.0/</code> or <code>cephalo-main/</code>), which is not a great name for your thesis.</li><li><strong>In a different directory</strong> — enter a path like <code>~/Documents/Bachelorarbeit_KMU_OSS</code>. The cephalo template is copied there, and the project is created inside. At the end, the script offers to delete the original download.</li></ol>
 <p>Option 2 is recommended for real work. Option 1 is fine for quick testing.</p>
-<p>Non-interactive:</p>
+<p>Non-interactive (in a terminal, <code>setup.sh</code> still offers to delete the template folder at the end; append <code>&lt;/dev/null</code> to skip that):</p>
 <pre><code>./setup.sh &quot;Bachelor thesis&quot; &quot;Long-form&quot; full --target ~/Documents/Bachelorarbeit</code></pre>
 <pre><code>.\setup.ps1 -WorkType &quot;Bachelor thesis&quot; -Structure &quot;Long-form&quot; -Scaffolding full -Target ~\Documents\Bachelorarbeit -NonInteractive</code></pre>
 <p>Why this matters: Claude Code needs the agent files (<code>.claude/</code>, <code>workflows/</code>, etc.) and your project content in the <em>same</em> directory. That is why the template is copied rather than just the project folder being created somewhere else — everything has to coexist.</p>
@@ -516,7 +516,7 @@ List any open questions for me to resolve before we proceed.</code></pre>
         rows.push(row("    ├── ","output/","dir")+sp(work==="Presentation"?"chapters/ , slides/":"chapters/"));
         if(work==="Presentation") rows.push(row("    ├── ","data/","dir"));
         if(emp) rows.push(row("    ├── ","methods/","dir")+"  "+row("","data/","dir"));
-        rows.push(row("    └── ","state.md","cm")+sp("created later by the orchestrator"));
+        rows.push(row("    └── ","state.md","cm")+sp(work==="Seminar paper"||work==="Presentation"?"created later by you or the writer-agent":"created later by the orchestrator"));
       }
       return rows.join("\n");
     }
