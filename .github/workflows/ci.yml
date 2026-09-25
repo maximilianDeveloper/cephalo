@@ -131,6 +131,26 @@ jobs:
               for o in sorted(stems & calls.keys()):
                   for a in sorted(stems - calls.keys() - calls[o]):
                       errors.append(f"{f}: {o} cannot call {a} (not in the Agent(...) entry of its tools line)")
+          # Every styleguide key that agents, checklists, workflows and docs name
+          # (document.hyphenation, captions.table_position, ...) is a slot in the template.
+          keys, prefixes, current = set(), set(), []
+          for line in open("templates/styleguide.md", encoding="utf-8"):
+              if line.startswith("## "):
+                  current = re.findall(r"`([a-z_]+)\.\*`", line)
+                  prefixes.update(current)
+                  continue
+              m = re.match(r"\s*- \*\*`([A-Za-z_.0-9]+)`:?\*\*", line)
+              if m and current:
+                  k = m.group(1)
+                  keys.add(k if k.split(".")[0] in current else f"{current[0]}.{k}")
+          key_ref = re.compile(r"\b(?:" + "|".join(sorted(prefixes)) + r")\.[a-z_0-9]+(?:\.[a-z_0-9]+)*")
+          for f in agent_files + sorted(glob.glob("checklists/*.md") + glob.glob("workflows/*.yaml") + glob.glob("docs/*.md") + glob.glob("templates/*.md")) + ["CLAUDE.md", "README.md"]:
+              for n, line in enumerate(open(f, encoding="utf-8"), 1):
+                  for k in key_ref.findall(line):
+                      if k.rsplit(".", 1)[1] in ("bib", "csl", "docx", "md", "pdf", "pptx", "txt", "yaml"):
+                          continue  # a file name such as document.docx
+                      if k not in keys and not any(x.startswith(k + ".") for x in keys):
+                          errors.append(f"{f}:{n}: styleguide key {k} has no slot in templates/styleguide.md")
           print("\n".join(errors) or "OK: agent definitions and workflow references")
           raise SystemExit(1 if errors else 0)
           EOF
