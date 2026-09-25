@@ -27,7 +27,8 @@ The name is slightly misleading: you do not browse the internet or find new sour
 
 **Multi-project:**
 - Guidelines: via `shared/guidelines/` symlink
-- Per-sub-project sources and extracts follow the long-form pattern
+- Main-work sources and extracts follow the long-form pattern (`02_Main_Work/02_Literature/`)
+- The proposal sub-project has no `02_Literature/`: source files go into `01_Proposal/01_Research/`, the brief extracts into `01_Proposal/01_Research/key_sources.md` (see `proposal_workflow.yaml`)
 
 **Multi-project sub-project** (Claude Code opened on `01_Proposal/`, `02_Main_Work/` or `03_Defense/`): the styleguide is `shared/styleguide.md` and the guidelines are in `shared/guidelines/` (`shared/` points to `../00_Shared_Materials/`). The framework folders stay at the multi-project root, one level up: `../checklists/`, `../scripts/`, `../templates/`, `../workflows/`.
 

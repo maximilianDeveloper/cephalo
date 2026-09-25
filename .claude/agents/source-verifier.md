@@ -32,8 +32,8 @@ citation imprecision), so it reaches the user as such.
 ## File paths
 
 - Chapter texts: `workspace/output/chapters/` or phase directories (long-form)
-- Source extracts: `workspace/sources/extracts/` or `02_Literature/extracts/`
-- Primary sources: `workspace/sources/` or `02_Literature/sources/`
+- Source extracts: `workspace/sources/extracts/` or `02_Literature/extracts/` (proposal sub-project: `01_Research/key_sources.md`)
+- Primary sources: `workspace/sources/` or `02_Literature/sources/` (proposal sub-project: `01_Research/`)
 - Styleguide: `styleguide.md`
 - Plagiarism thresholds: `checklists/plagiarism_protection.md`
 - Consistency checklist: `checklists/consistency.md`
