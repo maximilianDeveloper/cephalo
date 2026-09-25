@@ -170,7 +170,7 @@ def read_docx_text(path: Path) -> str:
     # Footnotes and endnotes (XML-level access). python-docx loads these as
     # generic opc parts without a typed .element, so parse the raw XML blob.
     try:
-        from docx.oxml import parse_xml
+        from docx.oxml.parser import parse_xml
         from docx.oxml.ns import qn
     except ImportError as exc:
         print(f"Warning: footnotes/endnotes skipped ({exc})", file=sys.stderr)
