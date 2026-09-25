@@ -3,7 +3,8 @@
 # cephalo setup script (Windows PowerShell).
 # Creates project structure based on user choices.
 #
-# Run as Administrator if you want symlinks (for multi-project setups).
+# Multi-project setups create symlinks: enable Developer Mode once (Settings ->
+# For developers) or run from an elevated shell; otherwise shared/ is copied.
 #
 # Usage:
 #   Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
