@@ -101,8 +101,13 @@ DOC_ABS=$(cd "$(dirname "$DOC")" && pwd)/$(basename "$DOC")
 WORK_DIR=$(mktemp -d)
 trap 'rm -rf "$WORK_DIR"' EXIT
 
-cd "$WORK_DIR"
-unzip -q "$DOC_ABS"
+# unzip reads [ ] * ? in the archive name as wildcards and can open a
+# different file (e.g. "Chapter 2.docx" for "Chapter [2].docx"): unpack a
+# copy with a fixed name instead.
+cp "$DOC_ABS" "$WORK_DIR/in.docx"
+mkdir "$WORK_DIR/x"
+cd "$WORK_DIR/x"
+unzip -q ../in.docx
 
 # Refuse documents containing symbolic links: unzip restores symlink entries,
 # and following them would embed arbitrary local files in the re-zipped
@@ -199,7 +204,7 @@ NEW_DOC="${DOC_ABS}.new"
 # If the repack or the final mv fails, do not leave a partial archive behind
 # (after a successful mv, NEW_DOC no longer exists).
 trap 'rm -rf "$WORK_DIR"; rm -f "$NEW_DOC"' EXIT
-"$PY" - "$NEW_DOC" "$WORK_DIR" "$DOC_ABS" << 'PYEOF'
+"$PY" - "$NEW_DOC" "$WORK_DIR/x" "$DOC_ABS" << 'PYEOF'
 import os
 import shutil
 import sys
