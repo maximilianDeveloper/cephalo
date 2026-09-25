@@ -136,7 +136,8 @@ if [ -z "$PYTHON_BIN" ]; then
             errors=$((errors + 1))
             continue
         fi
-        if pdftotext -layout "$pdf" "$out_file" 2>/dev/null \
+        # -enc UTF-8: the xpdf build of pdftotext defaults to Latin-1.
+        if pdftotext -layout -enc UTF-8 "$pdf" "$out_file" 2>/dev/null \
            && grep -q '[^[:space:]]' "$out_file"; then
             lines=$(($(wc -l < "$out_file")))
             echo "  OK  $(basename "$pdf")  ->  $name.txt ($lines lines)"
@@ -242,14 +243,26 @@ def extract_pdf_text(pdf_path, out_path):
             print(f"    pypdf failed ({e})" + (", trying pdftotext..." if have_pdftotext else ""), file=sys.stderr)
     if have_pdftotext:
         try:
+            # -enc UTF-8: the xpdf build of pdftotext (common on Windows)
+            # defaults to Latin-1, which the UTF-8 reads below would reject.
             subprocess.run(
-                ['pdftotext', '-layout', str(pdf_path), str(out_path)],
+                ['pdftotext', '-layout', '-enc', 'UTF-8', str(pdf_path), str(out_path)],
                 check=True, capture_output=True,
             )
             return True
         except subprocess.CalledProcessError:
             return False
     return False
+
+
+def read_text_member(path):
+    """Decode a .txt archive member: UTF-8 (with or without BOM), else
+    Windows-1252, the usual encoding of text files saved on Windows."""
+    data = path.read_bytes()
+    try:
+        return data.decode('utf-8-sig')
+    except UnicodeDecodeError:
+        return data.decode('cp1252', errors='replace')
 
 
 def safe_extract_zip(zip_path, target_dir):
@@ -311,7 +324,7 @@ for pdf in pdf_files:
 
     if file_type == 'pdf':
         if extract_pdf_text(pdf, out_file):
-            text = out_file.read_text(encoding='utf-8')
+            text = out_file.read_text(encoding='utf-8', errors='replace')
             if not text.strip():
                 out_file.unlink()
                 print(f"  WARN {rel_path} - extracted text is empty (scanned/image-only PDF?)", file=sys.stderr)
@@ -347,11 +360,11 @@ for pdf in pdf_files:
             for member in members:
                 suffix = member.suffix.lower()
                 if suffix == '.txt':
-                    parts.append(member.read_text(encoding='utf-8', errors='replace'))
+                    parts.append(read_text_member(member))
                 elif suffix == '.pdf':
                     member_out = tmp_path / (member.name + '.extracted')
                     if extract_pdf_text(member, member_out):
-                        parts.append(member_out.read_text(encoding='utf-8'))
+                        parts.append(member_out.read_text(encoding='utf-8', errors='replace'))
                     else:
                         print(f"    ERR {member.name} (in archive) - PDF extraction failed", file=sys.stderr)
             combined = '\n\n'.join(parts)
