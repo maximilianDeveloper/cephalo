@@ -121,7 +121,7 @@ If recurring patterns were observed: append to `00_Feedback_log.md`.
 
 Give the user a commit suggestion:
 
-```markdown
+````markdown
 ## Chat closure
 
 I updated:
@@ -139,7 +139,7 @@ git commit -m "theory: chapter 3 sections 3.1-3.3 complete, 4 extracts added"
 
 Recommended prompt for the next chat is in `03_Theory_chapters/handover.md` 
 under "Next chat". Ready to copy-paste.
-```
+````
 
 ## Feedback-loop escalation
 
