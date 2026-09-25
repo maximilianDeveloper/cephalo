@@ -74,6 +74,10 @@ Verify the following categories. Concrete values (font size, page-range notation
 - [ ] Bibliography: conventions per styleguide
   (automation: scripts/bibliography_check.py — minus-test)
 
+## Tables and figures
+- [ ] Caption and source-line placement per styleguide (`captions.*`)
+- [ ] Decimal separator per styleguide (`numbers.decimal_separator`)
+
 ## In-text citations
 - [ ] format per styleguide
 - [ ] et-al. rule per styleguide

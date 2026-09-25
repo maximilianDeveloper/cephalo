@@ -85,6 +85,13 @@ For every category below: **read concrete values from `styleguide.md`**, not fro
 - [ ] Non-breaking space before page number (styleguide: `in_text.nbsp_before_page`)
 - [ ] Page-range notation (styleguide: `in_text.page_range`)
 
+### Tables and figures
+
+- [ ] Table caption placement (styleguide: `captions.table_position`)
+- [ ] Figure caption placement (styleguide: `captions.figure_position`)
+- [ ] Source line placement (styleguide: `captions.source_position`)
+- [ ] Decimal separator (styleguide: `numbers.decimal_separator`)
+
 ### Style
 
 - [ ] Forbidden pronouns (styleguide: `style.forbidden_pronouns`)
