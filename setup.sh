@@ -536,7 +536,9 @@ if [ -n "$TARGET_DIR" ]; then
         echo -e "${RED}Error: cannot resolve target path '$TARGET_DIR'.${NC}" >&2
         exit 2
     fi
-    if [ "$TARGET_CANON" = "$SOURCE_CANON" ]; then
+    # canon_path keeps the letter case as typed, but APFS (macOS) and NTFS
+    # (Git Bash) usually ignore case: -ef compares the directories themselves.
+    if [ "$TARGET_CANON" = "$SOURCE_CANON" ] || [ "$TARGET_CANON" -ef "$SOURCE_CANON" ]; then
         echo -e "${GRAY}Target path equals current location — proceeding here.${NC}"
         TARGET_DIR=""
         SOURCE_DIR_BEFORE_MOVE=""
@@ -546,7 +548,19 @@ if [ -n "$TARGET_DIR" ]; then
         # mid-way, and leave a half-populated directory behind. Reject up front
         # with an actionable message (mirrors setup.ps1's equivalent guard).
         SOURCE_PREFIX="${SOURCE_CANON%/}/"
+        TARGET_INSIDE=false
         if [[ "${TARGET_CANON%/}/" == "$SOURCE_PREFIX"* ]]; then
+            TARGET_INSIDE=true
+        fi
+        # The same with -ef for each existing ancestor (letter case, see above).
+        ancestor="${TARGET_CANON%/*}"
+        while ! $TARGET_INSIDE && [ -n "$ancestor" ]; do
+            if [ "$ancestor" -ef "$SOURCE_CANON" ]; then
+                TARGET_INSIDE=true
+            fi
+            ancestor="${ancestor%/*}"
+        done
+        if $TARGET_INSIDE; then
             echo "" >&2
             echo -e "${RED}Error: the target directory must not be inside the cephalo template directory.${NC}" >&2
             echo -e "${RED}  Template: $SOURCE_CANON${NC}" >&2
