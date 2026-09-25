@@ -307,8 +307,9 @@ jobs:
                           "Im Jahr 2020 stieg es. Die EU (2020) beschloss es. Das Kapitel (2020) zeigt es.")
           d.add_paragraph("U.S.A. and B2B, CO2, 5G, BENELUX, GmbH; e.g. z. B. 2020.")
           d.add_paragraph("Fischers' (2020) Modell.")  # possessive of a name ending in s
+          d.add_paragraph("Wie O\u2019Brien (2021) zeigt.")  # typographic apostrophe; the entry has a straight one
           d.add_heading("Literaturverzeichnis", 1)
-          for entry in ("Schmidt, K. (2020). A.", "Müller, J. (2021). B.", "WHO. (2019). C.", "Fischers, P. (2020). E."):
+          for entry in ("Schmidt, K. (2020). A.", "Müller, J. (2021). B.", "WHO. (2019). C.", "Fischers, P. (2020). E.", "O'Brien, K. (2021). F."):
               d.add_paragraph(entry)
           d.save(os.path.join(w, "ok.docx"))
           d.add_paragraph("Uncited, U. (2019). D.")

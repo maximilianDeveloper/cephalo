@@ -116,8 +116,10 @@ def read_docx_paragraphs(path: Path) -> list[tuple[str, Optional[int]]]:
     try:
         doc = Document(str(path))
         # NFC: decomposed umlauts (e.g. pasted from a PDF) would never match
-        # their precomposed form or the [ÄÖÜ]/\w name classes
-        return [(unicodedata.normalize("NFC", p.text), heading_level(p)) for p in doc.paragraphs]
+        # their precomposed form or the [ÄÖÜ]/\w name classes. ’ -> ': Word's
+        # AutoCorrect writes O’Brien in the text, a pasted entry keeps O'Brien.
+        return [(unicodedata.normalize("NFC", p.text).replace("’", "'"), heading_level(p))
+                for p in doc.paragraphs]
     except PackageNotFoundError:
         print(f"Error: {path} is not a valid .docx file (corrupt or renamed?)", file=sys.stderr)
     except Exception as exc:
