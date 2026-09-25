@@ -267,6 +267,15 @@ canon_path() {
     printf '%s\n' "$out"
 }
 
+shell_quote() {
+    # Print $1 in single quotes (' as '\''), for commands the user may paste:
+    # nothing in it expands, in bash and zsh alike. The substitution runs in
+    # an assignment, where bash 3.2 and 5 treat the quote characters the same.
+    local q="'\\''" s
+    s=${1//\'/$q}
+    printf "'%s'" "$s"
+}
+
 # ==========================================================
 # Start
 # ==========================================================
@@ -345,7 +354,7 @@ if [ ! -f "setup.sh" ] || [ ! -d ".claude" ] || [ ! -d "templates" ]; then
     echo -e "${RED}(setup.sh, .claude/ and templates/ expected in: $(pwd)).${NC}" >&2
     if [ -n "$SCRIPT_DIR" ] && [ -d "$SCRIPT_DIR/.claude" ]; then
         echo -e "${YELLOW}The template appears to be at: $SCRIPT_DIR${NC}" >&2
-        echo -e "${YELLOW}Run:  cd \"$SCRIPT_DIR\" && ./setup.sh [args]${NC}" >&2
+        printf '%bRun:  cd %s && ./setup.sh [args]%b\n' "$YELLOW" "$(shell_quote "$SCRIPT_DIR")" "$NC" >&2
         echo -e "${YELLOW}Use --target PATH to create the project elsewhere.${NC}" >&2
     fi
     pause_before_close "error"
@@ -442,7 +451,7 @@ check_flat_only() {
     if [[ "$WORK_TYPE" =~ ^(Seminar\ paper|Presentation)$ ]] && [ -n "$STRUCTURE" ] && [ "$STRUCTURE" != "Flat" ]; then
         echo "Error: '$WORK_TYPE' uses the Flat structure; there is no $STRUCTURE workflow for it." >&2
         if [ -n "$TARGET_DIR" ]; then
-            echo "Use: $0 \"$WORK_TYPE\" Flat ${SCAFFOLDING:-full} --target \"$TARGET_DIR\"" >&2
+            echo "Use: $0 \"$WORK_TYPE\" Flat ${SCAFFOLDING:-full} --target $(shell_quote "$TARGET_DIR")" >&2
         else
             echo "Use: $0 \"$WORK_TYPE\" Flat ${SCAFFOLDING:-full}" >&2
         fi
@@ -1099,7 +1108,7 @@ if [ -n "$SOURCE_DIR_BEFORE_MOVE" ] && [ -d "$SOURCE_DIR_BEFORE_MOVE" ]; then
     else
         echo -e "${GRAY}Non-interactive run: keeping the original in place.${NC}"
         echo -e "${GRAY}Delete manually if no longer needed:${NC}"
-        echo -e "${GRAY}  rm -rf \"$SOURCE_DIR_BEFORE_MOVE\"${NC}"
+        printf '%b  rm -rf %s%b\n' "$GRAY" "$(shell_quote "$SOURCE_DIR_BEFORE_MOVE")" "$NC"
     fi
     echo ""
 fi
