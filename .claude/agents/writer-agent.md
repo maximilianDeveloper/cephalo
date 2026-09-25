@@ -77,6 +77,8 @@ The original quotes in the extracts, and in the seminar and presentation workflo
 
 **Read `styleguide.md` at the start of every chapter.** If a rule you need is not covered, report this to the orchestrator — do not guess.
 
+**Citations with a reference manager:** if the project has a `literature.bib` (`02_Literature/literature.bib`; flat: `workspace/sources/literature.bib`), write in-text citations as Pandoc citekeys, e.g. `[@smith2020, p. 975]`: the citation processor renders them in the styleguide's format at export (see `docs/reference_management.md`). Without a `literature.bib`, write them in the styleguide's in-text format.
+
 The styleguide is extracted per-project from the institution's guidelines. It may differ between projects.
 
 ## Chapter structure

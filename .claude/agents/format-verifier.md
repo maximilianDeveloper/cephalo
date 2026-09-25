@@ -136,7 +136,7 @@ Styleguide gap (for ❓):
 
 ### 5. Phase awareness
 
-**Phase A (Content):** flag only critical format errors (wholly wrong citation format). Defer polish.
+**Phase A (Content):** flag only critical format errors (wholly wrong citation format). Defer polish. Pandoc citekeys (`[@key, p. X]`) in chapter drafts are not format errors: with a `literature.bib` they are intended, and their rendered form is checked in the exported DOCX in Phase B.
 
 **Phase B (Formatting):** full check including mechanical scripts. Multiple iterations expected.
 
