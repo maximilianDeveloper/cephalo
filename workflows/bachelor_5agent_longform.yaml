@@ -296,11 +296,11 @@ phases:
   submission:
     manual: true
     task: |
-      - Final DOCX export to submissions/v_final_<date>.docx
+      - Final DOCX export to 08_Formal_Review/submissions/v_final_<date>.docx
       - Run scripts/docx_postprocess.sh on this v_final file (only if styleguide.md document.hyphenation = automatic; a fresh export may not carry the earlier patch)
-      - Tag in Git: git tag v_final_<date>
       - Update table of contents (Ctrl+A then F9)
       - Confirm the hyphenation setting matches styleguide.md (document.hyphenation)
       - Visual proofreading
       - Sign declaration of academic integrity
+      - Commit the final state (git add . then git commit -m "submission: final version"), then tag it: git tag v_final_<date>
       - Mentally rehearse defending each sentence
