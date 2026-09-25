@@ -25,10 +25,10 @@ The name is slightly misleading: you do not browse the internet or find new sour
 - Bibliography metadata (BibTeX): `02_Literature/literature.bib`
 - Extracts: `02_Literature/extracts/<citekey>.md`
 
-**Multi-project:**
+**Multi-project** (paths as seen from the sub-project Claude Code is opened on):
 - Guidelines: via `shared/guidelines/` symlink
-- Main-work sources and extracts follow the long-form pattern (`02_Main_Work/02_Literature/`)
-- The proposal sub-project has no `02_Literature/`: source files go into `01_Proposal/01_Research/`, the brief extracts into `01_Proposal/01_Research/key_sources.md` (see `proposal_workflow.yaml`)
+- Main work (`02_Main_Work/`): sources and extracts follow the long-form pattern (`02_Literature/`)
+- The proposal sub-project (`01_Proposal/`) has no `02_Literature/`: source files go into `01_Research/`, the brief extracts into `01_Research/key_sources.md` (see `proposal_workflow.yaml`)
 
 **Multi-project sub-project** (Claude Code opened on `01_Proposal/`, `02_Main_Work/` or `03_Defense/`): the styleguide is `shared/styleguide.md` and the guidelines are in `shared/guidelines/` (`shared/` points to `../00_Shared_Materials/`). The framework folders stay at the multi-project root, one level up: `../checklists/`, `../scripts/`, `../templates/`, `../workflows/`.
 
