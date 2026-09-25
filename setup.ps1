@@ -88,7 +88,12 @@ trap {
 # the result would be a project without agents, workflows, or templates.
 # Mirrors the equivalent guard in setup.sh.
 
-if (-not (Test-Path -LiteralPath "setup.ps1" -PathType Leaf) -or -not (Test-Path -LiteralPath ".claude" -PathType Container) -or -not (Test-Path -LiteralPath "templates" -PathType Container)) {
+# Absolute paths with .NET checks: Windows PowerShell 5.1 resolves relative
+# paths wrongly when the current folder contains [ ] (see Resolve-ProjectPath).
+$StartDir = (Get-Location).ProviderPath
+if (-not [System.IO.File]::Exists([System.IO.Path]::Combine($StartDir, "setup.ps1")) -or
+    -not [System.IO.Directory]::Exists([System.IO.Path]::Combine($StartDir, ".claude")) -or
+    -not [System.IO.Directory]::Exists([System.IO.Path]::Combine($StartDir, "templates"))) {
     $ScriptDir = $PSScriptRoot
     Write-Host ""
     Write-Host "Error: the current directory does not look like a cephalo template" -ForegroundColor Red

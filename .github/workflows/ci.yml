@@ -418,7 +418,7 @@ jobs:
         shell: powershell
         run: |
           function Invoke-Setup([string]$Dir, [string[]]$SetupArgs) {
-            Push-Location $Dir
+            Push-Location -LiteralPath $Dir
             & powershell -NoProfile -ExecutionPolicy Bypass -File ./setup.ps1 @SetupArgs
             $code = $LASTEXITCODE
             Pop-Location
@@ -432,6 +432,8 @@ jobs:
           $brk = Join-Path $env:TEMP 'ci_ps_[final]'
           Invoke-Setup $PWD @('-WorkType', 'Bachelor thesis', '-Structure', 'Long-form', '-Scaffolding', 'full', '-Target', $brk, '-NonInteractive')
           if (-not (Test-Path -LiteralPath (Join-Path $brk '00_Status.md'))) { Write-Host "brackets: 00_Status.md missing"; exit 1 }
+          # ... and a re-run inside that project still finds the template there.
+          Invoke-Setup $brk @('-WorkType', 'Bachelor thesis', '-Structure', 'Long-form', '-Scaffolding', 'full', '-NonInteractive')
           Invoke-Setup $PWD @('-WorkType', 'Master thesis', '-Structure', 'Multi-project', '-Scaffolding', 'minimal', '-Target', $multi, '-NonInteractive')
           foreach ($sub in '01_Proposal', '02_Main_Work', '03_Defense') {
             if (-not (Test-Path (Join-Path $multi "$sub/shared/guidelines"))) { Write-Host "multi: $sub/shared missing"; exit 1 }
