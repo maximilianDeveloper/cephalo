@@ -247,7 +247,23 @@ jobs:
           assert z.testzip() is None
           assert z.infolist()[0].filename == "[Content_Types].xml"
           assert "<w:autoHyphenation/>" in z.read("word/settings.xml").decode()
+          # variants: a disabled open/close element; a non-w: namespace prefix
+          W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+          for name, xml in (
+              ("openclose.docx", z.read("word/settings.xml").decode().replace(
+                  "<w:autoHyphenation/>", '<w:autoHyphenation w:val="0"></w:autoHyphenation>')),
+              ("prefix.docx", '<ns0:settings xmlns:ns0="%s"><ns0:zoom ns0:percent="100"/></ns0:settings>' % W),
+          ):
+              with zipfile.ZipFile(sys.argv[1].replace("ok.docx", name), "w") as out:
+                  for i in z.infolist():
+                      out.writestr(i.filename, xml if i.filename == "word/settings.xml" else z.read(i.filename))
           EOF
+          expect 0 bash scripts/docx_postprocess.sh "$W/openclose.docx"
+          test "$(unzip -p "$W/openclose.docx" word/settings.xml | grep -o '<w:autoHyphenation' | wc -l)" -eq 1
+          unzip -p "$W/openclose.docx" word/settings.xml | grep -q '<w:autoHyphenation/>'
+          cp "$W/prefix.docx" "$W/prefix.orig"
+          expect 1 bash scripts/docx_postprocess.sh "$W/prefix.docx"
+          cmp "$W/prefix.docx" "$W/prefix.orig"
           # extract_styleguide.sh: a ZIP disguised as PDF is unpacked; path traversal is blocked
           expect 0 bash scripts/extract_styleguide.sh "$W/good" "$W/out_good"
           grep -q "Example rule text" "$W/out_good/guide.txt"

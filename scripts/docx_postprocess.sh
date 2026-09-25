@@ -125,7 +125,8 @@ fi
 # Check whether auto-hyphenation is already ENABLED. Only the bare element or
 # w:val in {1,true,on} counts as enabled — w:val="0"/"false"/"off" means
 # explicitly disabled (OOXML ST_OnOff) and is rewritten below, not skipped.
-if grep -qE "<w:autoHyphenation([[:space:]]+w:val=[\"'](1|true|on)[\"'])?[[:space:]]*/>" "$SETTINGS" 2>/dev/null; then
+# Both the self-closing and the empty open/close form count.
+if grep -qE "<w:autoHyphenation([[:space:]]+w:val=[\"'](1|true|on)[\"'])?[[:space:]]*(/>|>[[:space:]]*</w:autoHyphenation>)" "$SETTINGS" 2>/dev/null; then
     echo "Note: auto-hyphenation already enabled — no change."
     SKIP_PATCH=1
 else
@@ -144,11 +145,16 @@ with open(path, 'r', encoding='utf-8') as f:
 
 # Enabled = bare element or w:val in {1,true,on}. Per OOXML ST_OnOff,
 # w:val="0"/"false"/"off" means explicitly DISABLED and must be rewritten.
-ENABLED_RE = re.compile(r'<w:autoHyphenation(?:\s+w:val=["\'](?:1|true|on)["\'])?\s*/>')
-PRESENT_RE = re.compile(r'<w:autoHyphenation(?:\s[^>]*)?/>')
+# Both the self-closing and the empty open/close form are matched, so an
+# existing element is never duplicated (a second one is schema-invalid).
+ENABLED_RE = re.compile(r'<w:autoHyphenation(?:\s+w:val=["\'](?:1|true|on)["\'])?\s*(?:/>|>\s*</w:autoHyphenation>)')
+PRESENT_RE = re.compile(r'<w:autoHyphenation(?:\s[^>]*?)?(?:/>|>\s*</w:autoHyphenation>)')
+TABSTOP_RE = re.compile(r'(<w:defaultTabStop\b[^>]*?(?:/>|>\s*</w:defaultTabStop>))')
 
 if ENABLED_RE.search(content):
     sys.exit(0)
+
+original = content
 
 if PRESENT_RE.search(content):
     # Element exists but disables hyphenation — rewrite it in place
@@ -156,21 +162,24 @@ if PRESENT_RE.search(content):
     content = PRESENT_RE.sub('<w:autoHyphenation/>', content, count=1)
 # Preferred: insert directly after defaultTabStop, its schema predecessor
 # (python-docx, Word and LibreOffice all write defaultTabStop)
-elif re.search(r'<w:defaultTabStop\b[^>]*/>', content):
-    content = re.sub(
-        r'(<w:defaultTabStop\b[^>]*/>)',
-        r'\1<w:autoHyphenation/>',
-        content,
-        count=1,
-    )
+elif TABSTOP_RE.search(content):
+    content = TABSTOP_RE.sub(r'\1<w:autoHyphenation/>', content, count=1)
 else:
-    # Fallback: insert as first child of <w:settings ...>
+    # Fallback: insert as first child of <w:settings ...> (not the empty
+    # self-closing <w:settings/>, where that would produce broken XML)
     content = re.sub(
-        r'(<w:settings[^>]*>)',
+        r'(<w:settings\b[^>]*(?<!/)>)',
         r'\1<w:autoHyphenation/>',
         content,
         count=1,
     )
+
+if content == original:
+    # Nothing matched (e.g. the document uses a namespace prefix other than
+    # w:) — fail instead of reporting success for an unchanged document.
+    sys.exit('Error: could not locate the settings element in word/settings.xml; '
+             'auto-hyphenation NOT enabled. Enable it in Word '
+             '(Layout > Hyphenation > Automatic) instead.')
 
 with open(path, 'w', encoding='utf-8') as f:
     f.write(content)
