@@ -11,6 +11,8 @@ Steps:
 
 The output can be cross-checked against the document's actual list of 
 abbreviations to identify undocumented abbreviations or unused entries.
+Run it on a copy without the list of abbreviations: the list is read too,
+so every entry in it would count as used.
 
 Usage:
     python scripts/abbreviations_extract.py workspace/output/document.docx
@@ -257,7 +259,8 @@ def main():
     
     print()
     print("Cross-check this list against your document's list of abbreviations.")
-    print("Add any missing entries; remove any unused entries.")
+    print("Add any missing entries; remove any unused entries. The list of abbreviations")
+    print("itself is read too: run this on a copy without it, or every entry counts as used.")
 
 
 if __name__ == "__main__":

@@ -95,6 +95,7 @@ python3 scripts/bibliography_check.py workspace/output/document.docx
 ```bash
 python3 scripts/abbreviations_extract.py workspace/output/document.docx
 ```
+Run it on a copy of the document without the list of abbreviations: the script reads the list too, so every listed entry would count as used.
 
 **Automatic hyphenation** (only if `styleguide.md` sets `document.hyphenation` to automatic; before final export):
 ```bash
