@@ -92,7 +92,9 @@ if [ -z "$PY" ]; then
     exit 1
 fi
 
-# Absolute path before changing directory
+# Absolute path before changing directory. A leading '-' would be read as
+# an option by dirname, basename and cd (a folder named '-' even as OLDPWD).
+case "$DOC" in -*) DOC="./$DOC" ;; esac
 DOC_ABS=$(cd "$(dirname "$DOC")" && pwd)/$(basename "$DOC")
 
 # Work in a temporary directory. Deliberately NOT named TMPDIR: that is the
