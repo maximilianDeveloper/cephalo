@@ -161,7 +161,7 @@ The agents work with what's already there. You don't need to rewrite anything th
 
 **`setup.ps1 cannot be loaded because running scripts is disabled`** — PowerShell's execution policy. Allow this session only:
 ```powershell
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 .\setup.ps1
 ```
 

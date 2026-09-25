@@ -97,7 +97,7 @@ If you cloned instead of unzipping: use a `--target` path in step 2, so your pro
 **Windows (PowerShell):**
 
 ```powershell
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 .\setup.ps1
 ```
 

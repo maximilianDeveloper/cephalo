@@ -298,7 +298,7 @@
 <p><strong>New here? Prefer a visual start.</strong> Open <code>docs/setup-wizard.html</code> in any browser — answer a few questions and it builds the exact setup command for your system and previews the folders it will create. It is fully offline and runs nothing; you copy the command and run it yourself in the next step.</p>
 <h3>2. Run the setup script</h3>
 <p><strong>Windows (PowerShell):</strong></p>
-<pre><code>Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+<pre><code>Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 .\setup.ps1</code></pre>
 <p>Only multi-project setups create symlinks — for those, enable Developer Mode once (Settings -&gt; For developers) or run from an elevated shell; see the FAQ. Flat and long-form setups need neither.</p>
 <p><strong>macOS / Linux / Git Bash:</strong></p>
@@ -470,7 +470,7 @@ List any open questions for me to resolve before we proceed.</code></pre>
 <h2>Troubleshooting</h2>
 <p><strong><code>./setup.sh: Permission denied</code></strong> — the script needs the execute bit: <code>chmod +x setup.sh</code>.</p>
 <p><strong><code>setup.ps1 cannot be loaded because running scripts is disabled</code></strong> — PowerShell&#x27;s execution policy. Allow this session only:</p>
-<pre><code>Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+<pre><code>Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 .\setup.ps1</code></pre>
 <p><strong><code>git: command not found</code></strong> (or <code>! Git not installed.</code> / <code>! Git not available</code> in the setup output) — install Git. On Windows: download Git for Windows (includes Git Bash, which is needed for the <code>.sh</code> helper scripts). On Linux/macOS: <code>apt install git</code> / <code>brew install git</code>. Setup creates no repository without Git (<code>git add .</code> then fails with <code>not a git repository</code>): afterwards, re-run setup with the same choices in the project folder (for multi-project, the root, not a sub-project).</p>
 <p><strong><code>New-Item: Administrator privilege required</code></strong> on Windows (Multi-project setup) — symlinks need Admin rights or Developer Mode. The easier fix: Settings -&gt; For developers -&gt; Developer Mode: on. Then delete the three <code>shared/</code> copies the setup created instead (<code>01_Proposal/shared</code>, <code>02_Main_Work/shared</code>, <code>03_Defense/shared</code>) and re-run setup; a re-run keeps existing copies as they are.</p>
