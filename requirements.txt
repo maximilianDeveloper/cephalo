@@ -14,5 +14,11 @@ pypdf[crypto]>=3.0.0,<7.0  # scripts/extract_styleguide.sh (pure-Python PDF extr
                            # [crypto] adds the AES support that encrypted, copy-protected
                            # guideline PDFs need (it pulls in the `cryptography` package)
 
+# cryptography 49 and later ship macOS wheels for Apple Silicon only. On an
+# Intel Mac, pip would pick the newest release and try to build it from source,
+# which needs a Rust toolchain and fails; 48.x is the last release with Intel-Mac
+# wheels. Other platforms are not affected by this line.
+cryptography<49; sys_platform == "darwin" and platform_machine == "x86_64"
+
 # Optional but recommended for development / contributors:
 # pyyaml>=6.0         # if you want to lint/validate the workflow YAMLs yourself
