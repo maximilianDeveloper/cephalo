@@ -383,6 +383,81 @@ if ($Target -ne "") {
     }
 }
 
+# ==========================================================
+# Interactive prompts
+# ==========================================================
+
+if (-not $NonInteractive) {
+    if ($WorkType -eq "") {
+        $WorkType = Ask-Choice "What kind of work is this?" @(
+            "Seminar paper",
+            "Presentation",
+            "Bachelor thesis",
+            "Master thesis",
+            "Dissertation"
+        )
+    }
+    
+    if ($Structure -eq "") {
+        if ($WorkType -in @("Seminar paper", "Presentation")) {
+            $Structure = "Flat"
+            Write-Host ""
+            Write-Host "For '$WorkType', using flat structure automatically." -ForegroundColor Gray
+        } else {
+            $Structure = Ask-Choice "What project structure?" @(
+                "Flat (single directory, simple)",
+                "Long-form (phase-based directories, centralized state)",
+                "Multi-project (proposal + main work + defense, separated)"
+            )
+        }
+    }
+    
+    if ($Scaffolding -eq "") {
+        $Scaffolding = Ask-Choice "How much scaffolding should the script pre-create?" @(
+            "Standard (full phase directories, ready to use)",
+            "Minimal (only base structure; let the style-resolver add more based on your guidelines)"
+        )
+    }
+}
+
+# ==========================================================
+# Normalize + validate configuration
+# ==========================================================
+# Re-validation after the interactive prompts (idempotent for values already
+# canonicalized by the early-validation call above).
+
+Resolve-CephaloConfiguration
+
+Write-Host ""
+Write-Host "Configuration:" -ForegroundColor Cyan
+Write-Host "  Work type:   $WorkType" -ForegroundColor White
+Write-Host "  Structure:   $Structure" -ForegroundColor White
+Write-Host "  Scaffolding: $Scaffolding" -ForegroundColor White
+if ($Target -ne "") { Write-Host "  Target:      $Target" -ForegroundColor White }
+Write-Host ""
+if ($NonInteractive) {
+    Write-Host "(Non-interactive mode: proceeding without confirmation)" -ForegroundColor Gray
+} else {
+    $confirm = Read-Host "Proceed? (y/j = yes, n = no)"
+    if ($null -eq $confirm) {
+        # EOF (stdin closed): fail instead of reporting a successful "Cancelled."
+        Write-Host ""
+        Write-Host "Error: input closed before confirmation." -ForegroundColor Red
+        Write-Host "For unattended runs, pass -WorkType, -Structure, -Scaffolding and -NonInteractive." -ForegroundColor Red
+        exit 2
+    }
+    if ($confirm -notmatch '^(y|j|yes|ja)$') {
+        Write-Host "Cancelled." -ForegroundColor Yellow
+        exit 0
+    }
+}
+
+# ==========================================================
+# Copy the template to -Target (after the confirmation)
+# ==========================================================
+# Only now, so that a declined "Proceed?" or an interrupted prompt leaves
+# no template copy behind (as in setup.sh).
+
 if ($Target -ne "") {
     $SourceDir = (Get-Location).Path
     
@@ -485,74 +560,6 @@ if ($Target -ne "") {
     $script:SourceDirBeforeMove = $SourceDir
     Set-Location -Path $Target
     Write-Verbose "Changed PowerShell location to target: $Target"
-}
-
-# ==========================================================
-# Interactive prompts
-# ==========================================================
-
-if (-not $NonInteractive) {
-    if ($WorkType -eq "") {
-        $WorkType = Ask-Choice "What kind of work is this?" @(
-            "Seminar paper",
-            "Presentation",
-            "Bachelor thesis",
-            "Master thesis",
-            "Dissertation"
-        )
-    }
-    
-    if ($Structure -eq "") {
-        if ($WorkType -in @("Seminar paper", "Presentation")) {
-            $Structure = "Flat"
-            Write-Host ""
-            Write-Host "For '$WorkType', using flat structure automatically." -ForegroundColor Gray
-        } else {
-            $Structure = Ask-Choice "What project structure?" @(
-                "Flat (single directory, simple)",
-                "Long-form (phase-based directories, centralized state)",
-                "Multi-project (proposal + main work + defense, separated)"
-            )
-        }
-    }
-    
-    if ($Scaffolding -eq "") {
-        $Scaffolding = Ask-Choice "How much scaffolding should the script pre-create?" @(
-            "Standard (full phase directories, ready to use)",
-            "Minimal (only base structure; let the style-resolver add more based on your guidelines)"
-        )
-    }
-}
-
-# ==========================================================
-# Normalize + validate configuration
-# ==========================================================
-# Re-validation after the interactive prompts (idempotent for values already
-# canonicalized by the early-validation call above).
-
-Resolve-CephaloConfiguration
-
-Write-Host ""
-Write-Host "Configuration:" -ForegroundColor Cyan
-Write-Host "  Work type:   $WorkType" -ForegroundColor White
-Write-Host "  Structure:   $Structure" -ForegroundColor White
-Write-Host "  Scaffolding: $Scaffolding" -ForegroundColor White
-Write-Host ""
-if ($NonInteractive) {
-    Write-Host "(Non-interactive mode: proceeding without confirmation)" -ForegroundColor Gray
-} else {
-    $confirm = Read-Host "Proceed? (y/j = yes, n = no)"
-    if ($null -eq $confirm) {
-        # EOF (stdin closed): fail instead of reporting a successful "Cancelled."
-        Write-Host ""
-        Write-Host "Error: input closed before confirmation." -ForegroundColor Red
-        Write-Host "For unattended runs, pass -WorkType, -Structure, -Scaffolding and -NonInteractive." -ForegroundColor Red
-        exit 2
-    }
-    if ($confirm -notmatch '^(y|j|yes|ja)$') {
-        Write-Host "Cancelled." -ForegroundColor Yellow
-        exit 0
-    }
 }
 
 $IsMinimal = $Scaffolding -match "^Minimal"
