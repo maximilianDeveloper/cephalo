@@ -143,6 +143,10 @@ phases:
         input_directory: guidelines/
         output: styleguide.md
         blocking: true
+        note: |
+          Multi-project main work: shared/styleguide.md normally exists
+          already (extracted in the proposal). Only verify it (no open ❓
+          items); re-extract only when the guidelines change.
   
   # ===========================================================
   # Lead-in: Proposal
