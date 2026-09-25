@@ -156,9 +156,12 @@ pandoc chapter.md \
   --citeproc \
   --bibliography 02_Literature/literature.bib \
   --csl path/to/style.csl \
+  --metadata reference-section-title="References" \
   --reference-doc template.docx \
   -o output.docx
 ```
+
+Use your styleguide's bibliography heading as the title. Without it, Pandoc adds the reference list without a heading, and `scripts/bibliography_check.py` cannot find the bibliography (exit 2).
 
 **Prerequisite:** a CSL file matching your institution's citation style. APA 7 is the closest standard for many institutions; download from [zotero.org/styles](https://www.zotero.org/styles). For institution-specific deviations, you may need to edit the CSL.
 
