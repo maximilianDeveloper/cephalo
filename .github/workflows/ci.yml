@@ -350,6 +350,19 @@ jobs:
           with zipfile.ZipFile(os.path.join(w, "zipmix", "guide.pdf"), "w") as z:
               z.writestr("rules.txt", "Example rule text")
               z.writestr("broken.pdf", b"%PDF-1.4 broken")
+          # ok.docx plus a footnote whose acronym Word split across two runs
+          with zipfile.ZipFile(os.path.join(w, "ok.docx")) as z, zipfile.ZipFile(os.path.join(w, "notes.docx"), "w") as out:
+              for i in z.infolist():
+                  data = z.read(i.filename)
+                  if i.filename == "[Content_Types].xml":
+                      data = data.replace(b"</Types>", b'<Override PartName="/word/footnotes.xml" ContentType='
+                                          b'"application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml"/></Types>')
+                  elif i.filename == "word/_rels/document.xml.rels":
+                      data = data.replace(b"</Relationships>", b'<Relationship Id="rIdFn" Type="http://schemas.openxmlformats.org'
+                                          b'/officeDocument/2006/relationships/footnotes" Target="footnotes.xml"/></Relationships>')
+                  out.writestr(i, data)
+              out.writestr("word/footnotes.xml", '<w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+                           '<w:footnote w:id="1"><w:p><w:r><w:t>Die UNES</w:t></w:r><w:r><w:t>CO.</w:t></w:r></w:p></w:footnote></w:footnotes>')
           # copy-protected guideline: AES-256, empty open password (needs pypdf[crypto])
           from pypdf import PdfWriter
           from pypdf.generic import DictionaryObject, NameObject, StreamObject
@@ -388,6 +401,9 @@ jobs:
           if grep -qx "  US" "$W/out.txt"; then echo "U.S.A. was truncated to US"; exit 1; fi
           expect 1 python scripts/abbreviations_extract.py "$W/notword.docx"
           test "$(wc -l < "$W/out.txt")" -eq 1
+          # footnotes are read, and an acronym split across runs stays whole
+          expect 0 python scripts/abbreviations_extract.py "$W/notes.docx"
+          grep -qx "  UNESCO" "$W/out.txt"
           # docx_postprocess.sh: hyphenation on, package still valid, [Content_Types].xml first,
           # permission bits of the replaced file kept
           chmod 600 "$W/ok.docx"
