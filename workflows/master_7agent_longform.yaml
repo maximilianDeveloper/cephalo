@@ -325,6 +325,7 @@ phases:
   submission:
     manual: true
     task: |
+      - Full-document final check: checklists/consistency.md, Part B (orchestrator-longform; B.6 is completed by the commit and tag below)
       - Final DOCX export to 08_Formal_Review/submissions/v_final_<date>.docx
       - Run scripts/docx_postprocess.sh on this v_final file (only if styleguide.md document.hyphenation = automatic; a fresh export may not carry the earlier patch)
       - Update table of contents

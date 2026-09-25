@@ -190,6 +190,7 @@ Present the outstanding items as a numbered list with source citations so the us
 - Writer-agent deactivated
 - format-verifier + build scripts
 - Milestone exports to `08_Formal_Review/submissions/` with date in filename
+- Before submission: the full-document final check, `checklists/consistency.md` Part B
 
 ## Git behavior
 
