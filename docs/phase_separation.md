@@ -68,7 +68,7 @@ When all criteria are met, the orchestrator:
 - Sets `00_Status.md` (long-form) or `workspace/state.md` (flat) -> phase: B
 - Deactivates the writer-agent
 - Activates the format-verifier as the lead agent
-- Begins phase 08_Formal_Review (long-form) or moves into the closing checklist (flat)
+- Begins phase 08_Formal_Review (long-form) or the flat workflow's Phase B steps (`phase_B_form`, then its closing checklist)
 
 ---
 
