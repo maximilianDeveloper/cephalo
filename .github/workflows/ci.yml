@@ -180,6 +180,9 @@ jobs:
             want=$(seq -s ' ' 1 "$(echo "$got" | wc -w)")
             test "$got" = "$want " || { echo "Next steps numbered '$got' for $args"; exit 1; }
           done
+          # The loop's last run (Master thesis, Multi-project, full) keeps both data placeholders.
+          test -f /tmp/ci_steps/02_Main_Work/05_Empirical/data/raw/.gitkeep
+          test -f /tmp/ci_steps/02_Main_Work/05_Empirical/data/processed/.gitkeep
 
       - name: Shell scripts stay LF in a core.autocrlf=true clone
         run: |

@@ -866,6 +866,7 @@ elif [[ "$STRUCTURE" =~ ^Multi-project ]]; then
             create_dir "$MAIN_NAME/05_Empirical/data/scripts"
             create_dir "$MAIN_NAME/05_Empirical/data/outputs"
             create_gitkeep "$MAIN_NAME/05_Empirical/data/raw"
+            create_gitkeep "$MAIN_NAME/05_Empirical/data/processed"
         fi
     fi
     

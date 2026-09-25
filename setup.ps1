@@ -789,6 +789,7 @@ elseif ($Structure -match "^Multi-project") {
             Create-DirSafe "$MainName\05_Empirical\data\scripts"
             Create-DirSafe "$MainName\05_Empirical\data\outputs"
             Create-Gitkeep "$MainName\05_Empirical\data\raw"
+            Create-Gitkeep "$MainName\05_Empirical\data\processed"
         }
     }
     
