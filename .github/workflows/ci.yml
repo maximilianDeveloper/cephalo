@@ -354,6 +354,21 @@ jobs:
           cp "$W/prefix.docx" "$W/prefix.orig"
           expect 1 bash scripts/docx_postprocess.sh "$W/prefix.docx"
           cmp "$W/prefix.docx" "$W/prefix.orig"
+          # a symbolic-link entry is refused before anything is unpacked, and the file stays as it was
+          python - "$W/ok.docx" "$W/link.docx" <<'EOF'
+          import stat, sys, zipfile
+          with zipfile.ZipFile(sys.argv[1]) as z, zipfile.ZipFile(sys.argv[2], "w") as out:
+              for i in z.infolist():
+                  out.writestr(i, z.read(i.filename))
+              link = zipfile.ZipInfo("word/media/image1.png")
+              link.create_system = 3
+              link.external_attr = (stat.S_IFLNK | 0o777) << 16
+              out.writestr(link, "../../../in.docx")
+          EOF
+          cp "$W/link.docx" "$W/link.orig"
+          expect 1 bash scripts/docx_postprocess.sh "$W/link.docx"
+          grep -q "symbolic links" "$W/out.txt"
+          cmp "$W/link.docx" "$W/link.orig"
           # [ ] in the name is not a wildcard: unzip must not open "Chapter 2.docx" instead
           cp "$W/ok.docx" "$W/Chapter [2].docx"; cp "$W/findings.docx" "$W/Chapter 2.docx"
           expect 0 bash scripts/docx_postprocess.sh "$W/Chapter [2].docx"

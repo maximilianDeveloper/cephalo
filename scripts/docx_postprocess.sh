@@ -107,6 +107,24 @@ trap 'rm -rf "$WORK_DIR"' EXIT
 # different file (e.g. "Chapter 2.docx" for "Chapter [2].docx"): unpack a
 # copy with a fixed name instead.
 cp "$DOC_ABS" "$WORK_DIR/in.docx"
+
+# Refuse symbolic-link entries before unpacking: how unzip restores them
+# depends on the platform (Git Bash by default turns a link into a COPY of
+# its target, which the check after unpacking cannot see).
+"$PY" - "$WORK_DIR/in.docx" << 'PYEOF'
+import stat
+import sys
+import zipfile
+
+try:
+    with zipfile.ZipFile(sys.argv[1]) as zf:
+        links = any(stat.S_ISLNK(i.external_attr >> 16) for i in zf.infolist())
+except zipfile.BadZipFile:
+    sys.exit('Error: not a valid .docx (ZIP) file')
+if links:
+    sys.exit('Error: document contains symbolic links; refusing to process it')
+PYEOF
+
 mkdir "$WORK_DIR/x"
 cd "$WORK_DIR/x"
 unzip -q ../in.docx
