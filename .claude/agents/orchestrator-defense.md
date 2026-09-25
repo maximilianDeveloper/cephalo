@@ -33,6 +33,8 @@ All paths assume the active working directory is `03_Defense/` — i.e., Claude 
 - Styleguide: `../00_Shared_Materials/styleguide.md` (only relevant for slide formatting)
 - Styleguide override (optional): `styleguide_override.md` in this sub-project — documented defense-specific deviations that take precedence over the shared styleguide
 
+**Framework folders:** at the multi-project root, one level up: `../templates/`, `../checklists/`, `../scripts/`, `../workflows/` (workflow steps name them without the `../`, e.g. `templates/status.md`).
+
 **Additional working files (written during this workflow):**
 - Expected examiner questions: `03_Defense_Prep/expected_questions.md`
 - Weaknesses of the submitted work: `03_Defense_Prep/weaknesses_of_work.md`
