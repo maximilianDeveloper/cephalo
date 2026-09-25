@@ -49,10 +49,15 @@ if [ ! -f "$DOC" ]; then
     exit 1
 fi
 
-if [[ "$DOC" != *.docx ]]; then
-    echo "Error: expected a .docx file" >&2
-    exit 1
-fi
+# Extension check is case-insensitive (Windows often has .DOCX), like the
+# Python scripts; spelled out for bash 3.2, which lacks ${var,,}.
+case "$DOC" in
+    *.[dD][oO][cC][xX]) ;;
+    *)
+        echo "Error: expected a .docx file" >&2
+        exit 1
+        ;;
+esac
 
 # Dependency checks
 if ! command -v unzip >/dev/null 2>&1; then
