@@ -299,7 +299,7 @@ jobs:
         run: |
           W=/tmp/ci_util; rm -rf "$W"; mkdir -p "$W/good" "$W/evil" "$W/aes" "$W/zipmix"
           python - "$W" <<'EOF'
-          import os, sys, zipfile
+          import os, sys, unicodedata, zipfile
           from docx import Document
           w = sys.argv[1]
           d = Document()
@@ -314,6 +314,16 @@ jobs:
           d.save(os.path.join(w, "ok.docx"))
           d.add_paragraph("Uncited, U. (2019). D.")
           d.save(os.path.join(w, "findings.docx"))
+          # recognized forms: highest-level heading wins, typed number and colon, slash
+          # authors, u. a., Ö as first letter, a cited middle author, NFC, month/structure words
+          f = Document()
+          f.add_heading("3.2 Sources", 2)
+          f.add_paragraph(unicodedata.normalize("NFD", "(Müller/Schmidt 2019), Öztürk (2020), (Dawson u. a. 2018), "
+                                               "Ellis (2018), (März 2021), (Tabelle 3, 2020)."))
+          f.add_heading("7 Literaturverzeichnis:", 1)
+          for entry in ("Müller, H./Schmidt, K. (2019). A.", "Öztürk, A. (2020). B.", "Dawson, R., Ellis, S., & Fowler, T. (2018). C."):
+              f.add_paragraph(entry)
+          f.save(os.path.join(w, "forms.docx"))
           n = Document()
           n.add_paragraph("As shown in [1], it works.")
           n.add_heading("References", 1)
@@ -365,6 +375,7 @@ jobs:
           grep -q Uncited "$W/out.txt"
           expect 2 python scripts/bibliography_check.py "$W/notword.docx"
           test "$(wc -l < "$W/out.txt")" -eq 1
+          expect 0 python scripts/bibliography_check.py "$W/forms.docx"
           # a numeric bibliography cannot be checked: exit 2, not a passed check
           expect 2 python scripts/bibliography_check.py "$W/numeric.docx"
           # the bibliography ends at the next top-level heading (appendix, declaration)
