@@ -90,10 +90,27 @@ trap {
 
 # Absolute paths with .NET checks: Windows PowerShell 5.1 resolves relative
 # paths wrongly when the current folder contains [ ] (see Resolve-ProjectPath).
+function Test-CephaloTemplate([string]$Dir) {
+    return [bool]($Dir -and
+        [System.IO.File]::Exists([System.IO.Path]::Combine($Dir, "setup.ps1")) -and
+        [System.IO.Directory]::Exists([System.IO.Path]::Combine($Dir, ".claude")) -and
+        [System.IO.Directory]::Exists([System.IO.Path]::Combine($Dir, "templates")))
+}
 $StartDir = (Get-Location).ProviderPath
-if (-not [System.IO.File]::Exists([System.IO.Path]::Combine($StartDir, "setup.ps1")) -or
-    -not [System.IO.Directory]::Exists([System.IO.Path]::Combine($StartDir, ".claude")) -or
-    -not [System.IO.Directory]::Exists([System.IO.Path]::Combine($StartDir, "templates"))) {
+# Windows PowerShell 5.1 started in a folder whose name contains [ ] (e.g.
+# "powershell -File .\setup.ps1" there) cannot enter it and starts in its own
+# $PSHOME instead. Then fall back to the folder the process was started in
+# or, failing that, the folder of this script, and move there.
+if (-not (Test-CephaloTemplate $StartDir)) {
+    $ProcessDir = [System.Environment]::CurrentDirectory
+    if (Test-CephaloTemplate $ProcessDir) {
+        $StartDir = $ProcessDir
+    } elseif ($StartDir.TrimEnd('\', '/') -eq "$PSHOME".TrimEnd('\', '/') -and (Test-CephaloTemplate $PSScriptRoot)) {
+        $StartDir = $PSScriptRoot
+    }
+    if (Test-CephaloTemplate $StartDir) { Set-Location -LiteralPath $StartDir }
+}
+if (-not (Test-CephaloTemplate $StartDir)) {
     $ScriptDir = $PSScriptRoot
     Write-Host ""
     Write-Host "Error: the current directory does not look like a cephalo template" -ForegroundColor Red
@@ -407,7 +424,7 @@ if ($Target -ne "") {
     # Resolve to absolute path against the PowerShell location, not the process
     # working directory that GetFullPath alone would use (see Write-Utf8NoBom)
     $Target = [System.IO.Path]::GetFullPath($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Target))
-    $SourceDir = (Get-Location).Path
+    $SourceDir = $StartDir
 
     if ($Target -eq $SourceDir) {
         Write-Host "Target path equals current location - proceeding here." -ForegroundColor Gray
@@ -510,7 +527,7 @@ if ($NonInteractive) {
 # (e.g. "Thesis [final]") as a wildcard pattern and misses the real folder.
 
 if ($Target -ne "") {
-    $SourceDir = (Get-Location).Path
+    $SourceDir = $StartDir
     
     # Create parent directory chain if needed
     $TargetParent = Split-Path -Parent $Target
@@ -619,7 +636,7 @@ if ($Target -ne "") {
     Set-Location -LiteralPath $Target
     Write-Verbose "Changed PowerShell location to target: $Target"
 }
-if (-not $script:ProjectRoot) { $script:ProjectRoot = (Get-Location).ProviderPath }
+if (-not $script:ProjectRoot) { $script:ProjectRoot = $StartDir }
 
 $IsMinimal = $Scaffolding -match "^Minimal"
 Write-Verbose "Resolved configuration: WorkType='$WorkType', Structure='$Structure', Scaffolding='$Scaffolding' (minimal=$IsMinimal)."
@@ -894,7 +911,7 @@ if (-not ([System.IO.Directory]::Exists($GitDir) -or [System.IO.File]::Exists($G
         Write-Host "  ! Git not available. Install from https://git-scm.com" -ForegroundColor Yellow
     } else {
         try {
-            git init | Out-Null
+            git -C $script:ProjectRoot init | Out-Null
             Write-Host "  + Git repository initialized" -ForegroundColor Green
         } catch {
             Write-Host "  ! Git init failed: $($_.Exception.Message)" -ForegroundColor Yellow
@@ -903,7 +920,7 @@ if (-not ([System.IO.Directory]::Exists($GitDir) -or [System.IO.File]::Exists($G
         $lfsAvailable = $null -ne (Get-Command git-lfs -ErrorAction SilentlyContinue)
         if ($lfsAvailable) {
             try {
-                git lfs install | Out-Null
+                git -C $script:ProjectRoot lfs install | Out-Null
                 Write-Host "  + Git LFS enabled" -ForegroundColor Green
             } catch {
                 Write-Host "  ! Git LFS present but 'git lfs install' failed. Large files will not use LFS." -ForegroundColor Yellow
