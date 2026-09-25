@@ -202,6 +202,7 @@ Push your repository to a remote Git host (GitHub, GitLab, your institution's Gi
 
 ```bash
 git remote add origin <repository-url>
+git branch -M main    # setup's git init may have named the branch master
 git push -u origin main
 ```
 
