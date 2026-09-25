@@ -134,6 +134,7 @@ from docx import Document
 d = Document()
 d.add_heading('Test', 1)
 d.add_paragraph('Schmidt 2020, S. 15 führt aus. Müller (2021) stimmt zu.')
+d.add_paragraph('Im Jahr 2020 stieg die Zahl. Die EU (2020) reagierte. Das Kapitel (2020) fasst zusammen.')
 d.add_heading('Literaturverzeichnis', 1)
 d.add_paragraph('Schmidt, K. (2020). Test A.')
 d.add_paragraph('Müller, J. (2021). Test B.')
