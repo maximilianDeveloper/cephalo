@@ -351,7 +351,7 @@ Months 8-9: Defense sub-project active
 Generally only one sub-project is active at a time.
 ```
 
-Parallel operation is possible (e.g., preparing defense slides while the main work is still in formal review), but not the norm.
+Parallel operation is the exception, and the defense cannot overlap the main work: `defense_workflow.yaml` step 0.1 stops until the main work's submission tag (`v_final_<date>` or `work_submitted_<date>`) exists.
 
 ---
 
