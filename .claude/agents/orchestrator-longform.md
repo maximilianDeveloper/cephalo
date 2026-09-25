@@ -1,7 +1,7 @@
 ---
 name: orchestrator-longform
 description: Extension of the orchestrator for long-form projects (bachelor, master, dissertation). Knows phase-based directory structure, enforces the chat closure ritual, reads handover documents at chat start.
-tools: Read, Write, Edit, Glob, Grep, Bash
+tools: Agent(research-agent, writer-agent, source-verifier, format-verifier, style-resolver, methods-agent, data-agent), Read, Write, Edit, Glob, Grep, Bash
 model: inherit
 ---
 

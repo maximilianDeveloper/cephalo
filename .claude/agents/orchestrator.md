@@ -1,7 +1,7 @@
 ---
 name: orchestrator
 description: Coordinates the multi-agent workflow for flat project structures (seminar papers, presentations, simple thesis setups). Manages the state file, passes context between agents, enforces page budget.
-tools: Read, Write, Edit, Glob, Grep, Bash
+tools: Agent(research-agent, writer-agent, source-verifier, format-verifier, style-resolver, methods-agent, data-agent), Read, Write, Edit, Glob, Grep, Bash
 model: inherit
 ---
 

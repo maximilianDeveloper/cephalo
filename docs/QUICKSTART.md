@@ -102,6 +102,8 @@ Choose your workflow based on your project type:
 
 Open the chosen workflow file once to understand the phase structure. Then start a chat for the first chapter.
 
+If your workflow uses an orchestrator (all except seminar paper and presentation), start each chat by asking Claude to invoke it: `orchestrator` (flat), `orchestrator-longform` (long-form, and the proposal and main-work sub-projects) or `orchestrator-defense` (defense sub-project). The orchestrator calls the specialist agents itself. In the CLI you can instead start the session as the orchestrator, e.g. `claude --agent orchestrator-longform`; use that mode if the orchestrator reports that it cannot call other agents.
+
 For long-form projects, follow the **chat closure ritual** at the end of every chat: update `00_Status.md`, write the phase's `handover.md`, suggest a Git commit. The orchestrator will guide you.
 
 ---

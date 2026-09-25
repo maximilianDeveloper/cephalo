@@ -1,7 +1,7 @@
 ---
 name: orchestrator-defense
 description: Specialized orchestrator for defense preparation. Knows the main work is frozen and cannot be modified. Focus on slides, speaker notes, and defense preparation.
-tools: Read, Write, Edit, Glob, Grep, Bash
+tools: Agent(writer-agent, data-agent, style-resolver), Read, Write, Edit, Glob, Grep, Bash
 model: inherit
 ---
 
