@@ -67,7 +67,7 @@ Extracts text from institutional guideline PDFs so the style-resolver agent can 
 # Long-form:
 ./scripts/extract_styleguide.sh guidelines/
 
-# Multi-project:
+# Multi-project (from the multi-project root, where scripts/ is):
 ./scripts/extract_styleguide.sh 00_Shared_Materials/guidelines/
 
 # Custom output directory:
@@ -89,6 +89,8 @@ After running, invoke the style-resolver agent in Claude Code:
 Please invoke the style-resolver agent. Read the extracted texts in 
 _styleguide_rawtext/ and produce styleguide.md.
 ```
+
+Multi-project: Claude Code is opened on a sub-project, one level below the folder the script wrote to, so name `../_styleguide_rawtext/` in the prompt.
 
 ### `abbreviations_extract.py`
 
