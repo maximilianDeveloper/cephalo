@@ -20,7 +20,7 @@ Before proposing larger changes, please read through these. They came out of rea
 
 **1. Institution-agnostic via style-resolver.** Never hardcode citation rules (APA 7, Chicago, institutional house styles, etc.) into agent prompts. The `style-resolver` extracts rules from institutional guidelines into `styleguide.md`; agents read that file. Exceptions undermine the entire architecture.
 
-**2. Self-contained agents.** Claude Code sub-agents cannot read `CLAUDE.md`. Every agent definition declares its own file paths and mandatory reads. Do not rely on external documentation being visible to the agent at runtime.
+**2. Self-contained agents.** Every agent definition declares its own file paths and mandatory reads. Do not rely on `CLAUDE.md` (which Claude Code may pass to sub-agents as well) or other documentation to instruct an agent at runtime: what an agent needs belongs in its own definition.
 
 **3. Phase separation.** Content work (Phase A, capable models) and formatting work (Phase B, fast models) must stay separated. Mixing them eliminates the cost saving that phase separation provides.
 

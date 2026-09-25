@@ -86,7 +86,7 @@ Non-orchestrator agents (`research-agent`, `writer-agent`, `source-verifier`, `f
 
 The orchestrators invoke these agents themselves through the `Agent` tool; the `Agent(...)` entry in each orchestrator's `tools:` line names the agents it may call. A session can also run as an orchestrator: `claude --agent orchestrator-longform`.
 
-Each agent definition includes its own file path conventions in a `File paths` section. Agents cannot read this CLAUDE.md — they must be self-contained.
+Each agent definition includes its own file path conventions in a `File paths` section. Agents must be self-contained: Claude Code may pass this CLAUDE.md to subagents as well, but an agent definition must not depend on it.
 
 ## Workflow selection
 
