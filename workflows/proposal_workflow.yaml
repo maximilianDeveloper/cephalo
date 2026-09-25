@@ -262,10 +262,10 @@ phases:
       - 04_Submission/proposal_final_<YYYY-MM-DD>.pdf (optional)
     
     steps:
-      - format-verifier: check against shared/styleguide.md
-      - Manual export to DOCX
+      - Manual export to DOCX (04_Submission/proposal_final_<YYYY-MM-DD>.docx)
+      - format-verifier: check this DOCX against shared/styleguide.md; re-export after fixes
       - Manual export to PDF (if supervisor prefers)
-      - Git tag: proposal_v1_<date>
+      - Commit the exported files, then Git tag: proposal_v1_<date>
     
     submission_is_manual: true
     submission_note: |
