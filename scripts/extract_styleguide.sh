@@ -405,7 +405,14 @@ for pdf in pdf_files:
                         member_problems += 1
             combined = '\n\n'.join(parts)
             if combined.strip():
-                out_file.write_text(combined, encoding='utf-8')
+                try:
+                    out_file.write_text(combined, encoding='utf-8')
+                except OSError as e:
+                    # e.g. a flattened name over the 255-byte limit: report it
+                    # and go on with the next file instead of aborting the run
+                    print(f"  ERR {rel_path} - cannot write {out_file.name} ({e})", file=sys.stderr)
+                    errors += 1
+                    continue
                 lines = len(combined.splitlines())
                 print(f"      -> {out_file.name} ({lines} lines)")
                 written.add(out_file.name)
