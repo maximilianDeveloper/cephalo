@@ -407,6 +407,8 @@ if ($Target -eq "" -and -not $NonInteractive) {
             Write-Host "and the project structure will be created inside it."
             Write-Host "Example: C:\Users\You\Documents\Bachelorarbeit_KMU_OSS"
             $Target = Read-Host "Target path"
+            # Explorer's "Copy as path" adds double quotes; a Windows path never contains them.
+            if ($Target) { $Target = $Target.Trim().Trim('"') }
             if ([string]::IsNullOrWhiteSpace($Target)) {
                 Write-Host "Empty path - using current location instead." -ForegroundColor Yellow
                 $Target = ""
