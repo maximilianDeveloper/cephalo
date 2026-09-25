@@ -88,6 +88,27 @@ jobs:
               elif isinstance(node, list):
                   for v in node:
                       yield from refs(v)
+          def paths(node):
+              if isinstance(node, dict):
+                  for k, v in node.items():
+                      if k in ("checklist", "script", "documentation", "extended_by") and isinstance(v, str):
+                          yield v
+                      else:
+                          yield from paths(v)
+              elif isinstance(node, list):
+                  for v in node:
+                      yield from paths(v)
+          # The agents an orchestrator may call: the Agent(...) entry of its tools line.
+          calls = {}
+          for f in agent_files:
+              front = yaml.safe_load(open(f, encoding="utf-8").read().split("---")[1])
+              m = re.search(r"\bAgent\(([^)]*)\)", str(front.get("tools", "")))
+              names = {a.strip() for a in m.group(1).split(",")} if m else set()
+              for a in sorted(names):
+                  if not os.path.isfile(f".claude/agents/{a}.md"):
+                      errors.append(f"{f}: Agent({a}) names no agent file")
+              if front["name"].startswith("orchestrator"):
+                  calls[front["name"]] = names
           for f in sorted(glob.glob("workflows/*.yaml")):
               wf = yaml.safe_load(open(f, encoding="utf-8"))
               declared = wf.get("agents", {})
@@ -97,6 +118,19 @@ jobs:
               for name in refs({k: v for k, v in wf.items() if k != "agents"}):
                   if name not in declared:
                       errors.append(f"{f}: agent {name!r} is used but not declared")
+              # Name, base workflow and referenced checklists, scripts and docs exist.
+              if wf.get("name") != os.path.basename(f)[:-5]:
+                  errors.append(f"{f}: name {wf.get('name')!r} does not match the file name")
+              if "based_on" in wf and not os.path.isfile(os.path.join("workflows", wf["based_on"])):
+                  errors.append(f"{f}: based_on points to missing workflows/{wf['based_on']}")
+              for p in paths(wf):
+                  if not os.path.isfile(p):
+                      errors.append(f"{f}: references missing {p}")
+              # Each orchestrator the workflow declares may call every other agent it declares.
+              stems = {os.path.basename(s["file"])[:-3] for s in declared.values()}
+              for o in sorted(stems & calls.keys()):
+                  for a in sorted(stems - calls.keys() - calls[o]):
+                      errors.append(f"{f}: {o} cannot call {a} (not in the Agent(...) entry of its tools line)")
           print("\n".join(errors) or "OK: agent definitions and workflow references")
           raise SystemExit(1 if errors else 0)
           EOF
