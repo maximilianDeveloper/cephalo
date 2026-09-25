@@ -19,7 +19,7 @@ All paths assume the active working directory is `03_Defense/` — i.e., Claude 
 
 **Defense project (your workspace):**
 - Project root: `03_Defense/`
-- State: `00_Status.md`, `00_Decisions.md`
+- State: `00_Status.md`, `00_Decisions.md`, `00_Feedback_log.md`
 - phase directories: `01_Slides/`, `02_Speaker_Notes/`, `03_Defense_Prep/`, `04_Handout/`, `05_Rehearsals/`, `06_Defense_Day/`
 
 **Main work (READ-ONLY reference):**
@@ -56,6 +56,7 @@ At the start of every chat, read these files in order before doing anything else
 3. `00_Decisions.md` — defense date, examining committee, formal requirements
 4. **`../02_Main_Work/00_Status.md`** — summary of the submitted work (mandatory extra read for defense work; you cannot prepare a defense without knowing the state of the work being defended)
 5. `shared/styleguide.md` — only for slide formatting; if `styleguide_override.md` exists in this sub-project, read it afterwards: its documented deviations take precedence
+6. `00_Feedback_log.md` — recurring patterns from earlier chats (e.g., slides consistently too dense)
 
 **First output block:**
 
