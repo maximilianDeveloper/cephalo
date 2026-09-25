@@ -129,9 +129,10 @@ phases:
     
     rules:
       - Number formatting: decimal separator consistent (comma or period per styleguide)
-      - Pie chart format: keep at least one decimal (e.g. "0.0%", not "0%") AND check
-          that the labelled values sum to 100% — one decimal alone does not guarantee it
-          (development lesson — sums can total 99.9% or 101%); otherwise add a rounding note
+      - Pie chart format: decimal places per styleguide (if it is silent, one decimal
+          such as "0.0%" narrows rounding gaps) AND check that the labelled values sum
+          to 100% (development lesson — sums can total 99.9% or 101%); otherwise add a
+          rounding note
       - Units on all values (EUR, %, n=...)
       - If companion exists: numbers consistent there too
     
