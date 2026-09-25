@@ -143,31 +143,41 @@ function Ask-Choice($Question, $Options) {
     return $Options[$n-1]
 }
 
-# The helpers below stop on failure (-ErrorAction Stop, or throw) so the
-# trap above reports it and exits 130. A plain New-Item error does not
-# stop the script: setup would continue and report success with parts of
-# the structure missing.
+# Absolute path for a path relative to the project root. The helpers below
+# work on absolute paths with .NET file APIs instead of Test-Path, New-Item
+# and Copy-Item: Windows PowerShell 5.1 resolves RELATIVE paths wrongly when
+# the current folder contains [ ] (e.g. "Thesis [final]"), and .NET knows no
+# wildcards. They also stop on failure (a .NET exception or throw), so the
+# trap above reports it and exits 130 instead of reporting success with
+# parts of the structure missing.
+$script:ProjectRoot = ""
+function Resolve-ProjectPath([string]$Path) {
+    $Path = $Path.Replace('\', [string][System.IO.Path]::DirectorySeparatorChar)
+    if ([System.IO.Path]::IsPathRooted($Path)) { return $Path }
+    return [System.IO.Path]::Combine($script:ProjectRoot, $Path)
+}
+
 function Create-DirSafe($Path) {
-    if (!(Test-Path $Path)) {
-        New-Item -ItemType Directory -Path $Path -Force -ErrorAction Stop | Out-Null
-        # New-Item -Force can report success without creating anything
-        # (seen with a file in the way under PowerShell 7), so verify.
-        if (-not (Test-Path -LiteralPath $Path -PathType Container)) {
-            throw "Could not create directory '$Path' (is a file in the way?)"
-        }
-        Write-Host "  + $Path" -ForegroundColor Green
-    } else {
+    $abs = Resolve-ProjectPath $Path
+    if ([System.IO.Directory]::Exists($abs)) {
         Write-Host "  . $Path (exists)" -ForegroundColor Gray
+        return
     }
+    if ([System.IO.File]::Exists($abs)) {
+        throw "Could not create directory '$Path': a file of that name is in the way"
+    }
+    [void][System.IO.Directory]::CreateDirectory($abs)
+    Write-Host "  + $Path" -ForegroundColor Green
 }
 
 function Create-Gitkeep($Path) {
-    $kp = Join-Path $Path ".gitkeep"
-    if (!(Test-Path $kp)) { New-Item -ItemType File -Path $kp -Force -ErrorAction Stop | Out-Null }
+    $kp = [System.IO.Path]::Combine((Resolve-ProjectPath $Path), ".gitkeep")
+    if (-not [System.IO.File]::Exists($kp)) { [System.IO.File]::WriteAllText($kp, "") }
 }
 
 function Create-Symlink($Link, $Target) {
-    if (Test-Path $Link) {
+    $LinkAbs = Resolve-ProjectPath $Link
+    if ([System.IO.Directory]::Exists($LinkAbs) -or [System.IO.File]::Exists($LinkAbs)) {
         Write-Host "  . $Link (exists)" -ForegroundColor Gray
         return
     }
@@ -177,11 +187,11 @@ function Create-Symlink($Link, $Target) {
     # ItemNotFoundException before any privilege check. Resolve the target to an
     # absolute path anchored at the link's parent so New-Item sees a real path
     # and the only remaining failure is the genuine elevation requirement.
-    $LinkParent = Split-Path $Link -Parent
-    if (-not $LinkParent) { $LinkParent = "." }
-    $AbsoluteTarget = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath((Join-Path $LinkParent $Target))
+    $AbsoluteTarget = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine(
+        [System.IO.Path]::GetDirectoryName($LinkAbs),
+        $Target.Replace('\', [string][System.IO.Path]::DirectorySeparatorChar)))
     try {
-        New-Item -ItemType SymbolicLink -Path $Link -Target $AbsoluteTarget -ErrorAction Stop | Out-Null
+        New-Item -ItemType SymbolicLink -Path $LinkAbs -Target $AbsoluteTarget -ErrorAction Stop | Out-Null
         Write-Host "  + $Link --> $Target" -ForegroundColor Green
     } catch {
         $NewItemError = $_.Exception.Message
@@ -190,8 +200,8 @@ function Create-Symlink($Link, $Target) {
         # it before copying. The redirection is cmd's, so no PowerShell error
         # record is raised. The link is relative, like the one setup.sh makes.
         if ($env:OS -eq "Windows_NT") {
-            cmd /c mklink /D "$Link" "$Target" '>nul' '2>&1'
-            if ($LASTEXITCODE -eq 0 -and (Test-Path -LiteralPath $Link -PathType Container)) {
+            cmd /c mklink /D "$LinkAbs" "$Target" '>nul' '2>&1'
+            if ($LASTEXITCODE -eq 0 -and [System.IO.Directory]::Exists($LinkAbs)) {
                 Write-Host "  + $Link --> $Target" -ForegroundColor Green
                 return
             }
@@ -201,8 +211,8 @@ function Create-Symlink($Link, $Target) {
         # rights (path-resolution, filesystem, and elevation errors all land here).
         Write-Host "  ! Symlink failed for $Link : $NewItemError" -ForegroundColor Yellow
         Write-Host "    (On Windows, real symlinks need Developer Mode or an elevated shell.)" -ForegroundColor DarkGray
-        if (Test-Path -LiteralPath $AbsoluteTarget) {
-            Copy-Item -LiteralPath $AbsoluteTarget -Destination $Link -Recurse -Force
+        if ([System.IO.Directory]::Exists($AbsoluteTarget)) {
+            Copy-Item -LiteralPath $AbsoluteTarget -Destination $LinkAbs -Recurse -Force
             Write-Host "    -> Copied $Target into $Link as fallback." -ForegroundColor Yellow
             Write-Host "    Note: when guidelines change, you must update each copy manually." -ForegroundColor Yellow
         } else {
@@ -215,14 +225,12 @@ function Write-Utf8NoBom($Path, $Content) {
     # PowerShell 5.1's "Set-Content -Encoding UTF8" writes a UTF-8 BOM.
     # For cross-platform compatibility (Linux tools, Git hooks), we avoid the BOM.
     #
-    # Resolve relative paths against the PowerShell provider location, NOT the
-    # process working directory. Set-Location (used by the -Target flow) changes
-    # only PowerShell's location; [Environment]::CurrentDirectory, which
-    # [IO.Path]::GetFullPath relies on, is left pointing at the launch directory.
-    # Using GetFullPath here would silently write .gitignore/.gitattributes into
-    # the original template folder instead of the target project.
+    # Resolve relative paths against the project root, NOT the process working
+    # directory: Set-Location (used by the -Target flow) changes only
+    # PowerShell's location, and [IO.Path]::GetFullPath would silently write
+    # .gitignore/.gitattributes into the original template folder.
     $encoding = New-Object System.Text.UTF8Encoding $false
-    $absolute = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Path)
+    $absolute = Resolve-ProjectPath $Path
     [System.IO.File]::WriteAllText($absolute, $Content, $encoding)
 }
 
@@ -231,12 +239,14 @@ function Copy-TemplateIfExists($Template, $Destination, $FallbackContent) {
     # user's accumulated 00_Status.md / 00_Decisions.md / 00_Feedback_log.md
     # (the framework's central status document and append-only decisions log),
     # mirroring Create-DirSafe's skip-if-exists behavior.
-    if (Test-Path $Destination) {
+    $DestinationAbs = Resolve-ProjectPath $Destination
+    $TemplateAbs = Resolve-ProjectPath $Template
+    if ([System.IO.File]::Exists($DestinationAbs)) {
         Write-Host "  . $Destination (exists, kept)" -ForegroundColor Gray
         return
     }
-    if (Test-Path $Template) {
-        Copy-Item $Template $Destination -ErrorAction Stop
+    if ([System.IO.File]::Exists($TemplateAbs)) {
+        [System.IO.File]::Copy($TemplateAbs, $DestinationAbs)
         Write-Host "  + $Destination" -ForegroundColor Green
     } else {
         Write-Utf8NoBom $Destination $FallbackContent
@@ -600,9 +610,11 @@ if ($Target -ne "") {
     Write-Host ""
     
     $script:SourceDirBeforeMove = $SourceDir
+    $script:ProjectRoot = $Target
     Set-Location -LiteralPath $Target
     Write-Verbose "Changed PowerShell location to target: $Target"
 }
+if (-not $script:ProjectRoot) { $script:ProjectRoot = (Get-Location).ProviderPath }
 
 $IsMinimal = $Scaffolding -match "^Minimal"
 Write-Verbose "Resolved configuration: WorkType='$WorkType', Structure='$Structure', Scaffolding='$Scaffolding' (minimal=$IsMinimal)."
@@ -826,7 +838,7 @@ venv/
 .claude/settings.local.json
 "@
 
-if (!(Test-Path ".gitignore")) {
+if (-not [System.IO.File]::Exists((Resolve-ProjectPath ".gitignore"))) {
     # The here-string above inherits CRLF from this CRLF-encoded .ps1 file,
     # but the repo-root .gitignore (and most POSIX tooling) uses LF. Normalize
     # to LF and add the trailing newline the here-string omits after its last
@@ -852,11 +864,11 @@ $GitattributesContent = @"
 # so after a -Target copy or in an in-place setup the file usually exists
 # already: append the LFS rules unless it has some (no duplicates on re-run).
 $GitattributesContentLf = ($GitattributesContent -replace "`r`n", "`n") + "`n"
-if (!(Test-Path ".gitattributes")) {
+if (-not [System.IO.File]::Exists((Resolve-ProjectPath ".gitattributes"))) {
     Write-Utf8NoBom ".gitattributes" $GitattributesContentLf
     Write-Host "  + .gitattributes" -ForegroundColor Green
 } else {
-    $ExistingGitattributes = [string](Get-Content -LiteralPath ".gitattributes" -Raw -Encoding UTF8)
+    $ExistingGitattributes = [System.IO.File]::ReadAllText((Resolve-ProjectPath ".gitattributes"), [System.Text.Encoding]::UTF8)
     if ($ExistingGitattributes -notmatch "filter=lfs") {
         if ($ExistingGitattributes -and -not $ExistingGitattributes.EndsWith("`n", [System.StringComparison]::Ordinal)) {
             $ExistingGitattributes += "`n"
@@ -868,7 +880,8 @@ if (!(Test-Path ".gitattributes")) {
     }
 }
 
-if (!(Test-Path ".git")) {
+$GitDir = Resolve-ProjectPath ".git"
+if (-not ([System.IO.Directory]::Exists($GitDir) -or [System.IO.File]::Exists($GitDir))) {
     # Check git separately from git-lfs, so a missing LFS doesn't mask
     # a successful git init. Mirrors the behavior of setup.sh.
     $gitAvailable = $null -ne (Get-Command git -ErrorAction SilentlyContinue)
