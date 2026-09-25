@@ -636,7 +636,9 @@ if [ -n "$TARGET_DIR" ]; then
     # Handle non-empty existing target
     TARGET_HAD_FILES=false
     if [ -d "$TARGET_DIR" ]; then
-        if [ "$(ls -A "$TARGET_DIR" 2>/dev/null)" ]; then
+        # Folder metadata alone (.DS_Store: Finder writes one into every
+        # folder it shows) does not make the target non-empty.
+        if [ -n "$(find "$TARGET_DIR" -mindepth 1 -maxdepth 1 ! -name .DS_Store ! -name Thumbs.db ! -name desktop.ini 2>/dev/null)" ]; then
             TARGET_HAD_FILES=true
             echo ""
             echo -e "${YELLOW}Warning: target directory already exists and is not empty:${NC}"

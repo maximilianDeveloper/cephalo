@@ -138,6 +138,10 @@ jobs:
           set +e; bash setup.sh "Seminar paper" "Flat" full --target /tmp/ci_nonempty </dev/null >/dev/null 2>&1; code=$?; set -e
           test "$code" -eq 2
           test "$(ls -A /tmp/ci_nonempty)" = existing.txt
+          # Folder metadata alone (a Finder .DS_Store) does not make a target non-empty.
+          mkdir /tmp/ci_ds && touch /tmp/ci_ds/.DS_Store
+          bash setup.sh "Seminar paper" "Flat" full --target /tmp/ci_ds </dev/null >/dev/null
+          test -d /tmp/ci_ds/workspace/sources/_guidelines
           # A target equal to the current location sets up in place (CONTRIBUTING target test 4).
           # (Output to a file: "| grep -q" would stop setup.sh early with SIGPIPE.)
           cp -a . /tmp/ci_self
