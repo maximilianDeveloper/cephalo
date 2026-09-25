@@ -14,7 +14,7 @@ cephalo ships five utility scripts in `scripts/`. They are optional — the agen
 
 ## Installation
 
-All scripts require Python 3.9 or newer. `abbreviations_extract.py` and `bibliography_check.py` have dependencies listed in `requirements.txt`. `cross_session_audit.py` uses only the Python standard library.
+All scripts require Python 3.9 or newer. `abbreviations_extract.py`, `bibliography_check.py` and `extract_styleguide.sh` have dependencies listed in `requirements.txt` (`python-docx`, and `pypdf` with its `[crypto]` extra, which installs `cryptography` for AES-encrypted PDFs). `cross_session_audit.py` uses only the Python standard library.
 
 ### On Linux / macOS
 
@@ -184,7 +184,9 @@ Like the other checks, this is a heuristic aid, not a guarantee — it only catc
 
 **`Error: python-docx not installed.`** (from `abbreviations_extract.py` and `bibliography_check.py`; the underlying import error is `ModuleNotFoundError: No module named 'docx'`) — install it: `pip install python-docx` (or `pip install -r requirements.txt`). If you installed `docx` instead, that is a different package: run `pip uninstall docx && pip install python-docx`.
 
-**`Error: neither pypdf nor pdftotext available for PDF extraction.`** (from `extract_styleguide.sh`; the underlying import error is `ModuleNotFoundError: No module named 'pypdf'`) — install it: `pip install pypdf`. Alternatively, install `pdftotext` (poppler) as fallback.
+**`Error: neither pypdf nor pdftotext available for PDF extraction.`** (from `extract_styleguide.sh`; the underlying import error is `ModuleNotFoundError: No module named 'pypdf'`) — install it: `pip install -r requirements.txt` (or `pip install "pypdf[crypto]"`; the quotes keep zsh from reading the brackets as a pattern). Alternatively, install `pdftotext` (poppler) as fallback.
+
+**`pypdf failed (cryptography>=3.1 is required for AES algorithm)`** (from `extract_styleguide.sh`) — the guideline PDF is AES-encrypted, typically copy protection with an empty open password, and pypdf was installed without its `[crypto]` extra. Run `pip install -r requirements.txt` again, or `pip install "pypdf[crypto]"`.
 
 **`UnicodeEncodeError: 'charmap'`** on Windows — your Python is older than 3.9. Upgrade Python.
 

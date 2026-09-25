@@ -19,7 +19,9 @@
 # Requirements:
 #   - bash (for wrapper)
 #   - python3 (or python, or the Windows `py` launcher) with the `pypdf`
-#     package installed (pure-python PDF parser). Install: pip3 install pypdf
+#     package installed (pure-python PDF parser), with its [crypto] extra for
+#     AES-encrypted PDFs. Install: pip3 install -r requirements.txt
+#     (or: pip3 install "pypdf[crypto]")
 #   - pdftotext (poppler) as fallback if python / pypdf is not available
 #
 # Why not pdftotext directly?
@@ -83,7 +85,7 @@ fi
 if [ -z "$PYTHON_BIN" ] && [ "$HAVE_PDFTOTEXT" = "0" ]; then
     echo "Error: no working Python 3 interpreter (tried: python3, python, py) and no pdftotext found." >&2
     echo "Install one of:" >&2
-    echo "  - python3 + 'pip3 install pypdf' (recommended, cross-platform)" >&2
+    echo "  - python3 + 'pip3 install \"pypdf[crypto]\"' (recommended, cross-platform)" >&2
     echo "  - pdftotext (poppler-utils on Linux, poppler on macOS)" >&2
     exit 1
 fi
@@ -217,7 +219,7 @@ except ImportError:
 
 if not have_pypdf and not have_pdftotext:
     print("Error: neither pypdf nor pdftotext available for PDF extraction.", file=sys.stderr)
-    print("  Install: pip3 install pypdf", file=sys.stderr)
+    print('  Install: pip3 install "pypdf[crypto]"', file=sys.stderr)
     sys.exit(1)
 
 
@@ -249,8 +251,9 @@ def extract_pdf_text(pdf_path, out_path):
                     texts.append('')
                     failed += 1
                     last_err = e
-            # Every page failed (e.g. an AES-encrypted PDF without the optional
-            # `cryptography` package): report the real cause, not "empty text".
+            # Every page failed (e.g. an AES-encrypted PDF where pypdf was
+            # installed without its [crypto] extra): report the real cause, not
+            # "empty text".
             if texts and failed == len(texts):
                 raise last_err
             out_path.write_text('\n\n'.join(texts), encoding='utf-8')

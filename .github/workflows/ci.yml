@@ -255,7 +255,7 @@ jobs:
 
       - name: Utility scripts on generated files (exit codes, safety checks)
         run: |
-          W=/tmp/ci_util; rm -rf "$W"; mkdir -p "$W/good" "$W/evil"
+          W=/tmp/ci_util; rm -rf "$W"; mkdir -p "$W/good" "$W/evil" "$W/aes"
           python - "$W" <<'EOF'
           import os, sys, zipfile
           from docx import Document
@@ -287,6 +287,19 @@ jobs:
               z.writestr("rules.txt", "Example rule text")
           with zipfile.ZipFile(os.path.join(w, "evil", "guide.pdf"), "w") as z:
               z.writestr("../../escaped.txt", "x")
+          # copy-protected guideline: AES-256, empty open password (needs pypdf[crypto])
+          from pypdf import PdfWriter
+          from pypdf.generic import DictionaryObject, NameObject, StreamObject
+          pw = PdfWriter()
+          page = pw.add_blank_page(width=300, height=200)
+          font = DictionaryObject({NameObject("/Type"): NameObject("/Font"), NameObject("/Subtype"): NameObject("/Type1"),
+                                   NameObject("/BaseFont"): NameObject("/Helvetica")})
+          page[NameObject("/Resources")] = DictionaryObject({NameObject("/Font"): DictionaryObject({NameObject("/F1"): pw._add_object(font)})})
+          content = StreamObject()
+          content.set_data(b"BT /F1 12 Tf 20 100 Td (Encrypted rule text) Tj ET")
+          page[NameObject("/Contents")] = pw._add_object(content)
+          pw.encrypt(user_password="", owner_password="owner", algorithm="AES-256")
+          pw.write(os.path.join(w, "aes", "guide.pdf"))
           EOF
           expect() {
             want=$1; shift
@@ -346,6 +359,8 @@ jobs:
           test -f "$W/out_good/removed_guide.txt"
           expect 1 bash scripts/extract_styleguide.sh "$W/evil" "$W/out_evil"
           grep -q "Blocked (security)" "$W/out.txt"
+          expect 0 bash scripts/extract_styleguide.sh "$W/aes" "$W/out_aes"
+          grep -q "Encrypted rule text" "$W/out_aes/guide.txt"
           # cross_session_audit.py: 0 = clean, 1 = findings, 2 = not a repository
           g() { git -c user.name=ci -c user.email=ci@example.com "$@"; }
           g init -q "$W/repo" && g -C "$W/repo" commit -q --allow-empty -m init

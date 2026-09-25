@@ -101,7 +101,7 @@ Filenames can be misleading: a file named with the topic might actually contain 
 - [ ] **Git LFS active** (long-form / multi-project): `git lfs install` was run
 - [ ] **Build tools available** (if using scripts):
   - `python3` (≥ 3.9) — required for all utility scripts
-  - `pip install -r requirements.txt` — installs `python-docx` and `pypdf`
+  - `pip install -r requirements.txt` — installs `python-docx` and `pypdf` (with `cryptography` for AES-encrypted PDFs)
   - `pandoc` — optional, for DOCX → plain-text conversion
   - `pdftotext` (poppler-utils) — optional fallback in `scripts/extract_styleguide.sh` (the script prefers Python-based extraction via `pypdf`)
   - `unzip` plus a working Python 3 — required by `scripts/docx_postprocess.sh`. Git Bash on Windows ships with `unzip` by default; re-zipping is done with Python's `zipfile` module, so `zip` itself is never invoked. See `docs/scripts.md` for details.
