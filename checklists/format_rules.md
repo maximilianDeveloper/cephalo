@@ -96,7 +96,7 @@ For every category below: **read concrete values from `styleguide.md`**, not fro
 
 ## Mechanical checks (automatable)
 
-These checks run via build scripts, not manually:
+These checks run via build scripts, not manually (the commands show the flat path; long-form: the latest DOCX in `08_Formal_Review/submissions/`, proposal: `04_Submission/`):
 
 ```bash
 # Bibliography minus-test

@@ -17,7 +17,7 @@ If `styleguide.md` lacks a rule, report this explicitly — do not guess.
 
 - Styleguide: `styleguide.md` (project root) — **single source of truth**
 - Chapter texts: `workspace/output/chapters/` or phase directories
-- Full document: `workspace/output/document.docx` or `.pptx`
+- Full document: `workspace/output/document.docx` (flat), the PPTX in `workspace/output/slides/` (presentations), the latest export in `08_Formal_Review/submissions/` (long-form) or in `04_Submission/` (proposal sub-project). The commands below show the flat path: use the actual document instead.
 - Institutional guidelines (fallback reference): `workspace/sources/_guidelines/` or `guidelines/`
 - Status file: `workspace/state.md` or `00_Status.md`
 - format rules checklist: `checklists/format_rules.md`
