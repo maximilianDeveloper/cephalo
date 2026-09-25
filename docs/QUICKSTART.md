@@ -165,7 +165,7 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\setup.ps1
 ```
 
-**`git: command not found`** — install Git. On Windows: download Git for Windows (includes Git Bash, which is needed for the `.sh` helper scripts). On Linux/macOS: `apt install git` / `brew install git`.
+**`git: command not found`** (or `! Git not installed.` / `! Git not available` in the setup output) — install Git. On Windows: download Git for Windows (includes Git Bash, which is needed for the `.sh` helper scripts). On Linux/macOS: `apt install git` / `brew install git`. Setup creates no repository without Git (`git add .` then fails with `not a git repository`): afterwards, re-run setup with the same choices in the project folder (for multi-project, the root, not a sub-project).
 
 **`New-Item: Administrator privilege required`** on Windows (Multi-project setup) — symlinks need Admin rights or Developer Mode. The easier fix: Settings -> For developers -> Developer Mode: on. Then delete the three `shared/` copies the setup created instead (`01_Proposal/shared`, `02_Main_Work/shared`, `03_Defense/shared`) and re-run setup; a re-run keeps existing copies as they are.
 
