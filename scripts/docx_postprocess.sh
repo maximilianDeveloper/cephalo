@@ -196,13 +196,15 @@ NEW_DOC="${DOC_ABS}.new"
 # If the repack or the final mv fails, do not leave a partial archive behind
 # (after a successful mv, NEW_DOC no longer exists).
 trap 'rm -rf "$WORK_DIR"; rm -f "$NEW_DOC"' EXIT
-"$PY" - "$NEW_DOC" "$WORK_DIR" << 'PYEOF'
+"$PY" - "$NEW_DOC" "$WORK_DIR" "$DOC_ABS" << 'PYEOF'
 import os
+import shutil
 import sys
 import zipfile
 
 out_path = sys.argv[1]
 src_dir = sys.argv[2]
+original = sys.argv[3]
 
 def collect_files(root):
     """Walk root and return list of (abs_path, rel_path) pairs."""
@@ -237,6 +239,11 @@ with zipfile.ZipFile(out_path, 'w', zipfile.ZIP_DEFLATED, strict_timestamps=Fals
     # Rest: deflated
     for abs_path, rel_path in others:
         zf.write(abs_path, rel_path, compress_type=zipfile.ZIP_DEFLATED)
+
+# The new file replaces the original: keep its permission bits, so a
+# document the user made private (e.g. mode 600) does not become readable
+# by everyone under the default umask.
+shutil.copymode(original, out_path)
 PYEOF
 
 mv "$NEW_DOC" "$DOC_ABS"

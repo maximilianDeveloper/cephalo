@@ -253,8 +253,11 @@ jobs:
           if grep -qx "  US" "$W/out.txt"; then echo "U.S.A. was truncated to US"; exit 1; fi
           expect 1 python scripts/abbreviations_extract.py "$W/notword.docx"
           test "$(wc -l < "$W/out.txt")" -eq 1
-          # docx_postprocess.sh: hyphenation on, package still valid, [Content_Types].xml first
+          # docx_postprocess.sh: hyphenation on, package still valid, [Content_Types].xml first,
+          # permission bits of the replaced file kept
+          chmod 600 "$W/ok.docx"
           expect 0 bash scripts/docx_postprocess.sh "$W/ok.docx"
+          test "$(stat -c %a "$W/ok.docx")" = 600
           python - "$W/ok.docx" <<'EOF'
           import sys, zipfile, docx
           docx.Document(sys.argv[1])
