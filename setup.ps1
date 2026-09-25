@@ -19,12 +19,14 @@ param(
 )
 
 # ==========================================================
-# Graceful interrupt handling (Ctrl+C)
+# Error handling (terminating errors)
 # ==========================================================
 # When the script is launched by double-click or "Run with PowerShell",
-# Windows auto-closes the window on exit, including Ctrl+C. The trap
-# below prints a clear message; the pause at the end keeps the window
-# open long enough for the user to read it.
+# Windows auto-closes the window on exit. The trap below prints a clear
+# message for a terminating error and pauses, so the user can read it.
+# It does not run on Ctrl+C: PowerShell stops the pipeline without
+# invoking trap or catch blocks (only finally blocks run), so after
+# Ctrl+C a double-clicked window still closes at once.
 
 $script:SetupInterrupted = $false
 
@@ -45,10 +47,10 @@ function Pause-BeforeClose($Reason = "done") {
     }
 }
 
-# PowerShell's equivalent of a SIGINT trap. This is purely cosmetic Ctrl+C
-# plumbing; under redirected stdio (CI, pipes, no console) touching the
-# console handle throws 'The handle is invalid', so it must be guarded, or
-# every -NonInteractive/automation run dies before doing any work.
+# Keep Ctrl+C a signal (the default), not console input. Under redirected
+# stdio (CI, pipes, no console) touching the console handle throws 'The
+# handle is invalid', so it must be guarded, or every -NonInteractive/
+# automation run dies before doing any work.
 try {
     [Console]::TreatControlCAsInput = $false
 } catch {
@@ -59,7 +61,7 @@ $null = Register-EngineEvent -SourceIdentifier PowerShell.Exiting -Action {
 } -ErrorAction SilentlyContinue
 
 trap {
-    # Runs on any terminating error, including user-pressed Ctrl+C (in most hosts)
+    # Runs on any terminating error (not on Ctrl+C, see above)
     $script:SetupInterrupted = $true
     Write-Host ""
     Write-Host ""
