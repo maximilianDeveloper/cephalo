@@ -69,9 +69,9 @@ Filenames can be misleading: a file named with the topic might actually contain 
 
 - [ ] State file with status of the previous chapter present
 - [ ] Feedback file (if it exists) up to date
-- [ ] Current Word document / PPTX (latest version) available
+- [ ] Current Word document / PPTX (latest version) available, once one exists (thesis and seminar chapters are drafted in Markdown; the DOCX is exported for the formatting phase)
 - [ ] Long-form: `00_Status.md` current
-- [ ] Long-form: most recent `handover.md` of the active phase present
+- [ ] Long-form: most recent `handover.md` of the active phase present (first chat of a new phase: none yet; the orchestrator creates it from `templates/handover.md`)
 
 ---
 
