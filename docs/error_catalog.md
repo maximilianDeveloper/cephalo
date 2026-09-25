@@ -19,7 +19,7 @@ This catalog is the empirical foundation for the verification steps the agents p
 | 7 | Secondary citation where primary is accessible | source-verifier | Step 5 |
 | 8 | Missing partial citations in multi-part sentences | source-verifier | Step 1 |
 | 9 | Unsupported causal claims | source-verifier | Step 6 |
-| 10 | Incorrect edition number | format-verifier | consistency |
+| 10 | Incorrect edition number | source-verifier / format-verifier | consistency A.5 / Step 3 |
 
 ---
 
@@ -122,7 +122,7 @@ The text cites a source as edition X in some places and edition Y in others. The
 
 **Why this happens:** Library copies, e-book versions, and physical copies are often different editions with different page numbers.
 
-**Detection:** format-verifier with `checklists/consistency.md`. Look for: same author with different years across the document, bibliography year not matching in-text year, mixed editions in the bibliography itself.
+**Detection:** source-verifier with `checklists/consistency.md` (A.5, after every second chapter; the orchestrator repeats the checklist in the final check), and format-verifier in Phase B (edition consistency, step 3 of its checks). Look for: same author with different years across the document, bibliography year not matching in-text year, mixed editions in the bibliography itself.
 
 ---
 
