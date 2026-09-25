@@ -1009,7 +1009,12 @@ if [ -n "$SOURCE_DIR_BEFORE_MOVE" ]; then
     # calling shell is still in the template folder, which the steps below
     # ("this directory", "git add .") do not mean.
     echo -e "${YELLOW}Next steps (in the project folder, not in this template folder):${NC}"
-    printf '   cd %q\n' "$TARGET_DIR"
+    # Single quotes (' as '\''): readable for umlauts in any locale, unlike
+    # printf %q, and valid in bash and zsh alike. The substitution runs in an
+    # assignment, where bash 3.2 and 5 treat the quote characters the same.
+    squote="'\\''"
+    target_quoted=${TARGET_DIR//\'/$squote}
+    echo "   cd '$target_quoted'"
     echo ""
 else
     echo -e "${YELLOW}Next steps:${NC}"
