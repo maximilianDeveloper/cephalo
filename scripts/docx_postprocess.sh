@@ -35,8 +35,10 @@ case "${1:-}" in
         ;;
 esac
 
-if [ $# -lt 1 ]; then
-    echo "Usage: $0 path/to/document.docx" >&2
+if [ $# -ne 1 ]; then
+    # One document per call: with more (e.g. a glob), only the first would be
+    # processed and the rest silently skipped.
+    echo "Usage: $0 path/to/document.docx   (one document per call)" >&2
     exit 1
 fi
 
