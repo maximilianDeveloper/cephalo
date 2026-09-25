@@ -146,7 +146,7 @@ Two PDF copies of the same source may have different page breaks. When the resea
 
 ## Continuous improvement
 
-When an agent catches an error not represented above, append it. Each entry should contain:
+When an agent catches an error not represented above, the orchestrator records it in the project's feedback log (`00_Feedback_log.md`; flat: `workspace/feedback.md`). To keep it for future projects, add it here in your cephalo template folder, not in a project's copy, which a framework update replaces (or propose it upstream, see `CONTRIBUTING.md`). Each entry should contain:
 
 - The pattern (in one sentence)
 - A bad example

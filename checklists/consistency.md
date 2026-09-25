@@ -113,8 +113,8 @@ To be performed after the last written chapter (introduction, written last).
 
 - [ ] Git tag for final state set
 - [ ] Backup of submission (local + cloud)
-- [ ] In multi-project structure: `02_Main_Work/` marked as frozen (update README)
-- [ ] Project retrospective: what worked? what didn't? Append to `docs/error_catalog.md` for the next project
+- [ ] In multi-project structure: `02_Main_Work/` frozen by its submission tag (`v_final_<date>` or `work_submitted_<date>`, which `03_Defense/` checks)
+- [ ] Project retrospective: what worked? what didn't? Record it in the project's feedback log (`00_Feedback_log.md`; flat: `workspace/feedback.md`); to keep general patterns for the next project, add them to `docs/error_catalog.md` in your cephalo template folder (a framework update replaces the project's copy of `docs/`)
 
 ---
 
