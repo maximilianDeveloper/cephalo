@@ -142,7 +142,7 @@ This directory lives once at the top level and is read by all three sub-projects
 ### Contents
 
 - **`guidelines/`** — institutional documents (citation guide, formatting rules, examination regulations)
-- **`course_materials/`** — course-specific materials (assignment briefing)
+- **`course_materials/`** — supplementary course material (syllabi, lecture slides). The assignment briefing and the examination regulations go into `guidelines/`: the pre-check and the style-resolver read only that folder.
 - **`styleguide.md`** — one styleguide for all sub-projects
 
 ### The style-resolver in multi-project setups
@@ -313,7 +313,7 @@ One-time at project start:
 
 - [ ] Run setup script with structure = "Multi-project"
 - [ ] Place institutional guidelines in `00_Shared_Materials/guidelines/`
-- [ ] Place course materials in `00_Shared_Materials/course_materials/`
+- [ ] Place supplementary course material in `00_Shared_Materials/course_materials/` (the assignment briefing belongs in `guidelines/`)
 - [ ] Initialize Git (done by setup script)
 - [ ] Symlinks in each sub-project to `00_Shared_Materials/` (done by setup script if Developer Mode is enabled or the shell is elevated — in Git Bash also with `MSYS=winsymlinks:nativestrict`; otherwise the copy-fallback applies — see "Access to shared materials" above)
 - [ ] Run style-resolver once -> `00_Shared_Materials/styleguide.md`
