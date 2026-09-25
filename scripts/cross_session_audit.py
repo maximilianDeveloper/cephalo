@@ -271,8 +271,9 @@ def find_dangling_refs(
     """Scan all .md files in the main worktree for cross-refs that point to non-existent files.
 
     Returns list of (source_file, line_text, missing_target). `skip` is the
-    resolved --report-file path: an earlier report quotes the refs it found
-    and must not be scanned as a source.
+    resolved --report-file path: a report quotes the refs it found and must
+    not be scanned as a source. Earlier reports under other names (e.g.
+    dated ones) are recognized by their title and skipped too.
 
     The regex requires a directory separator (slash or backslash) in the
     candidate path — otherwise generic mentions like `00_Status.md` in
@@ -311,6 +312,8 @@ def find_dangling_refs(
             text = md_path.read_text(encoding="utf-8", errors="replace")
         except OSError:
             continue
+        if text.lstrip("\ufeff").startswith("# Cross-Session Audit Report"):
+            continue  # an earlier report of this script
         for line_num, line in enumerate(text.splitlines(), start=1):
             for match in REF_PATTERN.finditer(line):
                 target = match.group(1).replace("\\", "/")

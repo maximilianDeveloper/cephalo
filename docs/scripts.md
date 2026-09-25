@@ -168,7 +168,7 @@ python3 scripts/cross_session_audit.py --report-file audit_report.md
 What it does: after a summary, the report shows a **worktree overview** (all worktrees, their current branch/HEAD, and the number of uncommitted changes and of `_*.md`-style closing/briefing/TODO notes in each), followed by three layers, numbered as in the report:
 
 1. **Layer 1 — `_*.md` files in a worktree but not in the main worktree** — for the `_*.md`-pattern notes, checks whether each one that exists in a linked worktree also exists in the main worktree; flags the ones that don't as potentially lost.
-2. **Layer 2 — dangling refs in the main worktree** — scans the main worktree's own Markdown files for backticked references to other Markdown (`.md`) files (paths prefixed with a two-digit `NN_.../`, `scripts/...`, or `workspace/...`) and reports any that point to a file that doesn't exist. References to other file types (e.g. `scripts/tool.py`) are not checked.
+2. **Layer 2 — dangling refs in the main worktree** — scans the main worktree's own Markdown files (not its earlier reports) for backticked references to other Markdown (`.md`) files (paths prefixed with a two-digit `NN_.../`, `scripts/...`, or `workspace/...`) and reports any that point to a file that doesn't exist. References to other file types (e.g. `scripts/tool.py`) are not checked.
 3. **Layer 3 — uncommitted changes per worktree** — lists the `git status --porcelain` lines (including untracked files) of each worktree that has uncommitted changes.
 
 Output goes to stdout by default; `--report-file PATH` additionally writes a Markdown report to that path.

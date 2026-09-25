@@ -470,6 +470,11 @@ jobs:
           g -C "$W/refs" add -A && g -C "$W/refs" commit -qm refs
           expect 1 python scripts/cross_session_audit.py --repo-root "$W/refs"
           grep -qF '`03_Theory/missing.md`' "$W/out.txt"
+          # an earlier report kept in the repository (e.g. a dated one) is not scanned for refs
+          expect 1 python scripts/cross_session_audit.py --repo-root "$W/refs" --report-file "$W/refs/audit/w1.md"
+          g -C "$W/refs" add -A && g -C "$W/refs" commit -qm w1
+          expect 1 python scripts/cross_session_audit.py --repo-root "$W/refs" --report-file "$W/refs/audit/w2.md"
+          grep -qF 'links to non-existent files):** 1' "$W/out.txt"
 
   windows:
     name: PowerShell 5.1 parse & setup smoke (Windows)
