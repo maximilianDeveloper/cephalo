@@ -201,7 +201,7 @@ phases:
       
       - step: B.2
         script: scripts/bibliography_check.py
-        action: Minus-test (every citation in bibliography, every entry cited)
+        action: Minus-test by author surname (every cited author in the bibliography, every entry's lead author cited; years are not compared)
       
       - step: B.3
         script: scripts/abbreviations_extract.py
@@ -213,7 +213,7 @@ phases:
       
       - step: B.5
         script: scripts/docx_postprocess.sh
-        action: Hyphenation, final formatting
+        action: Enable automatic hyphenation
         condition: styleguide.md document.hyphenation == automatic
   
   # ===========================================================
