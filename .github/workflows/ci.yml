@@ -312,6 +312,11 @@ jobs:
           d.save(os.path.join(w, "ok.docx"))
           d.add_paragraph("Uncited, U. (2019). D.")
           d.save(os.path.join(w, "findings.docx"))
+          n = Document()
+          n.add_paragraph("As shown in [1], it works.")
+          n.add_heading("References", 1)
+          n.add_paragraph('[1] J. Smith, "Title," Journal, 2020.')
+          n.save(os.path.join(w, "numeric.docx"))
           a = Document()
           a.add_paragraph("Schmidt (2020) zeigt es.")
           a.add_heading("Literaturverzeichnis", 1)
@@ -358,6 +363,8 @@ jobs:
           grep -q Uncited "$W/out.txt"
           expect 2 python scripts/bibliography_check.py "$W/notword.docx"
           test "$(wc -l < "$W/out.txt")" -eq 1
+          # a numeric bibliography cannot be checked: exit 2, not a passed check
+          expect 2 python scripts/bibliography_check.py "$W/numeric.docx"
           # the bibliography ends at the next top-level heading (appendix, declaration)
           expect 0 python scripts/bibliography_check.py "$W/appendix.docx"
           # a heading added to BIBLIOGRAPHY_HEADERS as it is spelled in the document is found

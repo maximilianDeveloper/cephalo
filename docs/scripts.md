@@ -123,7 +123,7 @@ What it does:
 3. Extracts author surnames from bibliography entries, using the same surname-prefix and umlaut handling as the in-text extraction
 4. Reports asymmetries in both directions
 
-Exit code 0 = no asymmetries, 1 = asymmetries found, 2 = bibliography section not detected or another error occurred (e.g. bad arguments, file not found, a file that cannot be read as a DOCX).
+Exit code 0 = no asymmetries, 1 = asymmetries found, 2 = bibliography section not detected, no bibliography entry could be read (the check supports author-year styles only, not numeric styles such as IEEE), or another error occurred (e.g. bad arguments, file not found, a file that cannot be read as a DOCX).
 
 The check uses heuristics and may produce false positives — and, in a few known edge cases, false negatives (a silent "no asymmetries" when there actually is one):
 

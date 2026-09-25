@@ -470,6 +470,13 @@ def main():
         sys.exit(2)
     
     bib_first_authors, bib_all_authors = extract_bibliography_authors(bibliography)
+    if not bib_first_authors:
+        # Comparing two empty sets would report a passed check, e.g. for a
+        # numeric bibliography ("[1] J. Smith, ...").
+        print(f"Warning: none of the {len(bibliography)} bibliography entries could be read.")
+        print('The check needs author-year entries such as "Smith, J. (2020)" or "WHO. (2019)";')
+        print("numeric styles such as IEEE are not supported.")
+        sys.exit(2)
     cited_authors = extract_in_text_authors(body, keep=frozenset(bib_first_authors))
     
     # Asymmetry check:
