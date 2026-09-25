@@ -154,6 +154,11 @@ phases:
   phase_01_proposal:
     directory: 01_Proposal/
     agents: [orchestrator-longform, writer, source-verifier]
+    optional: true
+    note: |
+      Optional within long-form. In a multi-project main work, skip it: the
+      accepted proposal is the read-only 01_Proposal_Reference/, and
+      deviations from it go to 00_Decisions.md.
     
     goals:
       - Finalize research question (-> 00_Decisions.md)
