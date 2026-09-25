@@ -429,6 +429,11 @@ if ($Target -ne "") {
     # Resolve to absolute path against the PowerShell location, not the process
     # working directory that GetFullPath alone would use (see Write-Utf8NoBom)
     $Target = [System.IO.Path]::GetFullPath($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Target))
+    # Drop a trailing separator (not that of a drive root such as C:\): Windows
+    # PowerShell 5.1 would pass "C:\My Thesis" to git with its closing quote
+    # escaped, and git init would fail.
+    $TargetRoot = [System.IO.Path]::GetPathRoot($Target)
+    if ($Target.Length -gt $TargetRoot.Length) { $Target = $Target.TrimEnd('\', '/') }
     $SourceDir = $StartDir
 
     if ($Target -eq $SourceDir) {
