@@ -216,6 +216,17 @@ jobs:
           d.save(os.path.join(w, "ok.docx"))
           d.add_paragraph("Uncited, U. (2019). D.")
           d.save(os.path.join(w, "findings.docx"))
+          a = Document()
+          a.add_paragraph("Schmidt (2020) zeigt es.")
+          a.add_heading("Literaturverzeichnis", 1)
+          a.add_heading("Monographien", 2)
+          a.add_paragraph("Schmidt, K. (2020). A.")
+          a.add_paragraph("Keller, T. (2018). B.")
+          a.add_heading("Anhang", 1)
+          a.add_paragraph("Im Interview verwies die Befragte auf Keller (2018).")
+          a.add_heading("Eidesstattliche Erklärung", 1)
+          a.add_paragraph("Ort, Datum")
+          a.save(os.path.join(w, "appendix.docx"))
           with zipfile.ZipFile(os.path.join(w, "notword.docx"), "w") as z:
               z.writestr("hello.txt", "a ZIP, but not a Word document")
           with zipfile.ZipFile(os.path.join(w, "good", "guide.pdf"), "w") as z:
@@ -234,6 +245,8 @@ jobs:
           grep -q Uncited "$W/out.txt"
           expect 2 python scripts/bibliography_check.py "$W/notword.docx"
           test "$(wc -l < "$W/out.txt")" -eq 1
+          # the bibliography ends at the next top-level heading (appendix, declaration)
+          expect 0 python scripts/bibliography_check.py "$W/appendix.docx"
           # abbreviations_extract.py: dotted, digit and mixed-case forms; clean error otherwise
           expect 0 python scripts/abbreviations_extract.py "$W/ok.docx"
           for a in B2B CO2 5G BENELUX GmbH; do grep -qx "  $a" "$W/out.txt"; done

@@ -20,6 +20,7 @@ import re
 import sys
 import unicodedata
 from pathlib import Path
+from typing import Optional
 
 # Encoding guard for Windows consoles (CP1252 by default).
 if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
@@ -91,13 +92,32 @@ PAREN_LOWERCASE_OK = {
 }
 
 
-def read_docx_paragraphs(path: Path) -> list[str]:
-    """Read all paragraph text from a .docx file."""
+def heading_level(paragraph) -> Optional[int]:
+    """Heading level of a paragraph (0 = Title, 1 = Heading 1, ...), or None
+    for body text. A custom style based on a built-in heading counts as that
+    heading. Built-in style names are stored in English whatever the Word UI
+    language, so "Überschrift 1" is read as "Heading 1" here."""
+    style = paragraph.style
+    for _ in range(10):  # base-style chains are short; guard against cycles
+        if style is None:
+            return None
+        name = (style.name or "").strip().lower()
+        if name == "title":
+            return 0
+        match = re.fullmatch(r"heading (\d)", name)
+        if match:
+            return int(match.group(1))
+        style = style.base_style
+    return None
+
+
+def read_docx_paragraphs(path: Path) -> list[tuple[str, Optional[int]]]:
+    """Read all paragraphs of a .docx file as (text, heading level) pairs."""
     try:
         doc = Document(str(path))
         # NFC: decomposed umlauts (e.g. pasted from a PDF) would never match
         # their precomposed form or the [ÄÖÜ]/\w name classes
-        return [unicodedata.normalize("NFC", p.text) for p in doc.paragraphs]
+        return [(unicodedata.normalize("NFC", p.text), heading_level(p)) for p in doc.paragraphs]
     except PackageNotFoundError:
         print(f"Error: {path} is not a valid .docx file (corrupt or renamed?)", file=sys.stderr)
     except Exception as exc:
@@ -110,36 +130,67 @@ def read_docx_paragraphs(path: Path) -> list[str]:
     sys.exit(2)
 
 
-def split_text_and_bibliography(paragraphs: list[str]) -> tuple[str, list[str]]:
+def _header_key(text: str) -> str:
+    """Normalize a paragraph for comparison with BIBLIOGRAPHY_HEADERS."""
+    text = text.strip().lower()
+    # Tolerate manually typed heading numbers ("7 Literaturverzeichnis",
+    # "7. Literaturverzeichnis") and trailing punctuation ("References:").
+    # Word's automatic heading numbering is not part of the paragraph
+    # text, so only literal-text numbering needs stripping here.
+    text = re.sub(r"^\d+(?:\.\d+)*\.?\s+", "", text)
+    return text.rstrip(".:").strip()
+
+
+def split_text_and_bibliography(
+    paragraphs: list[tuple[str, Optional[int]]],
+) -> tuple[str, list[str]]:
     """
     Split the document into body text and bibliography paragraphs.
     
     Heuristic: the bibliography starts at a heading whose text matches a
     common bibliography header (case-insensitive). Manually typed heading
     numbers ("7 Literaturverzeichnis", "7.1 Literatur") and trailing
-    punctuation ("References:") are tolerated.
+    punctuation ("References:") are tolerated. If several paragraphs match,
+    the highest-level heading wins, the first one on a tie: a body
+    sub-heading "3.2 Sources" does not start the bibliography before the
+    "References" chapter, and "Literaturverzeichnis" wins over its own
+    sub-section "Literatur".
+    
+    It ends at the next top-level heading (Heading 1, or Title for a
+    bibliography styled as Title) that is not itself a bibliography header,
+    e.g. an appendix or a declaration of authorship. What follows counts as
+    body text again: citations in an appendix are citations, and a signature
+    line such as "Ort, Datum" is not a bibliography entry. Sub-headings
+    ("Internetquellen") and a separate "Quellenverzeichnis" chapter stay in
+    the bibliography. Without heading styles, it runs to the end.
     
     Returns: (body_text, bibliography_paragraphs)
     """
+    texts = [text for text, _level in paragraphs]
     bib_start_idx = None
-    for i, p in enumerate(paragraphs):
-        text = p.strip().lower()
-        # Tolerate manually typed heading numbers ("7 Literaturverzeichnis",
-        # "7. Literaturverzeichnis") and trailing punctuation ("References:").
-        # Word's automatic heading numbering is not part of the paragraph
-        # text, so only literal-text numbering needs stripping here.
-        text = re.sub(r"^\d+(?:\.\d+)*\.?\s+", "", text)
-        text = text.rstrip(".:").strip()
-        if text in BIBLIOGRAPHY_HEADERS:
-            bib_start_idx = i
-            break
+    best_level = None
+    for i, p in enumerate(texts):
+        if _header_key(p) in BIBLIOGRAPHY_HEADERS:
+            # A header that is not styled as a heading counts as level 1.
+            level = paragraphs[i][1] if paragraphs[i][1] is not None else 1
+            if best_level is None or level < best_level:
+                bib_start_idx, best_level = i, level
     
     if bib_start_idx is None:
         # No clear bibliography heading found
-        return "\n".join(paragraphs), []
+        return "\n".join(texts), []
     
-    body = "\n".join(paragraphs[:bib_start_idx])
-    bibliography = [p for p in paragraphs[bib_start_idx + 1:] if p.strip()]
+    end_level = min(best_level, 1)
+    bib_end_idx = len(paragraphs)
+    for j in range(bib_start_idx + 1, len(paragraphs)):
+        level = paragraphs[j][1]
+        if (level is not None and level <= end_level
+                and _header_key(texts[j]) not in BIBLIOGRAPHY_HEADERS):
+            bib_end_idx = j
+            break
+
+    body = "\n".join(texts[:bib_start_idx] + texts[bib_end_idx:])
+    bibliography = [p for p in texts[bib_start_idx + 1:bib_end_idx] if p.strip()]
     return body, bibliography
 
 
