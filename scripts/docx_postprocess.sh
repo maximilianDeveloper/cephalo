@@ -194,7 +194,6 @@ if content == original:
 with open(path, 'w', encoding='utf-8') as f:
     f.write(content)
 PYEOF
-    echo "Auto-hyphenation enabled."
 fi
 
 # Re-zip. [Content_Types].xml is kept as the first entry and stored (not
@@ -258,4 +257,8 @@ PYEOF
 
 mv "$NEW_DOC" "$DOC_ABS"
 
+# Reported only now: the repack and the mv above can still fail.
+if [ "$SKIP_PATCH" = "0" ]; then
+    echo "Auto-hyphenation enabled."
+fi
 echo "Post-processing complete: $DOC"
