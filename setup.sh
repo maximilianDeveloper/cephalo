@@ -430,11 +430,20 @@ fi
 # Seminar papers and presentations have flat workflows only: with Long-form
 # or Multi-project, setup would suggest a thesis workflow for them. The
 # interactive menu and the setup assistant pick Flat for them anyway.
-if [[ "$WORK_TYPE" =~ ^(Seminar\ paper|Presentation)$ ]] && [ -n "$STRUCTURE" ] && [ "$STRUCTURE" != "Flat" ]; then
-    echo "Error: '$WORK_TYPE' uses the Flat structure; there is no $STRUCTURE workflow for it." >&2
-    echo "Use: $0 \"$WORK_TYPE\" Flat ${SCAFFOLDING:-full}" >&2
-    exit 2
-fi
+# Checked here and again after the work-type menu (STRUCTURE may come from
+# the command line while WORK_TYPE is chosen interactively).
+check_flat_only() {
+    if [[ "$WORK_TYPE" =~ ^(Seminar\ paper|Presentation)$ ]] && [ -n "$STRUCTURE" ] && [ "$STRUCTURE" != "Flat" ]; then
+        echo "Error: '$WORK_TYPE' uses the Flat structure; there is no $STRUCTURE workflow for it." >&2
+        if [ -n "$TARGET_DIR" ]; then
+            echo "Use: $0 \"$WORK_TYPE\" Flat ${SCAFFOLDING:-full} --target \"$TARGET_DIR\"" >&2
+        else
+            echo "Use: $0 \"$WORK_TYPE\" Flat ${SCAFFOLDING:-full}" >&2
+        fi
+        exit 2
+    fi
+}
+check_flat_only
 
 if [ -n "$SCAFFOLDING" ] && [ "$SCAFFOLDING" != "full" ] && [ "$SCAFFOLDING" != "minimal" ]; then
     echo "Error: invalid SCAFFOLDING '$SCAFFOLDING'." >&2
@@ -558,6 +567,7 @@ if [ -z "$WORK_TYPE" ]; then
         "Master thesis" \
         "Dissertation"
     WORK_TYPE="$SELECTED"
+    check_flat_only
 fi
 
 if [ -z "$STRUCTURE" ]; then
