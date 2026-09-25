@@ -975,7 +975,8 @@ EOF
     echo -e "  ${GREEN}+ .gitattributes${GITATTRIBUTES_NOTE}${NC}"
 fi
 
-if [ ! -d ".git" ]; then
+# -e, not -d: in a Git worktree or submodule, .git is a file.
+if [ ! -e ".git" ]; then
     if command -v git &> /dev/null; then
         if git init > /dev/null 2>&1; then
             if command -v git-lfs &> /dev/null; then
