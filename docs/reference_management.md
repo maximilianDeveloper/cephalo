@@ -32,13 +32,13 @@ Optional: install the **Zotero Connector** browser extension. It captures biblio
 
 Better BibTeX is a Zotero plugin that produces clean, stable BibTeX exports. The default Zotero BibTeX export is workable; Better BibTeX is significantly better.
 
-[github.com/retorquere/zotero-better-bibtex/releases/latest](https://github.com/retorquere/zotero-better-bibtex/releases/latest) — download the `.xpi` file, install via Zotero: Tools -> Add-ons -> gear icon -> Install Add-on From File.
+[github.com/retorquere/zotero-better-bibtex/releases/latest](https://github.com/retorquere/zotero-better-bibtex/releases/latest) — download the `.xpi` file, install via Zotero: Tools -> Plugins -> gear icon -> Install Plugin From File.
 
 ### 3. Configure citekeys
 
 Citekeys are the short identifiers used in your text (e.g., `smith2020`). In Zotero with Better BibTeX:
 
-- Edit -> Preferences -> Better BibTeX -> Citation keys
+- Edit -> Settings (macOS: Zotero -> Settings) -> Better BibTeX -> Citation keys
 - Set the citation key formula (recommended: `[auth:lower][year]` -> `smith2020`)
 - For multiple works by same author/year: add disambiguator (`[auth:lower][year][shorttitle]`)
 
