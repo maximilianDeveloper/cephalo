@@ -59,6 +59,7 @@ In Zotero:
 - Format: Better BibTeX
 - Check: "Keep updated" (this enables continuous auto-export)
 - Save to: the project's literature path
+  - Flat: `workspace/sources/literature.bib`
   - Long-form: `02_Literature/literature.bib`
   - Multi-project main work: `02_Main_Work/02_Literature/literature.bib`
 
@@ -161,7 +162,7 @@ pandoc chapter.md \
   -o output.docx
 ```
 
-Use your styleguide's bibliography heading as the title. Without it, Pandoc adds the reference list without a heading, and `scripts/bibliography_check.py` cannot find the bibliography (exit 2).
+Use your structure's `literature.bib` path from "Set up auto-export" (flat: `--bibliography workspace/sources/literature.bib`), and your styleguide's bibliography heading as the title. Without it, Pandoc adds the reference list without a heading, and `scripts/bibliography_check.py` cannot find the bibliography (exit 2).
 
 **Prerequisite:** a CSL file matching your institution's citation style. APA 7 is the closest standard for many institutions; download from [zotero.org/styles](https://www.zotero.org/styles). For institution-specific deviations, you may need to edit the CSL.
 
