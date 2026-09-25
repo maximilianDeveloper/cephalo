@@ -161,7 +161,12 @@ def get_uncommitted(worktree_path: Path) -> list[str]:
     --no-optional-locks: do not refresh the worktree's index under index.lock,
     which could make a parallel session's git command in that worktree fail.
     """
-    out = run_git(["--no-optional-locks", "status", "--porcelain"], worktree_path)
+    # core.quotepath=false: show non-ASCII file names (umlauts) as they are,
+    # not as octal escapes like "\303\274".
+    out = run_git(
+        ["-c", "core.quotepath=false", "--no-optional-locks", "status", "--porcelain"],
+        worktree_path,
+    )
     return [line for line in out.splitlines() if line]
 
 
