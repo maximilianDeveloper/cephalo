@@ -128,8 +128,9 @@ phases:
           copy if symlinks were not permitted; see CLAUDE.md, "Platform caveats").
           Only if shared/ is missing, create it:
           Windows (Developer Mode enabled — Settings -> For developers — or an
-          elevated PowerShell):
-            New-Item -ItemType SymbolicLink -Path "shared" -Target "..\00_Shared_Materials"
+          elevated shell), in PowerShell or cmd, run in 01_Proposal\ (keeps the
+          link relative, as setup.ps1 does):
+            cmd /c mklink /D shared ..\00_Shared_Materials
           macOS/Linux:
             ln -s ../00_Shared_Materials shared
 
