@@ -122,7 +122,7 @@ The generated `styleguide.md` follows the template in `templates/styleguide.md`.
 - Body text and footnotes (`body.*`, `footnotes.*`: font, size, line spacing, alignment, paragraph spacing)
 - Headings (sizes, numbering conventions, max depth)
 - Pagination, title page, tables and figures (`pagination.*`, `title_page.*`, `captions.*`, `numbers.*`)
-- Style rules (forbidden pronouns, block quote threshold, footnote policy)
+- Style rules (forbidden pronouns, forbidden evaluative wording, block quote threshold, footnote policy)
 - **Open questions (`❓` items)** — always include this section even if empty
 
 ## Common ambiguities to watch for

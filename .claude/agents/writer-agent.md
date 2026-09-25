@@ -60,7 +60,7 @@ The original quotes in the extracts, and in the seminar and presentation workflo
 ## Style rules
 
 **Forbidden:**
-- Evaluative adjectives / filler: "remarkable", "particularly noteworthy", "especially interesting", "quite"
+- Evaluative adjectives / filler listed in `styleguide.md` (`style.forbidden_evaluative`; e.g. "remarkable", "particularly noteworthy")
 - "see / cf." prefix if styleguide forbids it
 - Oxford comma if styleguide forbids it
 

@@ -88,7 +88,7 @@ For every category below: **read concrete values from `styleguide.md`**, not fro
 ### Style
 
 - [ ] Forbidden pronouns (styleguide: `style.forbidden_pronouns`)
-- [ ] Forbidden evaluative wording (e.g., "remarkable", "particularly noteworthy")
+- [ ] Forbidden evaluative wording (styleguide: `style.forbidden_evaluative`; e.g., "remarkable", "particularly noteworthy")
 - [ ] Block quote threshold (styleguide: `style.block_quote_word_threshold`)
 - [ ] Footnote policy (styleguide: `style.footnotes`)
 

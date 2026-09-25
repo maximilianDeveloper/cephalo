@@ -241,7 +241,7 @@ phases:
     style_note: |
       Proposal style is slightly more accessible than the final thesis text, 
       but still scholarly. Voice and person per shared/styleguide.md
-      (style.forbidden_pronouns; do not assume), no evaluative adjectives,
+      (style.forbidden_pronouns; do not assume), evaluative wording per style.forbidden_evaluative,
       clear citations for all substantive claims. shared/styleguide.md applies.
   
   # ===========================================================
