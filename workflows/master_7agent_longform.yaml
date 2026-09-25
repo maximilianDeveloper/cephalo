@@ -322,6 +322,7 @@ phases:
     manual: true
     task: |
       - Final DOCX export to 08_Formal_Review/submissions/v_final_<date>.docx
+      - Run scripts/docx_postprocess.sh on this v_final file (only if styleguide.md document.hyphenation = automatic; a fresh export may not carry the earlier patch)
       - Tag in Git: git tag v_final_<date>
       - Update table of contents
       - Confirm the hyphenation setting matches styleguide.md (document.hyphenation)
