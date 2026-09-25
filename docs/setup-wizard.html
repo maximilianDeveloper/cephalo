@@ -613,7 +613,7 @@ List any open questions for me to resolve before we proceed.</code></pre>
     // run note
     var rn=document.getElementById('runnote');
     rn.innerHTML=win
-      ? 'Run it from the cephalo folder. If PowerShell blocks the script, prefix once with <code>powershell -ExecutionPolicy Bypass -File .\\setup.ps1 …</code>'
+      ? 'Run it from the cephalo folder. If PowerShell blocks the script, first run <code>Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force</code> in the same window (this session only), then the command again.'
       : 'Make it executable once with <code>chmod +x setup.sh</code>, then run it from the cephalo folder.';
 
     var ln=document.getElementById('launchnote');
