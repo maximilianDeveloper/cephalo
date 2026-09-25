@@ -199,6 +199,60 @@ jobs:
           EOF
           node --check /tmp/ci_wizard.js
 
+      # The target path is the only free-text field the setup assistant puts
+      # into a command: run the generated commands against stub setup scripts
+      # and check that the path arrives unchanged and nothing else runs.
+      - name: setup-wizard commands pass the target path through bash and PowerShell
+        run: |
+          W=/tmp/ci_wiz; rm -rf "$W"; mkdir -p "$W/sh" "$W/ps" "$W/home"
+          printf '%s\n' '#!/bin/bash' '[ "$4" = --target ] && printf "%s" "$5" > target.txt' > "$W/sh/setup.sh"
+          chmod +x "$W/sh/setup.sh"
+          printf '%s\n' 'param([string]$WorkType, [string]$Structure, [string]$Scaffolding, [string]$Target, [switch]$NonInteractive)' \
+            '[IO.File]::WriteAllText((Join-Path $PSScriptRoot "target.txt"), "$Target|$($NonInteractive.IsPresent)")' > "$W/ps/setup.ps1"
+          node - "$W" <<'EOF'
+          const fs = require("fs"), cp = require("child_process"), path = require("path");
+          const W = process.argv[2], HOME = path.join(W, "home");
+          const script = fs.readFileSync("docs/setup-wizard.html", "utf8").split("<script>")[1].split("</script>")[0];
+          const grab = (a, b) => {
+            const i = script.indexOf(a), j = script.indexOf(b, i);
+            if (i < 0 || j < 0) throw new Error("marker not found: " + a);
+            return script.slice(i, j);
+          };
+          const state = { work: "Bachelor thesis", struct: "Long-form", scaf: "full" };
+          const F = new Function("state", "document", grab("function esc(s)", "// ----- command -----") +
+            grab("function shQuote(x)", "  // ----- render -----") + "\nreturn { buildCmd: buildCmd };")(state, null);
+          const text = h => h.replace(/<[^>]*>/g, "").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
+          const Q = ["\u2018", "\u2019", "\u201A", "\u201B"];
+          const sh = ["~", "~/Documents/Thesis", "~/x y", "~/it's", "~/$(touch PWNED)", "~-/x", "~+", "~1/x", "a;touch PWNED",
+                      "$(touch PWNED)", "`touch PWNED`", "$HOME", "'", "\"", "a\\", "Müller [final]", "-rf", "x\u2019y"];
+          const ps = ["'", "''", "\"", "$(New-Item -ItemType File PWNED)", "`n", "$env:HOME", "a;b", "C:\\Users\\x\\",
+                      "M\u00fcller\\Arbeit", "-NonInteractive:$false", "x'\u2019; New-Item -ItemType File PWNED; #"]
+            .concat(Q.map(q => "x" + q + "; New-Item -ItemType File PWNED; #"), Q.map(q => q + "+(New-Item PWNED)+" + q));
+          let bad = 0;
+          const check = (os, x, got, want, cmd) => {
+            if (got !== want) { bad++; console.log(`FAIL ${os} ${JSON.stringify(x)}: got ${JSON.stringify(got)}, want ${JSON.stringify(want)}\n  ${cmd}`); }
+          };
+          for (const x of sh) {
+            Object.assign(state, { os: "linux", target: x });
+            const cmd = text(F.buildCmd()), out = path.join(W, "sh", "target.txt");
+            fs.rmSync(out, { force: true });
+            cp.spawnSync("bash", ["-c", cmd], { cwd: path.join(W, "sh"), env: { ...process.env, HOME } });
+            const want = x === "~" || x.startsWith("~/") ? HOME + x.slice(1) : x;
+            check("bash", x, fs.existsSync(out) ? fs.readFileSync(out, "utf8") : null, want, cmd);
+          }
+          for (const x of ps) {
+            Object.assign(state, { os: "windows", target: x });
+            const cmd = text(F.buildCmd()), out = path.join(W, "ps", "target.txt");
+            fs.rmSync(out, { force: true });
+            cp.spawnSync("pwsh", ["-NoProfile", "-NonInteractive", "-Command", cmd], { cwd: path.join(W, "ps") });
+            check("pwsh", x, fs.existsSync(out) ? fs.readFileSync(out, "utf8") : null, x.trim() + "|True", cmd);
+          }
+          const canaries = cp.execSync(`find "${W}" -name "PWNED*"`).toString().trim();
+          if (canaries) { bad++; console.log("injected command ran: " + canaries); }
+          console.log(`${sh.length} bash and ${ps.length} PowerShell targets checked, ${bad} failures`);
+          process.exit(bad ? 1 : 0);
+          EOF
+
       - name: Utility scripts on generated files (exit codes, safety checks)
         run: |
           W=/tmp/ci_util; rm -rf "$W"; mkdir -p "$W/good" "$W/evil"
