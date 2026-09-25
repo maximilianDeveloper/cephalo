@@ -475,6 +475,9 @@ jobs:
           g -C "$W/refs" add -A && g -C "$W/refs" commit -qm w1
           expect 1 python scripts/cross_session_audit.py --repo-root "$W/refs" --report-file "$W/refs/audit/w2.md"
           grep -qF 'links to non-existent files):** 1' "$W/out.txt"
+          # a worktree whose folder is missing (moved, unmounted) is an error, not a clean result
+          g -C "$W/refs" worktree add -q -b gone "$W/gone" && mv "$W/gone" "$W/gone.moved"
+          expect 2 python scripts/cross_session_audit.py --repo-root "$W/refs"
 
   windows:
     name: PowerShell 5.1 parse & setup smoke (Windows)

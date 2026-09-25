@@ -173,7 +173,7 @@ What it does: after a summary, the report shows a **worktree overview** (all wor
 
 Output goes to stdout by default; `--report-file PATH` additionally writes a Markdown report to that path.
 
-Exit codes: `0` = no findings, `1` = findings reported (intended for CI/hooks), `2` = the audit could not run: `--repo-root` (default: the current directory) is not an existing directory inside a git working tree, `git` is not on PATH, a worktree could not be inspected (`git status` fails there, e.g. with "dubious ownership" or a corrupt index, or its directory cannot be read), or the `--report-file` could not be written (the report has already been printed to stdout in that case). The cause is printed as one `Error: ...` line on stderr.
+Exit codes: `0` = no findings, `1` = findings reported (intended for CI/hooks), `2` = the audit could not run: `--repo-root` (default: the current directory) is not an existing directory inside a git working tree, `git` is not on PATH, a worktree could not be inspected (`git status` fails there, e.g. with "dubious ownership" or a corrupt index, or its directory is missing or cannot be read; `git worktree prune` removes the entry of a deleted worktree), or the `--report-file` could not be written (the report has already been printed to stdout in that case). The cause is printed as one `Error: ...` line on stderr.
 
 Like the other checks, this is a heuristic aid, not a guarantee — it only catches the specific patterns described above (uncommitted changes, `_*.md` notes, and backticked cross-references in a recognized path format).
 

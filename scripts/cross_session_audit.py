@@ -233,8 +233,16 @@ def collect_worktree_data(worktrees: list[WorktreeInfo], report_path: Path | Non
     """
     for wt in worktrees:
         # A bare main repository has no working tree to inspect.
-        if wt.is_bare or not wt.path.exists():
+        if wt.is_bare:
             continue
+        # A missing folder cannot be inspected: its notes and drafts would
+        # silently count as clean.
+        if not wt.path.exists():
+            raise RuntimeError(
+                f"worktree {wt.path} not found: mount its drive, run "
+                "`git worktree repair <new path>` if it was moved, or "
+                "`git worktree prune` if it was deleted"
+            )
         wt.uncommitted = get_uncommitted(wt.path, report_path)
         wt.underscore_files = [
             p for p in find_underscore_files(wt.path) if (wt.path / p).resolve() != report_path
