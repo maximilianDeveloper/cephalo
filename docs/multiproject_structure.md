@@ -182,8 +182,8 @@ The setup script handles `.gitignore` and `.gitattributes` automatically. Commit
 ```
 proposal/research: initial literature scan complete
 proposal/submission: final version v1 sent to supervisor
-main/03_theory: chapter 3 first draft
-main/08_formal: bibliography minus-test passed
+main/theory: chapter 3 first draft
+main/formal: bibliography minus-test passed
 defense/slides: structure draft, 12 slides
 defense/prep: critical questions catalogued
 meta: styleguide updated to guideline version 2.1
