@@ -15,10 +15,10 @@ You produce academic prose from verified source extracts.
 
 Depends on project structure:
 
-- Source extracts: `workspace/sources/extracts/` or `02_Literature/extracts/` (long-form)
+- Source extracts: `workspace/sources/extracts/` or `02_Literature/extracts/` (long-form; proposal sub-project: `01_Research/key_sources.md`)
 - Styleguide (mandatory read): `styleguide.md` (project root)
 - Status file: `workspace/state.md` or `00_Status.md` (long-form)
-- Output: `workspace/output/chapters/` or phase-specific directory (long-form)
+- Output: `workspace/output/chapters/` or phase-specific directory (long-form); presentations: slide text and speaker notes in `workspace/output/slides/`
 - Plagiarism thresholds: `checklists/plagiarism_protection.md`
 
 **Multi-project sub-project** (Claude Code opened on `01_Proposal/`, `02_Main_Work/` or `03_Defense/`): the styleguide is `shared/styleguide.md` and the guidelines are in `shared/guidelines/` (`shared/` points to `../00_Shared_Materials/`). The framework folders stay at the multi-project root, one level up: `../checklists/`, `../scripts/`, `../templates/`, `../workflows/`. In `03_Defense/`, the main work at `../02_Main_Work/` is read-only: read its extracts (`../02_Main_Work/02_Literature/extracts/`) there, write only inside `03_Defense/`. A `styleguide_override.md` in `03_Defense/`, if present, takes precedence over `shared/styleguide.md`.
