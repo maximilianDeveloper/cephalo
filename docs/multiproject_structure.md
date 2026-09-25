@@ -85,7 +85,7 @@ project_root/                          ← Git repo root (one repo for all)
 │
 ├── .gitignore
 ├── .gitattributes
-└── README.md                          ← root-level overview
+└── README.md                          ← cephalo's README (replaced on template updates)
 ```
 
 The `01_`, `02_`, `03_` numbering enforces meaningful sort order: proposal first (chronologically), main work next, defense last.
@@ -317,7 +317,7 @@ One-time at project start:
 - [ ] Run style-resolver once -> `00_Shared_Materials/styleguide.md`
 - [ ] Reference manager collection for the main work, auto-export to `02_Main_Work/02_Literature/literature.bib`
 - [ ] Initial `00_Status.md` in all three sub-projects (done by setup script from templates)
-- [ ] Root-level `README.md` with project overview
+- [ ] Project overview in a root file of your own (e.g. `00_Project_overview.md`): the root `README.md` is cephalo's and is replaced when you update the template
 
 Per sub-project start:
 - [ ] Choose sub-project-specific workflow
