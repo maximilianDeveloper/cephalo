@@ -121,6 +121,8 @@ git reset --soft HEAD~1
 
 This undoes the last commit but keeps your file changes. You can then fix and re-commit.
 
+If it was your very first commit, Git answers `fatal: ambiguous argument 'HEAD~1'`. Use `git update-ref -d HEAD` instead: it removes that commit and keeps your files, still staged.
+
 **Warning:** `git reset --hard` deletes your changes too. Don't use it unless you're sure.
 
 ### "I want to see what was in the file last week"
@@ -132,10 +134,10 @@ git log -- path/to/file.md
 Shows all commits that touched that file. Pick a commit hash, then:
 
 ```bash
-git show <hash>:path/to/file.md
+git show <hash>:./path/to/file.md
 ```
 
-This prints the file as it was in that commit. You can copy what you need.
+This prints the file as it was in that commit. You can copy what you need. (The `./` makes the path relative to the folder you are in, as in the `git log` command above; without it, Git reads the path from the repository root, which fails inside a sub-project such as `02_Main_Work/`.)
 
 ### "I want to actually revert to last week's state"
 
