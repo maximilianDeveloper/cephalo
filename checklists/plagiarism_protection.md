@@ -98,7 +98,7 @@ Use direct quotes for:
 - Controversial statements where exact wording matters
 - Particularly memorable formulations
 
-Format: "[quote]" (Author, Year, p. X)
+Format: per `styleguide.md` (`in_text.format_direct`); example only: "[quote]" (Author, Year, p. X)
 
 **Important:** Block quotes apply above a certain word count (check styleguide; typically from 40 words).
 
