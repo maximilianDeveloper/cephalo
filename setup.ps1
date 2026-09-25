@@ -142,9 +142,18 @@ function Ask-Choice($Question, $Options) {
     return $Options[$n-1]
 }
 
+# The helpers below stop on failure (-ErrorAction Stop, or throw) so the
+# trap above reports it and exits 130. A plain New-Item error does not
+# stop the script: setup would continue and report success with parts of
+# the structure missing.
 function Create-DirSafe($Path) {
     if (!(Test-Path $Path)) {
-        New-Item -ItemType Directory -Path $Path -Force | Out-Null
+        New-Item -ItemType Directory -Path $Path -Force -ErrorAction Stop | Out-Null
+        # New-Item -Force can report success without creating anything
+        # (seen with a file in the way under PowerShell 7), so verify.
+        if (-not (Test-Path -LiteralPath $Path -PathType Container)) {
+            throw "Could not create directory '$Path' (is a file in the way?)"
+        }
         Write-Host "  + $Path" -ForegroundColor Green
     } else {
         Write-Host "  . $Path (exists)" -ForegroundColor Gray
@@ -153,7 +162,7 @@ function Create-DirSafe($Path) {
 
 function Create-Gitkeep($Path) {
     $kp = Join-Path $Path ".gitkeep"
-    if (!(Test-Path $kp)) { New-Item -ItemType File -Path $kp -Force | Out-Null }
+    if (!(Test-Path $kp)) { New-Item -ItemType File -Path $kp -Force -ErrorAction Stop | Out-Null }
 }
 
 function Create-Symlink($Link, $Target) {
@@ -226,7 +235,7 @@ function Copy-TemplateIfExists($Template, $Destination, $FallbackContent) {
         return
     }
     if (Test-Path $Template) {
-        Copy-Item $Template $Destination
+        Copy-Item $Template $Destination -ErrorAction Stop
         Write-Host "  + $Destination" -ForegroundColor Green
     } else {
         Write-Utf8NoBom $Destination $FallbackContent
