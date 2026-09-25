@@ -385,6 +385,9 @@ for pdf in pdf_files:
             # Collect .txt members and extract text from contained PDFs
             members = sorted(p for p in tmp_path.rglob('*') if p.is_file())
             parts = []
+            # A failed or empty PDF member counts as an error of the archive,
+            # like the same PDF at the top level (once per archive).
+            member_problems = 0
             for member in members:
                 suffix = member.suffix.lower()
                 if suffix == '.txt':
@@ -392,9 +395,14 @@ for pdf in pdf_files:
                 elif suffix == '.pdf':
                     member_out = tmp_path / (member.name + '.extracted')
                     if extract_pdf_text(member, member_out):
-                        parts.append(member_out.read_text(encoding='utf-8', errors='replace'))
+                        member_text = member_out.read_text(encoding='utf-8', errors='replace')
+                        if not member_text.strip():
+                            print(f"    WARN {member.name} (in archive) - extracted text is empty (scanned/image-only PDF?)", file=sys.stderr)
+                            member_problems += 1
+                        parts.append(member_text)
                     else:
                         print(f"    ERR {member.name} (in archive) - PDF extraction failed", file=sys.stderr)
+                        member_problems += 1
             combined = '\n\n'.join(parts)
             if combined.strip():
                 out_file.write_text(combined, encoding='utf-8')
@@ -402,6 +410,8 @@ for pdf in pdf_files:
                 print(f"      -> {out_file.name} ({lines} lines)")
                 written.add(out_file.name)
                 count += 1
+                if member_problems:
+                    errors += 1
             else:
                 found = ', '.join(m.name for m in members[:10]) if members else 'none'
                 print(f"    No usable text in archive (members: {found})", file=sys.stderr)
