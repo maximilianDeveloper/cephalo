@@ -392,6 +392,9 @@ def generate_report(
         lines.append("| Source file | Line | Missing target |")
         lines.append("|---|---|---|")
         for src, line_text, target in dangling_refs[:50]:  # Cap at 50
+            # The quoted line is often itself a table row: escape its pipes so
+            # they do not split this table's cells.
+            line_text = line_text.replace("|", "\\|")
             lines.append(f"| `{src}` | {line_text} | `{target}` |")
         if len(dangling_refs) > 50:
             lines.append(f"| ... | ... | (+{len(dangling_refs) - 50} more, truncated) |")
