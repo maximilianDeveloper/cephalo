@@ -334,6 +334,10 @@ jobs:
           $multi = Join-Path $env:TEMP 'ci_ps_multi'
           Invoke-Setup $PWD @('-WorkType', 'Seminar paper', '-Structure', 'Flat', '-Scaffolding', 'full', '-Target', $flat, '-NonInteractive')
           if (-not (Test-Path (Join-Path $flat 'workspace/sources/_guidelines'))) { Write-Host "flat: workspace/sources/_guidelines missing"; exit 1 }
+          # [ ] in the target name must not be read as a wildcard pattern.
+          $brk = Join-Path $env:TEMP 'ci_ps_[final]'
+          Invoke-Setup $PWD @('-WorkType', 'Bachelor thesis', '-Structure', 'Long-form', '-Scaffolding', 'full', '-Target', $brk, '-NonInteractive')
+          if (-not (Test-Path -LiteralPath (Join-Path $brk '00_Status.md'))) { Write-Host "brackets: 00_Status.md missing"; exit 1 }
           Invoke-Setup $PWD @('-WorkType', 'Master thesis', '-Structure', 'Multi-project', '-Scaffolding', 'minimal', '-Target', $multi, '-NonInteractive')
           foreach ($sub in '01_Proposal', '02_Main_Work', '03_Defense') {
             if (-not (Test-Path (Join-Path $multi "$sub/shared/guidelines"))) { Write-Host "multi: $sub/shared missing"; exit 1 }

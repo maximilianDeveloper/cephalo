@@ -90,9 +90,9 @@ if (-not (Test-Path -LiteralPath "setup.ps1" -PathType Leaf) -or -not (Test-Path
     Write-Host ""
     Write-Host "Error: the current directory does not look like a cephalo template" -ForegroundColor Red
     Write-Host "(setup.ps1, .claude/ and templates/ expected in: $(Get-Location))." -ForegroundColor Red
-    if ($ScriptDir -and (Test-Path (Join-Path $ScriptDir ".claude"))) {
+    if ($ScriptDir -and (Test-Path -LiteralPath (Join-Path $ScriptDir ".claude"))) {
         Write-Host "The template appears to be at: $ScriptDir" -ForegroundColor Yellow
-        Write-Host "Run:  Set-Location `"$ScriptDir`"; .\setup.ps1 [args]" -ForegroundColor Yellow
+        Write-Host "Run:  Set-Location -LiteralPath `"$ScriptDir`"; .\setup.ps1 [args]" -ForegroundColor Yellow
         Write-Host "Use -Target PATH to create the project elsewhere." -ForegroundColor Yellow
     }
     exit 2
@@ -177,8 +177,8 @@ function Create-Symlink($Link, $Target) {
         # rights (path-resolution, filesystem, and elevation errors all land here).
         Write-Host "  ! Symlink failed for $Link : $($_.Exception.Message)" -ForegroundColor Yellow
         Write-Host "    (On Windows, real symlinks need Developer Mode or an elevated shell.)" -ForegroundColor DarkGray
-        if (Test-Path $AbsoluteTarget) {
-            Copy-Item -Path $AbsoluteTarget -Destination $Link -Recurse -Force
+        if (Test-Path -LiteralPath $AbsoluteTarget) {
+            Copy-Item -LiteralPath $AbsoluteTarget -Destination $Link -Recurse -Force
             Write-Host "    -> Copied $Target into $Link as fallback." -ForegroundColor Yellow
             Write-Host "    Note: when guidelines change, you must update each copy manually." -ForegroundColor Yellow
         } else {
@@ -457,13 +457,15 @@ if ($NonInteractive) {
 # ==========================================================
 # Only now, so that a declined "Proceed?" or an interrupted prompt leaves
 # no template copy behind (as in setup.sh).
+# Paths use -LiteralPath: with -Path, PowerShell reads [ ] in a folder name
+# (e.g. "Thesis [final]") as a wildcard pattern and misses the real folder.
 
 if ($Target -ne "") {
     $SourceDir = (Get-Location).Path
     
     # Create parent directory chain if needed
     $TargetParent = Split-Path -Parent $Target
-    if ($TargetParent -and -not (Test-Path $TargetParent)) {
+    if ($TargetParent -and -not (Test-Path -LiteralPath $TargetParent)) {
         Write-Host "Creating parent directory: $TargetParent" -ForegroundColor Gray
         try {
             New-Item -ItemType Directory -Path $TargetParent -Force | Out-Null
@@ -475,9 +477,9 @@ if ($Target -ne "") {
     
     # Handle existing target
     $TargetWasEmpty = $true
-    if (Test-Path $Target) {
-        if (Test-Path $Target -PathType Container) {
-            $existing = Get-ChildItem -Path $Target -Force -ErrorAction SilentlyContinue
+    if (Test-Path -LiteralPath $Target) {
+        if (Test-Path -LiteralPath $Target -PathType Container) {
+            $existing = Get-ChildItem -LiteralPath $Target -Force -ErrorAction SilentlyContinue
             if ($existing) {
                 $TargetWasEmpty = $false
                 Write-Host ""
@@ -514,10 +516,10 @@ if ($Target -ne "") {
     Write-Host "Copying cephalo template to target..." -ForegroundColor Cyan
     $ExcludedTopLevelNames = @(".git", ".github", "__pycache__", ".venv", "venv")
     try {
-        Get-ChildItem -Path $SourceDir -Force | Where-Object {
+        Get-ChildItem -LiteralPath $SourceDir -Force | Where-Object {
             $ExcludedTopLevelNames -notcontains $_.Name -and $_.Extension -ne ".pyc" -and $_.Name -notlike "cephalo-setup.*"
         } | ForEach-Object {
-            Copy-Item -Path $_.FullName -Destination $Target -Recurse -Force -ErrorAction Stop
+            Copy-Item -LiteralPath $_.FullName -Destination $Target -Recurse -Force -ErrorAction Stop
         }
     } catch {
         Write-Host "Error during copy: $($_.Exception.Message)" -ForegroundColor Red
@@ -531,23 +533,23 @@ if ($Target -ne "") {
     # only if the target was empty or new: in a non-empty target the user
     # confirmed, these names may be the user's own files (e.g. a venv).
     if ($TargetWasEmpty) {
-        Get-ChildItem -Path $Target -Recurse -Force -Directory -ErrorAction SilentlyContinue |
+        Get-ChildItem -LiteralPath $Target -Recurse -Force -Directory -ErrorAction SilentlyContinue |
             Where-Object { $_.Name -in @("__pycache__", ".venv", "venv") } |
-            ForEach-Object { Remove-Item -Path $_.FullName -Recurse -Force -ErrorAction SilentlyContinue }
-        Get-ChildItem -Path $Target -Recurse -Force -File -Filter "*.pyc" -ErrorAction SilentlyContinue |
+            ForEach-Object { Remove-Item -LiteralPath $_.FullName -Recurse -Force -ErrorAction SilentlyContinue }
+        Get-ChildItem -LiteralPath $Target -Recurse -Force -File -Filter "*.pyc" -ErrorAction SilentlyContinue |
             Remove-Item -Force -ErrorAction SilentlyContinue
         $TargetClaudeWorktrees = Join-Path $Target ".claude\worktrees"
-        if (Test-Path $TargetClaudeWorktrees) {
-            Remove-Item -Path $TargetClaudeWorktrees -Recurse -Force -ErrorAction SilentlyContinue
+        if (Test-Path -LiteralPath $TargetClaudeWorktrees) {
+            Remove-Item -LiteralPath $TargetClaudeWorktrees -Recurse -Force -ErrorAction SilentlyContinue
         }
         $TargetClaudeLocalSettings = Join-Path $Target ".claude\settings.local.json"
-        if (Test-Path $TargetClaudeLocalSettings) {
-            Remove-Item -Path $TargetClaudeLocalSettings -Force -ErrorAction SilentlyContinue
+        if (Test-Path -LiteralPath $TargetClaudeLocalSettings) {
+            Remove-Item -LiteralPath $TargetClaudeLocalSettings -Force -ErrorAction SilentlyContinue
         }
     }
 
     # Sanity check after copy
-    if (-not (Test-Path (Join-Path $Target "setup.ps1")) -or -not (Test-Path (Join-Path $Target ".claude"))) {
+    if (-not (Test-Path -LiteralPath (Join-Path $Target "setup.ps1")) -or -not (Test-Path -LiteralPath (Join-Path $Target ".claude"))) {
         Write-Host "Error: copy appears incomplete. Aborting." -ForegroundColor Red
         Write-Host "  Source: $SourceDir" -ForegroundColor Red
         Write-Host "  Target: $Target" -ForegroundColor Red
@@ -558,7 +560,7 @@ if ($Target -ne "") {
     Write-Host ""
     
     $script:SourceDirBeforeMove = $SourceDir
-    Set-Location -Path $Target
+    Set-Location -LiteralPath $Target
     Write-Verbose "Changed PowerShell location to target: $Target"
 }
 
@@ -907,7 +909,7 @@ Write-Host ""
 # Offer to clean up the original source folder (if we copied)
 # ==========================================================
 
-if ($script:SourceDirBeforeMove -and (Test-Path $script:SourceDirBeforeMove)) {
+if ($script:SourceDirBeforeMove -and (Test-Path -LiteralPath $script:SourceDirBeforeMove)) {
     Write-Host "The original cephalo template folder is still at:" -ForegroundColor Gray
     Write-Host "  $($script:SourceDirBeforeMove)" -ForegroundColor Gray
     Write-Host ""
@@ -915,10 +917,10 @@ if ($script:SourceDirBeforeMove -and (Test-Path $script:SourceDirBeforeMove)) {
         $delAns = Read-Host "Delete it now? [y/N]"
         if ($delAns -match '^(y|Y|j|J|yes|Yes|ja|Ja)$') {
             # Safety: only delete if it still looks like a cephalo template
-            if ((Test-Path (Join-Path $script:SourceDirBeforeMove "setup.ps1")) -and `
-                (Test-Path (Join-Path $script:SourceDirBeforeMove ".claude"))) {
+            if ((Test-Path -LiteralPath (Join-Path $script:SourceDirBeforeMove "setup.ps1")) -and `
+                (Test-Path -LiteralPath (Join-Path $script:SourceDirBeforeMove ".claude"))) {
                 try {
-                    Remove-Item -Path $script:SourceDirBeforeMove -Recurse -Force
+                    Remove-Item -LiteralPath $script:SourceDirBeforeMove -Recurse -Force
                     Write-Host "+ Original folder deleted." -ForegroundColor Green
                 } catch {
                     Write-Host "! Could not delete original folder: $($_.Exception.Message)" -ForegroundColor Yellow
@@ -933,7 +935,7 @@ if ($script:SourceDirBeforeMove -and (Test-Path $script:SourceDirBeforeMove)) {
     } else {
         Write-Host "Non-interactive run: keeping the original in place." -ForegroundColor Gray
         Write-Host "Delete manually if no longer needed:" -ForegroundColor Gray
-        Write-Host "  Remove-Item -Path `"$($script:SourceDirBeforeMove)`" -Recurse -Force" -ForegroundColor Gray
+        Write-Host "  Remove-Item -LiteralPath `"$($script:SourceDirBeforeMove)`" -Recurse -Force" -ForegroundColor Gray
     }
     Write-Host ""
 }
