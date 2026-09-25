@@ -224,6 +224,20 @@ def collect_worktree_data(worktrees: list[WorktreeInfo]) -> None:
         wt.underscore_files = find_underscore_files(wt.path)
 
 
+def drop_report_file(worktrees: list[WorktreeInfo], report_path: Path) -> None:
+    """Remove the --report-file itself from the uncommitted-change lists.
+
+    Otherwise a report written into a worktree shows up there as an untracked
+    file on the next run, and the audit never returns 0 again.
+    """
+    for wt in worktrees:
+        wt.uncommitted = [
+            line
+            for line in wt.uncommitted
+            if " -> " in line or (wt.path / line[3:]).resolve() != report_path
+        ]
+
+
 def find_master_only_diff(
     worktrees: list[WorktreeInfo],
 ) -> dict[Path, list[tuple[str, Path]]]:
@@ -248,10 +262,14 @@ def find_master_only_diff(
     return missing
 
 
-def find_dangling_refs(main_path: Path) -> list[tuple[Path, str, str]]:
+def find_dangling_refs(
+    main_path: Path, skip: Path | None = None
+) -> list[tuple[Path, str, str]]:
     """Scan all .md files in the main worktree for cross-refs that point to non-existent files.
 
-    Returns list of (source_file, line_text, missing_target).
+    Returns list of (source_file, line_text, missing_target). `skip` is the
+    resolved --report-file path: an earlier report quotes the refs it found
+    and must not be scanned as a source.
 
     The regex requires a directory separator (slash or backslash) in the
     candidate path — otherwise generic mentions like `00_Status.md` in
@@ -278,6 +296,8 @@ def find_dangling_refs(main_path: Path) -> list[tuple[Path, str, str]]:
         relpath = md_path.relative_to(main_path)
         # Skip excluded directories
         if any(part in EXCLUDE_DIRS for part in relpath.parts):
+            continue
+        if skip is not None and md_path.resolve() == skip:
             continue
         # Skip framework documentation files
         if relpath.name in FRAMEWORK_DOC_FILES:
@@ -472,10 +492,14 @@ def main() -> int:
         repo_root = find_repo_root(args.repo_root)
         worktrees = list_worktrees(repo_root)
         collect_worktree_data(worktrees)
+        # The report file of this (and every earlier) run is not a finding.
+        report_path = args.report_file.resolve() if args.report_file else None
+        if report_path is not None:
+            drop_report_file(worktrees, report_path)
         master_only_diff = find_master_only_diff(worktrees)
 
         main_wt = next((wt for wt in worktrees if wt.is_main), None)
-        dangling = find_dangling_refs(main_wt.path) if main_wt else []
+        dangling = find_dangling_refs(main_wt.path, report_path) if main_wt else []
 
         report = generate_report(repo_root, worktrees, master_only_diff, dangling)
         print(report)
