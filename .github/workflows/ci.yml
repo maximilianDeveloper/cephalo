@@ -63,7 +63,7 @@ jobs:
           # Archives are unpacked only through scripts/extract_styleguide.sh (safe_extract_zip):
           # no agent or checklist may show another extractor as a command, in a code span
           # or in a code block (naming one in prose, e.g. to forbid it, is fine).
-          cmd = r"\b(?:unzip|7z|bsdtar)\s+\S|\btar\b[^|;&`\n]*(?:\s-?[a-z]*x[a-z]*\b|--extract)|\.extractall\(|unpack_archive\(|\bExpand-Archive\s+\S"
+          cmd = r"\b(?:unzip|7z[az]?|bsdtar)\s+\S|\btar\b[^|;&`\n]*(?:\s-?[a-z]*x[a-z]*\b|--extract)|\.extract(?:all)?\(|unpack_archive\(|\bExpand-Archive\s+\S|-m\s+(?:zipfile|tarfile)\s+(?:-e|--extract)\b|\bExtractToDirectory\b"
           in_span = re.compile(r"`[^`]*?(?:" + cmd + r")[^`]*`")
           in_block = re.compile(cmd)
           for f in agent_files + sorted(glob.glob("checklists/*.md")):
