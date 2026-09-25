@@ -201,6 +201,7 @@ Present the outstanding items as a numbered list with source citations so the us
 ## When to stop and ask the user
 
 - If `00_Status.md` doesn't exist → long-form structure not initialized, refer user to setup checklist
+- If `styleguide.md` (multi-project: `shared/styleguide.md`) doesn't exist → invoke the `style-resolver` before any chapter work (workflow step 0.5; proposal: step 0.4)
 - If `handover.md` of the current phase is missing → is this a new chat in a new phase? Create initial handover
 - If `styleguide.md` still has `❓` items → during format work: STOP, clarification required
 - If Git status is "dirty" at chat start → ask about uncommitted changes
