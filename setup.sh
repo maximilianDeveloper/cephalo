@@ -982,10 +982,22 @@ echo ""
 echo "Work type:    $WORK_TYPE"
 echo "Structure:    $STRUCTURE"
 echo "Scaffolding:  $SCAFFOLDING"
+if [ -n "$SOURCE_DIR_BEFORE_MOVE" ]; then
+    echo "Project:      $TARGET_DIR"
+fi
 echo ""
 echo -e "${CYAN}Suggested workflow: $WORKFLOW${NC}"
 echo ""
-echo -e "${YELLOW}Next steps:${NC}"
+if [ -n "$SOURCE_DIR_BEFORE_MOVE" ]; then
+    # The cd into the target happened in this script's process only: the
+    # calling shell is still in the template folder, which the steps below
+    # ("this directory", "git add .") do not mean.
+    echo -e "${YELLOW}Next steps (in the project folder, not in this template folder):${NC}"
+    printf '   cd %q\n' "$TARGET_DIR"
+    echo ""
+else
+    echo -e "${YELLOW}Next steps:${NC}"
+fi
 # Keep the step numbers contiguous whether or not the minimal-only step
 # prints (mirrors setup.ps1).
 STEP_NO=1

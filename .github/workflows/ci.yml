@@ -113,7 +113,9 @@ jobs:
       - name: Non-interactive setup smoke (all three structures)
         run: |
           bash setup.sh "Seminar paper" "Flat" full --target /tmp/ci_flat </dev/null
-          bash setup.sh "Bachelor thesis" "Long-form" full --target /tmp/ci_long </dev/null
+          bash setup.sh "Bachelor thesis" "Long-form" full --target /tmp/ci_long </dev/null | tee /tmp/ci_long.out
+          # The calling shell stays in the template folder: the summary must name the project.
+          grep -qx '   cd /tmp/ci_long' /tmp/ci_long.out
           bash setup.sh "Master thesis" "Multi-project" minimal --target /tmp/ci_multi </dev/null
           test -d /tmp/ci_flat/workspace/sources/_guidelines
           test -f /tmp/ci_long/00_Status.md
