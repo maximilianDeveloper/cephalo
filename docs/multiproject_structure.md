@@ -220,7 +220,7 @@ The three sub-projects need access to `00_Shared_Materials/` even when opened in
 
 **On Windows:** symlink creation requires either Administrator privileges OR Developer Mode enabled (Settings -> For developers -> Developer Mode: on). This applies to both setup scripts. Behavior differs in how the failure is surfaced:
 
-- **`setup.ps1`** (PowerShell): `New-Item -ItemType SymbolicLink` fails explicitly; the script catches the error and falls back to copying.
+- **`setup.ps1`** (PowerShell): `New-Item -ItemType SymbolicLink` fails explicitly (in Windows PowerShell 5.1 even with Developer Mode on); the script catches the error, retries with `mklink` (enough with Developer Mode), and falls back to copying only if that fails too.
 - **`setup.sh`** (Git Bash): `ln -s` silently succeeds but produces a directory copy instead of a real symlink. The setup script detects this after the fact by checking whether a real symlink exists, and warns accordingly.
 
 **Fallback if symlinks fail:** copy `00_Shared_Materials/` into each sub-project. Downside: when the styleguide updates, you must update three copies.

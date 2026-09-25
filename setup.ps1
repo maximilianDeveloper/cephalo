@@ -172,10 +172,22 @@ function Create-Symlink($Link, $Target) {
         New-Item -ItemType SymbolicLink -Path $Link -Target $AbsoluteTarget -ErrorAction Stop | Out-Null
         Write-Host "  + $Link --> $Target" -ForegroundColor Green
     } catch {
+        $NewItemError = $_.Exception.Message
+        # Windows PowerShell 5.1's New-Item demands elevation even in Developer
+        # Mode (it does not request unprivileged creation); mklink does, so try
+        # it before copying. The redirection is cmd's, so no PowerShell error
+        # record is raised. The link is relative, like the one setup.sh makes.
+        if ($env:OS -eq "Windows_NT") {
+            cmd /c mklink /D "$Link" "$Target" '>nul' '2>&1'
+            if ($LASTEXITCODE -eq 0 -and (Test-Path -LiteralPath $Link -PathType Container)) {
+                Write-Host "  + $Link --> $Target" -ForegroundColor Green
+                return
+            }
+        }
         # Fallback: copy the directory contents instead of symlinking.
         # Surface the REAL exception rather than always blaming Administrator
         # rights (path-resolution, filesystem, and elevation errors all land here).
-        Write-Host "  ! Symlink failed for $Link : $($_.Exception.Message)" -ForegroundColor Yellow
+        Write-Host "  ! Symlink failed for $Link : $NewItemError" -ForegroundColor Yellow
         Write-Host "    (On Windows, real symlinks need Developer Mode or an elevated shell.)" -ForegroundColor DarkGray
         if (Test-Path -LiteralPath $AbsoluteTarget) {
             Copy-Item -LiteralPath $AbsoluteTarget -Destination $Link -Recurse -Force
