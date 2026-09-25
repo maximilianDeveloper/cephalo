@@ -126,7 +126,7 @@ See `templates/decisions.md`.
 
 Cross-chapter learning. When a recurring pattern appears (e.g., "writer-agent tends to substitute synonyms in section openings"), log it here. Future chats read this and avoid repeating the pattern.
 
-Format is freeform but typically grouped by agent.
+Append-only: one short entry per pattern (date, where observed, pattern, countermeasure, scope), in chronological order. See `templates/feedback_log.md`.
 
 ---
 
