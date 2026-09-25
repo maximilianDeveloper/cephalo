@@ -26,6 +26,16 @@ pip3 install -r requirements.txt
 chmod +x scripts/*.sh
 ```
 
+If pip stops with `error: externally-managed-environment` (Debian 12, Ubuntu 23.04 and later, Homebrew Python), install into a virtual environment in the project root instead:
+
+```bash
+python3 -m venv .venv        # Debian/Ubuntu: if this fails, first run: sudo apt install python3-venv
+. .venv/bin/activate
+pip install -r requirements.txt
+```
+
+Activate it (`. .venv/bin/activate`) in every terminal where you run the scripts, and before you start Claude Code there: the agents call `python3` from that shell. `.venv/` is git-ignored, and setup does not copy it into a `--target` project.
+
 If `pdftotext` is available (optional fallback for `extract_styleguide.sh`):
 
 - **Linux (Debian/Ubuntu):** `sudo apt install poppler-utils`
