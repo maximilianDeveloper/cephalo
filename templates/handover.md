@@ -71,7 +71,7 @@ Confirm understanding, then proceed.
 
 ## Changed files (Git diff summary)
 
-[Output of `git diff --stat HEAD`, edited for clarity]
+[Output of `git status --short` (it lists new, still untracked files) and `git diff --stat HEAD`, edited for clarity]
 
 ```
 03_Theory_chapters/chapter_3.md           | +145 lines
