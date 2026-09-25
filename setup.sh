@@ -941,9 +941,10 @@ venv/
 !**/data/raw/README.md
 !**/data/processed/.gitkeep
 
-# Claude Code runtime artifacts
-.claude/worktrees/
-.claude/settings.local.json
+# Claude Code runtime artifacts (in every folder: in a multi-project
+# setup, Claude Code is opened on a sub-project)
+**/.claude/worktrees/
+**/.claude/settings.local.json
 EOF
     echo -e "  ${GREEN}+ .gitignore${NC}"
 else
