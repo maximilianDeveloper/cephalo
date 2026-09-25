@@ -79,7 +79,7 @@ Example: `02_Literature/extracts/smith2020.md`
 The writer-agent uses citekeys in citations within chapter drafts:
 
 ```markdown
-Information asymmetry impedes access to capital providers (smith2020, p. 975).
+Information asymmetry impedes access to capital providers [@smith2020, p. 975].
 ```
 
 When exporting to the final document (DOCX or PDF), citekeys are resolved to the styleguide-compliant citation format via a citation processor (Pandoc, LaTeX with biblatex, etc.).

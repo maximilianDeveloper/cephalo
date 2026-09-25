@@ -173,7 +173,7 @@ No special requirements. Symlinks work out of the box.
 
 ### Encoding on Windows consoles
 
-The Python scripts print Unicode symbols (`⚠️`, `✅`). On German Windows installations with CP1252 consoles, this would raise `UnicodeEncodeError`. The scripts reconfigure stdout to UTF-8 at startup, which handles this — but if you see `UnicodeEncodeError` anyway, your Python is older than 3.9. Upgrade.
+The Python scripts print Unicode symbols (`⚠️`, `✅`). On German Windows installations with CP1252 consoles, this would raise `UnicodeEncodeError`. The scripts reconfigure stdout to UTF-8 at startup, which handles this. They need Python 3.9 or later; if you see `UnicodeEncodeError` anyway, set `PYTHONIOENCODING=utf-8` and run again.
 
 ## Reference
 
