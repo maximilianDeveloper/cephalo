@@ -203,31 +203,33 @@ function Create-Symlink($Link, $Target) {
         Write-Host "  . $Link (exists)" -ForegroundColor Gray
         return
     }
-    # PowerShell 5.1's New-Item resolves a RELATIVE -Target against the current
-    # location, not the link's parent directory, so a relative '..\foo' target
-    # is looked for one level above the project root and fails with
-    # ItemNotFoundException before any privilege check. Resolve the target to an
-    # absolute path anchored at the link's parent so New-Item sees a real path
-    # and the only remaining failure is the genuine elevation requirement.
+    # The link target stays relative ('..\00_Shared_Materials'), like the one
+    # setup.sh makes, so the project can be moved and a committed link does
+    # not record a local absolute path.
+    $RelativeTarget = $Target.Replace('\', [string][System.IO.Path]::DirectorySeparatorChar)
     $AbsoluteTarget = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine(
-        [System.IO.Path]::GetDirectoryName($LinkAbs),
-        $Target.Replace('\', [string][System.IO.Path]::DirectorySeparatorChar)))
+        [System.IO.Path]::GetDirectoryName($LinkAbs), $RelativeTarget))
+    # On Windows, try mklink first: it keeps the target relative and works with
+    # Developer Mode or an elevated shell. Windows PowerShell 5.1's New-Item
+    # demands elevation even in Developer Mode, and it resolves a relative
+    # -Target against the current location, so it could only make an absolute
+    # link. The redirection is cmd's, so no PowerShell error record is raised.
+    if ($env:OS -eq "Windows_NT") {
+        cmd /c mklink /D "$LinkAbs" "$Target" '>nul' '2>&1'
+        if ($LASTEXITCODE -eq 0 -and [System.IO.Directory]::Exists($LinkAbs)) {
+            Write-Host "  + $Link --> $Target" -ForegroundColor Green
+            return
+        }
+    }
+    # PowerShell 6+ keeps a relative -Target relative (resolved against the
+    # link's directory); 5.1 only gets here after mklink failed, and needs the
+    # absolute target so the error below is the real one (usually elevation).
+    if ($PSVersionTable.PSVersion.Major -ge 6) { $NewItemTarget = $RelativeTarget } else { $NewItemTarget = $AbsoluteTarget }
     try {
-        New-Item -ItemType SymbolicLink -Path $LinkAbs -Target $AbsoluteTarget -ErrorAction Stop | Out-Null
+        New-Item -ItemType SymbolicLink -Path $LinkAbs -Target $NewItemTarget -ErrorAction Stop | Out-Null
         Write-Host "  + $Link --> $Target" -ForegroundColor Green
     } catch {
         $NewItemError = $_.Exception.Message
-        # Windows PowerShell 5.1's New-Item demands elevation even in Developer
-        # Mode (it does not request unprivileged creation); mklink does, so try
-        # it before copying. The redirection is cmd's, so no PowerShell error
-        # record is raised. The link is relative, like the one setup.sh makes.
-        if ($env:OS -eq "Windows_NT") {
-            cmd /c mklink /D "$LinkAbs" "$Target" '>nul' '2>&1'
-            if ($LASTEXITCODE -eq 0 -and [System.IO.Directory]::Exists($LinkAbs)) {
-                Write-Host "  + $Link --> $Target" -ForegroundColor Green
-                return
-            }
-        }
         # Fallback: copy the directory contents instead of symlinking.
         # Surface the REAL exception rather than always blaming Administrator
         # rights (path-resolution, filesystem, and elevation errors all land here).
@@ -236,7 +238,8 @@ function Create-Symlink($Link, $Target) {
         if ([System.IO.Directory]::Exists($AbsoluteTarget)) {
             Copy-Item -LiteralPath $AbsoluteTarget -Destination $LinkAbs -Recurse -Force
             Write-Host "    -> Copied $Target into $Link as fallback." -ForegroundColor Yellow
-            Write-Host "    Note: when guidelines change, you must update each copy manually." -ForegroundColor Yellow
+            Write-Host "    Note: when guidelines change, you must update each copy manually, or enable" -ForegroundColor Yellow
+            Write-Host "    Developer Mode, delete the three shared\ copies and re-run setup." -ForegroundColor Yellow
         } else {
             Write-Host "    Could not create $Link nor copy from $Target. Please create manually." -ForegroundColor Red
         }
@@ -591,7 +594,20 @@ if ($Target -ne "") {
         Get-ChildItem -LiteralPath $SourceDir -Force | Where-Object {
             $ExcludedTopLevelNames -notcontains $_.Name -and $_.Extension -ne ".pyc" -and $_.Name -notlike "cephalo-setup.*"
         } | ForEach-Object {
-            Copy-Item -LiteralPath $_.FullName -Destination $Target -Recurse -Force -ErrorAction Stop
+            if ($_.Name -eq ".claude" -and $_.PSIsContainer) {
+                # Copy .claude item by item, like setup.sh's tar excludes:
+                # the template's Claude Code worktrees and local settings must
+                # not land in (or, in a non-empty target, overwrite) the project's.
+                $ClaudeTarget = [System.IO.Path]::Combine($Target, ".claude")
+                [void][System.IO.Directory]::CreateDirectory($ClaudeTarget)
+                Get-ChildItem -LiteralPath $_.FullName -Force | Where-Object {
+                    $_.Name -ne "worktrees" -and $_.Name -ne "settings.local.json"
+                } | ForEach-Object {
+                    Copy-Item -LiteralPath $_.FullName -Destination $ClaudeTarget -Recurse -Force -ErrorAction Stop
+                }
+            } else {
+                Copy-Item -LiteralPath $_.FullName -Destination $Target -Recurse -Force -ErrorAction Stop
+            }
         }
     } catch {
         Write-Host "Error during copy: $($_.Exception.Message)" -ForegroundColor Red
@@ -600,9 +616,8 @@ if ($Target -ne "") {
 
     # The top-level filter above only excludes matches at the copy root;
     # Copy-Item -Recurse still pulls in nested __pycache__/.venv/etc. that
-    # live inside copied subdirectories (e.g. .claude\worktrees,
-    # .claude\settings.local.json). Sweep those out of the target too, but
-    # only if the target was empty or new: in a non-empty target the user
+    # live inside copied subdirectories. Sweep those out of the target too,
+    # but only if the target was empty or new: in a non-empty target the user
     # confirmed, these names may be the user's own files (e.g. a venv).
     if ($TargetWasEmpty) {
         Get-ChildItem -LiteralPath $Target -Recurse -Force -Directory -ErrorAction SilentlyContinue |
@@ -610,14 +625,6 @@ if ($Target -ne "") {
             ForEach-Object { Remove-Item -LiteralPath $_.FullName -Recurse -Force -ErrorAction SilentlyContinue }
         Get-ChildItem -LiteralPath $Target -Recurse -Force -File -Filter "*.pyc" -ErrorAction SilentlyContinue |
             Remove-Item -Force -ErrorAction SilentlyContinue
-        $TargetClaudeWorktrees = Join-Path $Target ".claude\worktrees"
-        if (Test-Path -LiteralPath $TargetClaudeWorktrees) {
-            Remove-Item -LiteralPath $TargetClaudeWorktrees -Recurse -Force -ErrorAction SilentlyContinue
-        }
-        $TargetClaudeLocalSettings = Join-Path $Target ".claude\settings.local.json"
-        if (Test-Path -LiteralPath $TargetClaudeLocalSettings) {
-            Remove-Item -LiteralPath $TargetClaudeLocalSettings -Force -ErrorAction SilentlyContinue
-        }
     }
 
     # Sanity check after copy
@@ -910,22 +917,31 @@ if (-not ([System.IO.Directory]::Exists($GitDir) -or [System.IO.File]::Exists($G
     if (-not $gitAvailable) {
         Write-Host "  ! Git not available. Install from https://git-scm.com" -ForegroundColor Yellow
     } else {
+        # A native command does not throw on failure: check $LASTEXITCODE.
+        $gitInitOk = $false
         try {
             git -C $script:ProjectRoot init | Out-Null
+            $gitInitOk = ($LASTEXITCODE -eq 0)
+        } catch { }
+        if ($gitInitOk) {
             Write-Host "  + Git repository initialized" -ForegroundColor Green
-        } catch {
-            Write-Host "  ! Git init failed: $($_.Exception.Message)" -ForegroundColor Yellow
+        } else {
+            Write-Host "  ! git init failed. Re-run manually to see the error: git init" -ForegroundColor Red
         }
         
         $lfsAvailable = $null -ne (Get-Command git-lfs -ErrorAction SilentlyContinue)
-        if ($lfsAvailable) {
+        if ($gitInitOk -and $lfsAvailable) {
+            $lfsOk = $false
             try {
                 git -C $script:ProjectRoot lfs install | Out-Null
+                $lfsOk = ($LASTEXITCODE -eq 0)
+            } catch { }
+            if ($lfsOk) {
                 Write-Host "  + Git LFS enabled" -ForegroundColor Green
-            } catch {
+            } else {
                 Write-Host "  ! Git LFS present but 'git lfs install' failed. Large files will not use LFS." -ForegroundColor Yellow
             }
-        } else {
+        } elseif ($gitInitOk) {
             Write-Host "  . Git LFS not available - skipping. Install from https://git-lfs.com if you expect large files." -ForegroundColor Gray
         }
     }
