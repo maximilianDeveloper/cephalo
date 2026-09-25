@@ -576,6 +576,9 @@ List any open questions for me to resolve before we proceed.</code></pre>
   function buildCmd(){
     var w=state.work,s=state.struct,c=state.scaf,t=state.target.trim();
     if(state.os==="windows"){
+      // Explorer's "Copy as path" adds double quotes; a Windows path never
+      // contains them (the .cmd launcher drops them too).
+      t=t.replace(/"/g,"").trim();
       var parts=['.\\setup.ps1',
         f('-WorkType')+' '+str('"'+w+'"'),
         f('-Structure')+' '+str('"'+s+'"'),

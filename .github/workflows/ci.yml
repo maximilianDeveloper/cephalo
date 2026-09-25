@@ -268,7 +268,7 @@ jobs:
           const sh = ["~", "~/Documents/Thesis", "~/x y", "~/it's", "~/$(touch PWNED)", "~-/x", "~+", "~1/x", "a;touch PWNED",
                       "$(touch PWNED)", "`touch PWNED`", "$HOME", "'", "\"", "a\\", "Müller [final]", "-rf", "x\u2019y"];
           const ps = ["'", "''", "\"", "$(New-Item -ItemType File PWNED)", "`n", "$env:HOME", "a;b", "C:\\Users\\x\\",
-                      "M\u00fcller\\Arbeit", "-NonInteractive:$false", "x'\u2019; New-Item -ItemType File PWNED; #"]
+                      "M\u00fcller\\Arbeit", "-NonInteractive:$false", "\"C:\\Thesis\\x y\"", "x'\u2019; New-Item -ItemType File PWNED; #"]
             .concat(Q.map(q => "x" + q + "; New-Item -ItemType File PWNED; #"), Q.map(q => q + "+(New-Item PWNED)+" + q));
           let bad = 0;
           const check = (os, x, got, want, cmd) => {
@@ -287,7 +287,7 @@ jobs:
             const cmd = text(F.buildCmd()), out = path.join(W, "ps", "target.txt");
             fs.rmSync(out, { force: true });
             cp.spawnSync("pwsh", ["-NoProfile", "-NonInteractive", "-Command", cmd], { cwd: path.join(W, "ps") });
-            check("pwsh", x, fs.existsSync(out) ? fs.readFileSync(out, "utf8") : null, x.trim() + "|True", cmd);
+            check("pwsh", x, fs.existsSync(out) ? fs.readFileSync(out, "utf8") : null, x.replace(/"/g, "").trim() + "|True", cmd);
           }
           const canaries = cp.execSync(`find "${W}" -name "PWNED*"`).toString().trim();
           if (canaries) { bad++; console.log("injected command ran: " + canaries); }
