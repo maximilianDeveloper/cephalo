@@ -84,16 +84,16 @@ Verify the following categories. Concrete values (font size, page-range notation
 
 ### 3. Automated mechanical checks
 
-These run deterministically:
+These run deterministically (on Windows, use `py` instead of `python3`):
 
 **Bibliography minus-test:**
 ```bash
-python scripts/bibliography_check.py workspace/output/document.docx
+python3 scripts/bibliography_check.py workspace/output/document.docx
 ```
 
 **Abbreviation index derivation:**
 ```bash
-python scripts/abbreviations_extract.py workspace/output/document.docx
+python3 scripts/abbreviations_extract.py workspace/output/document.docx
 ```
 
 **Automatic hyphenation** (only if `styleguide.md` sets `document.hyphenation` to automatic; before final export):

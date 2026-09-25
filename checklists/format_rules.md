@@ -99,11 +99,12 @@ For every category below: **read concrete values from `styleguide.md`**, not fro
 These checks run via build scripts, not manually (the commands show the flat path; long-form: the latest DOCX in `08_Formal_Review/submissions/`, proposal: `04_Submission/`):
 
 ```bash
+# (Windows: use `py` instead of `python3`)
 # Bibliography minus-test
-python scripts/bibliography_check.py workspace/output/document.docx
+python3 scripts/bibliography_check.py workspace/output/document.docx
 
 # List-of-abbreviations derivation
-python scripts/abbreviations_extract.py workspace/output/document.docx
+python3 scripts/abbreviations_extract.py workspace/output/document.docx
 
 # Pronoun check (use forbidden pronouns from styleguide)
 pandoc workspace/output/document.docx -o /dev/stdout --to plain --wrap=none | \
