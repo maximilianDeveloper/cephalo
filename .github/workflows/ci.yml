@@ -298,6 +298,55 @@ jobs:
           # leaving it at 2 would fail this step even though the test succeeded.
           $LASTEXITCODE = 0
 
+      - name: setup.ps1 keeps its UTF-8 BOM (Windows PowerShell 5.1 needs it)
+        shell: powershell
+        run: |
+          $b = [System.IO.File]::ReadAllBytes((Join-Path $PWD 'setup.ps1'))
+          if ($b[0] -ne 0xEF -or $b[1] -ne 0xBB -or $b[2] -ne 0xBF) { Write-Host "setup.ps1 lost its UTF-8 BOM"; exit 1 }
+
+      - name: Setup smoke (flat, multi-project), re-run and generated files
+        shell: powershell
+        run: |
+          function Invoke-Setup([string]$Dir, [string[]]$SetupArgs) {
+            Push-Location $Dir
+            & powershell -NoProfile -ExecutionPolicy Bypass -File ./setup.ps1 @SetupArgs
+            $code = $LASTEXITCODE
+            Pop-Location
+            if ($code -ne 0) { Write-Host "setup.ps1 $SetupArgs in $Dir exited with $code"; exit 1 }
+          }
+          $flat = Join-Path $env:TEMP 'ci_ps_flat'
+          $multi = Join-Path $env:TEMP 'ci_ps_multi'
+          Invoke-Setup $PWD @('-WorkType', 'Seminar paper', '-Structure', 'Flat', '-Scaffolding', 'full', '-Target', $flat, '-NonInteractive')
+          if (-not (Test-Path (Join-Path $flat 'workspace/sources/_guidelines'))) { Write-Host "flat: workspace/sources/_guidelines missing"; exit 1 }
+          Invoke-Setup $PWD @('-WorkType', 'Master thesis', '-Structure', 'Multi-project', '-Scaffolding', 'minimal', '-Target', $multi, '-NonInteractive')
+          foreach ($sub in '01_Proposal', '02_Main_Work', '03_Defense') {
+            if (-not (Test-Path (Join-Path $multi "$sub/shared/guidelines"))) { Write-Host "multi: $sub/shared missing"; exit 1 }
+          }
+          # The template ships a .gitattributes; setup appends the six LFS rules once.
+          $lfs = @(Select-String -Path (Join-Path $flat '.gitattributes') -Pattern 'filter=lfs').Count
+          if ($lfs -ne 6) { Write-Host "flat: expected 6 LFS rules in .gitattributes, found $lfs"; exit 1 }
+          # A re-run in place keeps edited state files and does not duplicate the LFS rules.
+          $status = Join-Path $multi '02_Main_Work/00_Status.md'
+          Add-Content -Path $status -Value 'ci-marker'
+          Invoke-Setup $multi @('-WorkType', 'Master thesis', '-Structure', 'Multi-project', '-Scaffolding', 'minimal', '-NonInteractive')
+          if (-not (Select-String -Path $status -Pattern 'ci-marker' -Quiet)) { Write-Host "re-run overwrote 02_Main_Work/00_Status.md"; exit 1 }
+          $lfs = @(Select-String -Path (Join-Path $multi '.gitattributes') -Pattern 'filter=lfs').Count
+          if ($lfs -ne 6) { Write-Host "re-run: expected 6 LFS rules in .gitattributes, found $lfs"; exit 1 }
+
+      - name: Closed stdin without -NonInteractive exits 2 instead of prompting forever
+        shell: powershell
+        run: |
+          $empty = Join-Path $env:TEMP 'ci_empty_stdin.txt'
+          $out = Join-Path $env:TEMP 'ci_stdin_out.txt'
+          [System.IO.File]::WriteAllText($empty, '')
+          $p = Start-Process -FilePath powershell -NoNewWindow -PassThru `
+            -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', './setup.ps1', '-WorkType', '"Bachelor thesis"', '-Structure', 'Flat' `
+            -RedirectStandardInput $empty -RedirectStandardOutput $out
+          $null = $p.Handle   # keeps ExitCode available after the process ends
+          if (-not $p.WaitForExit(120000)) { $p.Kill(); Write-Host "setup.ps1 kept prompting on closed stdin"; exit 1 }
+          if ($p.ExitCode -ne 2) { Get-Content $out -TotalCount 40; Write-Host "expected exit 2, got $($p.ExitCode)"; exit 1 }
+          $LASTEXITCODE = 0
+
       - name: Python syntax (Windows)
         shell: powershell
         run: python -m py_compile scripts/abbreviations_extract.py scripts/bibliography_check.py scripts/cross_session_audit.py
