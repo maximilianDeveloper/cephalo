@@ -537,7 +537,7 @@ if ($Target -ne "") {
     if ($TargetParent -and -not (Test-Path -LiteralPath $TargetParent)) {
         Write-Host "Creating parent directory: $TargetParent" -ForegroundColor Gray
         try {
-            New-Item -ItemType Directory -Path $TargetParent -Force | Out-Null
+            New-Item -ItemType Directory -Path $TargetParent -Force -ErrorAction Stop | Out-Null
         } catch {
             Write-Host "Error: cannot create parent directory '$TargetParent'." -ForegroundColor Red
             exit 2
@@ -1013,7 +1013,9 @@ if ($script:SourceDirBeforeMove -and (Test-Path -LiteralPath $script:SourceDirBe
             if ((Test-Path -LiteralPath (Join-Path $script:SourceDirBeforeMove "setup.ps1")) -and `
                 (Test-Path -LiteralPath (Join-Path $script:SourceDirBeforeMove ".claude"))) {
                 try {
-                    Remove-Item -LiteralPath $script:SourceDirBeforeMove -Recurse -Force
+                    # -ErrorAction Stop: without it a failed (partial) deletion only
+                    # printed errors and still reported the folder as deleted.
+                    Remove-Item -LiteralPath $script:SourceDirBeforeMove -Recurse -Force -ErrorAction Stop
                     Write-Host "+ Original folder deleted." -ForegroundColor Green
                 } catch {
                     Write-Host "! Could not delete original folder: $($_.Exception.Message)" -ForegroundColor Yellow
