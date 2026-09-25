@@ -456,6 +456,9 @@ jobs:
           g() { git -c user.name=ci -c user.email=ci@example.com "$@"; }
           g init -q "$W/repo" && g -C "$W/repo" commit -q --allow-empty -m init
           expect 0 python scripts/cross_session_audit.py --repo-root "$W/repo"
+          # its own --report-file is no finding on the next run (new folder, space in the name)
+          for i in 1 2; do expect 0 python scripts/cross_session_audit.py --repo-root "$W/repo" --report-file "$W/repo/audit/my report.md"; done
+          rm -rf "$W/repo/audit"
           g -C "$W/repo" worktree add -q -b side "$W/side"
           echo "# note" > "$W/side/_note.md"
           expect 1 python scripts/cross_session_audit.py --repo-root "$W/side"
