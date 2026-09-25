@@ -29,6 +29,8 @@ The output always goes to `styleguide.md` at the project root (or for multi-proj
 
 Templates: `templates/styleguide.md` provides the expected structure.
 
+**Multi-project sub-project** (Claude Code opened on `01_Proposal/`, `02_Main_Work/` or `03_Defense/`): the styleguide is `shared/styleguide.md` and the guidelines are in `shared/guidelines/` (`shared/` points to `../00_Shared_Materials/`). The framework folders stay at the multi-project root, one level up: `../checklists/`, `../scripts/`, `../templates/`, `../workflows/`.
+
 ## Procedure
 
 ### 1. Inspect guideline documents

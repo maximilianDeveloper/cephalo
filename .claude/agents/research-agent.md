@@ -29,6 +29,8 @@ The name is slightly misleading: you do not browse the internet or find new sour
 - Guidelines: via `shared/guidelines/` symlink
 - Per-sub-project sources and extracts follow the long-form pattern
 
+**Multi-project sub-project** (Claude Code opened on `01_Proposal/`, `02_Main_Work/` or `03_Defense/`): the styleguide is `shared/styleguide.md` and the guidelines are in `shared/guidelines/` (`shared/` points to `../00_Shared_Materials/`). The framework folders stay at the multi-project root, one level up: `../checklists/`, `../scripts/`, `../templates/`, `../workflows/`.
+
 ## Per-source workflow
 
 1. **Identify and load the source.**
