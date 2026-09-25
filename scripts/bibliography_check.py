@@ -316,8 +316,8 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
                 continue
             tokens = name.split()
             surname = next((t for t in reversed(tokens) if t[:1].isupper()), tokens[-1])
-            # English possessive: "Smith's (2020) study" -> Smith
-            surname = re.sub(r"['’]s$", "", surname)
+            # Possessive: "Smith's (2020) study", "Jones' (2020) model" -> Smith, Jones
+            surname = re.sub(r"['’]s?$", "", surname)
             # Safety net: skip known non-author capitalized words
             # (e.g., "Die EU (2020)", "Das Kapitel (2020)")
             if surname in stop:

@@ -306,8 +306,9 @@ jobs:
           d.add_paragraph("Schmidt 2020, S. 15 führt aus. Müller (2021) stimmt zu. Die WHO (2019) auch. "
                           "Im Jahr 2020 stieg es. Die EU (2020) beschloss es. Das Kapitel (2020) zeigt es.")
           d.add_paragraph("U.S.A. and B2B, CO2, 5G, BENELUX, GmbH; e.g. z. B. 2020.")
+          d.add_paragraph("Fischers' (2020) Modell.")  # possessive of a name ending in s
           d.add_heading("Literaturverzeichnis", 1)
-          for entry in ("Schmidt, K. (2020). A.", "Müller, J. (2021). B.", "WHO. (2019). C."):
+          for entry in ("Schmidt, K. (2020). A.", "Müller, J. (2021). B.", "WHO. (2019). C.", "Fischers, P. (2020). E."):
               d.add_paragraph(entry)
           d.save(os.path.join(w, "ok.docx"))
           d.add_paragraph("Uncited, U. (2019). D.")
