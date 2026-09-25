@@ -362,7 +362,8 @@ jobs:
           };
           const state = { work: "Bachelor thesis", struct: "Long-form", scaf: "full" };
           const F = new Function("state", "document", grab("function esc(s)", "// ----- command -----") +
-            grab("function shQuote(x)", "  // ----- render -----") + "\nreturn { buildCmd: buildCmd };")(state, null);
+            grab("function shQuote(x)", "  // ----- render -----") + grab("function launcher()", "  var dlBtn=") +
+            "\nreturn { buildCmd: buildCmd, launcher: launcher };")(state, null);
           const text = h => h.replace(/<[^>]*>/g, "").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
           const Q = ["\u2018", "\u2019", "\u201A", "\u201B"];
           const sh = ["~", "~/Documents/Thesis", "~/x y", "~/it's", "~/$(touch PWNED)", "~-/x", "~+", "~1/x", "a;touch PWNED",
@@ -389,9 +390,37 @@ jobs:
             cp.spawnSync("pwsh", ["-NoProfile", "-NonInteractive", "-Command", cmd], { cwd: path.join(W, "ps") });
             check("pwsh", x, fs.existsSync(out) ? fs.readFileSync(out, "utf8") : null, x.replace(/"/g, "").trim() + "|True", cmd);
           }
+          // The .sh/.command launcher: the same targets arrive unchanged, a failing
+          // setup is reported with its exit code, and a misplaced launcher stops.
+          fs.mkdirSync(path.join(W, "fail")); fs.mkdirSync(path.join(W, "away"));
+          fs.writeFileSync(path.join(W, "fail", "setup.sh"), "#!/bin/bash\nexit 3\n");
+          const runLauncher = (dir, x) => {
+            Object.assign(state, { os: "linux", target: x });
+            const L = F.launcher(), file = path.join(W, dir, L.name);
+            fs.writeFileSync(file, L.text.join("\n") + "\n");
+            return cp.spawnSync("bash", [file], { cwd: W, input: "", env: { ...process.env, HOME }, encoding: "utf8" });
+          };
+          for (const x of sh) {
+            const out = path.join(W, "sh", "target.txt");
+            fs.rmSync(out, { force: true });
+            const r = runLauncher("sh", x);
+            const want = x === "~" || x.startsWith("~/") ? HOME + x.slice(1) : x;
+            check("launcher", x, fs.existsSync(out) ? fs.readFileSync(out, "utf8") : null, want, "status " + r.status);
+          }
+          const failed = runLauncher("fail", "t");
+          check("launcher", "failing setup", failed.status + " " + /Setup failed \(exit 3\)/.test(failed.stdout), "3 true", failed.stdout);
+          const away = runLauncher("away", "t");
+          check("launcher", "no setup.sh", away.status + " " + /Could not find setup\.sh/.test(away.stdout), "1 true", away.stdout);
+          // The .cmd launcher (cmd.exe is not available here): CRLF, UTF-8 code page,
+          // and the -Target argument as cmd.exe and powershell -File will parse it.
+          for (const [x, arg] of [["D:\\Thesis\\", '-Target "D:\\Thesis\\\\"'], ["\"D:\\x y\"", '-Target "D:\\x y"'], ["50% off", '-Target "50%% off"']]) {
+            Object.assign(state, { os: "windows", target: x });
+            const L = F.launcher(), run = L.text.find(l => l.startsWith("powershell "));
+            check("cmd", x, [L.crlf, L.text.includes("chcp 65001 >nul"), run.includes(arg + " -NonInteractive")].join(), "true,true,true", run);
+          }
           const canaries = cp.execSync(`find "${W}" -name "PWNED*"`).toString().trim();
           if (canaries) { bad++; console.log("injected command ran: " + canaries); }
-          console.log(`${sh.length} bash and ${ps.length} PowerShell targets checked, ${bad} failures`);
+          console.log(`${sh.length} bash and ${ps.length} PowerShell targets and the launchers checked, ${bad} failures`);
           process.exit(bad ? 1 : 0);
           EOF
 
