@@ -167,10 +167,13 @@ def split_text_and_bibliography(
     Returns: (body_text, bibliography_paragraphs)
     """
     texts = [text for text, _level in paragraphs]
+    # Normalized like the paragraphs, so an entry added as the heading is
+    # spelled ("Quellenangaben", "A. Literaturverzeichnis") matches too.
+    headers = {_header_key(h) for h in BIBLIOGRAPHY_HEADERS}
     bib_start_idx = None
     best_level = None
     for i, p in enumerate(texts):
-        if _header_key(p) in BIBLIOGRAPHY_HEADERS:
+        if _header_key(p) in headers:
             # A header that is not styled as a heading counts as level 1.
             level = paragraphs[i][1] if paragraphs[i][1] is not None else 1
             if best_level is None or level < best_level:
@@ -185,7 +188,7 @@ def split_text_and_bibliography(
     for j in range(bib_start_idx + 1, len(paragraphs)):
         level = paragraphs[j][1]
         if (level is not None and level <= end_level
-                and _header_key(texts[j]) not in BIBLIOGRAPHY_HEADERS):
+                and _header_key(texts[j]) not in headers):
             bib_end_idx = j
             break
 

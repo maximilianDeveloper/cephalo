@@ -359,6 +359,8 @@ jobs:
           test "$(wc -l < "$W/out.txt")" -eq 1
           # the bibliography ends at the next top-level heading (appendix, declaration)
           expect 0 python scripts/bibliography_check.py "$W/appendix.docx"
+          # a heading added to BIBLIOGRAPHY_HEADERS as it is spelled in the document is found
+          python -c "import sys; sys.path.insert(0, 'scripts'); import bibliography_check as b; b.BIBLIOGRAPHY_HEADERS.append('Works Consulted'); assert b.split_text_and_bibliography([('(Smith, 2020).', None), ('Works Consulted', 1), ('Smith, J. (2020). X.', None)])[1]"
           # abbreviations_extract.py: dotted, digit and mixed-case forms; clean error otherwise
           expect 0 python scripts/abbreviations_extract.py "$W/ok.docx"
           for a in B2B CO2 5G BENELUX GmbH; do grep -qx "  $a" "$W/out.txt"; done
