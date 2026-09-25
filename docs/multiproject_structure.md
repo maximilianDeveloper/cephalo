@@ -267,6 +267,8 @@ done
 
 Re-run this after every change to `00_Shared_Materials/`, especially after styleguide updates.
 
+In the copy state, change the guidelines and the styleguide (including answers to `❓` items) only in `00_Shared_Materials/`, never in a sub-project's `shared/` copy: both the re-sync above and deleting the copies to switch to links (below) discard anything that exists only in a copy. If a styleguide was written into `<sub-project>/shared/styleguide.md`, move it to `00_Shared_Materials/` first.
+
 **Recommended fix:** enable Developer Mode once. The setting persists. On Git Bash, additionally set `MSYS=winsymlinks:nativestrict` in your shell profile so `ln -s` produces real symlinks on the first try. Existing `shared/` copies stay copies: re-running setup skips them as existing, so delete the three copies first (`01_Proposal/shared`, `02_Main_Work/shared`, `03_Defense/shared`), then re-run setup to create the links.
 
 ### Agent assignment per sub-project
