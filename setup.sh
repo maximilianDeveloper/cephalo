@@ -427,6 +427,12 @@ if [ -n "$STRUCTURE" ]; then
     fi
 fi
 
+if [ -n "$SCAFFOLDING" ] && [ "$SCAFFOLDING" != "full" ] && [ "$SCAFFOLDING" != "minimal" ]; then
+    echo "Error: invalid SCAFFOLDING '$SCAFFOLDING'." >&2
+    echo "Valid options: full, minimal" >&2
+    exit 2
+fi
+
 # Seminar papers and presentations have flat workflows only: with Long-form
 # or Multi-project, setup would suggest a thesis workflow for them. The
 # interactive menu and the setup assistant pick Flat for them anyway.
@@ -444,12 +450,6 @@ check_flat_only() {
     fi
 }
 check_flat_only
-
-if [ -n "$SCAFFOLDING" ] && [ "$SCAFFOLDING" != "full" ] && [ "$SCAFFOLDING" != "minimal" ]; then
-    echo "Error: invalid SCAFFOLDING '$SCAFFOLDING'." >&2
-    echo "Valid options: full, minimal" >&2
-    exit 2
-fi
 
 # All three positional arguments supplied -> documented non-interactive
 # mode (parity with setup.ps1 -NonInteractive): skip the location and
