@@ -56,7 +56,7 @@ Paraphrase (structural):
 
 - "seven of ten" → "70%"
 - "approximately two-thirds" → "approximately 67%"
-- "in the past ten years" → "between 2015 and 2025"
+- "in the past ten years" (source published 2025) → "between 2015 and 2025" (count from the source's publication year, not from today)
 
 No information loss, reliably reduces plagiarism software hits.
 
