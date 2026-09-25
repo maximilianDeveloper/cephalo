@@ -464,6 +464,12 @@ jobs:
           expect 1 python scripts/cross_session_audit.py --repo-root "$W/side"
           grep -qF "**Main worktree:** \`$W/repo\`" "$W/out.txt"
           expect 2 python scripts/cross_session_audit.py --repo-root "$W/good"
+          # a dangling ref in a phase README.md is found (only top-level framework docs are skipped)
+          g init -q "$W/refs" && mkdir -p "$W/refs/03_Theory"
+          printf 'see `03_Theory/missing.md`\n' > "$W/refs/03_Theory/README.md"
+          g -C "$W/refs" add -A && g -C "$W/refs" commit -qm refs
+          expect 1 python scripts/cross_session_audit.py --repo-root "$W/refs"
+          grep -qF '`03_Theory/missing.md`' "$W/out.txt"
 
   windows:
     name: PowerShell 5.1 parse & setup smoke (Windows)

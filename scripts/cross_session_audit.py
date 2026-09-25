@@ -47,7 +47,9 @@ UNDERSCORE_GLOB = "**/_*.md"
 EXCLUDE_DIRS = {".git", ".claude", "node_modules", "__pycache__", "_Backups"}
 
 # Framework documentation files that are not project-specific
-# (refs inside them are examples from the cephalo template, not real project refs)
+# (refs inside them are examples from the cephalo template, not real project refs).
+# They exist at the repository top level only: a phase README.md or a
+# project's own docs/ folder further down is project content and is scanned.
 FRAMEWORK_DOC_FILES = {
     "README.md",
     "CHANGELOG.md",
@@ -300,10 +302,10 @@ def find_dangling_refs(
             continue
         if skip is not None and md_path.resolve() == skip:
             continue
-        # Skip framework documentation files
-        if relpath.name in FRAMEWORK_DOC_FILES:
+        # Skip framework documentation files (top level only, see above)
+        if len(relpath.parts) == 1 and relpath.name in FRAMEWORK_DOC_FILES:
             continue
-        if any(part in FRAMEWORK_DOC_DIRS for part in relpath.parts):
+        if relpath.parts[0] in FRAMEWORK_DOC_DIRS:
             continue
         try:
             text = md_path.read_text(encoding="utf-8", errors="replace")
