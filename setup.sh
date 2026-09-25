@@ -670,7 +670,8 @@ if [ -n "$TARGET_DIR" ]; then
     # We copy visible and dot-files, but exclude .git (user will init fresh).
     # Virtual environments (.venv/, venv/) are skipped at any depth, as in
     # setup.ps1 and .gitignore: their scripts point back into the template.
-    # The wizard launcher (cephalo-setup.* at the template root) is left out:
+    # The wizard launcher (cephalo-setup*, also a copy the browser renamed
+    # to e.g. "cephalo-setup (1).sh", at the template root) is left out:
     # it embeds the user's absolute path and would end up in the commit.
     # So is .github/: cephalo's own CI and issue templates would otherwise
     # run and show up in every thesis repository pushed to GitHub.
@@ -686,7 +687,7 @@ if [ -n "$TARGET_DIR" ]; then
         tar --exclude='./.git' --exclude='./.git/*' \
             --exclude='./.claude/worktrees' --exclude='./.claude/worktrees/*' \
             --exclude='./.claude/settings.local.json' \
-            --exclude='./cephalo-setup.*' \
+            --exclude='./cephalo-setup*' \
             --exclude='./.github' --exclude='./.github/*' \
             --exclude='.venv' --exclude='*/.venv' --exclude='*/.venv/*' \
             --exclude='venv' --exclude='*/venv' --exclude='*/venv/*' \

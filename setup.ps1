@@ -584,7 +584,7 @@ if ($Target -ne "") {
     # that the repo's own .gitignore protects (__pycache__, *.pyc, venvs, and
     # Claude Code's own worktrees/local settings). These must not leak into
     # a freshly scaffolded project. The setup-wizard launcher
-    # (cephalo-setup.*) is skipped too: it embeds the absolute path it was
+    # (cephalo-setup*, also a renamed re-download) is skipped too: it embeds the absolute path it was
     # generated for and would otherwise be committed with the project.
     Write-Verbose "Copying template from '$SourceDir' to target '$Target'"
     Write-Host ""
@@ -592,7 +592,7 @@ if ($Target -ne "") {
     $ExcludedTopLevelNames = @(".git", ".github", "__pycache__", ".venv", "venv")
     try {
         Get-ChildItem -LiteralPath $SourceDir -Force | Where-Object {
-            $ExcludedTopLevelNames -notcontains $_.Name -and $_.Extension -ne ".pyc" -and $_.Name -notlike "cephalo-setup.*"
+            $ExcludedTopLevelNames -notcontains $_.Name -and $_.Extension -ne ".pyc" -and $_.Name -notlike "cephalo-setup*"
         } | ForEach-Object {
             if ($_.Name -eq ".claude" -and $_.PSIsContainer) {
                 # Copy .claude item by item, like setup.sh's tar excludes:

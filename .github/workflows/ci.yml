@@ -127,12 +127,12 @@ jobs:
           test ! -e /tmp/ci_flat/.github
           # Leftovers in the template folder that must not reach a --target project.
           mkdir -p venv scripts/.venv scripts/__pycache__ .claude/worktrees/x
-          touch cephalo-setup.sh .claude/settings.local.json scripts/__pycache__/x.pyc
+          touch cephalo-setup.sh "cephalo-setup (1).sh" .claude/settings.local.json scripts/__pycache__/x.pyc
           bash setup.sh "Seminar paper" "Flat" full --target /tmp/ci_excl </dev/null >/dev/null
-          for p in .github venv scripts/.venv scripts/__pycache__ .claude/worktrees .claude/settings.local.json cephalo-setup.sh; do
+          for p in .github venv scripts/.venv scripts/__pycache__ .claude/worktrees .claude/settings.local.json cephalo-setup.sh "cephalo-setup (1).sh"; do
             if [ -e "/tmp/ci_excl/$p" ]; then echo "copied into --target: $p"; exit 1; fi
           done
-          rm -rf venv scripts/.venv scripts/__pycache__ .claude/worktrees .claude/settings.local.json cephalo-setup.sh
+          rm -rf venv scripts/.venv scripts/__pycache__ .claude/worktrees .claude/settings.local.json cephalo-setup.sh "cephalo-setup (1).sh"
           # A non-empty target without prompts is refused and left untouched (CONTRIBUTING target test 3).
           mkdir /tmp/ci_nonempty && touch /tmp/ci_nonempty/existing.txt
           set +e; bash setup.sh "Seminar paper" "Flat" full --target /tmp/ci_nonempty </dev/null >/dev/null 2>&1; code=$?; set -e
