@@ -304,6 +304,7 @@ Positional arguments (all optional; missing values trigger interactive prompts):
 
   STRUCTURE    One of:
                  "Flat", "Long-form", "Multi-project"
+               ("Seminar paper" and "Presentation": "Flat" only)
 
   SCAFFOLDING  "full" or "minimal"
 
@@ -424,6 +425,15 @@ if [ -n "$STRUCTURE" ]; then
         echo "See: $0 --help" >&2
         exit 2
     fi
+fi
+
+# Seminar papers and presentations have flat workflows only: with Long-form
+# or Multi-project, setup would suggest a thesis workflow for them. The
+# interactive menu and the setup assistant pick Flat for them anyway.
+if [[ "$WORK_TYPE" =~ ^(Seminar\ paper|Presentation)$ ]] && [ -n "$STRUCTURE" ] && [ "$STRUCTURE" != "Flat" ]; then
+    echo "Error: '$WORK_TYPE' uses the Flat structure; there is no $STRUCTURE workflow for it." >&2
+    echo "Use: $0 \"$WORK_TYPE\" Flat ${SCAFFOLDING:-full}" >&2
+    exit 2
 fi
 
 if [ -n "$SCAFFOLDING" ] && [ "$SCAFFOLDING" != "full" ] && [ "$SCAFFOLDING" != "minimal" ]; then

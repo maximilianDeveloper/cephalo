@@ -288,6 +288,16 @@ function Resolve-CephaloConfiguration {
         exit 2
     }
 
+    # Seminar papers and presentations have flat workflows only: with
+    # Long-form or Multi-project, setup would suggest a thesis workflow for
+    # them. The interactive menu and the setup assistant pick Flat anyway.
+    if ($script:WorkType -in @("Seminar paper", "Presentation") -and $script:Structure -ne "Flat") {
+        Write-Host ""
+        Write-Host "Error: '$($script:WorkType)' uses the Flat structure; there is no $($script:Structure) workflow for it." -ForegroundColor Red
+        Write-Host "  Use: -Structure Flat" -ForegroundColor Red
+        exit 2
+    }
+
     # Scaffolding: accept "Minimal...", "Standard...", and the CLI shorthand "full".
     if ($script:Scaffolding -match "^Minimal") {
         $script:Scaffolding = "Minimal"

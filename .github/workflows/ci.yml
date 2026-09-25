@@ -139,6 +139,8 @@ jobs:
           }
           expect_2 "Bachelorarbeit" "Long-form" full --target /tmp/ci_typo
           expect_2 "Bachelor thesis" "Long-form" fulll --target /tmp/ci_typo
+          expect_2 "Seminar paper" "Long-form" full --target /tmp/ci_typo
+          expect_2 "Presentation" "Multi-project" full --target /tmp/ci_typo
           expect_2 "Bachelor thesis" "Long-form" full --taget /tmp/ci_typo
           expect_2 "Bachelor thesis" "Long-form" full /tmp/ci_typo
           expect_2 "Bachelor thesis" "Long-form" full --target=
