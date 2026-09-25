@@ -23,6 +23,9 @@
 #     for portable XML patching and re-zipping)
 
 set -euo pipefail
+# An exported CDPATH makes cd print the directory, which would corrupt
+# DOC_ABS below.
+unset CDPATH
 
 case "${1:-}" in
     -h|--help)
