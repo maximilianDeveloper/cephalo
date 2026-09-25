@@ -146,7 +146,7 @@ For multi-project setups, open the active sub-project (`01_Proposal/`, `02_Main_
 If you already have a draft (in Word, Markdown, etc.):
 
 1. Run setup as above
-2. Place existing chapters in the appropriate phase directories (long-form) or `workspace/output/chapters/` (flat)
+2. Place existing chapters in the appropriate phase directories (long-form) or `workspace/output/chapters/` (flat), as Markdown or plain text: the agents cannot open `.docx` files (in Word: Save As -> Plain Text, or `pandoc chapter.docx -o chapter.md`)
 3. Create an initial `00_Status.md` (long-form) or `workspace/state.md` (flat) summarizing where you stand
 4. Run the style-resolver
 5. Start a chat asking the source-verifier to verify your existing chapters

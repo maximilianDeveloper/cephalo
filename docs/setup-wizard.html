@@ -464,7 +464,7 @@ List any open questions for me to resolve before we proceed.</code></pre>
 <hr>
 <h2>Migration from existing work</h2>
 <p>If you already have a draft (in Word, Markdown, etc.):</p>
-<ol><li>Run setup as above</li><li>Place existing chapters in the appropriate phase directories (long-form) or <code>workspace/output/chapters/</code> (flat)</li><li>Create an initial <code>00_Status.md</code> (long-form) or <code>workspace/state.md</code> (flat) summarizing where you stand</li><li>Run the style-resolver</li><li>Start a chat asking the source-verifier to verify your existing chapters</li></ol>
+<ol><li>Run setup as above</li><li>Place existing chapters in the appropriate phase directories (long-form) or <code>workspace/output/chapters/</code> (flat), as Markdown or plain text: the agents cannot open <code>.docx</code> files (in Word: Save As -&gt; Plain Text, or <code>pandoc chapter.docx -o chapter.md</code>)</li><li>Create an initial <code>00_Status.md</code> (long-form) or <code>workspace/state.md</code> (flat) summarizing where you stand</li><li>Run the style-resolver</li><li>Start a chat asking the source-verifier to verify your existing chapters</li></ol>
 <p>The agents work with what&#x27;s already there. You don&#x27;t need to rewrite anything that already exists.</p>
 <hr>
 <h2>Troubleshooting</h2>
