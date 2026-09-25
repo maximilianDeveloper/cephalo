@@ -122,6 +122,29 @@ jobs:
           test -d /tmp/ci_multi/00_Shared_Materials/guidelines
           for sub in 01_Proposal 02_Main_Work 03_Defense; do test -L "/tmp/ci_multi/$sub/shared"; done
 
+      - name: --target copies leave out local artifacts; non-empty and in-place targets
+        run: |
+          test ! -e /tmp/ci_flat/.github
+          # Leftovers in the template folder that must not reach a --target project.
+          mkdir -p venv scripts/.venv scripts/__pycache__ .claude/worktrees/x
+          touch cephalo-setup.sh .claude/settings.local.json scripts/__pycache__/x.pyc
+          bash setup.sh "Seminar paper" "Flat" full --target /tmp/ci_excl </dev/null >/dev/null
+          for p in .github venv scripts/.venv scripts/__pycache__ .claude/worktrees .claude/settings.local.json cephalo-setup.sh; do
+            if [ -e "/tmp/ci_excl/$p" ]; then echo "copied into --target: $p"; exit 1; fi
+          done
+          rm -rf venv scripts/.venv scripts/__pycache__ .claude/worktrees .claude/settings.local.json cephalo-setup.sh
+          # A non-empty target without prompts is refused and left untouched (CONTRIBUTING target test 3).
+          mkdir /tmp/ci_nonempty && touch /tmp/ci_nonempty/existing.txt
+          set +e; bash setup.sh "Seminar paper" "Flat" full --target /tmp/ci_nonempty </dev/null >/dev/null 2>&1; code=$?; set -e
+          test "$code" -eq 2
+          test "$(ls -A /tmp/ci_nonempty)" = existing.txt
+          # A target equal to the current location sets up in place (CONTRIBUTING target test 4).
+          # (Output to a file: "| grep -q" would stop setup.sh early with SIGPIPE.)
+          cp -a . /tmp/ci_self
+          (cd /tmp/ci_self && bash setup.sh "Seminar paper" "Flat" full --target /tmp/ci_self </dev/null >/tmp/ci_self.out)
+          grep -q "Target path equals current location" /tmp/ci_self.out
+          test -d /tmp/ci_self/workspace/sources/_guidelines
+
       - name: Invalid arguments fail fast (exit 2, no stray target)
         run: |
           set +e
@@ -145,6 +168,11 @@ jobs:
           expect_2 "Bachelor thesis" "Long-form" full /tmp/ci_typo
           expect_2 "Bachelor thesis" "Long-form" full --target=
           expect_2 "Bachelor thesis" "Long-form" full --target ci_inside
+          # The Flat-only rule also applies when the work type comes from the menu.
+          set +e; printf '1\n' | bash setup.sh "" "Long-form" full --target /tmp/ci_typo >/dev/null 2>/tmp/ci_menu_flat.err; code=$?; set -e
+          test "$code" -eq 2
+          grep -q "uses the Flat structure" /tmp/ci_menu_flat.err
+          test ! -e /tmp/ci_typo
 
       - name: Setup regressions (re-run, generated files, menus, numbering)
         run: |
@@ -183,6 +211,11 @@ jobs:
           # The loop's last run (Master thesis, Multi-project, full) keeps both data placeholders.
           test -f /tmp/ci_steps/02_Main_Work/05_Empirical/data/raw/.gitkeep
           test -f /tmp/ci_steps/02_Main_Work/05_Empirical/data/processed/.gitkeep
+          # Research data stays out of Git; the placeholders do not.
+          for d in raw processed; do
+            git -C /tmp/ci_steps check-ignore -q "02_Main_Work/05_Empirical/data/$d/interviews.csv"
+            if git -C /tmp/ci_steps check-ignore -q "02_Main_Work/05_Empirical/data/$d/.gitkeep"; then echo "data/$d/.gitkeep is ignored"; exit 1; fi
+          done
 
       - name: Shell scripts stay LF in a core.autocrlf=true clone
         run: |
