@@ -184,7 +184,7 @@ Present the outstanding items as a numbered list with source citations so the us
 ### `07_Introduction`
 - ALWAYS last
 - No changes to main chapters permitted — only introduction, abstract, summary
-- If content adjustments needed: document phase rollback in handover
+- If content adjustments are needed: document the phase rollback in `00_Decisions.md` and name the phase to return to in `00_Status.md` and the handover
 
 ### `08_Formal_Review` (Phase B)
 - Writer-agent deactivated
