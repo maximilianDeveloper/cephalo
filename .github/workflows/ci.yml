@@ -170,14 +170,16 @@ jobs:
           bash setup.sh "Bachelor thesis" "Long-form" full --target /tmp/ci_long </dev/null | tee /tmp/ci_long.out
           # The calling shell stays in the template folder: the summary must name the project.
           grep -qxF "   cd '/tmp/ci_long'" /tmp/ci_long.out
-          bash setup.sh "Master thesis" "Multi-project" minimal --target /tmp/ci_multi </dev/null
+          bash setup.sh "Master thesis" "Multi-project" minimal --target /tmp/ci_multi </dev/null >/tmp/ci_multi.out
           test -d /tmp/ci_flat/workspace/sources/_guidelines
           test -f /tmp/ci_long/00_Status.md
           test -d /tmp/ci_multi/00_Shared_Materials/guidelines
-          # The sub-projects read ../00_Shared_Materials/ directly: no shared/ link or copy.
+          # The sub-projects read ../00_Shared_Materials/ directly: no shared/ link or copy,
+          # and no note about old shared/ entries in a new project.
           for sub in 01_Proposal 02_Main_Work 03_Defense; do
             if [ -e "/tmp/ci_multi/$sub/shared" ] || [ -L "/tmp/ci_multi/$sub/shared" ]; then echo "$sub/shared was created"; exit 1; fi
           done
+          if grep -q 'No longer used' /tmp/ci_multi.out; then echo "old shared/ note in a new project"; exit 1; fi
 
       - name: --target copies leave out local artifacts; non-empty and in-place targets
         run: |
@@ -341,14 +343,14 @@ jobs:
             done
           done
           test "$i" -eq 22
-          # shared/ entries from an earlier version (a link, a copy, or the text file that
-          # a clone without symlink support leaves) are named in "Next steps" by both
-          # scripts, and kept.
+          # shared/ entries from an earlier version (a link, a copy, or a link left dangling
+          # by a moved project) are named in "Next steps" by both scripts, and kept. The
+          # text file that a clone without symlink support leaves is checked in the other jobs.
           for s in sh ps; do
             d="$P/${s}9"   # Bachelor thesis, Multi-project, full
             ln -s ../00_Shared_Materials "$d/01_Proposal/shared"
             cp -r "$d/00_Shared_Materials" "$d/02_Main_Work/shared"
-            printf '../00_Shared_Materials' > "$d/03_Defense/shared"
+            ln -s /tmp/ci_moved_away/00_Shared_Materials "$d/03_Defense/shared"
             if [ "$s" = sh ]; then
               out=$(cd "$d" && bash setup.sh "Bachelor thesis" "Multi-project" full </dev/null)
             else
@@ -361,7 +363,7 @@ jobs:
             esac
             test -L "$d/01_Proposal/shared"
             test -d "$d/02_Main_Work/shared/guidelines"
-            test -f "$d/03_Defense/shared"
+            test -L "$d/03_Defense/shared"
           done
           # Where .gitignore and .gitattributes are missing, both scripts write the same ones.
           rm "$P"/sh1/.gitignore "$P"/sh1/.gitattributes "$P"/ps1/.gitignore "$P"/ps1/.gitattributes
@@ -953,17 +955,24 @@ jobs:
           if (-not (Select-String -Path $status -Pattern 'ci-marker' -Quiet)) { Write-Host "re-run overwrote 02_Main_Work/00_Status.md"; exit 1 }
           $lfs = @(Select-String -Path (Join-Path $multi '.gitattributes') -Pattern 'filter=lfs').Count
           if ($lfs -ne 6) { Write-Host "re-run: expected 6 LFS rules in .gitattributes, found $lfs"; exit 1 }
-          # shared\ entries from an earlier version (here a copy, and the text file that a
-          # clone without symlink support leaves) are named in "Next steps", and kept.
+          # shared\ entries from an earlier version (a copy, a link, and the text file that a
+          # clone without symlink support leaves) are named in "Next steps", and kept; a
+          # project without them gets no such note.
+          function Get-RerunOutput {
+            Push-Location -LiteralPath $multi
+            $out = & powershell -NoProfile -ExecutionPolicy Bypass -File ./setup.ps1 -WorkType 'Master thesis' -Structure 'Multi-project' -Scaffolding minimal -NonInteractive | Out-String
+            $code = $LASTEXITCODE
+            Pop-Location
+            if ($code -ne 0) { Write-Host "re-run exited with $code"; exit 1 }
+            return $out
+          }
+          if ((Get-RerunOutput) -match 'No longer used') { Write-Host "old shared\ note although there is none"; exit 1 }
           Copy-Item -Path (Join-Path $multi '00_Shared_Materials') -Destination (Join-Path $multi '01_Proposal/shared') -Recurse
+          New-Item -ItemType SymbolicLink -Path (Join-Path $multi '02_Main_Work/shared') -Target (Join-Path $multi '00_Shared_Materials') | Out-Null
           Set-Content -LiteralPath (Join-Path $multi '03_Defense/shared') -Value '../00_Shared_Materials' -NoNewline
-          Push-Location -LiteralPath $multi
-          $out = & powershell -NoProfile -ExecutionPolicy Bypass -File ./setup.ps1 -WorkType 'Master thesis' -Structure 'Multi-project' -Scaffolding minimal -NonInteractive | Out-String
-          $code = $LASTEXITCODE
-          Pop-Location
-          if ($code -ne 0) { Write-Host "re-run exited with $code"; exit 1 }
-          if ($out -notmatch 'No longer used.*01_Proposal\\shared 03_Defense\\shared') { Write-Host $out; Write-Host "old shared\ entries not named"; exit 1 }
-          foreach ($p in '01_Proposal/shared/guidelines', '03_Defense/shared') {
+          $out = Get-RerunOutput
+          if ($out -notmatch 'No longer used.*01_Proposal\\shared 02_Main_Work\\shared 03_Defense\\shared') { Write-Host $out; Write-Host "old shared\ entries not named"; exit 1 }
+          foreach ($p in '01_Proposal/shared/guidelines', '02_Main_Work/shared/guidelines', '03_Defense/shared') {
             if (-not (Test-Path -LiteralPath (Join-Path $multi $p))) { Write-Host "re-run removed $p"; exit 1 }
           }
 
@@ -1066,10 +1075,12 @@ jobs:
           test -d /tmp/ci_flat/workspace/sources/_guidelines
           test -f /tmp/ci_long/00_Status.md
           test -f /tmp/ci_multi/02_Main_Work/05_Empirical/data/processed/.gitkeep
-          # The sub-projects read ../00_Shared_Materials/ directly: no shared/ link or copy.
+          # The sub-projects read ../00_Shared_Materials/ directly: no shared/ link or copy,
+          # and no note about old shared/ entries in a new project.
           for sub in 01_Proposal 02_Main_Work 03_Defense; do
             if [ -e "/tmp/ci_multi/$sub/shared" ] || [ -L "/tmp/ci_multi/$sub/shared" ]; then echo "$sub/shared was created"; exit 1; fi
           done
+          if grep -q 'No longer used' /tmp/ci_multi.out; then echo "old shared/ note in a new project"; exit 1; fi
           # A shared/ entry from an earlier version (here the text file that a clone
           # without symlink support leaves) is named in "Next steps", and kept.
           printf '../00_Shared_Materials' > /tmp/ci_multi/03_Defense/shared
