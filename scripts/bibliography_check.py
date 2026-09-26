@@ -435,6 +435,7 @@ def extract_bibliography_authors(bibliography: list[str]) -> tuple[set[str], set
       Dawson, R., Ellis, S., & Fowler, T. (2020). ...
                                            -> first: Dawson; all: Dawson, Ellis, Fowler
       WHO. (2019). ...                     -> first: WHO
+      Ders. (2021). ...                    -> (the author of the entry above)
     """
     first_authors = set()
     all_authors = set()
@@ -457,6 +458,10 @@ def extract_bibliography_authors(bibliography: list[str]) -> tuple[set[str], set
         if not match:
             # Institutional entries: "WHO. (2019). ..." — period before the year.
             match = re.match(r"^(" + surname_token + r")\.\s*\(\d{4}", entry.strip())
+            # "Ders. (2021)" / "Dies. (2020)" (German "derselbe"/"dieselbe"):
+            # the author of the entry above, not an author of that name.
+            if match and match.group(1) in ("Ders", "Dies", "Derselbe", "Dieselbe"):
+                match = None
         if match:
             full = match.group(1)
             # Keep the last capitalized token as the canonical surname

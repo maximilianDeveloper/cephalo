@@ -569,7 +569,7 @@ jobs:
           for entry in ("Müller, H./Schmidt, K. (2019). A.", "Öztürk, A. (2020). B.", "Dawson, R., Ellis, S., & Fowler, T. (2018). C.",
                         "De Vries, R. (2018). D.", "Weber, E. (2020). E.", "Fischer, Hans/Wolf, Karl (2017): G.",
                         "De Dreu, C. K. W., & Weingart, L. R. (2003). H.", "Van Dijk, T. A., & De Vries, R. (2019). I.",
-                        "Le Grand, J. (2007). J.", "De Beers. (n.d.). K.", "Keller, T. (2018). L.", "Braun, P. (2017). M."):
+                        "Le Grand, J. (2007). J.", "De Beers. (n.d.). K.", "Keller, T. (2018). L.", "Braun, P. (2017). M.", "Ders. (2019). N."):
               f.add_paragraph(entry)
           f.save(os.path.join(w, "forms.docx"))
           # prose that looks like a citation with a capitalized particle or a filler,
