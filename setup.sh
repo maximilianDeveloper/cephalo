@@ -66,8 +66,8 @@ on_error() {
     [ "$SETUP_INTERRUPTED" = "1" ] && exit $exit_code
     # In a subshell ( ... ) or $( ... ), carry on as without the trap: the
     # output of a $( ... ) must not take in the message, and a failed ( ... )
-    # fails its caller, which reports it (not under bash 3.2: see the
-    # shared/ links below).
+    # fails its caller, which reports it (not under bash 3.2, which runs no
+    # ERR trap for a failed ( ... ): so no setup step runs in one).
     if [ "${BASH_SUBSHELL:-0}" -gt 0 ]; then
         return 0
     fi
@@ -179,60 +179,6 @@ create_gitkeep() {
     # already exists, or set -e aborts every re-run of the setup.
     if [ ! -f "$gk" ]; then
         touch "$gk"
-    fi
-}
-
-create_symlink() {
-    local link="$1"
-    local target="$2"
-    
-    if [ -L "$link" ] || [ -e "$link" ]; then
-        echo -e "  ${GRAY}. $link (exists)${NC}"
-        return
-    fi
-    
-    # Try to create the symlink. On Git Bash (MinGW64) without either
-    # MSYS=winsymlinks:nativestrict or Developer Mode / Admin rights,
-    # `ln -s` silently creates a directory copy instead — with exit code 0.
-    # We must verify that a real symlink emerged. `|| true` keeps a FAILING
-    # ln (e.g. nativestrict without symlink privilege, or FAT32/exFAT)
-    # from aborting the subshell under set -e before the copy-fallback
-    # below can run.
-    ln -s "$target" "$link" 2>/dev/null || true
-    
-    if [ -L "$link" ]; then
-        echo -e "  ${GREEN}+ $link --> $target${NC}"
-        return
-    fi
-    
-    # No symlink was created. Possible outcomes:
-    #   (a) `ln -s` made a directory copy (Git Bash default) — already there.
-    #   (b) `ln -s` produced nothing — we need to copy ourselves.
-    # For case (b), the target path is relative to the LINK'S location,
-    # not to CWD, so we resolve it that way before copying. `|| true`: a
-    # failing cp must reach the "symlink AND copy failed" message below
-    # instead of aborting the whole setup under set -e.
-    if [ ! -e "$link" ]; then
-        local link_parent
-        link_parent=$(dirname "$link")
-        local resolved_target="$link_parent/$target"
-        if [ -d "$resolved_target" ] || [ -f "$resolved_target" ]; then
-            cp -r "$resolved_target" "$link" 2>/dev/null || true
-        elif [ -d "$target" ] || [ -f "$target" ]; then
-            # Fallback: target may be given relative to CWD
-            cp -r "$target" "$link" 2>/dev/null || true
-        fi
-    fi
-    
-    if [ -e "$link" ] && [ ! -L "$link" ]; then
-        echo -e "  ${YELLOW}! $link created as COPY (symlink not supported here).${NC}"
-        echo -e "  ${YELLOW}  Updates to $target will NOT propagate automatically.${NC}"
-        echo -e "  ${YELLOW}  On Git Bash: export MSYS=winsymlinks:nativestrict and enable${NC}"
-        echo -e "  ${YELLOW}  Developer Mode (Settings -> For developers), then delete the three${NC}"
-        echo -e "  ${YELLOW}  shared/ copies (01_Proposal, 02_Main_Work, 03_Defense) and re-run setup.${NC}"
-        echo -e "  ${YELLOW}  See docs/multiproject_structure.md for manual re-sync.${NC}"
-    else
-        echo -e "  ${RED}! $link could not be created (symlink AND copy failed).${NC}"
     fi
 }
 
@@ -851,8 +797,8 @@ IS_MINIMAL=false
 
 # Set by exactly one of the structure branches below; guarded after them.
 WORKFLOW=""
-# Multi-project: true if a shared/ folder is a copy, not a link.
-SHARED_COPIED=false
+# Multi-project: shared/ entries left from an earlier cephalo version.
+OLD_SHARED=""
 
 # ==========================================================
 # Flat structure
@@ -1005,16 +951,13 @@ elif [[ "$STRUCTURE" =~ ^Multi-project ]]; then
         create_gitkeep "03_Defense/05_Rehearsals"
     fi
     
-    # Symlinks, made from inside each sub-project (the relative target, and
-    # Git Bash's copy in place of a link, resolve from there). Not in a
-    # ( cd ... ) subshell: bash 3.2 runs no ERR trap for a failed subshell,
-    # so a failure would end the setup without the report.
-    step "Creating symlinks to 00_Shared_Materials"
+    # The agents read ../00_Shared_Materials/ directly. Earlier versions
+    # linked or copied it into each sub-project as shared/: name such an
+    # entry in "Next steps" (a copy may hold changes), never delete it.
     for p in "01_Proposal" "$MAIN_NAME" "03_Defense"; do
-        cd "$p"
-        create_symlink "shared" "../00_Shared_Materials"
-        cd ..
-        [ -L "$p/shared" ] || SHARED_COPIED=true
+        if [ -e "$p/shared" ] || [ -L "$p/shared" ]; then
+            OLD_SHARED="$OLD_SHARED $p/shared"
+        fi
     done
     
     # Central files per sub-project
@@ -1171,10 +1114,9 @@ elif [[ "$STRUCTURE" =~ ^Long-form ]]; then
     echo "   -> guidelines/"
 else
     echo "   -> 00_Shared_Materials/guidelines/"
-    if $SHARED_COPIED; then
-        # The sub-projects read their shared/ copy, which does not follow.
-        echo -e "   ${YELLOW}shared/ is a copy, not a link: after adding files, re-sync the three"
-        echo -e "   copies (docs/multiproject_structure.md, \"Re-syncing shared materials manually\").${NC}"
+    if [ -n "$OLD_SHARED" ]; then
+        echo -e "   ${YELLOW}No longer used (the agents read ../00_Shared_Materials/), delete:${OLD_SHARED}"
+        echo -e "   (a copy may hold files you changed there: move them to 00_Shared_Materials/ first)${NC}"
     fi
 fi
 echo ""

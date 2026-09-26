@@ -3,9 +3,6 @@
 # cephalo setup script (Windows PowerShell).
 # Creates project structure based on user choices.
 #
-# Multi-project setups create symlinks: enable Developer Mode once (Settings ->
-# For developers) or run from an elevated shell; otherwise shared/ is copied.
-#
 # Usage:
 #   Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 #   .\setup.ps1
@@ -196,62 +193,6 @@ function Create-DirSafe($Path) {
 function Create-Gitkeep($Path) {
     $kp = [System.IO.Path]::Combine((Resolve-ProjectPath $Path), ".gitkeep")
     if (-not [System.IO.File]::Exists($kp)) { [System.IO.File]::WriteAllText($kp, "") }
-}
-
-function Create-Symlink($Link, $Target) {
-    $LinkAbs = Resolve-ProjectPath $Link
-    if ([System.IO.Directory]::Exists($LinkAbs) -or [System.IO.File]::Exists($LinkAbs)) {
-        Write-Host "  . $Link (exists)" -ForegroundColor Gray
-        return
-    }
-    # The link target stays relative ('..\00_Shared_Materials'), like the one
-    # setup.sh makes, so the project can be moved and a committed link does
-    # not record a local absolute path.
-    $RelativeTarget = $Target.Replace('\', [string][System.IO.Path]::DirectorySeparatorChar)
-    $AbsoluteTarget = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine(
-        [System.IO.Path]::GetDirectoryName($LinkAbs), $RelativeTarget))
-    # On Windows, try mklink first: it keeps the target relative and works with
-    # Developer Mode or an elevated shell. Windows PowerShell 5.1's New-Item
-    # demands elevation even in Developer Mode, and it resolves a relative
-    # -Target against the current location, so it could only make an absolute
-    # link. The redirection is cmd's, so no PowerShell error record is raised.
-    # The paths reach cmd as environment variables inside quotes: passed as
-    # arguments, they arrive unquoted unless they contain a space, and cmd
-    # splits them at & or , ; = (a project folder such as R&D_Thesis).
-    if ($env:OS -eq "Windows_NT") {
-        $env:CEPHALO_LINK = $LinkAbs
-        $env:CEPHALO_LINK_TARGET = $Target
-        cmd /c 'mklink /D "%CEPHALO_LINK%" "%CEPHALO_LINK_TARGET%" >nul 2>&1'
-        $MklinkExit = $LASTEXITCODE
-        Remove-Item Env:CEPHALO_LINK, Env:CEPHALO_LINK_TARGET
-        if ($MklinkExit -eq 0 -and [System.IO.Directory]::Exists($LinkAbs)) {
-            Write-Host "  + $Link --> $Target" -ForegroundColor Green
-            return
-        }
-    }
-    # PowerShell 6+ keeps a relative -Target relative (resolved against the
-    # link's directory); 5.1 only gets here after mklink failed, and needs the
-    # absolute target so the error below is the real one (usually elevation).
-    if ($PSVersionTable.PSVersion.Major -ge 6) { $NewItemTarget = $RelativeTarget } else { $NewItemTarget = $AbsoluteTarget }
-    try {
-        New-Item -ItemType SymbolicLink -Path $LinkAbs -Target $NewItemTarget -ErrorAction Stop | Out-Null
-        Write-Host "  + $Link --> $Target" -ForegroundColor Green
-    } catch {
-        $NewItemError = $_.Exception.Message
-        # Fallback: copy the directory contents instead of symlinking.
-        # Surface the REAL exception rather than always blaming Administrator
-        # rights (path-resolution, filesystem, and elevation errors all land here).
-        Write-Host "  ! Symlink failed for $Link : $NewItemError" -ForegroundColor Yellow
-        Write-Host "    (On Windows, real symlinks need Developer Mode or an elevated shell.)" -ForegroundColor DarkGray
-        if ([System.IO.Directory]::Exists($AbsoluteTarget)) {
-            Copy-Item -LiteralPath $AbsoluteTarget -Destination $LinkAbs -Recurse -Force
-            Write-Host "    -> Copied $Target into $Link as fallback." -ForegroundColor Yellow
-            Write-Host "    Note: when guidelines change, you must update each copy manually, or enable" -ForegroundColor Yellow
-            Write-Host "    Developer Mode, delete the three shared\ copies and re-run setup." -ForegroundColor Yellow
-        } else {
-            Write-Host "    Could not create $Link nor copy from $Target. Please create manually." -ForegroundColor Red
-        }
-    }
 }
 
 function Write-Utf8NoBom($Path, $Content) {
@@ -727,8 +668,8 @@ if ($Target -ne "") {
 if (-not $script:ProjectRoot) { $script:ProjectRoot = $StartDir }
 
 $IsMinimal = $Scaffolding -match "^Minimal"
-# Multi-project: true if a shared\ folder is a copy, not a link.
-$SharedCopied = $false
+# Multi-project: shared\ entries left from an earlier cephalo version.
+$OldShared = @()
 Write-Verbose "Resolved configuration: WorkType='$WorkType', Structure='$Structure', Scaffolding='$Scaffolding' (minimal=$IsMinimal)."
 Write-Verbose "Working location: $((Get-Location).Path)"
 
@@ -889,14 +830,12 @@ elseif ($Structure -match "^Multi-project") {
         Create-Gitkeep "03_Defense\05_Rehearsals"
     }
     
-    # Symlinks
-    Write-Step "Creating symlinks to 00_Shared_Materials"
-    Create-Symlink "01_Proposal\shared" "..\00_Shared_Materials"
-    Create-Symlink "$MainName\shared" "..\00_Shared_Materials"
-    Create-Symlink "03_Defense\shared" "..\00_Shared_Materials"
+    # The agents read ..\00_Shared_Materials\ directly. Earlier versions
+    # linked or copied it into each sub-project as shared\: name such an
+    # entry in "Next steps" (a copy may hold changes), never delete it.
     foreach ($p in @("01_Proposal", $MainName, "03_Defense")) {
-        $SharedItem = Get-Item -LiteralPath (Resolve-ProjectPath "$p\shared") -Force -ErrorAction SilentlyContinue
-        if (-not $SharedItem -or -not $SharedItem.LinkType) { $SharedCopied = $true }
+        $SharedPath = Resolve-ProjectPath "$p\shared"
+        if ([System.IO.Directory]::Exists($SharedPath) -or [System.IO.File]::Exists($SharedPath)) { $OldShared += "$p\shared" }
     }
     
     # Central files per sub-project
@@ -1060,10 +999,9 @@ if ($Structure -eq "Flat") {
     Write-Host "   -> guidelines\"
 } else {
     Write-Host "   -> 00_Shared_Materials\guidelines\"
-    if ($SharedCopied) {
-        # The sub-projects read their shared\ copy, which does not follow.
-        Write-Host "   shared\ is a copy, not a link: after adding files, re-sync the three" -ForegroundColor Yellow
-        Write-Host "   copies (docs\multiproject_structure.md, `"Re-syncing shared materials manually`")." -ForegroundColor Yellow
+    if ($OldShared.Count -gt 0) {
+        Write-Host "   No longer used (the agents read ..\00_Shared_Materials\), delete: $($OldShared -join ' ')" -ForegroundColor Yellow
+        Write-Host "   (a copy may hold files you changed there: move them to 00_Shared_Materials\ first)" -ForegroundColor Yellow
     }
 }
 Write-Host ""
