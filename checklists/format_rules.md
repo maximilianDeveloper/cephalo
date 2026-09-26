@@ -50,7 +50,7 @@ For every category below: **read concrete values from `styleguide.md`**, not fro
 ### Table of contents
 
 - [ ] Auto-generated
-- [ ] Level emphasis per styleguide (a common convention: level 1 bold, deeper levels without emphasis)
+- [ ] Level emphasis (styleguide: `headings.toc_emphasis`; a common convention: level 1 bold, deeper levels without emphasis)
 
 ### List of abbreviations
 

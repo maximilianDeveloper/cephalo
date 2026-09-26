@@ -86,7 +86,7 @@ Per styleguide. If the styleguide is silent, do not pick a convention yourself: 
 - Axis labels complete (incl. units)
 - Legend present
 - Color choice: accessible (also for B&W print and color-blindness)
-- Resolution: per styleguide or print requirements (example: 300 dpi for print)
+- Resolution: per styleguide (`document.figure_resolution`) or print requirements (example: 300 dpi for print)
 
 ### python-pptx specifics (for presentations)
 
@@ -101,7 +101,7 @@ Per styleguide. If the styleguide is silent, do not pick a convention yourself: 
 
 - Test type documented (t-test, ANOVA, chi-squared, etc.)
 - Degrees of freedom given
-- p-values: notation per styleguide (example, APA style: `p < .001`), never `p = 0.0000000`
+- p-values: notation per styleguide (`numbers.p_values`; example, APA style: `p < .001`), never `p = 0.0000000`
 - Effect sizes documented (Cohen's d, η², φ, etc.)
 
 ### Multiple comparisons

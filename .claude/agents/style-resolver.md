@@ -73,7 +73,7 @@ For each rule, note:
 
 Tag every entry under "Open questions" (the entries, not the inline markers, are what the other agents check), because the two kinds block different phases:
 
-- `[content]` — the answer changes what the writer drafts in Phase A, so it must be resolved before any chapter is written: `style.forbidden_pronouns`, `style.forbidden_evaluative`, `style.block_quote_word_threshold`, `style.footnotes`, `in_text.page_for_indirect`, `in_text.cf_prefix`, `document.page_count`, `headings.max_depth`, `numbers.decimal_separator` and `captions.*` (built into tables and figures the data-agent makes in Phase A), and any other rule that changes wording, content or length.
+- `[content]` — the answer changes what the writer drafts in Phase A, so it must be resolved before any chapter is written: `style.forbidden_pronouns`, `style.forbidden_evaluative`, `style.block_quote_word_threshold`, `style.footnotes`, `in_text.page_for_indirect`, `in_text.cf_prefix`, `document.page_count`, `headings.max_depth`, `numbers.decimal_separator`, `numbers.p_values`, `document.figure_resolution` and `captions.*` (built into tables and figures the data-agent makes in Phase A), and any other rule that changes wording, content or length.
 - `[format]` — the answer changes only typesetting, so it can wait until the formatting phase (Phase B): all other keys (fonts, spacing, margins, pagination, headings layout, title page, bibliography layout, the notation of citations and page ranges).
 - When unsure, tag it `[content]`. An instruction-like passage (see step 1) is tagged `[format]`: it blocks no drafting, but the user should see it before Phase B.
 

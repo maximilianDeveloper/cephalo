@@ -51,6 +51,7 @@
 - **`margins`:** [e.g., 2.5 cm all sides, or 2.5 cm top/bottom and 3.0 cm left/right]
 - **`hyphenation`:** [automatic / manual / off]
 - **`page_size`:** [A4 / Letter]
+- **`figure_resolution`:** [e.g., 300 dpi for print]
 
 ---
 
@@ -82,6 +83,7 @@
 - **`level_2.weight`:** [bold / regular]
 - **`level_3.size`:** [e.g., 12 pt]
 - **`level_3.weight`:** [bold / regular]
+- **`toc_emphasis`:** [table of contents: e.g., level 1 bold, deeper levels regular]
 
 ---
 
@@ -107,6 +109,7 @@
 - **`captions.figure_position`:** [above / below the figure]
 - **`captions.source_position`:** [e.g., below the table or figure]
 - **`numbers.decimal_separator`:** [`.` / `,`]
+- **`numbers.p_values`:** [notation, e.g., `p < .001` (APA) or `p < 0.001`]
 
 ---
 
@@ -134,7 +137,7 @@
 ## Open questions (`❓`)
 
 [List of items the resolver could not unambiguously extract. Each item is tagged:
-`[content]` — the answer changes what is written or produced in Phase A: voice and pronouns, evaluative wording, the direct-quote threshold, what may go into footnotes, the "cf." prefix and page numbers for paraphrases, the page count, the outline depth, and the decimal separator and caption placement (built into tables and figures in Phase A). Resolve with the supervisor before any chapter is drafted.
+`[content]` — the answer changes what is written or produced in Phase A: voice and pronouns, evaluative wording, the direct-quote threshold, what may go into footnotes, the "cf." prefix and page numbers for paraphrases, the page count, the outline depth, and the decimal separator, p-value notation, figure resolution and caption placement (built into tables and figures in Phase A). Resolve with the supervisor before any chapter is drafted.
 `[format]` — the answer changes only how the text is set: fonts, spacing, margins, pagination, title page, bibliography layout, citation punctuation. Resolve before the formatting phase (Phase B).
 An entry here without a tag counts as `[content]`. A `❓` next to a rule above only points to its entry here.]
 

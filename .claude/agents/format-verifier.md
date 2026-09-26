@@ -68,7 +68,7 @@ Verify the following categories. Concrete values (font size, page-range notation
 - [ ] Position per styleguide
 
 ## Indexes
-- [ ] Table of contents: automatic generation; level formatting per styleguide
+- [ ] Table of contents: automatic generation; level formatting per styleguide (`headings.toc_emphasis`)
 - [ ] Abbreviations: only actually-used abbreviations
   (automation: scripts/abbreviations_extract.py)
 - [ ] Bibliography: conventions per styleguide
