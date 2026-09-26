@@ -187,9 +187,21 @@ if [ -z "$PYTHON_BIN" ]; then
     exit 0
 fi
 
+# Paths handed to Python. Under Git Bash the interpreter is a native Windows
+# program, and MSYS converts a /path argument for it only when it looks like
+# a path: not "/tmp/Chapter [2].docx" (brackets), for example. cygpath, part
+# of Git Bash, converts every path; elsewhere the path stays as it is.
+py_path() {
+    if command -v cygpath >/dev/null 2>&1; then
+        cygpath -m "$1"
+    else
+        printf '%s\n' "$1"
+    fi
+}
+
 # Delegate to Python for all heavy lifting — handles file-type detection,
 # recursive search, safe ZIP extraction (ZipSlip-hardened), and pypdf.
-"$PYTHON_BIN" - "$GUIDELINES_DIR" "$OUT_DIR" "$HAVE_PDFTOTEXT" << 'PYEOF'
+"$PYTHON_BIN" - "$(py_path "$GUIDELINES_DIR")" "$(py_path "$OUT_DIR")" "$HAVE_PDFTOTEXT" << 'PYEOF'
 import os
 import sys
 import subprocess

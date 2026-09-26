@@ -97,6 +97,18 @@ fi
 case "$DOC" in -*) DOC="./$DOC" ;; esac
 DOC_ABS=$(cd "$(dirname "$DOC")" && pwd)/$(basename "$DOC")
 
+# Paths handed to Python. Under Git Bash the interpreter is a native Windows
+# program, and MSYS converts a /path argument for it only when it looks like
+# a path: not "/tmp/Chapter [2].docx" (brackets), for example. cygpath, part
+# of Git Bash, converts every path; elsewhere the path stays as it is.
+py_path() {
+    if command -v cygpath >/dev/null 2>&1; then
+        cygpath -m "$1"
+    else
+        printf '%s\n' "$1"
+    fi
+}
+
 # Work in a temporary directory. Deliberately NOT named TMPDIR: that is the
 # standard POSIX temp-dir override, and reassigning it would silently leak
 # into child processes (e.g. Python's tempfile module).
@@ -111,7 +123,7 @@ cp "$DOC_ABS" "$WORK_DIR/in.docx"
 # Refuse symbolic-link entries before unpacking: how unzip restores them
 # depends on the platform (Git Bash by default turns a link into a COPY of
 # its target, which the check after unpacking cannot see).
-"$PY" - "$WORK_DIR/in.docx" << 'PYEOF'
+"$PY" - "$(py_path "$WORK_DIR/in.docx")" << 'PYEOF'
 import stat
 import sys
 import zipfile
@@ -223,7 +235,7 @@ NEW_DOC="${DOC_ABS}.new"
 # If the repack or the final mv fails, do not leave a partial archive behind
 # (after a successful mv, NEW_DOC no longer exists).
 trap 'rm -rf "$WORK_DIR"; rm -f "$NEW_DOC"' EXIT
-"$PY" - "$NEW_DOC" "$WORK_DIR/x" "$DOC_ABS" << 'PYEOF'
+"$PY" - "$(py_path "$NEW_DOC")" "$(py_path "$WORK_DIR/x")" "$(py_path "$DOC_ABS")" << 'PYEOF'
 import os
 import shutil
 import sys
