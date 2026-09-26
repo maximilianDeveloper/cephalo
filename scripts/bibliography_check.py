@@ -83,6 +83,15 @@ GERMAN_NON_AUTHOR_CAPS = {
 # parenthetical stage does not filter them: a missing entry is still reported.
 SURNAME_LIKE_STOPWORDS = {"Sommer", "Winter", "Herbst", "Freitag", "Montag", "Mai", "August"}
 
+# What follows the year of "(von Mai 2020 bis Juni 2021)", "(von Winter 2019/20
+# an)" or "(von Mai 2020–Juni 2021)": the rest of a date range, so the word
+# after "von" is a date, not an author (unlike "(von Sommer 2019 an einer
+# Stichprobe ...)" or "(von Winter 2012 für 1991 bis 2010 geschätzt)").
+DATE_RANGE_AFTER_YEAR = (
+    r"(?:/\d{2,4})?\s*(?:bis\b|an\b(?=\s*(?:[,.;:]|$))|[-–]\s*(?:\d{2,4}\b|Januar|Februar|März|April|Mai"
+    r"|Juni|Juli|August|September|Oktober|November|Dezember|Frühjahr|Frühling|Sommer|Herbst|Winter"
+    r"|Anfang|Mitte|Ende)\b)")
+
 # Name particles that may precede a surname: van der Berg, de la Rosa, von Wagner.
 NAME_PARTICLES = {
     "van", "von", "de", "del", "della", "di", "la", "le", "du", "dos", "das",
@@ -312,7 +321,7 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
                 # range such a word is prose: "(von Mai 2020 bis Juni 2021)",
                 # unlike "(von Winter 2010 eingeführt)" or "(Studie von Sommer, 2019)".
                 after_von = (not comma_form and idx > 0 and tokens[idx - 1].lower() == "von"
-                             and re.search(r"\d{4}(?:/\d{2,4})?\s*(?:bis\b|an\b|[-–]\s*[^\W\d])", fragment) is not None)
+                             and re.match(DATE_RANGE_AFTER_YEAR, fragment[match.end():]) is not None)
                 if confirmed_only and surname not in keep:
                     continue
                 if len(surname) > 1 and (surname not in stop or surname.isupper()
@@ -454,7 +463,9 @@ def extract_bibliography_authors(bibliography: list[str]) -> tuple[set[str], set
             all_authors.add(surname)
         
         # Co-authors after & or "and" / "und"
-        coauthor_pattern = r"(?:&|and|und)\s+(" + surname_token + r"),"
+        # (lowercase particles only, as in the text: "und Van Dyk, Silke
+        # (Hrsg.)" is an editor, not a co-author)
+        coauthor_pattern = r"(?:&|and|und)\s+(" + NAME_PREFIX_LOWER + surname_core + r"),"
         for match in re.findall(coauthor_pattern, entry):
             tokens = match.split()
             surname = next((t for t in reversed(tokens) if t[:1].isupper()), tokens[-1])
@@ -467,7 +478,7 @@ def extract_bibliography_authors(bibliography: list[str]) -> tuple[set[str], set
         # subtracted from the cited-author set, so growing it can only
         # remove false positives, never add any.
         head = re.split(r"\(\d{4}", entry, maxsplit=1)[0]
-        middle_pattern = r"(" + surname_token + r"),\s*(?:[A-ZÄÖÜ]\.[\s-]*)+"
+        middle_pattern = r"(" + NAME_PREFIX_LOWER + surname_core + r"),\s*(?:[A-ZÄÖÜ]\.[\s-]*)+"
         for m in re.finditer(middle_pattern, head):
             tokens = m.group(1).split()
             surname = next((t for t in reversed(tokens) if t[:1].isupper()), tokens[-1])
@@ -477,7 +488,11 @@ def extract_bibliography_authors(bibliography: list[str]) -> tuple[set[str], set
         # unbroken chain of "Surname, Given" names that starts the entry, so a
         # slash in the title ("Theory/Practice,"), editors ("in Meier, Karl/
         # Wolf, Eva (Hrsg.)") or places ("Wiesbaden/Berlin") add nothing.
-        given = r"[A-ZÄÖÜ][\w.'’-]*(?:[\s-]+[A-ZÄÖÜ][\w.'’-]*)*"
+        # A given name is a word not followed by a period, or an initial or
+        # short abbreviation with one ("J.", "Chr."), so "Smith, John.
+        # Durkheim/Weber, Two Sociologies" (MLA) does not continue the chain.
+        given_word = r"(?:[A-ZÄÖÜ][\w'’-]*(?![\w.])|[A-ZÄÖÜ][a-zäöü]{0,2}\.)"
+        given = given_word + r"(?:[\s-]+" + given_word + r")*"
         chain = re.match(surname_token + r",\s*" + given
                          + r"(?:\s*[/;]\s*" + surname_token + r",\s*" + given + r")*", entry.strip())
         for m in re.finditer(r"[/;]\s*(" + surname_token + r"),", chain.group(0) if chain else ""):
@@ -540,10 +555,17 @@ def main():
     # An entry led by a capitalized particle ("De Vries, R. (2018)") counts as
     # cited when its full name appears in the text, in any citation form: the
     # in-text patterns do not parse capitalized particles (see NAME_PREFIX).
+    # Only for names read as lead authors ("De Beers. (n.d.)" is not), and not
+    # when another entry without a particle has the same surname ("Witte, E."
+    # next to "De Witte, H."). A German genitive counts too ("Van Dijks").
+    plain_leads, _ = extract_bibliography_authors(
+        [e for e in bibliography if not re.match(r"(?:" + CAPITALIZED_PARTICLES + r")\s", e.strip())])
     for surname, full in particle_lead_names(bibliography).items():
+        if surname not in bib_first_authors or surname in plain_leads:
+            continue
         words = full.split()
         name = r"\s+".join("(?i:" + re.escape(w) + ")" for w in words[:-1]) + r"\s+" + re.escape(words[-1])
-        if re.search(r"\b" + name + r"(?![\w'’-])", body):
+        if re.search(r"\b" + name + r"(?:s|['’]s?)?(?![\w'’-])", body):
             cited_authors.add(surname)
     
     # Asymmetry check:
