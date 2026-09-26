@@ -259,6 +259,32 @@ function Write-Utf8NoBom($Path, $Content) {
     [System.IO.File]::WriteAllText($absolute, $Content, $encoding)
 }
 
+function Merge-MissingLines([string]$TemplateFile, [string]$ProjectFile) {
+    # Append to the project's file the rules of the template's file that it
+    # lacks (blank and comment lines aside), under one comment line, as
+    # setup.sh does. Returns how many rules were added. CR and a UTF-8 BOM
+    # (dropped by ReadAllText) are ignored when comparing, so a file edited
+    # on Windows is not filled with duplicates.
+    $utf8 = New-Object System.Text.UTF8Encoding $false
+    $existing = [System.IO.File]::ReadAllText($ProjectFile, $utf8)
+    $have = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::Ordinal)
+    foreach ($line in ($existing -split "`n")) { [void]$have.Add($line.TrimEnd("`r")) }
+    $missing = New-Object System.Collections.Generic.List[string]
+    foreach ($line in ([System.IO.File]::ReadAllText($TemplateFile, $utf8) -split "`n")) {
+        $line = $line.TrimEnd("`r")
+        if ($line -eq "" -or $line.StartsWith("#")) { continue }
+        if ($have.Add($line)) { $missing.Add($line) }
+    }
+    if ($missing.Count -gt 0) {
+        # Keep the file's last line intact if it has no line break.
+        $text = ""
+        if ($existing.Length -gt 0 -and -not $existing.EndsWith("`n")) { $text = "`n" }
+        $text += "`n# Added by cephalo setup: template rules this file lacked`n" + ($missing -join "`n") + "`n"
+        [System.IO.File]::AppendAllText($ProjectFile, $text, $utf8)
+    }
+    return $missing.Count
+}
+
 function Copy-TemplateIfExists($Template, $Destination, $FallbackContent) {
     # Never overwrite an existing state file. Re-running setup must preserve the
     # user's accumulated 00_Status.md / 00_Decisions.md / 00_Feedback_log.md
@@ -566,7 +592,8 @@ if ($Target -ne "") {
                 Write-Host "  .claude\agents\, workflows\, checklists\, templates\, scripts\, docs\,"
                 Write-Host "  CLAUDE.md, README.md and the template's other top-level files."
                 Write-Host "Files the template does not contain (00_Status.md, phase folders,"
-                Write-Host "guidelines\, styleguide.md, ...) are kept."
+                Write-Host "guidelines\, styleguide.md, ...) are kept. The project's own .gitignore"
+                Write-Host "and .gitattributes are kept too; template rules they lack are appended."
                 Write-Host ""
                 if (-not $NonInteractive) {
                     $overwriteAns = Read-Host "Continue and copy into this directory? [y/N]"
@@ -597,9 +624,22 @@ if ($Target -ne "") {
     Write-Host ""
     Write-Host "Copying cephalo template to target..." -ForegroundColor Cyan
     $ExcludedTopLevelNames = @(".git", ".github", "__pycache__", ".venv", "venv")
+    # The project's own .gitignore/.gitattributes may hold rules the user
+    # added (docs/git_introduction.md suggests it): they are not replaced,
+    # but completed with the template's rules after the copy.
+    $KeepNames = @()
+    if (-not $TargetWasEmpty) {
+        foreach ($KeepName in ".gitignore", ".gitattributes") {
+            if ([System.IO.File]::Exists([System.IO.Path]::Combine($Target, $KeepName)) -and
+                [System.IO.File]::Exists([System.IO.Path]::Combine($SourceDir, $KeepName))) {
+                $KeepNames += $KeepName
+            }
+        }
+    }
     try {
         Get-ChildItem -LiteralPath $SourceDir -Force | Where-Object {
-            $ExcludedTopLevelNames -notcontains $_.Name -and $_.Extension -ne ".pyc" -and $_.Name -notlike "cephalo-setup*"
+            $ExcludedTopLevelNames -notcontains $_.Name -and $KeepNames -notcontains $_.Name -and
+            $_.Extension -ne ".pyc" -and $_.Name -notlike "cephalo-setup*"
         } | ForEach-Object {
             if ($_.Name -eq ".claude" -and $_.PSIsContainer) {
                 # Copy .claude item by item, like setup.sh's tar excludes:
@@ -643,6 +683,15 @@ if ($Target -ne "") {
     }
     
     Write-Host "+ Template copied to: $Target" -ForegroundColor Green
+    foreach ($KeepName in $KeepNames) {
+        $KeepTemplate = [System.IO.Path]::Combine($SourceDir, $KeepName)
+        try {
+            $added = Merge-MissingLines $KeepTemplate ([System.IO.Path]::Combine($Target, $KeepName))
+            Write-Host ". $KeepName kept (project's own); template rules added: $added" -ForegroundColor Gray
+        } catch {
+            Write-Host "! $KeepName kept, but the template's rules could not be added: compare it with $KeepTemplate" -ForegroundColor Yellow
+        }
+    }
     Write-Host ""
     
     $script:SourceDirBeforeMove = $SourceDir

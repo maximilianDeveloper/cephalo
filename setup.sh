@@ -276,6 +276,28 @@ shell_quote() {
     printf "'%s'" "$s"
 }
 
+merge_missing_lines() {
+    # Append to the project's file $2 the rules of the template's file $1
+    # that it lacks (blank and comment lines aside), under one comment line.
+    # Prints how many rules were added. CR and a UTF-8 BOM are ignored when
+    # comparing, so a file edited on Windows is not filled with duplicates.
+    local missing count
+    missing="$(LC_ALL=C awk '
+        { sub(/\r$/, "") }
+        FNR == 1 && substr($0, 1, 3) == "\357\273\277" { $0 = substr($0, 4) }
+        FILENAME == ARGV[1] { have[$0] = 1; next }
+        $0 != "" && $0 !~ /^#/ && !($0 in have) && !seen[$0]++ { print }
+    ' "$2" "$1")" || return 1
+    count=0
+    [ -n "$missing" ] && count="$(printf '%s\n' "$missing" | wc -l | tr -d ' ')"
+    if [ "$count" -gt 0 ]; then
+        # Keep the file's last line intact if it has no line break.
+        if [ -s "$2" ] && [ -n "$(tail -c 1 "$2")" ]; then printf '\n' >> "$2"; fi
+        printf '\n# Added by cephalo setup: template rules this file lacked\n%s\n' "$missing" >> "$2"
+    fi
+    printf '%s\n' "$count"
+}
+
 # ==========================================================
 # Start
 # ==========================================================
@@ -671,7 +693,8 @@ if [ -n "$TARGET_DIR" ]; then
             echo "  .claude/agents/, workflows/, checklists/, templates/, scripts/, docs/,"
             echo "  CLAUDE.md, README.md and the template's other top-level files."
             echo "Files the template does not contain (00_Status.md, phase folders,"
-            echo "guidelines/, styleguide.md, ...) are kept."
+            echo "guidelines/, styleguide.md, ...) are kept. The project's own .gitignore"
+            echo "and .gitattributes are kept too; template rules they lack are appended."
             echo ""
             if ! $NON_INTERACTIVE && [ -t 0 ] && [ -t 1 ]; then
                 read -r -p "Continue and copy into this directory? [y/N]: " overwrite_ans || overwrite_ans=""
@@ -700,6 +723,19 @@ if [ -n "$TARGET_DIR" ]; then
     # it embeds the user's absolute path and would end up in the commit.
     # So is .github/: cephalo's own CI and issue templates would otherwise
     # run and show up in every thesis repository pushed to GitHub.
+    # The project's own .gitignore/.gitattributes may hold rules the user
+    # added (docs/git_introduction.md suggests it): they are not replaced,
+    # but completed with the template's rules after the copy.
+    KEEP_FILES=()
+    KEEP_EXCLUDES=()
+    if $TARGET_HAD_FILES; then
+        for f in .gitignore .gitattributes; do
+            if [ -f "$TARGET_DIR/$f" ] && [ -f "$SOURCE_DIR_BEFORE_MOVE/$f" ]; then
+                KEEP_FILES+=("$f")
+                KEEP_EXCLUDES+=("--exclude=./$f")
+            fi
+        done
+    fi
     echo ""
     echo -e "${CYAN}Copying cephalo template to target...${NC}"
     # Use a tar-pipe to reliably include dotfiles and respect excludes
@@ -718,6 +754,7 @@ if [ -n "$TARGET_DIR" ]; then
             --exclude='venv' --exclude='*/venv' --exclude='*/venv/*' \
             --exclude='__pycache__' --exclude='*/__pycache__' --exclude='*/__pycache__/*' \
             --exclude='*.pyc' \
+            ${KEEP_EXCLUDES[@]+"${KEEP_EXCLUDES[@]}"} \
             -cf - .
     ) | (
         cd "$TARGET_DIR" &&
@@ -744,6 +781,13 @@ if [ -n "$TARGET_DIR" ]; then
     fi
 
     echo -e "${GREEN}+ Template copied to: $TARGET_DIR${NC}"
+    for f in ${KEEP_FILES[@]+"${KEEP_FILES[@]}"}; do
+        if added="$(merge_missing_lines "$SOURCE_DIR_BEFORE_MOVE/$f" "$TARGET_DIR/$f")"; then
+            echo -e "${GRAY}. $f kept (project's own); template rules added: $added${NC}"
+        else
+            echo -e "${YELLOW}! $f kept, but the template's rules could not be added: compare it with $SOURCE_DIR_BEFORE_MOVE/$f${NC}"
+        fi
+    done
     echo ""
 
     # Change into target and continue the rest of the setup there

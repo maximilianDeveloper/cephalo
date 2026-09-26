@@ -277,7 +277,7 @@ jobs:
 
       # setup.sh and setup.ps1 must scaffold the same project. pwsh (PowerShell 7,
       # preinstalled on the runner) runs setup.ps1 here; the Windows job covers 5.1.
-      - name: setup.sh and setup.ps1 create identical projects (all 22 combinations)
+      - name: setup.sh and setup.ps1 create identical projects (all 22 combinations, update path)
         run: |
           P=/tmp/ci_parity; rm -rf "$P"; mkdir -p "$P"; i=0
           for wt in "Seminar paper" "Presentation" "Bachelor thesis" "Master thesis" "Dissertation"; do
@@ -298,6 +298,24 @@ jobs:
           (cd "$P/ps1" && pwsh -NoProfile -File ./setup.ps1 -WorkType "Seminar paper" -Structure Flat -Scaffolding full -NonInteractive >/dev/null)
           diff -r --no-dereference -x .git "$P/sh1" "$P/ps1"
           cmp .gitignore "$P/ps1/.gitignore"
+          # Updating a project (--target into it, confirmed at the prompts) keeps its own
+          # .gitignore/.gitattributes and appends the template rules they lack, in both scripts.
+          # (No Python caches in the template: setup.ps1 leaves nested ones it copies into a
+          # non-empty target in place, as they could be the user's own.)
+          find . -name __pycache__ -type d -prune -exec rm -rf {} +
+          U=/tmp/ci_update; rm -rf "$U"; mkdir -p "$U"
+          bash setup.sh "Master thesis" "Multi-project" full --target "$U/base" </dev/null >/dev/null
+          sed -i '/^\*\.swp$/d' "$U/base/.gitignore"
+          printf 'interviews/\r\nsecret.txt' >> "$U/base/.gitignore"
+          printf '*.csv text eol=lf\n' >> "$U/base/.gitattributes"
+          cp -a "$U/base" "$U/sh"; cp -a "$U/base" "$U/ps"
+          printf '4\n3\n1\ny\ny\nn\n' | script -qec "bash setup.sh --target $U/sh" /dev/null >/dev/null
+          printf 'y\ny\nn\n' | pwsh -NoProfile -File ./setup.ps1 -WorkType "Master thesis" -Structure "Multi-project" -Scaffolding full -Target "$U/ps" >/dev/null
+          diff -r --no-dereference -x .git "$U/sh" "$U/ps"
+          grep -q '^interviews/' "$U/sh/.gitignore" && grep -qx 'secret.txt' "$U/sh/.gitignore"
+          test "$(grep -cx '\*\.swp' "$U/sh/.gitignore")" -eq 1
+          grep -qx '\*\.csv text eol=lf' "$U/sh/.gitattributes"
+          test "$(grep -c 'filter=lfs' "$U/sh/.gitattributes")" -eq 6
 
       - name: Shell scripts stay LF in a core.autocrlf=true clone
         run: |

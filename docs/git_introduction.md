@@ -58,7 +58,7 @@ The `.` means "everything in the current directory and below". This is the simpl
 **Word of caution:** `git add .` also stages files you might not want in version control — for example `.env` files (containing secrets), or drafts you copied from elsewhere by mistake. Two safer habits:
 
 - Run `git status` before every `git add .` and look at the list. If something unexpected is there, stage specific files instead: `git add 03_Theory_chapters/chapter_2.md`.
-- Keep a thorough `.gitignore`. The setup script creates a reasonable default, but add anything project-specific you know you never want committed.
+- Keep a thorough `.gitignore`. The setup script creates a reasonable default, but add anything project-specific you know you never want committed. A template update (setup with `--target` into the project) keeps your rules and only appends the template rules your file lacks.
 
 For a thesis project where everything in the project is meant to be versioned anyway, `git add .` is usually fine. For projects with mixed confidential data, be more deliberate.
 
