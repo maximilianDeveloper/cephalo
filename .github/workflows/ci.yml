@@ -783,6 +783,11 @@ jobs:
           grep -q 'pdftotext-only' "$W/out.txt"
           test -f "$W/lg_out/a.txt"
           test -f "$W/lg_out/b.txt"
+          # ... also when the guidelines folder itself is given as a link
+          ln -s lg "$W/lglink"
+          PATH="$W/nopy" bash scripts/extract_styleguide.sh "$W/lglink" "$W/lgl_out" > "$W/out.txt" 2>&1
+          test -f "$W/lgl_out/a.txt"
+          test -f "$W/lgl_out/b.txt"
           # extract_styleguide.sh: a ZIP disguised as PDF is unpacked; path traversal is blocked
           expect 0 bash scripts/extract_styleguide.sh "$W/good" "$W/out_good"
           grep -q "Example rule text" "$W/out_good/guide.txt"

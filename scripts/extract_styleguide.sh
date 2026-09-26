@@ -154,7 +154,8 @@ if [ -z "$PYTHON_BIN" ]; then
             echo "  ERR $(basename "$pdf") - PDF extraction failed or produced no text" >&2
             errors=$((errors + 1))
         fi
-    done < <(find "$base" \( -type f -o -type l \) -iname '*.pdf' -print0 | sort -z)
+    # -H: a guidelines folder given as a link is searched too (as by rglob).
+    done < <(find -H "$base" \( -type f -o -type l \) -iname '*.pdf' -print0 | sort -z)
 
     echo ""
     echo "Done."
