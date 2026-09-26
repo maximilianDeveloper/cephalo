@@ -23,13 +23,13 @@ The guideline directory varies by project structure:
 
 - **Flat structure:** `workspace/sources/_guidelines/` (leading underscore is intentional — it signals to the research-agent that this folder is NOT a source of citable literature)
 - **Long-form structure:** `guidelines/` (top-level folder; no ambiguity)
-- **Multi-project structure:** `00_Shared_Materials/guidelines/` (accessed via `shared/guidelines/` symlink from sub-projects)
+- **Multi-project structure:** `00_Shared_Materials/guidelines/` (`../00_Shared_Materials/guidelines/` from a sub-project)
 
 The output always goes to `styleguide.md` at the project root (or for multi-project: `00_Shared_Materials/styleguide.md`).
 
 Templates: `templates/styleguide.md` provides the expected structure.
 
-**Multi-project sub-project** (Claude Code opened on `01_Proposal/`, `02_Main_Work/` or `03_Defense/`): read the guidelines from `../00_Shared_Materials/guidelines/` and write the styleguide to `../00_Shared_Materials/styleguide.md`, the targets of the `shared/` link through which the other agents read it (`shared/styleguide.md`). If `shared/` is a plain folder, not a link, setup fell back to copying: the copy does not change with `00_Shared_Materials/`, so tell the user to re-sync it after your run (see `docs/multiproject_structure.md`, "Re-syncing shared materials manually"). The framework folders stay at the multi-project root, one level up: `../checklists/`, `../scripts/`, `../templates/`, `../workflows/`.
+**Multi-project sub-project** (Claude Code opened on `01_Proposal/`, `02_Main_Work/` or `03_Defense/`): read the guidelines from `../00_Shared_Materials/guidelines/` and write the styleguide to `../00_Shared_Materials/styleguide.md`, where the agents of all three sub-projects read it. The framework folders stay at the multi-project root, one level up: `../checklists/`, `../scripts/`, `../templates/`, `../workflows/`.
 
 ## Procedure
 
