@@ -131,7 +131,7 @@ python3 scripts/bibliography_check.py --help
 What it does:
 
 1. Splits the document into body and bibliography (detects the section by header)
-2. Extracts author surnames from in-text citations — supports parenthetical and narrative forms (also with a page locator, `Müller (2020, S. 15)`, `Müller (2020: 15)`), `et al.`/`u. a.`, joint authors (in parentheses also `(Müller/Schmidt 2019)`), hyphenated surnames, surnames starting with Ä/Ö/Ü, typographic apostrophes (`O’Brien`), year-suffix citations (`Schulz (2022a)`, `(Wagner, 2022a)`), name prefixes including `van der`/`van den`/`von`/`de la`/`ter`/`ten`, also capitalized at the start (`De Vries`, `Van der Berg`; not `Das`, the German article), and the citation-lead words `vgl.`/`cf.`/`see`/`siehe`/`nach`/`zit. nach`
+2. Extracts author surnames from in-text citations — supports parenthetical and narrative forms (also with a page locator, `Müller (2020, S. 15)`, `Müller (2020: 15)`), `et al.`/`u. a.`, joint authors (in parentheses also `(Müller/Schmidt 2019)`), hyphenated surnames, surnames starting with Ä/Ö/Ü, typographic apostrophes (`O’Brien`), year-suffix citations (`Schulz (2022a)`, `(Wagner, 2022a)`), name prefixes including `van der`/`van den`/`von`/`de la`/`ter`/`ten`, also capitalized at the start (`De Vries`, `Van der Berg`; not `Das`, the German article), and the citation-lead words `vgl.`/`cf.`/`see`/`siehe`/`nach`/`zit. nach`, also followed by `auch`/`also`/`z. B.`/`e.g.` (`(vgl. auch Müller 2020)`)
 3. Extracts author surnames from bibliography entries, using the same surname-prefix and umlaut handling as the in-text extraction
 4. Reports asymmetries in both directions
 

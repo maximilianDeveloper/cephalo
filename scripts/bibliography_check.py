@@ -253,9 +253,11 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
             match = re.match(r"^((?:cf\.\s+|see\s+|vgl\.\s+|siehe\s+|nach\s+|zit\.\s+nach\s+)?[^,]+(?:\s+(?:et\s+al\.?|u\.\s*a\.))?(?:\s*(?:,\s*)?(?:&|and|und)\s+[\w'’-]+|,\s*[\w'’-]+)*),\s*\d{4}", fragment)
             if not match:
                 # Try German style: "Author YYYY" without comma
-                # (lead word in any case: "(Vgl. Smith 2020)")
+                # (lead word in any case: "(Vgl. Smith 2020)"; a filler only
+                # after a lead word: "(vgl. auch Müller 2020)", "(see also
+                # Smith 2020)", not "(auch Deutschland 2020)")
                 match = re.match(
-                    r"^((?i:vgl\.\s+|cf\.\s+|see\s+|siehe\s+|nach\s+|zit\.\s+nach\s+)?"
+                    r"^((?i:(?:vgl\.|cf\.|see|siehe|nach|zit\.\s+nach)\s+(?:(?:auch|also|z\.\s*b\.|e\.g\.)\s+)?)?"
                     + prefix + r"[A-ZÄÖÜ][\wäöüß'’-]+"
                     + r"(?:(?:\s+(?:&|und|and)\s+|\s*/\s*)" + prefix + r"[A-ZÄÖÜ][\wäöüß'’-]+)?"
                     + r"(?:\s+(?:et\s+al\.?|u\.\s*a\.))?)"
