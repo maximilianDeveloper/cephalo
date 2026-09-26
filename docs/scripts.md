@@ -163,7 +163,7 @@ What it does:
 2. Inserts `<w:autoHyphenation/>` into `word/settings.xml` if not already present, or rewrites it in place if it is present but explicitly disabled (`w:val="0"`/`"false"`/`"off"`)
    (if the settings element cannot be located, e.g. because the generator used a namespace prefix other than `w:`, the script stops with an error and leaves the file unchanged — enable hyphenation in Word instead)
 3. Re-zips, keeping `[Content_Types].xml` as the first entry and stored (uncompressed) — not an OOXML requirement, but it maximizes compatibility with strict/streaming consumers
-4. Replaces the original file only after the new archive was built successfully
+4. Replaces the original file only after the new archive was built successfully (for a symbolic link, the document it points to; the link stays)
 
 Run once before the final export. Re-running is safe (the script detects if the flag is already set and enabled).
 

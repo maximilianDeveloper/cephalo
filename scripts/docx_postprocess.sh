@@ -96,6 +96,15 @@ fi
 # an option by dirname, basename and cd (a folder named '-' even as OLDPWD).
 case "$DOC" in -*) DOC="./$DOC" ;; esac
 DOC_ABS=$(cd "$(dirname "$DOC")" && pwd)/$(basename "$DOC")
+# A symbolic link: patch the document it points to. Replacing the link
+# itself (the mv at the end) would leave that document unchanged.
+while [ -L "$DOC_ABS" ]; do
+    LINK_TARGET=$(readlink "$DOC_ABS")
+    case "$LINK_TARGET" in
+        /*) DOC_ABS="$LINK_TARGET" ;;
+        *)  DOC_ABS="$(dirname "$DOC_ABS")/$LINK_TARGET" ;;
+    esac
+done
 
 # Paths handed to Python. Under Git Bash the interpreter is a native Windows
 # program, and MSYS converts a /path argument for it only when it looks like

@@ -710,6 +710,11 @@ jobs:
           echo n | script -qec "bash scripts/docx_postprocess.sh $W/ro.docx" /dev/null >/dev/null
           test "$(stat -c %a "$W/ro.docx")" = 444
           unzip -p "$W/ro.docx" word/settings.xml | grep -q autoHyphenation
+          # a symbolic link to the document: the document is patched, the link stays
+          cp "$W/findings.docx" "$W/target.docx"; ln -s target.docx "$W/linked.docx"
+          expect 0 bash scripts/docx_postprocess.sh "$W/linked.docx"
+          test -L "$W/linked.docx"
+          unzip -p "$W/target.docx" word/settings.xml | grep -q autoHyphenation
           python - "$W/ok.docx" <<'EOF'
           import sys, zipfile, docx
           docx.Document(sys.argv[1])
@@ -1168,6 +1173,13 @@ jobs:
           # A name starting with "-" is a file, not an option.
           "$SH" "$R/scripts/docx_postprocess.sh" -draft.docx
           hyphenated ./-draft.docx
+          # A symbolic link to the document: the document is patched, the link stays.
+          if [ "$RUNNER_OS" != Windows ]; then
+            cp "Chapter 2.docx" target.docx; ln -s target.docx linked.docx
+            "$SH" "$R/scripts/docx_postprocess.sh" linked.docx
+            test -L linked.docx
+            hyphenated target.docx
+          fi
           # A symbolic-link entry is refused before unpacking (Git Bash's unzip would copy it).
           cp link.docx link.orig
           set +e; "$SH" "$R/scripts/docx_postprocess.sh" link.docx >out.txt 2>&1; code=$?; set -e
