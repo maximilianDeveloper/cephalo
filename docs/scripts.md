@@ -189,6 +189,8 @@ Exit codes: `0` = no findings, `1` = findings reported (intended for CI/hooks), 
 
 Like the other checks, this is a heuristic aid, not a guarantee — it only catches the specific patterns described above (uncommitted changes, `_*.md` notes, and backticked cross-references in a recognized path format).
 
+A bare repository (`git clone --bare` with linked worktrees) has no main worktree to compare against: run from the bare repository itself, the audit stops with exit 2; run from one of its worktrees, it compares against the bare entry, so every `_*.md` note counts as missing from the main worktree and Layer 2 has no files to check.
+
 ---
 
 ## Troubleshooting
