@@ -156,6 +156,9 @@ ask_choice() {
         echo "Please enter a number between 1 and ${#options[@]}." >&2
         if [ "$attempts" -ge 10 ]; then
             echo "Error: too many invalid attempts. Aborting." >&2
+            # A menu shows only in runs without all three arguments, such as a
+            # double-clicked one, whose window would close at once.
+            pause_before_close "error"
             exit 2
         fi
     done

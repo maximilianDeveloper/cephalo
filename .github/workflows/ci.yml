@@ -326,6 +326,10 @@ jobs:
           out=$(printf '2\nThesisSub\n' | pwsh -NoProfile -File ./setup.ps1 || true)
           printf '%s\n' "$out" | grep -q 'check the messages above'
           test ! -e ThesisSub
+          # So does setup.sh's exit after ten invalid menu answers.
+          out=$(printf '1\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\n' | script -qec "bash setup.sh" /dev/null || true)
+          printf '%s\n' "$out" | grep -q 'too many invalid attempts'
+          printf '%s\n' "$out" | grep -q 'check the messages above'
 
       # setup.sh and setup.ps1 must scaffold the same project. pwsh (PowerShell 7,
       # preinstalled on the runner) runs setup.ps1 here; the Windows job covers 5.1.
