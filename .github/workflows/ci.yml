@@ -564,12 +564,12 @@ jobs:
           f.add_paragraph(unicodedata.normalize("NFD", "(Müller/Schmidt 2019), Öztürk (2020), (Dawson u. a. 2018), "
                                                "Ellis (2018), (März 2021), (Tabelle 3, 2020), (von Mai 2020 bis Juni 2021), (De Vries 2018), (vgl. auch Weber 2020), (Fischer/Wolf 2017), "
                                                "(e.g., De Dreu & Weingart, 2003). Van Dijk and De Vries (2019) argue. (De Vries 2018, Kap. 3). "
-                                               "(see Le Grand 2007 for a critique). (De Beers, n.d.)."))
+                                               "(see Le Grand 2007 for a critique). (De Beers, n.d.). (Weber, 1922, zit. nach Keller, 2018, S. 5)."))
           f.add_heading("7 Literaturverzeichnis:", 1)
           for entry in ("Müller, H./Schmidt, K. (2019). A.", "Öztürk, A. (2020). B.", "Dawson, R., Ellis, S., & Fowler, T. (2018). C.",
                         "De Vries, R. (2018). D.", "Weber, E. (2020). E.", "Fischer, Hans/Wolf, Karl (2017): G.",
                         "De Dreu, C. K. W., & Weingart, L. R. (2003). H.", "Van Dijk, T. A., & De Vries, R. (2019). I.",
-                        "Le Grand, J. (2007). J.", "De Beers. (n.d.). K."):
+                        "Le Grand, J. (2007). J.", "De Beers. (n.d.). K.", "Keller, T. (2018). L."):
               f.add_paragraph(entry)
           f.save(os.path.join(w, "forms.docx"))
           # prose that looks like a citation with a capitalized particle or a filler,

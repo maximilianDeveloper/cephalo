@@ -240,7 +240,8 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
     
     Two-stage parsing:
       1. Find parenthesized blocks that look like citations
-      2. Split each block on semicolons, then parse each fragment
+      2. Split each block on semicolons and before "zit. nach", then parse
+         each fragment
     
     The recognition is heuristic and may produce false positives. The output
     is intended for cross-checking, not as ground truth.
@@ -274,9 +275,11 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
     # Stage 1: find parenthesized blocks containing a year (YYYY)
     paren_blocks = re.findall(r"\(([^()]*\d{4}[^()]*)\)", body)
     
-    # Stage 2: per block, split on semicolons and parse each fragment
+    # Stage 2: per block, split on semicolons and before "zit. nach" (the
+    # secondary source after the primary one: "(Weber 1922, zit. nach Keller
+    # 2018)"), and parse each fragment
     for block in paren_blocks:
-        for fragment in block.split(";"):
+        for fragment in re.split(r";|,?\s+(?=zit\.\s+nach\s)", block):
             fragment = fragment.strip()
             # A citation fragment typically has "Author(s), YYYY[, p. X]"
             # (English/APA style — comma before year)
