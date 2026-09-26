@@ -75,7 +75,7 @@ Lessons from project experience:
 
 ### Format
 
-Per styleguide. If the styleguide is silent, do not pick a convention yourself: report the gap to the orchestrator as `❓` (APA 7 is one common option the user may choose).
+Per styleguide. If the styleguide is silent, do not pick a convention yourself: report the gap to the orchestrator as `❓` (APA 7 is one common option the user may choose). While a rule you build into outputs (`numbers.decimal_separator`, `captions.*`) is still an open question in `styleguide.md`, do not produce final tables or figures: name it to the orchestrator.
 
 ## Figures
 

@@ -147,12 +147,16 @@ phases:
         blocking: true
         task: |
           In multi-project setups, verify that `../00_Shared_Materials/styleguide.md` 
-          exists and contains no open ❓ items. The defense reuses the styleguide 
+          exists and has no open ❓ entries. The defense reuses the styleguide 
           from the main work.
           
           In stand-alone defense setups (rare — defense without prior cephalo project), 
           extract the styleguide from institutional guidelines into `styleguide.md` 
           at the defense project root.
+          
+          Open ❓ [content] entries (or entries without a tag) must be resolved
+          before slides or speaker notes are drafted, ❓ [format] entries before
+          the slides are exported.
   
   # ===========================================================
   # Phase 1 - Slides

@@ -134,9 +134,9 @@
 ## Open questions (`❓`)
 
 [List of items the resolver could not unambiguously extract. Each item is tagged:
-`[content]` — the answer changes what is written in Phase A: voice and pronouns, evaluative wording, the direct-quote threshold, what may go into footnotes, the "cf." prefix and page numbers for paraphrases, the page count, the outline depth. Resolve with the supervisor before any chapter is drafted.
-`[format]` — the answer changes only how the text is set: fonts, spacing, margins, pagination, captions, title page, bibliography layout, citation punctuation. Resolve before the formatting phase (Phase B).
-An item without a tag counts as `[content]`.]
+`[content]` — the answer changes what is written or produced in Phase A: voice and pronouns, evaluative wording, the direct-quote threshold, what may go into footnotes, the "cf." prefix and page numbers for paraphrases, the page count, the outline depth, and the decimal separator and caption placement (built into tables and figures in Phase A). Resolve with the supervisor before any chapter is drafted.
+`[format]` — the answer changes only how the text is set: fonts, spacing, margins, pagination, title page, bibliography layout, citation punctuation. Resolve before the formatting phase (Phase B).
+An entry here without a tag counts as `[content]`. A `❓` next to a rule above only points to its entry here.]
 
 - [ ] ❓ [content] `style.forbidden_pronouns` — [description of the ambiguity and where it appears in the source documents]
 - [ ] ❓ [format] `in_text.page_range` — [...]

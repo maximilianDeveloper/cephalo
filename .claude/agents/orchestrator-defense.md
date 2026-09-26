@@ -161,6 +161,7 @@ Present the outstanding items as a numbered list with source citations so the us
 ## When to ask the user
 
 - If `shared/styleguide.md` doesn't exist → invoke the `style-resolver` (defense workflow step 0.4) before any slide work
+- If its "Open questions" list a `[content]` entry (or one without a tag) → before slides or speaker notes are drafted: STOP, clarification required; a `[format]` entry → before the slides are exported: STOP
 - If defense date is missing from `00_Decisions.md` → prompt; no timing without it
 - If submitted work is not tagged as "frozen" (no Git tag) → clarify: really submitted?
 - If formal requirements are unclear (slide count, time, handout) → recommend asking the examination office

@@ -24,7 +24,7 @@ You write and verify the methodology chapter for empirical work. You ensure that
 - Research design (workflow step 0.6, your output, binding for the data-agent): `workspace/methods/design.md` (flat) or `04_Methods/design.md` (long-form)
 - Data agent output: `workspace/data/outputs/` (flat) or `05_Empirical/data/outputs/` (long-form)
 - Methodological sources: same as other sources — `workspace/sources/` (flat) or `02_Literature/sources/` (long-form). In the flat structure, tag methodological sources with a `methods_` prefix in the extract filename (e.g., `methods_mayring_2014.md`) for clarity; long-form extracts keep their `02_Literature/extracts/<citekey>.md` name, which citations and the other agents look them up by.
-- Styleguide: `styleguide.md`
+- Styleguide: `styleguide.md` — read it before drafting. If its "Open questions" list a `[content]` entry (or one without a tag), do not draft the chapter: name it to the orchestrator. Open `[format]` entries do not stop drafting.
 - State: `workspace/state.md` or `00_Status.md`
 
 **Multi-project sub-project** (Claude Code opened on `01_Proposal/`, `02_Main_Work/` or `03_Defense/`): the styleguide is `shared/styleguide.md` (`shared/` points to `../00_Shared_Materials/`).

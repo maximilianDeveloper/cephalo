@@ -80,6 +80,10 @@ phases:
         agent: style-resolver
         output: styleguide.md
         blocking: true
+        note: |
+          This workflow has no Phase B. Clarify open ❓ [content] entries
+          before slides are drafted (step 1), open ❓ [format] entries
+          before the first format-verifier pass (step 3).
       
       - step: 0.6
         name: Define data basis
@@ -149,6 +153,7 @@ phases:
     - step: F.1
       manual: true
       task: |
+        - No open ❓ entries left under Open questions in styleguide.md
         - Final PPTX export
         - Final PDF (for submission)
         - Speaker notes export (if required)

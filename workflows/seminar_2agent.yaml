@@ -128,6 +128,7 @@ phases:
     - step: F.1
       manual: true
       task: |
+        - Resolve the open ❓ [format] entries in styleguide.md (usually with the supervisor)
         - Verify all chapters against styleguide (checklists/format_rules.md)
         - Export to DOCX (the scripts below read the DOCX, not the Markdown)
         - Derive list of abbreviations from text (scripts/abbreviations_extract.py)

@@ -82,6 +82,10 @@ phases:
         agent: style-resolver
         output: styleguide.md
         blocking: true
+        note: |
+          If the resolver leaves open ❓ [content] entries, clarify them
+          with the user before any chapter or data output is made; open
+          ❓ [format] entries may wait until the A -> B transition.
       
       - step: 0.6
         name: Methods design (only if empirical)
