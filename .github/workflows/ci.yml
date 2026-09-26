@@ -594,7 +594,8 @@ jobs:
                           "(Kopernikus, De revolutionibus, 1543). (Interview 7, La Paz, 2019). (Studie von Sommer, 2019). "
                           "Thatcher and Major (1979–1997) privatised. (von Herbst 2012 mit Daten für 1991 bis 2010 geschätzt). "
                           "However, Smith and Jones (2019) argue. Das Verfahren, das Müller und Schmidt (2019) entwickelt haben, gilt. "
-                          "(Juni, Juli und August 2020). (January, February, and March 2021).")
+                          "(Juni, Juli und August 2020). (January, February, and March 2021). "
+                          "Reagan, Kohl und Thatcher (1980–1990) prägten die Dekade.")
           r.add_heading("References", 1)
           for entry in ("De Vries, R. (2018). A.", "Fischer, Hans, Titel, in Schulz, Eva/Meier, Karl (Hrsg.), Band, Berlin 2019.",
                         "Mai, Manfred (2018): Medienpolitik.", "Thatcher, M. (1993). Memoirs."):
