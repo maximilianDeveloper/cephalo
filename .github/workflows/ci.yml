@@ -19,9 +19,9 @@ jobs:
         # 3.9 backs the documented minimum; a recent version catches deprecations.
         python-version: ["3.9", "3.13"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -698,7 +698,7 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # "shell: powershell" is Windows PowerShell 5.1 — exactly the floor the
       # scripts document. (pwsh would be PowerShell 7 and hides 5.1 issues.)
@@ -854,9 +854,9 @@ jobs:
     env:
       SH: ${{ matrix.sh }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
 
