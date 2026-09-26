@@ -39,7 +39,8 @@ These documents define the rules the work must follow.
 
 For the active chapter, all sources to be cited must be available.
 
-- [ ] All relevant sources available as files (PDF, EPUB, scanned print)
+- [ ] All relevant sources available as files the agents can read: PDF (also scanned print) or plain text
+- [ ] E-books (EPUB) converted first: an EPUB is a ZIP archive the agents cannot open. Convert it to PDF or text (e.g. with Calibre) and cite the print edition's page numbers where the e-book shows them; if it has none, ask how to cite it (chapter or section) and log the answer as a decision (`00_Decisions.md`; flat projects: `workspace/state.md`)
 - [ ] Access verified (institutional databases — sessions still valid?)
 - [ ] No source from memory only — original file must exist
 - [ ] File contents inspected; do not trust filenames

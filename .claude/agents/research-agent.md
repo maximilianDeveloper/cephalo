@@ -50,6 +50,9 @@ The name is slightly misleading: you do not browse the internet or find new sour
      write outside the target directory. If the script cannot handle the file, stop and ask
      the user
    - For real PDFs: read content
+   - For an EPUB (a ZIP archive, which neither you nor the script may unpack): do not
+     extract it; mark the source `❓` and ask the user for a PDF, or for a PDF or text
+     conversion of the e-book (e.g. made with Calibre)
    - For e-books: use page numbers from the print edition when available, not e-book pagination
 
 2. **Walk through the source page by page.**
@@ -181,7 +184,7 @@ One file per source. Filename: author_year or BibTeX citekey.
 
 **Citekey:** [e.g., author2024]     (only with Zotero/BibTeX integration)
 **Source file path:** [path to original]
-**File type:** [real PDF / ZIP archive / EPUB / ...]
+**File type:** [real PDF / ZIP archive / e-book converted from EPUB / ...]
 **Status:** draft / verified (set by research-agent after source-verifier ✅)
 **Used in:** [Chapter X, Y — updated by writer-agent]
 
