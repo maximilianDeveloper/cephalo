@@ -385,7 +385,8 @@ jobs:
           printf '4\n3\n1\ny\ny\nn\n' | script -qec "bash setup.sh --target $U/sh" /dev/null >/dev/null
           printf 'y\ny\nn\n' | pwsh -NoProfile -File ./setup.ps1 -WorkType "Master thesis" -Structure "Multi-project" -Scaffolding full -Target "$U/ps" >/dev/null
           diff -r --no-dereference -x .git "$U/sh" "$U/ps"
-          grep -q '^interviews/' "$U/sh/.gitignore" && grep -qx 'secret.txt' "$U/sh/.gitignore"
+          grep -q '^interviews/' "$U/sh/.gitignore"
+          grep -qx 'secret.txt' "$U/sh/.gitignore"
           test "$(grep -cx '\*\.swp' "$U/sh/.gitignore")" -eq 1
           grep -qx '\*\.csv text eol=lf' "$U/sh/.gitattributes"
           test "$(grep -c 'filter=lfs' "$U/sh/.gitattributes")" -eq 6
@@ -1183,7 +1184,9 @@ jobs:
           # A symbolic-link entry is refused before unpacking (Git Bash's unzip would copy it).
           cp link.docx link.orig
           set +e; "$SH" "$R/scripts/docx_postprocess.sh" link.docx >out.txt 2>&1; code=$?; set -e
-          test "$code" -eq 1 && grep -q "symbolic links" out.txt && cmp link.docx link.orig
+          test "$code" -eq 1
+          grep -q "symbolic links" out.txt
+          cmp link.docx link.orig
           # A ZIP disguised as a PDF is unpacked by the script's own safe extractor.
           "$SH" "$R/scripts/extract_styleguide.sh" "$W/good" "$W/out_good"
           grep -q "Example rule text" "$W/out_good/guide.txt"
