@@ -159,7 +159,10 @@ phases:
           does not re-extract, because the main work will reuse the same file.
           If the file does not exist yet (the proposal is usually the first 
           sub-project), the style-resolver extracts it once from 
-          `shared/guidelines/` into `shared/styleguide.md`.
+          `../00_Shared_Materials/guidelines/` into
+          `../00_Shared_Materials/styleguide.md` (the targets of shared/:
+          if shared/ is a copy, a styleguide written there would stay in
+          this sub-project).
           
           (b) Proposal as stand-alone (rare — proposal written before the main 
           work's cephalo project exists): invoke the style-resolver to extract 
