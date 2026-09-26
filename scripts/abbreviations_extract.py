@@ -36,6 +36,7 @@ if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
 try:
     from docx import Document
     from docx.opc.exceptions import PackageNotFoundError
+    from docx.table import _Cell
 except ImportError:
     print("Error: python-docx not installed.", file=sys.stderr)
     print("Install: pip install python-docx  (or: pip install -r requirements.txt)", file=sys.stderr)
@@ -148,10 +149,12 @@ def read_docx_text(path: Path) -> str:
         if p.text:
             chunks.append(p.text)
     
-    # Tables (including nested)
+    # Tables (including nested). The cells as written, not row.cells: that
+    # resolves merged cells, and python-docx raises on a vertical merge with no
+    # cell above it (found in converted documents), ending in a traceback.
     def collect_table_text(tbl):
         for row in tbl.rows:
-            for cell in row.cells:
+            for cell in (_Cell(tc, tbl) for tc in row._tr.tc_lst):
                 for p in cell.paragraphs:
                     if p.text:
                         chunks.append(p.text)

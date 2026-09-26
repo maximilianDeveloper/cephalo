@@ -603,6 +603,13 @@ jobs:
           a.add_heading("Eidesstattliche Erklärung", 1)
           a.add_paragraph("Ort, Datum")
           a.save(os.path.join(w, "appendix.docx"))
+          # a table whose first row holds a vertical-merge continuation (converter output)
+          from docx.oxml import OxmlElement
+          v = Document()
+          vt = v.add_table(rows=2, cols=2)
+          vt.cell(0, 1).text = "ABC"; vt.cell(1, 0).text = "DEF"; vt.cell(1, 1).text = "GHI"
+          vt.rows[0]._tr.tc_lst[0].get_or_add_tcPr().append(OxmlElement("w:vMerge"))
+          v.save(os.path.join(w, "vmerge.docx"))
           with zipfile.ZipFile(os.path.join(w, "notword.docx"), "w") as z:
               z.writestr("hello.txt", "a ZIP, but not a Word document")
           with zipfile.ZipFile(os.path.join(w, "good", "guide.pdf"), "w") as z:
@@ -675,6 +682,9 @@ jobs:
           # footnotes are read, and an acronym split across runs stays whole
           expect 0 python scripts/abbreviations_extract.py "$W/notes.docx"
           grep -qx "  UNESCO" "$W/out.txt"
+          # a table with an irregular vertical merge is read, not ended with a traceback
+          expect 0 python scripts/abbreviations_extract.py "$W/vmerge.docx"
+          for a in ABC DEF GHI; do grep -qx "  $a" "$W/out.txt"; done
           # docx_postprocess.sh: hyphenation on, package still valid, [Content_Types].xml first,
           # permission bits of the replaced file kept
           chmod 600 "$W/ok.docx"
