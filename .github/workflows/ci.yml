@@ -308,12 +308,14 @@ jobs:
           if [ "$code" -ne 130 ] || ! grep -q 'only partly set up' /tmp/ci_int.out; then cat /tmp/ci_int.out; echo "exit $code"; exit 1; fi
           # At the interactive target prompt, a folder dragged into the terminal
           # (quoted, or with shell escapes) is the folder meant.
-          mkdir -p "/tmp/ci_dd/My Thesis (2026)" "/tmp/ci_dd/Other Thesis"
+          mkdir -p "/tmp/ci_dd/My Thesis (2026)" "/tmp/ci_dd/Other Thesis" "/tmp/ci_dd/John's Thesis"
           printf '2\n/tmp/ci_dd/My\\ Thesis\\ \\(2026\\) \n3\n1\n1\ny\nn\n\n' | script -qec "bash setup.sh" /dev/null >/dev/null
           printf "2\n'/tmp/ci_dd/Other Thesis' \n3\n1\n1\ny\nn\n\n" | script -qec "bash setup.sh" /dev/null >/dev/null
+          printf '2\n%s \n3\n1\n1\ny\nn\n\n' "'/tmp/ci_dd/John'\\''s Thesis'" | script -qec "bash setup.sh" /dev/null >/dev/null
           test -d "/tmp/ci_dd/My Thesis (2026)/workspace/sources/_guidelines"
           test -d "/tmp/ci_dd/Other Thesis/workspace/sources/_guidelines"
-          test "$(ls -A /tmp/ci_dd | wc -l)" -eq 2
+          test -d "/tmp/ci_dd/John's Thesis/workspace/sources/_guidelines"
+          test "$(ls -A /tmp/ci_dd | wc -l)" -eq 3
           # An error a double-clicked run can reach (a bare folder name at the target
           # prompt lies inside the template) waits for Enter before the window closes;
           # with all three arguments, as the setup assistant's launchers pass them, not.

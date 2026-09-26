@@ -561,7 +561,9 @@ if [ -z "$TARGET_DIR" ] && ! $NON_INTERACTIVE && [ -t 0 ] && [ -t 1 ]; then
                 # Undo that as the shell does for --target; backslashes in
                 # other paths stay (C:\... typed in Git Bash).
                 case "$TARGET_DIR" in
-                    \'*\') TARGET_DIR="${TARGET_DIR#\'}"; TARGET_DIR="${TARGET_DIR%\'}" ;;
+                    \'*\') TARGET_DIR="${TARGET_DIR#\'}"; TARGET_DIR="${TARGET_DIR%\'}"
+                           # An apostrophe inside comes as '\'' (John'\''s Thesis).
+                           TARGET_DIR="$(printf '%s\n' "$TARGET_DIR" | sed "s/'\\\\''/'/g")" ;;
                     \"*\") TARGET_DIR="${TARGET_DIR#\"}"; TARGET_DIR="${TARGET_DIR%\"}" ;;
                     /*|\~*) TARGET_DIR="$(printf '%s\n' "$TARGET_DIR" | sed 's/\\\(.\)/\1/g')" ;;
                 esac
