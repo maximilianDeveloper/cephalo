@@ -110,6 +110,9 @@ if [ -z "$PYTHON_BIN" ]; then
     written="|"
     base="${GUIDELINES_DIR%/}"
     while IFS= read -r -d '' pdf; do
+        # A link counts if it leads to a file, as in the Python path
+        # (is_file); a broken link is skipped there too.
+        [ -f "$pdf" ] || continue
         # Flatten the relative path; strip only the FINAL .pdf extension
         # (any case), so 'notes.pdf.pdf' does not collapse onto 'notes.pdf'.
         rel="${pdf#"$base"}"
@@ -151,7 +154,7 @@ if [ -z "$PYTHON_BIN" ]; then
             echo "  ERR $(basename "$pdf") - PDF extraction failed or produced no text" >&2
             errors=$((errors + 1))
         fi
-    done < <(find "$base" -type f -iname '*.pdf' -print0 | sort -z)
+    done < <(find "$base" \( -type f -o -type l \) -iname '*.pdf' -print0 | sort -z)
 
     echo ""
     echo "Done."

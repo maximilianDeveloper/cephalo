@@ -759,6 +759,23 @@ jobs:
           cp "$W/ok.docx" "$W/Chapter [2].docx"; cp "$W/findings.docx" "$W/Chapter 2.docx"
           expect 0 bash scripts/docx_postprocess.sh "$W/Chapter [2].docx"
           expect 0 python scripts/bibliography_check.py "$W/Chapter [2].docx"
+          # extract_styleguide.sh without Python (pdftotext-only mode) reads the same
+          # files as the Python path, a linked PDF included; pdftotext is stubbed, as
+          # only the file selection is tested here
+          mkdir -p "$W/nopy" "$W/lg"
+          for b in bash find sort head tr grep wc rm basename cat mkdir dirname env ls mktemp; do
+            ln -s "$(command -v "$b")" "$W/nopy/$b"
+          done
+          cat > "$W/nopy/pdftotext" <<'STUB'
+          #!/bin/bash
+          echo "text" > "${@: -1}"
+          STUB
+          chmod +x "$W/nopy/pdftotext"
+          printf '%%PDF-1.4 stub' > "$W/lg/a.pdf"; ln -s a.pdf "$W/lg/b.pdf"
+          PATH="$W/nopy" bash scripts/extract_styleguide.sh "$W/lg" "$W/lg_out" > "$W/out.txt" 2>&1
+          grep -q 'pdftotext-only' "$W/out.txt"
+          test -f "$W/lg_out/a.txt"
+          test -f "$W/lg_out/b.txt"
           # extract_styleguide.sh: a ZIP disguised as PDF is unpacked; path traversal is blocked
           expect 0 bash scripts/extract_styleguide.sh "$W/good" "$W/out_good"
           grep -q "Example rule text" "$W/out_good/guide.txt"
