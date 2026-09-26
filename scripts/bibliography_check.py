@@ -89,6 +89,12 @@ NAME_PARTICLES = {
     "ter", "ten", "der", "den",
 }
 
+# The particles as a regex prefix of a surname, also capitalized at the start
+# of an entry or citation (De Vries, Van der Berg, La Porta). "Das" stays
+# lowercase: capitalized, it is the German article far more often.
+NAME_PREFIX = (r"(?:(?:van|von|de|del|della|di|la|le|du|dos|das|ter|ten"
+               r"|Van|Von|De|Del|Della|Di|La|Le|Du|Dos|Ter|Ten)\s+(?:der\s+|den\s+|de\s+|la\s+)?)?")
+
 # Lowercase words that may precede a surname inside a parenthetical citation:
 # name particles and short fillers after a lead word ("see also", "vgl. z. B.").
 PAREN_LOWERCASE_OK = NAME_PARTICLES | {"also", "auch", "z.", "z.b.", "e.g."}
@@ -231,8 +237,8 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
     """
     authors = set()
     stop = GERMAN_NON_AUTHOR_CAPS - keep
-    # Lowercase name particles: van der Berg, de la Rosa, von Wagner, ter Horst
-    prefix = r"(?:(?:van|von|de|del|della|di|la|le|du|dos|das|ter|ten)\s+(?:der\s+|den\s+|de\s+|la\s+)?)?"
+    # Name particles: van der Berg, de la Rosa, von Wagner, ter Horst, De Vries
+    prefix = NAME_PREFIX
     
     # Stage 1: find parenthesized blocks containing a year (YYYY)
     paren_blocks = re.findall(r"\(([^()]*\d{4}[^()]*)\)", body)
@@ -402,10 +408,10 @@ def extract_bibliography_authors(bibliography: list[str]) -> tuple[set[str], set
     #   - non-ASCII initial: Öztürk (same class as the in-text patterns)
     #   - hyphenated: Müller-Schmidt
     #   - apostrophe, straight or typographic (Word AutoCorrect): O'Brien, O’Brien
-    #   - with prefix: van der Berg, van den Berg, de la Rosa, von Wagner
+    #   - with prefix: van der Berg, van den Berg, de la Rosa, von Wagner,
+    #     also capitalized: De Vries, Van der Berg
     surname_core = r"[A-ZÄÖÜ][\w'’-]+"
-    prefix = r"(?:(?:van|von|de|del|della|di|la|le|du|dos|das|ter|ten)\s+(?:der\s+|den\s+|de\s+|la\s+)?)?"
-    surname_token = prefix + surname_core
+    surname_token = NAME_PREFIX + surname_core
     
     for entry in bibliography:
         if not entry.strip():
