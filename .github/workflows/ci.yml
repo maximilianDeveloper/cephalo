@@ -566,32 +566,35 @@ jobs:
           # authors, u. a., Ö as first letter, a cited middle author, NFC, month/structure
           # words, a surname-like month after "von", a capitalized particle, a filler
           # after the lead word, a co-author with full given names after "/", three
-          # authors named in the text
+          # authors named in the text, also in parentheses and after "However,"
           f = Document()
           f.add_heading("3.2 Sources", 2)
           f.add_paragraph(unicodedata.normalize("NFD", "(Müller/Schmidt 2019), Öztürk (2020), (Dawson u. a. 2018), "
                                                "Ellis (2018), (März 2021), (Tabelle 3, 2020), (von Mai 2020 bis Juni 2021), (De Vries 2018), (vgl. auch Weber 2020), (Fischer/Wolf 2017), "
                                                "(e.g., De Dreu & Weingart, 2003). Van Dijk and De Vries (2019) argue. (De Vries 2018, Kap. 3). "
                                                "(see Le Grand 2007 for a critique). (De Beers, n.d.). (Weber, 1922, zit. nach Keller, 2018, S. 5). Braun (2017: 15 f.) widerspricht. "
-                                               "Kraus, Lang und Roth (2016) zeigen es (vgl. Adam/Berg/Cohn 2015)."))
+                                               "Kraus, Lang und Roth (2016) zeigen es (vgl. Adam/Berg/Cohn 2015). (Nagel, Otto und Peters 2014). "
+                                               "However, Quinn, Ross, and Stone (2013) argue."))
           f.add_heading("7 Literaturverzeichnis:", 1)
           for entry in ("Müller, H./Schmidt, K. (2019). A.", "Öztürk, A. (2020). B.", "Dawson, R., Ellis, S., & Fowler, T. (2018). C.",
                         "De Vries, R. (2018). D.", "Weber, E. (2020). E.", "Fischer, Hans/Wolf, Karl (2017): G.",
                         "De Dreu, C. K. W., & Weingart, L. R. (2003). H.", "Van Dijk, T. A., & De Vries, R. (2019). I.",
                         "Le Grand, J. (2007). J.", "De Beers. (n.d.). K.", "Keller, T. (2018). L.", "Braun, P. (2017). M.", "Ders. (2019). N.",
-                        "Kraus, A., Lang, B., & Roth, C. (2016). O.", "Adam, A./Berg, B./Cohn, C. (2015): P."):
+                        "Kraus, A., Lang, B., & Roth, C. (2016). O.", "Adam, A./Berg, B./Cohn, C. (2015): P.",
+                        "Nagel, N., Otto, O., & Peters, P. (2014). Q.", "Quinn, Q., Ross, R., & Stone, S. (2013). R."):
               f.add_paragraph(entry)
           f.save(os.path.join(w, "forms.docx"))
-          # prose that looks like a citation with a capitalized particle or a filler,
-          # and real citations after "de"/"Der"/"von" that must still be reported
-          # when their entry is missing
+          # prose that looks like a citation with a capitalized particle, a filler or
+          # a list of names, and real citations after "de"/"Der"/"von" that must still
+          # be reported when their entry is missing
           r = Document()
           r.add_paragraph("(Von der Rentenreform 2001 profitierten viele.) (Chirac/Le Pen 2002; La Liga 2018/19). "
                           "(see also Horizon 2020). (De Vries 2018). (Der Freitag, 2020). (de Winter et al., 2014). "
                           "(Meier 2019, S. 3). (Von Mai 2020 bis April 2021 wurden 300 Personen befragt.) "
                           "(Kopernikus, De revolutionibus, 1543). (Interview 7, La Paz, 2019). (Studie von Sommer, 2019). "
                           "Thatcher and Major (1979–1997) privatised. (von Herbst 2012 mit Daten für 1991 bis 2010 geschätzt). "
-                          "However, Smith and Jones (2019) argue. Das Verfahren, das Müller und Schmidt (2019) entwickelt haben, gilt.")
+                          "However, Smith and Jones (2019) argue. Das Verfahren, das Müller und Schmidt (2019) entwickelt haben, gilt. "
+                          "(Juni, Juli und August 2020). (January, February, and March 2021).")
           r.add_heading("References", 1)
           for entry in ("De Vries, R. (2018). A.", "Fischer, Hans, Titel, in Schulz, Eva/Meier, Karl (Hrsg.), Band, Berlin 2019.",
                         "Mai, Manfred (2018): Medienpolitik.", "Thatcher, M. (1993). Memoirs."):
@@ -684,7 +687,7 @@ jobs:
           expect 0 python scripts/bibliography_check.py "$W/forms.docx"
           expect 1 python scripts/bibliography_check.py "$W/prose.docx"
           for a in Freitag Winter Meier Fischer Mai Sommer Thatcher Herbst; do grep -qx "    $a" "$W/out.txt"; done
-          for a in Rentenreform Chirac Pen Liga Horizon Vries De Interview However Verfahren; do
+          for a in Rentenreform Chirac Pen Liga Horizon Vries De Interview However Verfahren Juni Juli August January February March; do
             if grep -qx "    $a" "$W/out.txt"; then echo "prose read as a citation of $a"; exit 1; fi
           done
           # a numeric bibliography cannot be checked: exit 2, not a passed check

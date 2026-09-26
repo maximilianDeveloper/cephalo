@@ -263,11 +263,8 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
 
     def german_form(particles: str, lead: str) -> str:
         """German author-year citation without a comma: "Author YYYY"."""
-        name = particles + r"[A-ZÄÖÜ][\wäöüß'’-]+"
-        return (r"^(" + lead + name
-                # co-authors: "Müller/Schmidt/Weber", "Müller und Schmidt",
-                # "Dawson, Ellis und Fowler"
-                + r"(?:(?:\s*/\s*" + name + r")+|(?:,\s*" + name + r")*,?\s+(?:&|und|and)\s+" + name + r")?"
+        return (r"^(" + lead + particles + r"[A-ZÄÖÜ][\wäöüß'’-]+"
+                + r"(?:(?:\s+(?:&|und|and)\s+|\s*/\s*)" + particles + r"[A-ZÄÖÜ][\wäöüß'’-]+)?"
                 + r"(?:\s+(?:et\s+al\.?|u\.\s*a\.))?)"
                 + r"\s+\d{4}")
     # Lead word in any case: "(Vgl. Smith 2020)".
@@ -310,8 +307,7 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
             # Remove "et al." / German "u. a."
             name_part = re.sub(r"\s+(?:et\s+al\.?|u\.\s*a\.)", "", name_part, flags=re.IGNORECASE)
             # Split on & or , or / or "and"/"und"
-            parts = re.split(r"\s*[&,/]\s*|\s+(?:and|und)\s+", name_part)
-            for k, part in enumerate(parts):
+            for part in re.split(r"\s*[&,/]\s*|\s+(?:and|und)\s+", name_part):
                 # The surname is the last capitalized token ("van den Berg" ->
                 # Berg); numbers ("Tabelle 3") and lowercase words never
                 # qualify, single letters ("N = 1200") are rejected
@@ -335,11 +331,7 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
                 # unlike "(von Winter 2010 eingeführt)" or "(Studie von Sommer, 2019)".
                 after_von = (not comma_form and idx > 0 and tokens[idx - 1].lower() == "von"
                              and re.match(DATE_RANGE_AFTER_YEAR, fragment[match.end():]) is not None)
-                # A name before the last two of a list without the APA comma
-                # ("(Müller/Schmidt/Weber 2019)") counts, like a filler form,
-                # only if the bibliography lists it: see the narrative forms.
-                extra = not comma_form and k < len(parts) - 2
-                if (confirmed_only or extra) and surname not in keep:
+                if confirmed_only and surname not in keep:
                     continue
                 if len(surname) > 1 and (surname not in stop or surname.isupper()
                                          or (surname in SURNAME_LIKE_STOPWORDS and not after_von)):
@@ -350,18 +342,15 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
     #   - hyphenated surnames: Müller-Schmidt
     #   - letters of any script and apostrophes: García, O'Brien, O’Brien
     #   - name prefixes: van der Berg, de la Rosa, von Wagner
-    #   - joint authors: Smith and Jones, Müller-Schmidt & Weiss, also a list:
-    #     Dawson, Ellis and Fowler
+    #   - joint authors: Smith and Jones, Müller-Schmidt & Weiss
     #   - et al. narrative: Brown et al. (2021), German Müller u. a. (2021)
     #   - same-author-same-year suffixes: Schulz (2022a)
     #   - locator or further years inside the parentheses: Müller (2020, S. 15),
     #     Müller (2020: 15), Smith (2019, 2020)
     #   - German author-year style: Schmidt 2020 (no parentheses, handled below)
     name_token = r"[A-ZÄÖÜ](?:[^\W\d_]|['’-])+"
-    # Joint form (also a list, "Dawson, Ellis and Fowler") OR et-al form
-    joint = (r"(?:,\s+" + prefix + name_token + r")*,?\s+(?:&|and|und)\s+"
-             + prefix + name_token)
-    joint_split = r",?\s+(?:&|and|und)\s+|,\s+"
+    # Joint form OR et-al form
+    joint = r"\s+(?:&|and|und)\s+" + prefix + name_token
     et_al = r"\s+(?:et\s+al\.?|u\.\s*a\.)"
     # Narrative with parentheses: Author (YYYY[, locator])
     narrative_paren = (
@@ -374,8 +363,7 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
     )
     for match in re.findall(narrative_paren, body):
         cleaned = re.sub(et_al, "", match, flags=re.IGNORECASE)
-        parts = re.split(joint_split, cleaned)
-        for k, part in enumerate(parts):
+        for part in re.split(r"\s+(?:&|and|und)\s+", cleaned):
             name = part.strip()
             if not name:
                 continue
@@ -386,12 +374,6 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
             # Safety net: skip known non-author capitalized words
             # (e.g., "Die EU (2020)", "Das Kapitel (2020)")
             if surname in stop:
-                continue
-            # A name before the last two of a list ("Dawson, Ellis and Fowler
-            # (2018)") counts only if the bibliography lists it: the word before
-            # a pair is often prose ("However, Smith and Jones (2019)", "Das
-            # Verfahren, das Müller und Schmidt (2019) entwickelt haben").
-            if k < len(parts) - 2 and surname not in keep:
                 continue
             authors.add(surname)
     
@@ -424,8 +406,7 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
     )
     for match in re.findall(german_narrative_strict, body):
         cleaned = re.sub(et_al, "", match, flags=re.IGNORECASE)
-        parts = re.split(joint_split, cleaned)
-        for k, part in enumerate(parts):
+        for part in re.split(r"\s+(?:&|and|und)\s+", cleaned):
             name = part.strip()
             if not name:
                 continue
@@ -434,10 +415,26 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
             # Safety net: skip known non-author capitalized words
             if surname in stop:
                 continue
-            # As above: a name before the last two of a list must be listed.
-            if k < len(parts) - 2 and surname not in keep:
-                continue
             authors.add(surname)
+    
+    # Three or more names before a year ("Dawson, Ellis und Fowler (2018)",
+    # "(Dawson/Ellis/Fowler 2018)"): the patterns above read at most the last
+    # two. Prose lists read the same way ("(Juni, Juli und August 2020)"), so
+    # a name counts here only if a bibliography entry starts with it (keep).
+    # At most ten names, so that a long list of words does not take quadratic
+    # time.
+    list_sep = r"(?:\s*/\s*|,\s*(?:(?:&|and|und)\s+)?|\s+(?:&|and|und)\s+)"
+    name_list = (r"(?<![\w'’-])(" + prefix + name_token
+                 + r"(?:" + list_sep + prefix + name_token + r"){2,9})"
+                 # the year closes the citation or a locator follows, unlike
+                 # "Marx und Weber (1890–1920)"
+                 + r"\s+\(?\d{4}[a-z]?(?=[,;:)])")
+    for match in re.findall(name_list, body):
+        for part in re.split(list_sep, match):
+            surname = next((t for t in reversed(part.split()) if t[:1].isupper()), "")
+            surname = re.sub(r"['’]s?$", "", surname)
+            if surname in keep:
+                authors.add(surname)
     
     return authors
 
