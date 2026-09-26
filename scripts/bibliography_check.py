@@ -89,13 +89,16 @@ NAME_PARTICLES = {
     "ter", "ten", "der", "den",
 }
 
-# The particles as a regex prefix of a surname: lowercase (van der Berg), and
-# also capitalized at the start of an entry or citation (De Vries, Van der
-# Berg, La Porta). "Das" stays lowercase: capitalized, it is the German
-# article far more often.
+# The particles as a regex prefix of a surname: lowercase (van der Berg) in
+# citations and entries, and also capitalized at the start of an entry (De
+# Vries, Van der Berg, La Porta). "Das" stays lowercase: capitalized, it is
+# the German article far more often. In the text, a capitalized particle opens
+# prose too often ("(Von Anfang 2020 bis ...)", "(La Liga 2018/19)") to be
+# parsed as one; see particle_lead_names.
 NAME_PREFIX_LOWER = r"(?:(?:van|von|de|del|della|di|la|le|du|dos|das|ter|ten)\s+(?:der\s+|den\s+|de\s+|la\s+)?)?"
-NAME_PREFIX = (r"(?:(?:van|von|de|del|della|di|la|le|du|dos|das|ter|ten"
-               r"|Van|Von|De|Del|Della|Di|La|Le|Du|Dos|Ter|Ten)\s+(?:der\s+|den\s+|de\s+|la\s+)?)?")
+CAPITALIZED_PARTICLES = r"Van|Von|De|Del|Della|Di|La|Le|Du|Dos|Ter|Ten"
+NAME_PREFIX = (r"(?:(?:van|von|de|del|della|di|la|le|du|dos|das|ter|ten|" + CAPITALIZED_PARTICLES
+               + r")\s+(?:der\s+|den\s+|de\s+|la\s+)?)?")
 
 # Lowercase words that may precede a surname inside a parenthetical citation:
 # name particles and short fillers after a lead word ("see also", "vgl. z. B.").
@@ -250,20 +253,14 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
                 + r"\s+\d{4}")
     # Lead word in any case: "(Vgl. Smith 2020)".
     german_plain = german_form(prefix, r"(?i:vgl\.\s+|cf\.\s+|see\s+|siehe\s+|nach\s+|zit\.\s+nach\s+)?")
-    # Also a capitalized particle ("(De Vries 2018)") or a filler after the
-    # lead word ("(vgl. auch Müller 2020)", "(see also Smith 2020)"). Both
-    # also open prose ("(Von Anfang 2020 bis ...)", "(La Liga 2018/19)",
-    # "(see also Horizon 2020)"), so such a name counts only if the
-    # bibliography lists it (keep), and only if the year ends the citation:
-    # after it a year suffix, then only a locator or further years after a
-    # comma, colon or bracket, or a second year ("(De Vries 2018a, b)", "(Di
-    # Fabio 2019, Rn. 12)", "(Van Gennep 1909/1986)"), not running text as in
-    # "(Von Mai 2020 bis Juni 2021 ...)" or "(siehe auch Winter 2022/23)"
-    # with an unrelated author Mai or Winter.
-    german_confirmed = german_form(
-        NAME_PREFIX,
-        r"(?i:(?:vgl\.|cf\.|see|siehe|nach|zit\.\s+nach)\s+(?:(?:auch|also|z\.\s*b\.|e\.g\.)\s+)?)?"
-    ) + r"[a-z]?(?:(?:\s*[,:]|\s*\[|\s*/\s*\d{4}\b|\s+(?:und|and|&)\s+\d)[^()]*)?$"
+    # Also a filler after the lead word: "(vgl. auch Müller 2020)", "(see
+    # also Smith 2020)". It opens prose too ("(see also Horizon 2020)"), so
+    # such a name counts only if the bibliography lists it (keep), and only
+    # if at most a year suffix and a page locator follow the year.
+    german_filler = german_form(
+        prefix,
+        r"(?i:(?:vgl\.|cf\.|see|siehe|nach|zit\.\s+nach)\s+(?:auch|also|z\.\s*b\.|e\.g\.)\s+)"
+    ) + r"[a-z]?(?:\s*[,:]\s*(?:S\.|p\.|pp\.|Rn\.)?\s*\d[^()]*)?$"
     
     # Stage 1: find parenthesized blocks containing a year (YYYY)
     paren_blocks = re.findall(r"\(([^()]*\d{4}[^()]*)\)", body)
@@ -275,14 +272,14 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
             # A citation fragment typically has "Author(s), YYYY[, p. X]"
             # (English/APA style — comma before year)
             # or "Author(s) YYYY[, S. X]" (German author-year style — no comma)
-            match = re.match(r"^((?:cf\.\s+|see\s+|vgl\.\s+|siehe\s+|nach\s+|zit\.\s+nach\s+)?[^,]+(?:\s+(?:et\s+al\.?|u\.\s*a\.))?(?:\s*(?:,\s*)?(?:&|and|und)\s+" + NAME_PREFIX + r"[\w'’-]+|,\s*" + NAME_PREFIX + r"[\w'’-]+)*),\s*\d{4}", fragment)
+            match = re.match(r"^((?:cf\.\s+|see\s+|vgl\.\s+|siehe\s+|nach\s+|zit\.\s+nach\s+)?[^,]+(?:\s+(?:et\s+al\.?|u\.\s*a\.))?(?:\s*(?:,\s*)?(?:&|and|und)\s+[\w'’-]+|,\s*[\w'’-]+)*),\s*\d{4}", fragment)
             confirmed_only = False
             comma_form = bool(match)
             if not match:
                 # Try German style: "Author YYYY" without comma
                 match = re.match(german_plain, fragment)
             if not match:
-                match = re.match(german_confirmed, fragment)
+                match = re.match(german_filler, fragment)
                 confirmed_only = True
             if not match:
                 continue
@@ -292,16 +289,7 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
             # Remove "et al." / German "u. a."
             name_part = re.sub(r"\s+(?:et\s+al\.?|u\.\s*a\.)", "", name_part, flags=re.IGNORECASE)
             # Split on & or , or / or "and"/"und"
-            parts = re.split(r"\s*[&,/]\s*|\s+(?:and|und)\s+", name_part)
-            # A name after the first comma with a capitalized particle ("(e.g.,
-            # De Dreu & Weingart, 2003)") also matches prose ("(for example, La
-            # Liga, 2018)", "(Interview 7, La Paz, 2019)"): then every name of
-            # the fragment counts only if the bibliography lists it.
-            head_parts = len(re.split(r"\s*[&/]\s*|\s+(?:and|und)\s+", name_part.split(",", 1)[0]))
-            gated = confirmed_only or any(
-                t[:1].isupper() and t.lower() in NAME_PARTICLES
-                for later in parts[head_parts:] for t in later.split()[:-1])
-            for part in parts:
+            for part in re.split(r"\s*[&,/]\s*|\s+(?:and|und)\s+", name_part):
                 # The surname is the last capitalized token ("van den Berg" ->
                 # Berg); numbers ("Tabelle 3") and lowercase words never
                 # qualify, single letters ("N = 1200") are rejected
@@ -314,21 +302,18 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
                 # fragment is prose ("eigene Darstellung", "etwa Deutschland").
                 if any(t[:1].islower() and t.lower() not in PAREN_LOWERCASE_OK for t in tokens[:idx]):
                     continue
-                # A capitalized particle followed by lowercase words is a title,
-                # not a surname: "(Kopernikus, De revolutionibus, 1543)".
-                if idx < len(tokens) - 1 and tokens[idx].lower() in NAME_PARTICLES:
-                    continue
                 surname = tokens[idx]
                 # Safety net: skip known non-author capitalized words
                 # (e.g., "(März 2021)", "(Tabelle 3, 2020)"). All-caps
                 # acronyms and surname-like stopwords are kept here: in
                 # parentheses before a year, "(OECD, 2019)" or
                 # "(Winter, 2017)" is a citation, and a missing entry for it
-                # must still be reported. After the preposition "von" such a
-                # word is prose, in the form without a comma: "(von Mai 2020 bis
-                # Juni 2021)", unlike "(Studie von Sommer, 2019)".
-                after_von = not comma_form and idx > 0 and tokens[idx - 1].lower() == "von"
-                if gated and surname not in keep:
+                # must still be reported. After the preposition "von" in a date
+                # range such a word is prose: "(von Mai 2020 bis Juni 2021)",
+                # unlike "(von Winter 2010 eingeführt)" or "(Studie von Sommer, 2019)".
+                after_von = (not comma_form and idx > 0 and tokens[idx - 1].lower() == "von"
+                             and re.search(r"\d{4}(?:/\d{2,4})?\s*(?:bis\b|an\b|[-–]\s*[^\W\d])", fragment) is not None)
+                if confirmed_only and surname not in keep:
                     continue
                 if len(surname) > 1 and (surname not in stop or surname.isupper()
                                          or (surname in SURNAME_LIKE_STOPWORDS and not after_von)):
@@ -374,19 +359,6 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
                 continue
             authors.add(surname)
     
-    # "Van Dijk and De Vries (2019)": with a capitalized particle in the second
-    # name, the joint form above sees only "Vries (2019)". The first name counts
-    # only if the bibliography lists it: prose has the same shape ("Teneriffa
-    # und La Palma (2021)").
-    narrative_confirmed = (
-        r"(" + name_token + r")\s+(?:&|and|und)\s+"
-        + r"(?:Van|Von|De|Del|Della|Di|La|Le|Du|Dos|Ter|Ten)\s+(?:der\s+|den\s+|de\s+|la\s+)?"
-        + name_token + r"\s+\(\d{4}[a-z]?"
-        + r"(?:,\s*(?:S\.|p\.|pp\.)\s*\d[^()]*|:\s*\d+(?:\s*[-–]\s*\d+)?|[,;]\s*\d{4}[a-z]?[^()]*)?\)")
-    for surname in re.findall(narrative_confirmed, body):
-        if surname in keep:
-            authors.add(surname)
-
     # German author-year narrative without parentheses: "Schmidt 2020 führt aus..."
     # 
     # False-positive trap: "Im Jahr 2020...", "Die EU 2020...", "Januar 2020..."
@@ -516,6 +488,18 @@ def extract_bibliography_authors(bibliography: list[str]) -> tuple[set[str], set
     return first_authors, all_authors
 
 
+def particle_lead_names(bibliography: list[str]) -> dict[str, str]:
+    """Lead authors of entries that start with a capitalized particle, with
+    their full name: "De Vries, R. (2018). ..." -> {"Vries": "De Vries"}."""
+    names = {}
+    for entry in bibliography:
+        match = re.match(r"^((?:" + CAPITALIZED_PARTICLES + r")\s+(?:(?:der|den|de|la)\s+)?"
+                         r"([A-ZÄÖÜ][\w'’-]+))[,.]", entry.strip())
+        if match:
+            names[match.group(2)] = match.group(1)
+    return names
+
+
 def main():
     if len(sys.argv) != 2:
         print("Usage: python scripts/bibliography_check.py <file.docx>", file=sys.stderr)
@@ -553,6 +537,14 @@ def main():
         print("numeric styles such as IEEE are not supported.")
         sys.exit(2)
     cited_authors = extract_in_text_authors(body, keep=frozenset(bib_first_authors))
+    # An entry led by a capitalized particle ("De Vries, R. (2018)") counts as
+    # cited when its full name appears in the text, in any citation form: the
+    # in-text patterns do not parse capitalized particles (see NAME_PREFIX).
+    for surname, full in particle_lead_names(bibliography).items():
+        words = full.split()
+        name = r"\s+".join("(?i:" + re.escape(w) + ")" for w in words[:-1]) + r"\s+" + re.escape(words[-1])
+        if re.search(r"\b" + name + r"(?![\w'’-])", body):
+            cited_authors.add(surname)
     
     # Asymmetry check:
     # - cited_only: cited in text but no matching lead author in bibliography
