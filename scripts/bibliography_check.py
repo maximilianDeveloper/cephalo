@@ -350,10 +350,10 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
     narrative_paren = (
         r"(" + prefix + name_token
         + r"(?:" + joint + r"|" + et_al + r")?)\s+\(\d{4}[a-z]?"
-        # locator: page ("2020, S. 15", "2020: 15-17") or further years
-        # ("2019, 2020"); not any text, or "Deutschland (2020: 5,9 %)" and
-        # "Umsatz (2020, in Mio. €)" would count as citations
-        + r"(?:,\s*(?:S\.|p\.|pp\.)\s*\d[^()]*|:\s*\d+(?:\s*[-–]\s*\d+)?|[,;]\s*\d{4}[a-z]?[^()]*)?\)"
+        # locator: page ("2020, S. 15", "2020: 15-17", "2020: 15 f.") or
+        # further years ("2019, 2020"); not any text, or "Deutschland (2020:
+        # 5,9 %)" and "Umsatz (2020, in Mio. €)" would count as citations
+        + r"(?:,\s*(?:S\.|p\.|pp\.)\s*\d[^()]*|:\s*\d+(?:\s*[-–]\s*\d+)?(?:\s*ff?\.)?|[,;]\s*\d{4}[a-z]?[^()]*)?\)"
     )
     for match in re.findall(narrative_paren, body):
         cleaned = re.sub(et_al, "", match, flags=re.IGNORECASE)
