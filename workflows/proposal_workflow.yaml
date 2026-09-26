@@ -124,11 +124,13 @@ phases:
         manual: true
         task: |
           The proposal reads the shared materials one level up, in
-          ../00_Shared_Materials/ (guidelines/, course_materials/,
-          styleguide.md), which setup.sh / setup.ps1 created. Only if it is
-          missing, create it with guidelines/ and course_materials/ inside.
-          A shared/ link or copy from an earlier cephalo version is no longer
-          used and can be deleted.
+          ../00_Shared_Materials/ (guidelines/, course_materials/, and the
+          styleguide.md of step 0.4). setup.sh / setup.ps1 created the
+          folder; only if it is missing, create it with guidelines/ and
+          course_materials/ inside. A shared/ link, copy or small text file
+          from an earlier cephalo version is no longer used: move anything
+          you changed in a copy to ../00_Shared_Materials/, then delete it in
+          Explorer or Finder (see docs/multiproject_structure.md).
 
       - step: 0.3
         name: Materials pre-check

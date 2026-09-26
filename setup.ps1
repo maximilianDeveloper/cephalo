@@ -1000,8 +1000,9 @@ if ($Structure -eq "Flat") {
 } else {
     Write-Host "   -> 00_Shared_Materials\guidelines\"
     if ($OldShared.Count -gt 0) {
-        Write-Host "   No longer used (the agents read ..\00_Shared_Materials\), delete: $($OldShared -join ' ')" -ForegroundColor Yellow
-        Write-Host "   (a copy may hold files you changed there: move them to 00_Shared_Materials\ first)" -ForegroundColor Yellow
+        Write-Host "   No longer used (the agents read ..\00_Shared_Materials\): $($OldShared -join ' ')" -ForegroundColor Yellow
+        Write-Host "   Delete them in Explorer or Finder: on the command line, deleting a link can" -ForegroundColor Yellow
+        Write-Host "   empty 00_Shared_Materials\. Move changes out of a copy first (docs\multiproject_structure.md)." -ForegroundColor Yellow
     }
 }
 Write-Host ""

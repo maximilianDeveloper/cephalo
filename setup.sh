@@ -1115,8 +1115,9 @@ elif [[ "$STRUCTURE" =~ ^Long-form ]]; then
 else
     echo "   -> 00_Shared_Materials/guidelines/"
     if [ -n "$OLD_SHARED" ]; then
-        echo -e "   ${YELLOW}No longer used (the agents read ../00_Shared_Materials/), delete:${OLD_SHARED}"
-        echo -e "   (a copy may hold files you changed there: move them to 00_Shared_Materials/ first)${NC}"
+        echo -e "   ${YELLOW}No longer used (the agents read ../00_Shared_Materials/):${OLD_SHARED}"
+        echo -e "   Delete them in Explorer or Finder: on the command line, deleting a link can"
+        echo -e "   empty 00_Shared_Materials/. Move changes out of a copy first (docs/multiproject_structure.md).${NC}"
     fi
 fi
 echo ""
