@@ -50,7 +50,7 @@ Keep entries short — a few lines each. Long narratives belong in `00_Decisions
 
 - **Observed in:** Ch. 2 and Ch. 5
 - **Pattern:** Some citations used `p. 15–16` (en-dash), others `p. 15 to 16` (word form). Styleguide says word form.
-- **Countermeasure:** Bulk-fix via format-verifier in Phase B. Writer-agent should follow styleguide from the first draft.
+- **Countermeasure:** Bulk-fix in Phase B from the format-verifier's findings. Writer-agent should follow styleguide from the first draft.
 - **Scope:** writer-agent, format-verifier
 
 ---

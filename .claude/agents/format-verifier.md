@@ -148,5 +148,5 @@ Styleguide gap (for ❓):
 
 - **Styleguide is the truth** — no hardcoded rules override it
 - **Transparency on gaps** — ❓ instead of guessing
-- **Precise findings** — line number + context so the writer can fix directly
+- **Precise findings** — line number + context, so the fix can be applied directly: in Phase A by the writer, in Phase B by the orchestrator or the user (format-only edits; the writer stays deactivated)
 - **Use scripts** — don't manually count what a script can count
