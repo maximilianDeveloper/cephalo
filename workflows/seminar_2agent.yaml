@@ -89,8 +89,9 @@ phases:
         output: styleguide.md
         blocking: true
         note: |
-          Once per project. If the resolver leaves any open ❓ items,
-          clarify them before starting chapter work.
+          Once per project. If the resolver leaves open ❓ [content] items,
+          clarify them before starting chapter work; open ❓ [format] items
+          before the closing step F.1.
   
   # ===========================================================
   # Per-chapter work (one chat per chapter)

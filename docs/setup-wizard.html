@@ -318,7 +318,7 @@
 <pre><code>Please invoke the style-resolver agent. Extract the formatting 
 and citation rules from the guidelines directory into styleguide.md. 
 List any open questions for me to resolve before we proceed.</code></pre>
-<p>The resolver produces a structured <code>styleguide.md</code>. Open questions are marked <code>❓</code> — resolve these (usually by asking your supervisor) before content work begins.</p>
+<p>The resolver produces a structured <code>styleguide.md</code>. Open questions are marked <code>❓</code> and tagged: resolve the <code>[content]</code> ones (voice, citation wording, length — usually by asking your supervisor) before content work begins; the <code>[format]</code> ones (fonts, margins, pagination, ...) can wait until the formatting phase.</p>
 <h3>5. Begin writing</h3>
 <p>Use the workflow that matches your project. See <code>docs/QUICKSTART.md</code> for detailed chapter-by-chapter instructions.</p>
 <hr>
@@ -439,7 +439,7 @@ citation rules from the guidelines directory into styleguide.md.
 List any open questions for me to resolve before we proceed.</code></pre>
 <p>The resolver will:</p>
 <ol><li>Read your guidelines</li><li>Produce <code>styleguide.md</code> at the project root (or <code>00_Shared_Materials/styleguide.md</code>)</li><li>Flag ambiguous or missing rules as <code>❓</code></li><li>(For minimal-scaffolding setups) propose additional directories based on what your guidelines require</li></ol>
-<p>Resolve all <code>❓</code> items before proceeding to content work. This usually means asking your supervisor about the ambiguous points.</p>
+<p>Each <code>❓</code> item is tagged. Resolve the <code>[content]</code> items (voice, evaluative wording, citation wording, length, outline depth) before the first chapter is drafted: their answers change what the agents write. The <code>[format]</code> items (fonts, margins, pagination, captions, ...) only need an answer before the formatting phase. Resolving usually means asking your supervisor about the ambiguous points.</p>
 <hr>
 <h2>Step 4: Begin chapter work</h2>
 <p>Choose your workflow based on your project type:</p>
@@ -458,7 +458,7 @@ List any open questions for me to resolve before we proceed.</code></pre>
 <h3>Trusting filenames</h3>
 <p>Institutional course files sometimes have misleading names. A <code>.pdf</code> may actually be a ZIP archive of JPEGs. The research-agent should inspect file contents, not filenames. If you upload sources manually, verify what&#x27;s actually inside.</p>
 <h3>Ignoring open <code>❓</code> items</h3>
-<p><code>❓</code> items in <code>styleguide.md</code> mean &quot;I don&#x27;t know&quot;. If you let them sit, the format-verifier will repeatedly flag the same issues. Resolve early.</p>
+<p><code>❓</code> items in <code>styleguide.md</code> mean &quot;I don&#x27;t know&quot;. Open <code>[content]</code> items stop drafting; open <code>[format]</code> items stop the formatting phase, and until then the format-verifier keeps flagging the same issues. Resolve early.</p>
 <h3>Working in the multi-project root</h3>
 <p>For multi-project setups, open the active sub-project (<code>01_Proposal/</code>, <code>02_Main_Work/</code>, or <code>03_Defense/</code>) in Claude Code. Opening the root exposes all three to the agent at once, which leads to confusion and unintended edits across sub-projects.</p>
 <hr>

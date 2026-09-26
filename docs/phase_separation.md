@@ -24,6 +24,7 @@ cephalo splits the project lifecycle into two distinct phases:
 
 - **Active agents:** writer-agent (capable model), source-verifier (capable model), research-agent, orchestrator
 - **Goal:** content-stable chapters
+- **Start condition:** no open `❓ [content]` items in `styleguide.md` (voice, evaluative wording, citation wording, length); `❓ [format]` items may stay open until the A → B transition
 - **Iterations:** typically 30-50 per project
 - **Format-verifier role:** flag only critical format errors that would mask content issues; defer the rest
 

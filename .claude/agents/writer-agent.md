@@ -75,7 +75,7 @@ The original quotes in the extracts, and in the seminar and presentation workflo
 
 **Important:** Specific formats (page range notation, "see / cf.", et-al. rules) live in `styleguide.md`. 
 
-**Read `styleguide.md` at the start of every chapter.** If a rule you need is not covered, report this to the orchestrator — do not guess.
+**Read `styleguide.md` at the start of every chapter.** If a rule you need is not covered, report this to the orchestrator — do not guess. If its open questions still list a `❓ [content]` item (or one without a tag), do not draft: name it to the orchestrator (or to the user, in workflows without one), since its answer changes what you write. Open `❓ [format]` items do not stop drafting.
 
 **Citations with a reference manager:** if the project has a `literature.bib` (`02_Literature/literature.bib`; flat: `workspace/sources/literature.bib`), write in-text citations as Pandoc citekeys, e.g. `[@smith2020, p. 975]`: the citation processor renders them in the styleguide's format at export (see `docs/reference_management.md`). Without a `literature.bib`, write them in the styleguide's in-text format.
 

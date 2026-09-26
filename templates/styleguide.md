@@ -1,7 +1,7 @@
 # Styleguide for [project name]
 
 **This template is filled by the style-resolver agent.**
-**After extraction, review and clarify all open ❓ items with the supervisor.**
+**After extraction, clarify all open ❓ items with the supervisor: `[content]` items before any chapter is drafted, `[format]` items before the formatting phase (Phase B).**
 **File path:** `styleguide.md` at the project root (or `00_Shared_Materials/styleguide.md` in multi-project setups).
 
 ---
@@ -133,10 +133,13 @@
 
 ## Open questions (`❓`)
 
-[List of items the resolver could not unambiguously extract. Resolve with the supervisor before content work begins.]
+[List of items the resolver could not unambiguously extract. Each item is tagged:
+`[content]` — the answer changes what is written in Phase A: voice and pronouns, evaluative wording, the direct-quote threshold, what may go into footnotes, the "cf." prefix and page numbers for paraphrases, the page count, the outline depth. Resolve with the supervisor before any chapter is drafted.
+`[format]` — the answer changes only how the text is set: fonts, spacing, margins, pagination, captions, title page, bibliography layout, citation punctuation. Resolve before the formatting phase (Phase B).
+An item without a tag counts as `[content]`.]
 
-- [ ] ❓ [item, with description of the ambiguity and where it appears in the source documents]
-- [ ] ❓ [...]
+- [ ] ❓ [content] `style.forbidden_pronouns` — [description of the ambiguity and where it appears in the source documents]
+- [ ] ❓ [format] `in_text.page_range` — [...]
 
 ---
 

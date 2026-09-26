@@ -145,8 +145,9 @@ phases:
         blocking: true
         note: |
           Multi-project main work: shared/styleguide.md normally exists
-          already (extracted in the proposal). Only verify it (no open ❓
-          items); re-extract only when the guidelines change.
+          already (extracted in the proposal). Only verify it (no open
+          ❓ [content] items; ❓ [format] items may wait until Phase B);
+          re-extract only when the guidelines change.
   
   # ===========================================================
   # Lead-in: Proposal

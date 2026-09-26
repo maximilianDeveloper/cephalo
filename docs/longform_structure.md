@@ -232,7 +232,7 @@ One-time at project start:
 - [ ] Place institutional guidelines in `guidelines/`
 - [ ] Initialize Git (done by setup script)
 - [ ] Run style-resolver to produce `styleguide.md`
-- [ ] Resolve all `❓` items in `styleguide.md`
+- [ ] Resolve the `❓ [content]` items in `styleguide.md` (the `[format]` items before Phase B)
 - [ ] Configure reference manager: collection created, BibTeX export to `02_Literature/literature.bib`
 - [ ] Initial `00_Status.md` filled with project metadata, research question, page budget
 - [ ] First commit: `meta: initial setup`

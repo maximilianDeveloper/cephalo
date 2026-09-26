@@ -81,7 +81,7 @@ The resolver will:
 3. Flag ambiguous or missing rules as `❓`
 4. (For minimal-scaffolding setups) propose additional directories based on what your guidelines require
 
-Resolve all `❓` items before proceeding to content work. This usually means asking your supervisor about the ambiguous points.
+Each `❓` item is tagged. Resolve the `[content]` items (voice, evaluative wording, citation wording, length, outline depth) before the first chapter is drafted: their answers change what the agents write. The `[format]` items (fonts, margins, pagination, captions, ...) only need an answer before the formatting phase. Resolving usually means asking your supervisor about the ambiguous points.
 
 ---
 
@@ -133,7 +133,7 @@ Institutional course files sometimes have misleading names. A `.pdf` may actuall
 
 ### Ignoring open `❓` items
 
-`❓` items in `styleguide.md` mean "I don't know". If you let them sit, the format-verifier will repeatedly flag the same issues. Resolve early.
+`❓` items in `styleguide.md` mean "I don't know". Open `[content]` items stop drafting; open `[format]` items stop the formatting phase, and until then the format-verifier keeps flagging the same issues. Resolve early.
 
 ### Working in the multi-project root
 

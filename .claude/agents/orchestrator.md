@@ -47,7 +47,8 @@ If `styleguide.md` does not yet exist:
 - Invoke the `style-resolver` agent
 - Wait for result
 - Check for open `❓` items
-- If any: prompt user to clarify before continuing
+- Open `[content]` items (or items without a tag): prompt the user to clarify them before any chapter is drafted
+- Open `[format]` items: remind the user; they may stay open until the Phase A → B transition
 
 ### Steps 1..N: Chapter assignment
 

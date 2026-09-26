@@ -79,8 +79,10 @@ phases:
         output: styleguide.md
         blocking: true
         note: |
-          Must complete before Step 1. If the resolver leaves any open 
-          ❓ items, prompt user for clarification.
+          Must complete before Step 1. If the resolver leaves open
+          ❓ [content] items, clarify them with the user before any chapter
+          is drafted; open ❓ [format] items may wait until the A -> B
+          transition.
   
   # ===========================================================
   # Phase A - Content

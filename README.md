@@ -145,7 +145,7 @@ and citation rules from the guidelines directory into styleguide.md.
 List any open questions for me to resolve before we proceed.
 ```
 
-The resolver produces a structured `styleguide.md`. Open questions are marked `❓` — resolve these (usually by asking your supervisor) before content work begins.
+The resolver produces a structured `styleguide.md`. Open questions are marked `❓` and tagged: resolve the `[content]` ones (voice, citation wording, length — usually by asking your supervisor) before content work begins; the `[format]` ones (fonts, margins, pagination, ...) can wait until the formatting phase.
 
 ### 5. Begin writing
 
