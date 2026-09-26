@@ -120,6 +120,7 @@ if (-not (Test-CephaloTemplate $StartDir)) {
         Write-Host "Run:  Set-Location -LiteralPath `"$ScriptDir`"; .\setup.ps1 [args]" -ForegroundColor Yellow
         Write-Host "Use -Target PATH to create the project elsewhere." -ForegroundColor Yellow
     }
+    Pause-BeforeClose "error"
     exit 2
 }
 
@@ -489,6 +490,7 @@ if ($Target -ne "") {
             Write-Host "  Template: $SourceDir" -ForegroundColor Red
             Write-Host "  Target:   $Target" -ForegroundColor Red
             Write-Host "  Choose a target outside the template folder, or run without -Target to set up here." -ForegroundColor Red
+            Pause-BeforeClose "error"
             exit 2
         }
     }
@@ -582,6 +584,7 @@ if ($Target -ne "") {
             New-Item -ItemType Directory -Path $TargetParent -Force -ErrorAction Stop | Out-Null
         } catch {
             Write-Host "Error: cannot create parent directory '$TargetParent'." -ForegroundColor Red
+            Pause-BeforeClose "error"
             exit 2
         }
     }
@@ -620,6 +623,7 @@ if ($Target -ne "") {
             }
         } else {
             Write-Host "Error: target path exists and is not a directory." -ForegroundColor Red
+            Pause-BeforeClose "error"
             exit 2
         }
     } else {
@@ -670,6 +674,7 @@ if ($Target -ne "") {
         }
     } catch {
         Write-Host "Error during copy: $($_.Exception.Message)" -ForegroundColor Red
+        Pause-BeforeClose "error"
         exit 3
     }
 
@@ -691,6 +696,7 @@ if ($Target -ne "") {
         Write-Host "Error: copy appears incomplete. Aborting." -ForegroundColor Red
         Write-Host "  Source: $SourceDir" -ForegroundColor Red
         Write-Host "  Target: $Target" -ForegroundColor Red
+        Pause-BeforeClose "error"
         exit 3
     }
     

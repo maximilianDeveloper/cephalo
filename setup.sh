@@ -516,6 +516,15 @@ if [ -n "$WORK_TYPE" ] && [ -n "$STRUCTURE" ] && [ -n "$SCAFFOLDING" ]; then
     NON_INTERACTIVE=true
 fi
 
+# For the error exits below, which a double-clicked run can reach: Git Bash
+# closes its window on exit, so an interactive run waits for Enter first.
+# Runs with all three arguments do not (the setup assistant's launchers,
+# which pass them, pause themselves).
+exit_with_pause() {
+    $NON_INTERACTIVE || pause_before_close "error"
+    exit "$1"
+}
+
 # ==========================================================
 # Target directory handling
 # ==========================================================
@@ -578,7 +587,7 @@ if [ -n "$TARGET_DIR" ]; then
     # Reject obviously bad paths
     if [[ "$TARGET_DIR" == *$'\n'* ]] || [[ "$TARGET_DIR" == *$'\r'* ]]; then
         echo -e "${RED}Error: target path contains invalid characters.${NC}" >&2
-        exit 2
+        exit_with_pause 2
     fi
     
     # Resolve to absolute path (the source must stay resolvable too)
@@ -591,7 +600,7 @@ if [ -n "$TARGET_DIR" ]; then
     SOURCE_CANON="$(pwd -P)"
     if ! TARGET_CANON="$(canon_path "$TARGET_DIR")"; then
         echo -e "${RED}Error: cannot resolve target path '$TARGET_DIR'.${NC}" >&2
-        exit 2
+        exit_with_pause 2
     fi
     # canon_path keeps the letter case as typed, but APFS (macOS) and NTFS
     # (Git Bash) usually ignore case: -ef compares the directories themselves.
@@ -623,7 +632,7 @@ if [ -n "$TARGET_DIR" ]; then
             echo -e "${RED}  Template: $SOURCE_CANON${NC}" >&2
             echo -e "${RED}  Target:   $TARGET_CANON${NC}" >&2
             echo -e "${RED}  Choose a target outside the template folder, or run without --target to set up here.${NC}" >&2
-            exit 2
+            exit_with_pause 2
         fi
         # Continue with the canonical path, so mkdir -p below never creates
         # stray directories for spellings like "a/zzz/../Thesis".
@@ -709,7 +718,7 @@ if [ -n "$TARGET_DIR" ]; then
         echo -e "${GRAY}Creating parent directory: $TARGET_PARENT${NC}"
         if ! mkdir -p "$TARGET_PARENT"; then
             echo -e "${RED}Error: cannot create parent directory '$TARGET_PARENT'.${NC}" >&2
-            exit 2
+            exit_with_pause 2
         fi
     fi
 
@@ -743,7 +752,7 @@ if [ -n "$TARGET_DIR" ]; then
         fi
     elif [ -e "$TARGET_DIR" ]; then
         echo -e "${RED}Error: target path exists and is not a directory.${NC}" >&2
-        exit 2
+        exit_with_pause 2
     else
         mkdir -p "$TARGET_DIR"
     fi
@@ -804,7 +813,7 @@ if [ -n "$TARGET_DIR" ]; then
         else
             echo -e "${RED}  Delete the partial target directory, then re-run setup.${NC}" >&2
         fi
-        exit 3
+        exit_with_pause 3
     fi
 
     # Basic sanity check after copy
@@ -812,7 +821,7 @@ if [ -n "$TARGET_DIR" ]; then
         echo -e "${RED}Error: copy appears incomplete. Aborting.${NC}" >&2
         echo -e "${RED}  Source: $SOURCE_DIR_BEFORE_MOVE${NC}" >&2
         echo -e "${RED}  Target: $TARGET_DIR${NC}" >&2
-        exit 3
+        exit_with_pause 3
     fi
 
     echo -e "${GREEN}+ Template copied to: $TARGET_DIR${NC}"

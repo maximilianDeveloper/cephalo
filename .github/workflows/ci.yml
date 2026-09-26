@@ -314,6 +314,16 @@ jobs:
           test -d "/tmp/ci_dd/My Thesis (2026)/workspace/sources/_guidelines"
           test -d "/tmp/ci_dd/Other Thesis/workspace/sources/_guidelines"
           test "$(ls -A /tmp/ci_dd | wc -l)" -eq 2
+          # An error a double-clicked run can reach (a bare folder name at the target
+          # prompt lies inside the template) waits for Enter before the window closes;
+          # with all three arguments, as the setup assistant's launchers pass them, not.
+          out=$(printf '2\nThesisSub\n\n' | script -qec "bash setup.sh" /dev/null || true)
+          printf '%s\n' "$out" | grep -q 'check the messages above'
+          out=$(script -qec "bash setup.sh 'Seminar paper' Flat full --target ThesisSub" /dev/null </dev/null || true)
+          if printf '%s\n' "$out" | grep -q 'check the messages above'; then echo "setup.sh paused with all three arguments"; exit 1; fi
+          out=$(printf '2\nThesisSub\n' | pwsh -NoProfile -File ./setup.ps1 || true)
+          printf '%s\n' "$out" | grep -q 'check the messages above'
+          test ! -e ThesisSub
 
       # setup.sh and setup.ps1 must scaffold the same project. pwsh (PowerShell 7,
       # preinstalled on the runner) runs setup.ps1 here; the Windows job covers 5.1.
@@ -886,7 +896,7 @@ jobs:
           }
           if (-not (Get-RerunNote)) { Write-Host "re-sync note missing although shared\ are copies"; exit 1 }
 
-      - name: Closed stdin without -NonInteractive exits 2 instead of prompting forever
+      - name: Closed stdin exits 2 instead of prompting forever; an error exit waits for Enter
         shell: powershell
         run: |
           $empty = Join-Path $env:TEMP 'ci_empty_stdin.txt'
@@ -898,6 +908,18 @@ jobs:
           $null = $p.Handle   # keeps ExitCode available after the process ends
           if (-not $p.WaitForExit(120000)) { $p.Kill(); Write-Host "setup.ps1 kept prompting on closed stdin"; exit 1 }
           if ($p.ExitCode -ne 2) { Get-Content $out -TotalCount 40; Write-Host "expected exit 2, got $($p.ExitCode)"; exit 1 }
+          # A bare folder name at the target prompt lies inside the template: the error
+          # waits for Enter, so a "Run with PowerShell" window does not close at once.
+          $answers = Join-Path $env:TEMP 'ci_inside_answers.txt'
+          [System.IO.File]::WriteAllText($answers, "2`r`nThesisSub`r`n")
+          $p = Start-Process -FilePath powershell -NoNewWindow -PassThru `
+            -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', './setup.ps1' `
+            -RedirectStandardInput $answers -RedirectStandardOutput $out
+          $null = $p.Handle
+          if (-not $p.WaitForExit(120000)) { $p.Kill(); Write-Host "setup.ps1 hung at the error pause"; exit 1 }
+          if ($p.ExitCode -ne 2 -or -not (Select-String -Path $out -Pattern 'check the messages above' -Quiet)) {
+            Get-Content $out -TotalCount 60; Write-Host "no pause before the error exit (exit $($p.ExitCode))"; exit 1
+          }
           $LASTEXITCODE = 0
 
       - name: Python syntax (Windows)
