@@ -511,7 +511,11 @@ def main() -> int:
         master_only_diff = find_master_only_diff(worktrees)
 
         main_wt = next((wt for wt in worktrees if wt.is_main), None)
-        dangling = find_dangling_refs(main_wt.path, report_path) if main_wt else []
+        # A bare main repository has no working tree: Layer 2 has nothing to
+        # check there, and its folder may hold worktrees made inside it, whose
+        # files would be read with references resolved from the wrong root.
+        dangling = (find_dangling_refs(main_wt.path, report_path)
+                    if main_wt and not main_wt.is_bare else [])
 
         report = generate_report(repo_root, worktrees, master_only_diff, dangling)
         print(report)

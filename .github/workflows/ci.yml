@@ -833,6 +833,14 @@ jobs:
           # a worktree whose folder is missing (moved, unmounted) is an error, not a clean result
           g -C "$W/refs" worktree add -q -b gone "$W/gone" && mv "$W/gone" "$W/gone.moved"
           expect 2 python scripts/cross_session_audit.py --repo-root "$W/refs"
+          # a bare repository with a worktree made inside it: Layer 2 does not read the
+          # worktree's files with references resolved from the bare folder
+          mkdir -p "$W/src/03_Theory"
+          printf 'see `03_Theory/chapter_3.md`\n' > "$W/src/03_Theory/README.md"
+          echo "# ch3" > "$W/src/03_Theory/chapter_3.md"
+          g init -q "$W/src" && g -C "$W/src" add -A && g -C "$W/src" commit -qm src
+          g clone -q --bare "$W/src" "$W/bare.git" && g -C "$W/bare.git" worktree add -q main
+          expect 0 python scripts/cross_session_audit.py --repo-root "$W/bare.git/main"
 
   windows:
     name: PowerShell 5.1 parse & setup smoke (Windows)
