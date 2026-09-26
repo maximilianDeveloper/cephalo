@@ -175,10 +175,12 @@ def split_text_and_bibliography(
     common bibliography header (case-insensitive). Manually typed heading
     numbers ("7 Literaturverzeichnis", "7.1 Literatur") and trailing
     punctuation ("References:") are tolerated. If several paragraphs match,
-    the highest-level heading wins, the first one on a tie: a body
-    sub-heading "3.2 Sources" does not start the bibliography before the
-    "References" chapter, and "Literaturverzeichnis" wins over its own
-    sub-section "Literatur".
+    the highest-level heading wins (a paragraph not styled as a heading
+    counts as level 1 and yields to a styled one of that level), the first
+    one on a tie: a body sub-heading "3.2 Sources" does not start the
+    bibliography before the "References" chapter, "Literaturverzeichnis"
+    wins over its own sub-section "Literatur", and a body paragraph that
+    reads just "Literatur" does not start it either.
     
     It ends at the next top-level heading (Heading 1, or Title for a
     bibliography styled as Title) that is not itself a bibliography header,
@@ -195,19 +197,23 @@ def split_text_and_bibliography(
     # spelled ("Quellenangaben", "A. Literaturverzeichnis") matches too.
     headers = {_header_key(h) for h in BIBLIOGRAPHY_HEADERS}
     bib_start_idx = None
-    best_level = None
+    best_rank = None
     for i, p in enumerate(texts):
         if _header_key(p) in headers:
-            # A header that is not styled as a heading counts as level 1.
-            level = paragraphs[i][1] if paragraphs[i][1] is not None else 1
-            if best_level is None or level < best_level:
-                bib_start_idx, best_level = i, level
+            # A header that is not styled as a heading counts as level 1, but
+            # yields to a styled heading of the same level: a body paragraph
+            # that reads just "Literatur" does not start the bibliography
+            # before the "Literaturverzeichnis" heading.
+            level = paragraphs[i][1]
+            rank = (level, 0) if level is not None else (1, 1)
+            if best_rank is None or rank < best_rank:
+                bib_start_idx, best_rank = i, rank
     
     if bib_start_idx is None:
         # No clear bibliography heading found
         return "\n".join(texts), []
     
-    end_level = min(best_level, 1)
+    end_level = min(best_rank[0], 1)
     bib_end_idx = len(paragraphs)
     for j in range(bib_start_idx + 1, len(paragraphs)):
         level = paragraphs[j][1]

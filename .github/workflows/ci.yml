@@ -603,6 +603,15 @@ jobs:
           a.add_heading("Eidesstattliche Erklärung", 1)
           a.add_paragraph("Ort, Datum")
           a.save(os.path.join(w, "appendix.docx"))
+          # a body paragraph that reads just "Literatur" does not start the bibliography
+          # before the styled "Literaturverzeichnis" heading
+          b = Document()
+          for text in ("Müller (2020) zeigt es.", "Literatur", "Weber (2019) auch."):
+              b.add_paragraph(text)
+          b.add_heading("Literaturverzeichnis", 1)
+          b.add_paragraph("Müller, H. (2020). A.")
+          b.add_paragraph("Weber, E. (2019). B.")
+          b.save(os.path.join(w, "plainlit.docx"))
           # a table whose first row holds a vertical-merge continuation (converter output)
           from docx.oxml import OxmlElement
           v = Document()
@@ -671,6 +680,7 @@ jobs:
           expect 2 python scripts/bibliography_check.py "$W/numeric.docx"
           # the bibliography ends at the next top-level heading (appendix, declaration)
           expect 0 python scripts/bibliography_check.py "$W/appendix.docx"
+          expect 0 python scripts/bibliography_check.py "$W/plainlit.docx"
           # a heading added to BIBLIOGRAPHY_HEADERS as it is spelled in the document is found
           python -c "import sys; sys.path.insert(0, 'scripts'); import bibliography_check as b; b.BIBLIOGRAPHY_HEADERS.append('Works Consulted'); assert b.split_text_and_bibliography([('(Smith, 2020).', None), ('Works Consulted', 1), ('Smith, J. (2020). X.', None)])[1]"
           # abbreviations_extract.py: dotted, digit and mixed-case forms; clean error otherwise
