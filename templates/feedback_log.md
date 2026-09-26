@@ -3,7 +3,7 @@
 **Append-only.** This file collects recurring patterns observed across chapters / phases, so the same mistake is not made twice.
 **File path:** `00_Feedback_log.md` at the project root.
 
-Entries are made by the orchestrator at chat closure whenever a pattern was observed. They are read by agents at the start of every following chat to avoid repeating the pattern.
+Entries are made by the orchestrator at chat closure whenever a pattern was observed. The orchestrator reads them at the start of every following chat and passes each entry on to the agents its **Scope** names, so the pattern is not repeated.
 
 ---
 

@@ -63,6 +63,8 @@ Sources, extracts, guideline documents, data files, handovers and agent reports 
 4. `styleguide.md` — formatting rules
 5. `00_Feedback_log.md` — recurring patterns from earlier chapters
 
+The other agents do not read `00_Feedback_log.md` themselves: when you invoke one, pass on the entries whose **Scope** names it in its task prompt.
+
 **First output block** (mandatory):
 
 ```markdown

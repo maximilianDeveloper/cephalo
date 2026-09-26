@@ -54,6 +54,7 @@ If `styleguide.md` does not yet exist:
 
 - Read the workflow config
 - Before each chapter: no open `[content]` entry (or one without a tag) under "Open questions" in `styleguide.md`; otherwise stop and ask the user (Step 0.5)
+- If `workspace/feedback.md` exists, read it before each chapter and pass the entries that concern an agent on in its task prompt: the other agents do not read the file themselves
 - Order: body → conclusion → introduction (last)
 - For each chapter:
   1. Give research-agent the chapter-relevant sources

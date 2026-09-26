@@ -60,6 +60,8 @@ At the start of every chat, read these files in order before doing anything else
 5. `shared/styleguide.md` — only for slide formatting; if `styleguide_override.md` exists in this sub-project, read it afterwards: its documented deviations take precedence
 6. `00_Feedback_log.md` — recurring patterns from earlier chats (e.g., slides consistently too dense)
 
+The other agents do not read `00_Feedback_log.md` themselves: when you invoke one, pass on the entries whose **Scope** names it in its task prompt.
+
 **First output block:**
 
 ```markdown

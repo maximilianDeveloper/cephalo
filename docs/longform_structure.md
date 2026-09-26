@@ -124,7 +124,7 @@ See `templates/decisions.md`.
 
 ### `00_Feedback_log.md`
 
-Cross-chapter learning. When a recurring pattern appears (e.g., "writer-agent tends to substitute synonyms in section openings"), log it here. Future chats read this and avoid repeating the pattern.
+Cross-chapter learning. When a recurring pattern appears (e.g., "writer-agent tends to substitute synonyms in section openings"), log it here. In future chats the orchestrator reads it and passes each entry on to the agents its scope names, so they avoid repeating the pattern.
 
 Append-only: one short entry per pattern (date, where observed, pattern, countermeasure, scope), in chronological order. See `templates/feedback_log.md`.
 
