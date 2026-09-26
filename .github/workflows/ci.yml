@@ -720,6 +720,9 @@ jobs:
         run: |
           $typo = Join-Path $env:TEMP "ci_typo2"
           function Expect-Failure([int]$Want, [string[]]$SetupArgs) {
+            # The runner sets 'Stop': PowerShell's own error text on stderr (unknown
+            # parameter) would end the step instead of being discarded.
+            $ErrorActionPreference = 'Continue'
             & powershell -NoProfile -ExecutionPolicy Bypass -File .\setup.ps1 @SetupArgs *> $null
             $code = $LASTEXITCODE
             if ($code -eq 0 -or ($Want -gt 0 -and $code -ne $Want)) { Write-Host "expected exit $Want, got $code for: $SetupArgs"; exit 1 }
@@ -886,7 +889,8 @@ jobs:
           grep -q ci-marker /tmp/ci_long/00_Status.md
           rm /tmp/ci_flat/.gitignore
           (cd /tmp/ci_flat && "$SH" setup.sh "Seminar paper" "Flat" full </dev/null >/dev/null)
-          cmp .gitignore /tmp/ci_flat/.gitignore
+          # (Compared with Git's copy: a Windows checkout may have CRLF in .gitignore.)
+          git show HEAD:.gitignore | cmp - /tmp/ci_flat/.gitignore
           test "$(grep -c 'filter=lfs' /tmp/ci_long/.gitattributes)" -eq 6
 
       - name: --target rules and invalid arguments
