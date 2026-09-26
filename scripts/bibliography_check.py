@@ -451,6 +451,13 @@ def extract_bibliography_authors(bibliography: list[str]) -> tuple[set[str], set
             tokens = m.group(1).split()
             surname = next((t for t in reversed(tokens) if t[:1].isupper()), tokens[-1])
             all_authors.add(surname)
+        # Co-authors after / or ; with full given names ("Müller, Hans/Schmidt,
+        # Karl (2019)", "Smith, John; Jones, Robert (2019)"), in the head only,
+        # so a slash in the title ("Theory/Practice,") adds nothing.
+        for m in re.finditer(r"[/;]\s*(" + surname_token + r"),", head):
+            tokens = m.group(1).split()
+            surname = next((t for t in reversed(tokens) if t[:1].isupper()), tokens[-1])
+            all_authors.add(surname)
     
     return first_authors, all_authors
 

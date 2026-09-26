@@ -132,7 +132,7 @@ What it does:
 
 1. Splits the document into body and bibliography (detects the section by header)
 2. Extracts author surnames from in-text citations — supports parenthetical and narrative forms (also with a page locator, `Müller (2020, S. 15)`, `Müller (2020: 15)`), `et al.`/`u. a.`, joint authors (in parentheses also `(Müller/Schmidt 2019)`), hyphenated surnames, surnames starting with Ä/Ö/Ü, typographic apostrophes (`O’Brien`), year-suffix citations (`Schulz (2022a)`, `(Wagner, 2022a)`), name prefixes including `van der`/`van den`/`von`/`de la`/`ter`/`ten`, also capitalized at the start (`De Vries`, `Van der Berg`; not `Das`, the German article), and the citation-lead words `vgl.`/`cf.`/`see`/`siehe`/`nach`/`zit. nach`, also followed by `auch`/`also`/`z. B.`/`e.g.` (`(vgl. auch Müller 2020)`)
-3. Extracts author surnames from bibliography entries, using the same surname-prefix and umlaut handling as the in-text extraction
+3. Extracts author surnames from bibliography entries, using the same surname-prefix and umlaut handling as the in-text extraction; co-authors are read after `&`/`and`/`und`, as `Surname, I.` pairs, and after `/` or `;` also with full given names (`Müller, Hans/Schmidt, Karl (2019)`)
 4. Reports asymmetries in both directions
 
 Exit code 0 = no asymmetries, 1 = asymmetries found, 2 = bibliography section not detected, no bibliography entry could be read (the check supports author-year styles only, not numeric styles such as IEEE), or another error occurred (e.g. bad arguments, file not found, a file that cannot be read as a DOCX).
