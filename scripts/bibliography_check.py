@@ -491,10 +491,13 @@ def extract_bibliography_authors(bibliography: list[str]) -> tuple[set[str], set
         # A given name is a word not followed by a period, or an initial or
         # short abbreviation with one ("J.", "Chr."), so "Smith, John.
         # Durkheim/Weber, Two Sociologies" (MLA) does not continue the chain.
+        # The chain must end where an author block ends, before "(" (year,
+        # "(Hrsg.)") or ":", so a title that follows the names directly
+        # (MLA, ISO 690: "Alexander, Jeffrey C. Marx/Weber, The ...") adds none.
         given_word = r"(?:[A-ZÄÖÜ][\w'’-]*(?![\w.])|[A-ZÄÖÜ][a-zäöü]{0,2}\.)"
-        given = given_word + r"(?:[\s-]+" + given_word + r")*"
+        given = given_word + r"(?:(?:-|\s+)" + given_word + r")*"
         chain = re.match(surname_token + r",\s*" + given
-                         + r"(?:\s*[/;]\s*" + surname_token + r",\s*" + given + r")*", entry.strip())
+                         + r"(?:\s*[/;]\s*" + surname_token + r",\s*" + given + r")*(?=\s*[(:])", entry.strip())
         for m in re.finditer(r"[/;]\s*(" + surname_token + r"),", chain.group(0) if chain else ""):
             tokens = m.group(1).split()
             surname = next((t for t in reversed(tokens) if t[:1].isupper()), tokens[-1])
@@ -564,7 +567,10 @@ def main():
         if surname not in bib_first_authors or surname in plain_leads:
             continue
         words = full.split()
-        name = r"\s+".join("(?i:" + re.escape(w) + ")" for w in words[:-1]) + r"\s+" + re.escape(words[-1])
+        # German texts abbreviate "von"/"der": "(v. Rosenstiel 2007)", "v. d. Oelsnitz".
+        abbrev = {"von": r"von|v\.", "der": r"der|d\.", "den": r"den|d\."}
+        name = (r"\s*".join("(?i:" + abbrev.get(w.lower(), re.escape(w)) + ")" for w in words[:-1])
+                + r"\s*" + re.escape(words[-1]))
         if re.search(r"\b" + name + r"(?:s|['’]s?)?(?![\w'’-])", body):
             cited_authors.add(surname)
     
