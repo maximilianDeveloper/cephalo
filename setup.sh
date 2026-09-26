@@ -546,6 +546,15 @@ if [ -z "$TARGET_DIR" ] && ! $NON_INTERACTIVE && [ -t 0 ] && [ -t 1 ]; then
                 echo "and the project structure will be created inside it."
                 echo "Example: ~/Documents/Bachelorarbeit_KMU_OSS"
                 read -r -p "Target path: " TARGET_DIR || TARGET_DIR=""
+                # A folder dragged into the terminal arrives quoted ('/a/My
+                # Thesis') or shell-escaped (/a/My\ Thesis, macOS Terminal).
+                # Undo that as the shell does for --target; backslashes in
+                # other paths stay (C:\... typed in Git Bash).
+                case "$TARGET_DIR" in
+                    \'*\') TARGET_DIR="${TARGET_DIR#\'}"; TARGET_DIR="${TARGET_DIR%\'}" ;;
+                    \"*\") TARGET_DIR="${TARGET_DIR#\"}"; TARGET_DIR="${TARGET_DIR%\"}" ;;
+                    /*|\~*) TARGET_DIR="$(printf '%s\n' "$TARGET_DIR" | sed 's/\\\(.\)/\1/g')" ;;
+                esac
                 if [ -z "$TARGET_DIR" ]; then
                     echo -e "${YELLOW}Empty path — using current location instead.${NC}"
                     TARGET_DIR=""

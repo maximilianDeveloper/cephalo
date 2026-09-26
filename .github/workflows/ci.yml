@@ -306,6 +306,14 @@ jobs:
           kill -TERM "$pid"
           set +e; wait "$pid"; code=$?; set -e
           if [ "$code" -ne 130 ] || ! grep -q 'only partly set up' /tmp/ci_int.out; then cat /tmp/ci_int.out; echo "exit $code"; exit 1; fi
+          # At the interactive target prompt, a folder dragged into the terminal
+          # (quoted, or with shell escapes) is the folder meant.
+          mkdir -p "/tmp/ci_dd/My Thesis (2026)" "/tmp/ci_dd/Other Thesis"
+          printf '2\n/tmp/ci_dd/My\\ Thesis\\ \\(2026\\) \n3\n1\n1\ny\nn\n\n' | script -qec "bash setup.sh" /dev/null >/dev/null
+          printf "2\n'/tmp/ci_dd/Other Thesis' \n3\n1\n1\ny\nn\n\n" | script -qec "bash setup.sh" /dev/null >/dev/null
+          test -d "/tmp/ci_dd/My Thesis (2026)/workspace/sources/_guidelines"
+          test -d "/tmp/ci_dd/Other Thesis/workspace/sources/_guidelines"
+          test "$(ls -A /tmp/ci_dd | wc -l)" -eq 2
 
       # setup.sh and setup.ps1 must scaffold the same project. pwsh (PowerShell 7,
       # preinstalled on the runner) runs setup.ps1 here; the Windows job covers 5.1.
