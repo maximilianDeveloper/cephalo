@@ -705,6 +705,8 @@ if ($Target -ne "") {
 if (-not $script:ProjectRoot) { $script:ProjectRoot = $StartDir }
 
 $IsMinimal = $Scaffolding -match "^Minimal"
+# Multi-project: true if a shared\ folder is a copy, not a link.
+$SharedCopied = $false
 Write-Verbose "Resolved configuration: WorkType='$WorkType', Structure='$Structure', Scaffolding='$Scaffolding' (minimal=$IsMinimal)."
 Write-Verbose "Working location: $((Get-Location).Path)"
 
@@ -870,6 +872,10 @@ elseif ($Structure -match "^Multi-project") {
     Create-Symlink "01_Proposal\shared" "..\00_Shared_Materials"
     Create-Symlink "$MainName\shared" "..\00_Shared_Materials"
     Create-Symlink "03_Defense\shared" "..\00_Shared_Materials"
+    foreach ($p in @("01_Proposal", $MainName, "03_Defense")) {
+        $SharedItem = Get-Item -LiteralPath (Resolve-ProjectPath "$p\shared") -Force -ErrorAction SilentlyContinue
+        if (-not $SharedItem -or -not $SharedItem.LinkType) { $SharedCopied = $true }
+    }
     
     # Central files per sub-project
     Write-Step "Creating central state files per sub-project"
@@ -1032,6 +1038,11 @@ if ($Structure -eq "Flat") {
     Write-Host "   -> guidelines\"
 } else {
     Write-Host "   -> 00_Shared_Materials\guidelines\"
+    if ($SharedCopied) {
+        # The sub-projects read their shared\ copy, which does not follow.
+        Write-Host "   shared\ is a copy, not a link: after adding files, re-sync the three" -ForegroundColor Yellow
+        Write-Host "   copies (docs\multiproject_structure.md, `"Re-syncing shared materials manually`")." -ForegroundColor Yellow
+    }
 }
 Write-Host ""
 $stepNo++

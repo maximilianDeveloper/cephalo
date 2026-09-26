@@ -332,6 +332,25 @@ jobs:
             done
           done
           test "$i" -eq 22
+          # "Next steps" name the re-sync when the shared/ folders are copies (the
+          # link fallback), in both scripts, and only then.
+          for s in sh ps; do
+            d="$P/${s}9"   # Bachelor thesis, Multi-project, full
+            for state in link copy; do
+              want=0
+              if [ "$state" = copy ]; then
+                want=1
+                for sub in 01_Proposal 02_Main_Work 03_Defense; do rm "$d/$sub/shared"; cp -r "$d/00_Shared_Materials" "$d/$sub/shared"; done
+              fi
+              if [ "$s" = sh ]; then
+                out=$(cd "$d" && bash setup.sh "Bachelor thesis" "Multi-project" full </dev/null)
+              else
+                out=$(cd "$d" && pwsh -NoProfile -File ./setup.ps1 -WorkType "Bachelor thesis" -Structure "Multi-project" -Scaffolding full -NonInteractive)
+              fi
+              n=$(printf '%s\n' "$out" | grep -c 'is a copy, not a link' || true)
+              test "$n" -eq "$want" || { echo "$s, shared/ as $state: re-sync note shown $n times"; exit 1; }
+            done
+          done
           # Where .gitignore and .gitattributes are missing, both scripts write the same ones.
           rm "$P"/sh1/.gitignore "$P"/sh1/.gitattributes "$P"/ps1/.gitignore "$P"/ps1/.gitattributes
           (cd "$P/sh1" && bash setup.sh "Seminar paper" Flat full </dev/null >/dev/null)
@@ -844,6 +863,22 @@ jobs:
           if (-not (Select-String -Path $status -Pattern 'ci-marker' -Quiet)) { Write-Host "re-run overwrote 02_Main_Work/00_Status.md"; exit 1 }
           $lfs = @(Select-String -Path (Join-Path $multi '.gitattributes') -Pattern 'filter=lfs').Count
           if ($lfs -ne 6) { Write-Host "re-run: expected 6 LFS rules in .gitattributes, found $lfs"; exit 1 }
+          # "Next steps" name the re-sync only when the shared\ folders are copies (the link fallback).
+          function Get-RerunNote {
+            Push-Location -LiteralPath $multi
+            $out = & powershell -NoProfile -ExecutionPolicy Bypass -File ./setup.ps1 -WorkType 'Master thesis' -Structure 'Multi-project' -Scaffolding minimal -NonInteractive | Out-String
+            $code = $LASTEXITCODE
+            Pop-Location
+            if ($code -ne 0) { Write-Host "re-run exited with $code"; exit 1 }
+            return ($out -match 'is a copy, not a link')
+          }
+          if (Get-RerunNote) { Write-Host "re-sync note shown although shared\ are links"; exit 1 }
+          foreach ($sub in '01_Proposal', '02_Main_Work', '03_Defense') {
+            $link = Join-Path $multi "$sub/shared"
+            [System.IO.Directory]::Delete($link)   # the link only, not 00_Shared_Materials
+            Copy-Item -Path (Join-Path $multi '00_Shared_Materials') -Destination $link -Recurse
+          }
+          if (-not (Get-RerunNote)) { Write-Host "re-sync note missing although shared\ are copies"; exit 1 }
 
       - name: Closed stdin without -NonInteractive exits 2 instead of prompting forever
         shell: powershell

@@ -836,6 +836,8 @@ IS_MINIMAL=false
 
 # Set by exactly one of the structure branches below; guarded after them.
 WORKFLOW=""
+# Multi-project: true if a shared/ folder is a copy, not a link.
+SHARED_COPIED=false
 
 # ==========================================================
 # Flat structure
@@ -993,6 +995,9 @@ elif [[ "$STRUCTURE" =~ ^Multi-project ]]; then
     (cd "01_Proposal" && create_symlink "shared" "../00_Shared_Materials")
     (cd "$MAIN_NAME" && create_symlink "shared" "../00_Shared_Materials")
     (cd "03_Defense" && create_symlink "shared" "../00_Shared_Materials")
+    for p in "01_Proposal" "$MAIN_NAME" "03_Defense"; do
+        [ -L "$p/shared" ] || SHARED_COPIED=true
+    done
     
     # Central files per sub-project
     step "Creating central state files per sub-project"
@@ -1148,6 +1153,11 @@ elif [[ "$STRUCTURE" =~ ^Long-form ]]; then
     echo "   -> guidelines/"
 else
     echo "   -> 00_Shared_Materials/guidelines/"
+    if $SHARED_COPIED; then
+        # The sub-projects read their shared/ copy, which does not follow.
+        echo -e "   ${YELLOW}shared/ is a copy, not a link: after adding files, re-sync the three"
+        echo -e "   copies (docs/multiproject_structure.md, \"Re-syncing shared materials manually\").${NC}"
+    fi
 fi
 echo ""
 STEP_NO=$((STEP_NO + 1))
