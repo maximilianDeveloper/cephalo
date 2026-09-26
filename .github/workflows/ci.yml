@@ -811,3 +811,176 @@ jobs:
           } else {
             Write-Host "PSScriptAnalyzer not available - skipped"
           }
+
+  # setup.sh and the shell scripts on the two other documented platforms:
+  # macOS runs them with /bin/bash 3.2 and BSD tar, Windows with Git Bash
+  # (MSYS: ln -s makes copies, NTFS ignores letter case, CRLF checkouts).
+  shell-platforms:
+    name: setup.sh and shell scripts (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            name: macOS /bin/bash 3.2
+            sh: /bin/bash
+          - os: windows-latest
+            name: Windows Git Bash
+            sh: bash
+    defaults:
+      run:
+        shell: bash
+    env:
+      SH: ${{ matrix.sh }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install script dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Platform (bash version, tar, line endings)
+        run: |
+          "$SH" --version | head -1
+          tar --version | head -1
+          if [ "$RUNNER_OS" = macOS ]; then
+            "$SH" --version | head -1 | grep -q 'version 3\.2'
+            tar --version | grep -q bsdtar
+          fi
+          # The checkout may use core.autocrlf=true (Windows): .gitattributes keeps *.sh LF.
+          for f in setup.sh scripts/*.sh; do
+            if grep -q $'\r' "$f"; then echo "CRLF in $f"; exit 1; fi
+            "$SH" -n "$f"
+          done
+
+      - name: Setup smoke (all three structures), re-run and generated files
+        run: |
+          "$SH" setup.sh "Seminar paper" "Flat" full --target /tmp/ci_flat </dev/null >/dev/null
+          "$SH" setup.sh "Bachelor thesis" "Long-form" full --target /tmp/ci_long </dev/null >/dev/null
+          "$SH" setup.sh "Master thesis" "Multi-project" full --target /tmp/ci_multi </dev/null >/tmp/ci_multi.out
+          test -d /tmp/ci_flat/workspace/sources/_guidelines
+          test -f /tmp/ci_long/00_Status.md
+          test -f /tmp/ci_multi/02_Main_Work/05_Empirical/data/processed/.gitkeep
+          for sub in 01_Proposal 02_Main_Work 03_Defense; do test -d "/tmp/ci_multi/$sub/shared/guidelines"; done
+          if [ -L /tmp/ci_multi/01_Proposal/shared ]; then
+            echo "shared/ is a symbolic link"
+          else
+            # Git Bash without winsymlinks:nativestrict copies; setup must say so.
+            test "$RUNNER_OS" = Windows
+            grep -q "created as COPY" /tmp/ci_multi.out
+            echo "shared/ is a copy (warned)"
+          fi
+          if [ "$RUNNER_OS" = Windows ]; then
+            MSYS=winsymlinks:nativestrict "$SH" setup.sh "Master thesis" "Multi-project" minimal --target /tmp/ci_native </dev/null >/tmp/ci_native.out
+            test -d /tmp/ci_native/01_Proposal/shared/guidelines
+            if [ -L /tmp/ci_native/01_Proposal/shared ]; then echo "nativestrict: symbolic link"; else grep -q "created as COPY" /tmp/ci_native.out; echo "nativestrict: copy (warned)"; fi
+          fi
+          # A re-run keeps state files; a missing .gitignore is written as the template's.
+          echo "ci-marker" >> /tmp/ci_long/00_Status.md
+          (cd /tmp/ci_long && "$SH" setup.sh "Bachelor thesis" "Long-form" full </dev/null >/dev/null)
+          grep -q ci-marker /tmp/ci_long/00_Status.md
+          rm /tmp/ci_flat/.gitignore
+          (cd /tmp/ci_flat && "$SH" setup.sh "Seminar paper" "Flat" full </dev/null >/dev/null)
+          cmp .gitignore /tmp/ci_flat/.gitignore
+          test "$(grep -c 'filter=lfs' /tmp/ci_long/.gitattributes)" -eq 6
+
+      - name: --target rules and invalid arguments
+        run: |
+          expect() {
+            want=$1; shift
+            set +e; "$SH" setup.sh "$@" </dev/null >/tmp/ci_out.txt 2>&1; code=$?; set -e
+            if [ "$code" -ne "$want" ]; then cat /tmp/ci_out.txt; echo "expected exit $want, got $code: $*"; exit 1; fi
+          }
+          # Local artifacts stay out of a --target copy.
+          mkdir -p venv scripts/.venv .claude/worktrees/x
+          touch "cephalo-setup (1).sh" .claude/settings.local.json
+          expect 0 "Seminar paper" "Flat" full --target /tmp/ci_excl
+          for p in .github venv scripts/.venv .claude/worktrees .claude/settings.local.json "cephalo-setup (1).sh"; do
+            if [ -e "/tmp/ci_excl/$p" ]; then echo "copied into --target: $p"; exit 1; fi
+          done
+          rm -rf venv scripts/.venv .claude/worktrees .claude/settings.local.json "cephalo-setup (1).sh"
+          # A non-empty target is refused without prompts; folder metadata alone is not content.
+          mkdir /tmp/ci_nonempty && touch /tmp/ci_nonempty/existing.txt
+          expect 2 "Seminar paper" "Flat" full --target /tmp/ci_nonempty
+          test "$(ls -A /tmp/ci_nonempty)" = existing.txt
+          mkdir /tmp/ci_meta && touch /tmp/ci_meta/.DS_Store /tmp/ci_meta/Thumbs.db /tmp/ci_meta/desktop.ini
+          expect 0 "Seminar paper" "Flat" full --target /tmp/ci_meta
+          test -d /tmp/ci_meta/workspace/sources/_guidelines
+          # The template folder under another letter case (APFS and NTFS usually ignore
+          # case) is recognized: a target inside it is refused.
+          up="$(dirname "$PWD")/$(basename "$PWD" | tr '[:lower:]' '[:upper:]')"
+          if [ "$up" != "$PWD" ] && [ -d "$up" ]; then
+            expect 2 "Seminar paper" "Flat" full --target "$up/ci_sub"
+            test ! -e ci_sub
+          else
+            echo "case-sensitive file system: letter-case test skipped"
+          fi
+          # Typos exit 2 without a stray target or an in-place setup.
+          for args in "Bachelorarbeit|Long-form|full" "Bachelor thesis|Long-form|fulll" "Seminar paper|Long-form|full"; do
+            IFS='|' read -r a b c <<< "$args"
+            expect 2 "$a" "$b" "$c" --target /tmp/ci_typo
+          done
+          expect 2 "Bachelor thesis" "Long-form" full --taget /tmp/ci_typo
+          expect 2 "Bachelor thesis" "Long-form" full --target=
+          test ! -e /tmp/ci_typo && test ! -e 00_Status.md && test ! -e workspace
+
+      - name: setup.sh helpers under this bash (rule merge, shell quoting)
+        run: |
+          {
+            sed -n '/^merge_missing_lines() {/,/^}/p;/^shell_quote() {/,/^}/p' setup.sh
+            cat <<'EOF'
+          printf '\357\273\277*.swp\r\nown/\n' > /tmp/ci_gi
+          printf '# comment\n*.swp\n*.pyc\n*.pyc\n' > /tmp/ci_tpl
+          test "$(merge_missing_lines /tmp/ci_tpl /tmp/ci_gi)" = 1
+          test "$(tail -n 1 /tmp/ci_gi)" = '*.pyc'
+          test "$(merge_missing_lines /tmp/ci_tpl /tmp/ci_gi)" = 0
+          q="$(shell_quote "it's \$HOME \`x\`")"
+          test "$(eval "printf '%s' $q")" = "it's \$HOME \`x\`"
+          echo "helpers OK under $BASH_VERSION"
+          EOF
+          } > /tmp/ci_helpers.sh
+          "$SH" -eu /tmp/ci_helpers.sh
+
+      - name: docx_postprocess.sh and extract_styleguide.sh
+        run: |
+          R="$PWD"; W=/tmp/ci_px; rm -rf "$W"; mkdir -p "$W/good"
+          python - "$W" <<'EOF'
+          import os, stat, sys, zipfile
+          from docx import Document
+          w = sys.argv[1]
+          for name, text in (("Chapter [2].docx", "eins"), ("Chapter 2.docx", "zwei"), ("-draft.docx", "drei")):
+              d = Document()
+              d.add_paragraph(text)
+              d.save(os.path.join(w, name))
+          with zipfile.ZipFile(os.path.join(w, "Chapter 2.docx")) as z, zipfile.ZipFile(os.path.join(w, "link.docx"), "w") as out:
+              for i in z.infolist():
+                  out.writestr(i, z.read(i.filename))
+              link = zipfile.ZipInfo("word/media/image1.png")
+              link.create_system = 3
+              link.external_attr = (stat.S_IFLNK | 0o777) << 16
+              out.writestr(link, "../../../in.docx")
+          with zipfile.ZipFile(os.path.join(w, "good", "guide.pdf"), "w") as z:
+              z.writestr("rules.txt", "Example rule text")
+          EOF
+          hyphenated() { python -c "import sys, zipfile; sys.exit('<w:autoHyphenation/>' not in zipfile.ZipFile(sys.argv[1]).read('word/settings.xml').decode())" "$1"; }
+          cd "$W"
+          # [ ] in the name is not a wildcard: "Chapter 2.docx" stays untouched.
+          before="$(cksum < "Chapter 2.docx")"
+          "$SH" "$R/scripts/docx_postprocess.sh" "Chapter [2].docx"
+          hyphenated "Chapter [2].docx"
+          test "$(cksum < "Chapter 2.docx")" = "$before"
+          # A name starting with "-" is a file, not an option.
+          "$SH" "$R/scripts/docx_postprocess.sh" -draft.docx
+          hyphenated ./-draft.docx
+          # A symbolic-link entry is refused before unpacking (Git Bash's unzip would copy it).
+          cp link.docx link.orig
+          set +e; "$SH" "$R/scripts/docx_postprocess.sh" link.docx >out.txt 2>&1; code=$?; set -e
+          test "$code" -eq 1 && grep -q "symbolic links" out.txt && cmp link.docx link.orig
+          # A ZIP disguised as a PDF is unpacked by the script's own safe extractor.
+          "$SH" "$R/scripts/extract_styleguide.sh" "$W/good" "$W/out_good"
+          grep -q "Example rule text" "$W/out_good/guide.txt"
