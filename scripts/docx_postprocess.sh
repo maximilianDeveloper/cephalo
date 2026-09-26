@@ -285,7 +285,10 @@ with zipfile.ZipFile(out_path, 'w', zipfile.ZIP_DEFLATED, strict_timestamps=Fals
 shutil.copymode(original, out_path)
 PYEOF
 
-mv "$NEW_DOC" "$DOC_ABS"
+# -f: for a read-only document, mv would otherwise ask in a terminal (and
+# BSD mv reports success when the question is declined); the mode copied
+# above keeps it read-only.
+mv -f "$NEW_DOC" "$DOC_ABS"
 
 # Reported only now: the repack and the mv above can still fail.
 if [ "$SKIP_PATCH" = "0" ]; then

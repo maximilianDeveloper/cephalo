@@ -690,6 +690,13 @@ jobs:
           chmod 600 "$W/ok.docx"
           expect 0 bash scripts/docx_postprocess.sh "$W/ok.docx"
           test "$(stat -c %a "$W/ok.docx")" = 600
+          # a read-only document is replaced without a question in a terminal (GNU mv
+          # would ask, BSD mv report success when declined) and stays read-only
+          # (the runner is no root user, for whom mv would not ask)
+          cp "$W/findings.docx" "$W/ro.docx"; chmod 444 "$W/ro.docx"
+          echo n | script -qec "bash scripts/docx_postprocess.sh $W/ro.docx" /dev/null >/dev/null
+          test "$(stat -c %a "$W/ro.docx")" = 444
+          unzip -p "$W/ro.docx" word/settings.xml | grep -q autoHyphenation
           python - "$W/ok.docx" <<'EOF'
           import sys, zipfile, docx
           docx.Document(sys.argv[1])
