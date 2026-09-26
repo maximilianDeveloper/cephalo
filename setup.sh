@@ -13,7 +13,9 @@
 # Run it from inside the cephalo template directory (it scaffolds into
 # the current directory, or copies the template to --target PATH).
 
-set -euo pipefail
+# -E (errtrace): the ERR trap below also fires for a command that fails
+# inside a function (create_dir, copy_template_or_fallback, ...).
+set -Eeuo pipefail
 # An exported CDPATH would redirect the relative cd calls below (e.g. into
 # the sub-projects) to same-named directories elsewhere.
 unset CDPATH
@@ -44,6 +46,12 @@ on_error() {
     local exit_code=$?
     # Skip if already handling interrupt (avoid double-pause)
     [ "$SETUP_INTERRUPTED" = "1" ] && exit $exit_code
+    # In a subshell ( ... ) or $( ... ), carry on as without the trap: a
+    # failed ( ... ) fails its caller, which reports once, and the output of
+    # a $( ... ) must not take in the message.
+    if [ "${BASH_SUBSHELL:-0}" -gt 0 ]; then
+        return 0
+    fi
     echo ""
     echo -e "\033[0;31m! Setup exited unexpectedly (exit code $exit_code).\033[0m"
     pause_before_close "error"
