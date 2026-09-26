@@ -263,8 +263,11 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
 
     def german_form(particles: str, lead: str) -> str:
         """German author-year citation without a comma: "Author YYYY"."""
-        return (r"^(" + lead + particles + r"[A-ZÄÖÜ][\wäöüß'’-]+"
-                + r"(?:(?:\s+(?:&|und|and)\s+|\s*/\s*)" + particles + r"[A-ZÄÖÜ][\wäöüß'’-]+)?"
+        name = particles + r"[A-ZÄÖÜ][\wäöüß'’-]+"
+        return (r"^(" + lead + name
+                # co-authors: "Müller/Schmidt/Weber", "Müller und Schmidt",
+                # "Dawson, Ellis und Fowler"
+                + r"(?:(?:\s*/\s*" + name + r")+|(?:,\s*" + name + r")*,?\s+(?:&|und|and)\s+" + name + r")?"
                 + r"(?:\s+(?:et\s+al\.?|u\.\s*a\.))?)"
                 + r"\s+\d{4}")
     # Lead word in any case: "(Vgl. Smith 2020)".
@@ -342,15 +345,18 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
     #   - hyphenated surnames: Müller-Schmidt
     #   - letters of any script and apostrophes: García, O'Brien, O’Brien
     #   - name prefixes: van der Berg, de la Rosa, von Wagner
-    #   - joint authors: Smith and Jones, Müller-Schmidt & Weiss
+    #   - joint authors: Smith and Jones, Müller-Schmidt & Weiss, also a list:
+    #     Dawson, Ellis and Fowler
     #   - et al. narrative: Brown et al. (2021), German Müller u. a. (2021)
     #   - same-author-same-year suffixes: Schulz (2022a)
     #   - locator or further years inside the parentheses: Müller (2020, S. 15),
     #     Müller (2020: 15), Smith (2019, 2020)
     #   - German author-year style: Schmidt 2020 (no parentheses, handled below)
     name_token = r"[A-ZÄÖÜ](?:[^\W\d_]|['’-])+"
-    # Joint form OR et-al form
-    joint = r"\s+(?:&|and|und)\s+" + prefix + name_token
+    # Joint form (also a list, "Dawson, Ellis and Fowler") OR et-al form
+    joint = (r"(?:,\s+" + prefix + name_token + r")*,?\s+(?:&|and|und)\s+"
+             + prefix + name_token)
+    joint_split = r",?\s+(?:&|and|und)\s+|,\s+"
     et_al = r"\s+(?:et\s+al\.?|u\.\s*a\.)"
     # Narrative with parentheses: Author (YYYY[, locator])
     narrative_paren = (
@@ -363,7 +369,7 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
     )
     for match in re.findall(narrative_paren, body):
         cleaned = re.sub(et_al, "", match, flags=re.IGNORECASE)
-        for part in re.split(r"\s+(?:&|and|und)\s+", cleaned):
+        for part in re.split(joint_split, cleaned):
             name = part.strip()
             if not name:
                 continue
@@ -406,7 +412,7 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
     )
     for match in re.findall(german_narrative_strict, body):
         cleaned = re.sub(et_al, "", match, flags=re.IGNORECASE)
-        for part in re.split(r"\s+(?:&|and|und)\s+", cleaned):
+        for part in re.split(joint_split, cleaned):
             name = part.strip()
             if not name:
                 continue
