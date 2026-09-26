@@ -16,8 +16,8 @@
 # -E (errtrace): the ERR trap below also fires for a command that fails
 # inside a function (create_dir, copy_template_or_fallback, ...).
 set -Eeuo pipefail
-# An exported CDPATH would redirect the relative cd calls below (e.g. into
-# the sub-projects) to same-named directories elsewhere.
+# An exported CDPATH would redirect the relative cd calls below (e.g. when
+# resolving a relative --target) to same-named directories elsewhere.
 unset CDPATH
 
 # ==========================================================
