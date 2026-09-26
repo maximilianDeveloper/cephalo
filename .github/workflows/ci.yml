@@ -294,6 +294,18 @@ jobs:
           set -e
           reported_once "$code1" /tmp/ci_err1.out
           reported_once "$code2" /tmp/ci_err2.out
+          # Stopped during the copy into a new --target (TERM, handled like Ctrl+C,
+          # which a background job ignores): the advice names the partly set-up
+          # folder, which a re-run of the same command would refuse.
+          mkdir /tmp/ci_slow
+          printf '#!/bin/sh\nif [ "$1" = -xf ]; then %s "$@"; sleep 3; exit 0; fi\nexec %s "$@"\n' "$(command -v tar)" "$(command -v tar)" > /tmp/ci_slow/tar
+          chmod +x /tmp/ci_slow/tar
+          PATH="/tmp/ci_slow:$PATH" bash setup.sh "Seminar paper" "Flat" full --target /tmp/ci_int </dev/null >/tmp/ci_int.out 2>&1 &
+          pid=$!
+          for _ in $(seq 50); do [ -f /tmp/ci_int/setup.sh ] && break; sleep 0.2; done
+          kill -TERM "$pid"
+          set +e; wait "$pid"; code=$?; set -e
+          if [ "$code" -ne 130 ] || ! grep -q 'only partly set up' /tmp/ci_int.out; then cat /tmp/ci_int.out; echo "exit $code"; exit 1; fi
 
       # setup.sh and setup.ps1 must scaffold the same project. pwsh (PowerShell 7,
       # preinstalled on the runner) runs setup.ps1 here; the Windows job covers 5.1.

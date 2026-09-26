@@ -30,14 +30,32 @@ unset CDPATH
 # message, and pause briefly so the user sees what went on.
 
 SETUP_INTERRUPTED=0
+# Where the run was stopped, for the advice below: set when the template
+# copy into a new --target begins, and when the setup has completed.
+COPY_STARTED=0
+TARGET_HAD_FILES=false
+SETUP_DONE=0
 
 on_interrupt() {
     SETUP_INTERRUPTED=1
     echo ""
     echo ""
+    if [ "$SETUP_DONE" = "1" ]; then
+        # Ctrl+C after the summary (e.g. at "Delete it now?"): the project
+        # is complete, so this is no failure for a calling launcher.
+        echo -e "\033[0;90m  Stopped (Ctrl+C) after the setup had completed.\033[0m"
+        pause_before_close "done"
+        exit 0
+    fi
     echo -e "\033[1;33m! Setup cancelled by user (Ctrl+C).\033[0m"
-    echo -e "\033[0;90m  Any directories created up to this point remain in place.\033[0m"
-    echo -e "\033[0;90m  Re-run the script to resume; existing items will be skipped.\033[0m"
+    if [ "$COPY_STARTED" = "1" ] && [ "$TARGET_HAD_FILES" = "false" ]; then
+        # The same command would now refuse the non-empty target.
+        echo -e "\033[0;90m  The new project folder is only partly set up. Delete it, then re-run setup:\033[0m"
+        echo -e "\033[0;90m  $TARGET_DIR\033[0m"
+    else
+        echo -e "\033[0;90m  Any directories created up to this point remain in place.\033[0m"
+        echo -e "\033[0;90m  Re-run the script to resume; existing items will be skipped.\033[0m"
+    fi
     pause_before_close "cancelled"
     exit 130
 }
@@ -687,7 +705,6 @@ if [ -n "$TARGET_DIR" ]; then
     fi
 
     # Handle non-empty existing target
-    TARGET_HAD_FILES=false
     if [ -d "$TARGET_DIR" ]; then
         # Folder metadata alone (.DS_Store: Finder writes one into every
         # folder it shows) does not make the target non-empty.
@@ -746,6 +763,7 @@ if [ -n "$TARGET_DIR" ]; then
     fi
     echo ""
     echo -e "${CYAN}Copying cephalo template to target...${NC}"
+    COPY_STARTED=1
     # Use a tar-pipe to reliably include dotfiles and respect excludes
     # across Linux / macOS / Git Bash, without needing rsync.
     # tar's own messages stay visible (disk full, permissions, path too
@@ -1084,6 +1102,7 @@ fi
 # Summary
 # ==========================================================
 
+SETUP_DONE=1
 header "Setup complete"
 echo ""
 echo "Work type:    $WORK_TYPE"
@@ -1181,4 +1200,6 @@ fi
 
 # Disable error-trap for the clean-exit pause (we are done, not erroring)
 trap - ERR
+# Ctrl+C at this last pause closes like Enter.
+trap 'exit 0' INT
 pause_before_close "done"
