@@ -81,7 +81,7 @@ The resolver will:
 3. Flag ambiguous or missing rules as `❓`
 4. (For minimal-scaffolding setups) propose additional directories based on what your guidelines require
 
-Each `❓` item is tagged. Resolve the `[content]` items (voice, evaluative wording, citation wording, length, outline depth) before the first chapter is drafted: their answers change what the agents write. The `[format]` items (fonts, margins, pagination, captions, ...) only need an answer before the formatting phase. Resolving usually means asking your supervisor about the ambiguous points.
+Each `❓` item is tagged. Resolve the `[content]` items (voice, evaluative wording, citation wording, length, outline depth, and the number formats, resolution and captions of tables and figures) before the first chapter is drafted: their answers change what the agents write. The `[format]` items (fonts, margins, pagination, title page, ...) only need an answer before the formatting phase. Resolving usually means asking your supervisor about the ambiguous points.
 
 ---
 
