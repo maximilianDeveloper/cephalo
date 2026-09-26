@@ -581,7 +581,10 @@ if ($Target -ne "") {
     $TargetWasEmpty = $true
     if (Test-Path -LiteralPath $Target) {
         if (Test-Path -LiteralPath $Target -PathType Container) {
-            $existing = Get-ChildItem -LiteralPath $Target -Force -ErrorAction SilentlyContinue
+            # Folder metadata alone (Thumbs.db, desktop.ini, a .DS_Store from a
+            # Mac) does not make the target non-empty, as in setup.sh.
+            $existing = Get-ChildItem -LiteralPath $Target -Force -ErrorAction SilentlyContinue |
+                Where-Object { @(".DS_Store", "Thumbs.db", "desktop.ini") -notcontains $_.Name }
             if ($existing) {
                 $TargetWasEmpty = $false
                 Write-Host ""

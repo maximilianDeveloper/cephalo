@@ -298,6 +298,10 @@ jobs:
           (cd "$P/ps1" && pwsh -NoProfile -File ./setup.ps1 -WorkType "Seminar paper" -Structure Flat -Scaffolding full -NonInteractive >/dev/null)
           diff -r --no-dereference -x .git "$P/sh1" "$P/ps1"
           cmp .gitignore "$P/ps1/.gitignore"
+          # Folder metadata alone does not make a target non-empty for setup.ps1 either.
+          mkdir "$P/meta" && touch "$P/meta/Thumbs.db" "$P/meta/desktop.ini"
+          pwsh -NoProfile -File ./setup.ps1 -WorkType "Seminar paper" -Structure Flat -Scaffolding full -Target "$P/meta" -NonInteractive >/dev/null
+          test -d "$P/meta/workspace/sources/_guidelines"
           # Updating a project (--target into it, confirmed at the prompts) keeps its own
           # .gitignore/.gitattributes and appends the template rules they lack, in both scripts.
           # (No Python caches in the template: setup.ps1 leaves nested ones it copies into a
