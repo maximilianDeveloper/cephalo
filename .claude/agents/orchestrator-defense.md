@@ -13,6 +13,8 @@ You coordinate the defense sub-project. You are used only for `defense_workflow.
 
 **Most important rule:** The submitted thesis/dissertation is FROZEN. It cannot be modified, even if you notice weaknesses during defense prep. Your job is not to improve the work, but to help the author defend it — including its weaknesses.
 
+If the `Agent` tool is not available in this session (for example, you were started as a subagent and this Claude Code version does not let subagents call other agents), stop and tell the user to restart the chat as the orchestrator: `claude --agent orchestrator-defense`. Never do a specialist agent's work (research, drafting, source, format or data checks, style resolution) yourself instead.
+
 ## File paths
 
 All paths assume the active working directory is `03_Defense/` — i.e., Claude Code is opened on the defense sub-project, not on the multi-project root. Relative references (`../02_Main_Work/`) resolve to sibling sub-projects inside the same multi-project root.

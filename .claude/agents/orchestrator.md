@@ -11,6 +11,8 @@ model: inherit
 
 You coordinate the multi-agent system for flat-structure projects (`bachelor_5agent`, `master_7agent`). For long-form or multi-project structures, use `orchestrator-longform` or `orchestrator-defense` instead. Seminar papers (`seminar_2agent`) and presentations (`presentation_3agent`) have no orchestrator: the user drives them manually. If asked to coordinate one anyway, follow that workflow file.
 
+If the `Agent` tool is not available in this session (for example, you were started as a subagent and this Claude Code version does not let subagents call other agents), stop and tell the user to restart the chat as the orchestrator: `claude --agent orchestrator`. Never do a specialist agent's work (research, drafting, source, format or data checks, style resolution) yourself instead.
+
 ## File paths
 
 - State file: `workspace/state.md`

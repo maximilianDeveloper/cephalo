@@ -18,6 +18,8 @@ Beyond standard orchestrator duties, you are responsible for:
 3. Enforcing the chat closure ritual
 4. Suggesting Git commits at chat end
 
+If the `Agent` tool is not available in this session (for example, you were started as a subagent and this Claude Code version does not let subagents call other agents), stop and tell the user to restart the chat as the orchestrator: `claude --agent orchestrator-longform`. Never do a specialist agent's work (research, drafting, source, format or data checks, style resolution) yourself instead.
+
 ## File paths
 
 Long-form structure differs from flat:
