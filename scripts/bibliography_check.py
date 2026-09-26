@@ -310,7 +310,8 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
             # Remove "et al." / German "u. a."
             name_part = re.sub(r"\s+(?:et\s+al\.?|u\.\s*a\.)", "", name_part, flags=re.IGNORECASE)
             # Split on & or , or / or "and"/"und"
-            for part in re.split(r"\s*[&,/]\s*|\s+(?:and|und)\s+", name_part):
+            parts = re.split(r"\s*[&,/]\s*|\s+(?:and|und)\s+", name_part)
+            for k, part in enumerate(parts):
                 # The surname is the last capitalized token ("van den Berg" ->
                 # Berg); numbers ("Tabelle 3") and lowercase words never
                 # qualify, single letters ("N = 1200") are rejected
@@ -334,7 +335,11 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
                 # unlike "(von Winter 2010 eingeführt)" or "(Studie von Sommer, 2019)".
                 after_von = (not comma_form and idx > 0 and tokens[idx - 1].lower() == "von"
                              and re.match(DATE_RANGE_AFTER_YEAR, fragment[match.end():]) is not None)
-                if confirmed_only and surname not in keep:
+                # A name before the last two of a list without the APA comma
+                # ("(Müller/Schmidt/Weber 2019)") counts, like a filler form,
+                # only if the bibliography lists it: see the narrative forms.
+                extra = not comma_form and k < len(parts) - 2
+                if (confirmed_only or extra) and surname not in keep:
                     continue
                 if len(surname) > 1 and (surname not in stop or surname.isupper()
                                          or (surname in SURNAME_LIKE_STOPWORDS and not after_von)):
@@ -369,7 +374,8 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
     )
     for match in re.findall(narrative_paren, body):
         cleaned = re.sub(et_al, "", match, flags=re.IGNORECASE)
-        for part in re.split(joint_split, cleaned):
+        parts = re.split(joint_split, cleaned)
+        for k, part in enumerate(parts):
             name = part.strip()
             if not name:
                 continue
@@ -380,6 +386,12 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
             # Safety net: skip known non-author capitalized words
             # (e.g., "Die EU (2020)", "Das Kapitel (2020)")
             if surname in stop:
+                continue
+            # A name before the last two of a list ("Dawson, Ellis and Fowler
+            # (2018)") counts only if the bibliography lists it: the word before
+            # a pair is often prose ("However, Smith and Jones (2019)", "Das
+            # Verfahren, das Müller und Schmidt (2019) entwickelt haben").
+            if k < len(parts) - 2 and surname not in keep:
                 continue
             authors.add(surname)
     
@@ -412,7 +424,8 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
     )
     for match in re.findall(german_narrative_strict, body):
         cleaned = re.sub(et_al, "", match, flags=re.IGNORECASE)
-        for part in re.split(joint_split, cleaned):
+        parts = re.split(joint_split, cleaned)
+        for k, part in enumerate(parts):
             name = part.strip()
             if not name:
                 continue
@@ -420,6 +433,9 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
             surname = next((t for t in reversed(tokens) if t[:1].isupper()), tokens[-1])
             # Safety net: skip known non-author capitalized words
             if surname in stop:
+                continue
+            # As above: a name before the last two of a list must be listed.
+            if k < len(parts) - 2 and surname not in keep:
                 continue
             authors.add(surname)
     
