@@ -712,6 +712,32 @@ jobs:
           # leaving it at 2 would fail this step even though the test succeeded.
           $LASTEXITCODE = 0
 
+      # The same argument checks as the Ubuntu job runs for setup.sh: each call
+      # must fail without creating the target and without scaffolding into the
+      # template checkout. PowerShell rejects an unknown parameter itself (exit 1).
+      - name: Invalid arguments fail fast (no stray target, no in-place setup)
+        shell: powershell
+        run: |
+          $typo = Join-Path $env:TEMP "ci_typo2"
+          function Expect-Failure([int]$Want, [string[]]$SetupArgs) {
+            & powershell -NoProfile -ExecutionPolicy Bypass -File .\setup.ps1 @SetupArgs *> $null
+            $code = $LASTEXITCODE
+            if ($code -eq 0 -or ($Want -gt 0 -and $code -ne $Want)) { Write-Host "expected exit $Want, got $code for: $SetupArgs"; exit 1 }
+            foreach ($p in $typo, "ci_inside", "00_Status.md", "workspace", "02_Literature") {
+              if (Test-Path -LiteralPath $p) { Write-Host "created $p for: $SetupArgs"; exit 1 }
+            }
+          }
+          Expect-Failure 2 @("-WorkType", "Bachelorarbeit", "-Structure", "Long-form", "-Scaffolding", "full", "-Target", $typo, "-NonInteractive")
+          Expect-Failure 2 @("-WorkType", "Bachelor thesis", "-Structure", "Long-form", "-Scaffolding", "fulll", "-Target", $typo, "-NonInteractive")
+          Expect-Failure 2 @("-WorkType", "Seminar paper", "-Structure", "Long-form", "-Scaffolding", "full", "-Target", $typo, "-NonInteractive")
+          Expect-Failure 2 @("-WorkType", "Presentation", "-Structure", "Multi-project", "-Scaffolding", "full", "-Target", $typo, "-NonInteractive")
+          Expect-Failure 2 @("-WorkType", "Bachelor thesis", "-Structure", "Long-form", "-Target", $typo, "-NonInteractive")
+          Expect-Failure 2 @("-WorkType", "Bachelor thesis", "-Structure", "Long-form", "-Scaffolding", "full", "-Target", "ci_inside", "-NonInteractive")
+          Expect-Failure 2 @("-WorkType", "Bachelor thesis", "-Structure", "Long-form", "-Scaffolding", "full", "-Target", ".\ci_inside\sub", "-NonInteractive")
+          Expect-Failure 0 @("-WorkType", "Bachelor thesis", "-Structure", "Long-form", "-Scaffolding", "full", "-Taget", $typo, "-NonInteractive")
+          Expect-Failure 0 @("Bachelor thesis", "Long-form", "full", $typo, "extra", "-NonInteractive")
+          $LASTEXITCODE = 0
+
       - name: setup.ps1 keeps its UTF-8 BOM (Windows PowerShell 5.1 needs it)
         shell: powershell
         run: |
