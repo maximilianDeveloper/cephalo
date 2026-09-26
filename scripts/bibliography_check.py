@@ -89,9 +89,11 @@ NAME_PARTICLES = {
     "ter", "ten", "der", "den",
 }
 
-# The particles as a regex prefix of a surname, also capitalized at the start
-# of an entry or citation (De Vries, Van der Berg, La Porta). "Das" stays
-# lowercase: capitalized, it is the German article far more often.
+# The particles as a regex prefix of a surname: lowercase (van der Berg), and
+# also capitalized at the start of an entry or citation (De Vries, Van der
+# Berg, La Porta). "Das" stays lowercase: capitalized, it is the German
+# article far more often.
+NAME_PREFIX_LOWER = r"(?:(?:van|von|de|del|della|di|la|le|du|dos|das|ter|ten)\s+(?:der\s+|den\s+|de\s+|la\s+)?)?"
 NAME_PREFIX = (r"(?:(?:van|von|de|del|della|di|la|le|du|dos|das|ter|ten"
                r"|Van|Von|De|Del|Della|Di|La|Le|Du|Dos|Ter|Ten)\s+(?:der\s+|den\s+|de\s+|la\s+)?)?")
 
@@ -237,8 +239,25 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
     """
     authors = set()
     stop = GERMAN_NON_AUTHOR_CAPS - keep
-    # Name particles: van der Berg, de la Rosa, von Wagner, ter Horst, De Vries
-    prefix = NAME_PREFIX
+    # Name particles: van der Berg, de la Rosa, von Wagner, ter Horst
+    prefix = NAME_PREFIX_LOWER
+
+    def german_form(particles: str, lead: str) -> str:
+        """German author-year citation without a comma: "Author YYYY"."""
+        return (r"^(" + lead + particles + r"[A-ZÄÖÜ][\wäöüß'’-]+"
+                + r"(?:(?:\s+(?:&|und|and)\s+|\s*/\s*)" + particles + r"[A-ZÄÖÜ][\wäöüß'’-]+)?"
+                + r"(?:\s+(?:et\s+al\.?|u\.\s*a\.))?)"
+                + r"\s+\d{4}")
+    # Lead word in any case: "(Vgl. Smith 2020)".
+    german_plain = german_form(prefix, r"(?i:vgl\.\s+|cf\.\s+|see\s+|siehe\s+|nach\s+|zit\.\s+nach\s+)?")
+    # Also a capitalized particle ("(De Vries 2018)") or a filler after the
+    # lead word ("(vgl. auch Müller 2020)", "(see also Smith 2020)"). Both
+    # also open prose ("(Von Anfang 2020 bis ...)", "(La Liga 2018/19)",
+    # "(see also Horizon 2020)"), so such a name counts only if the
+    # bibliography lists it (keep).
+    german_confirmed = german_form(
+        NAME_PREFIX,
+        r"(?i:(?:vgl\.|cf\.|see|siehe|nach|zit\.\s+nach)\s+(?:(?:auch|also|z\.\s*b\.|e\.g\.)\s+)?)?")
     
     # Stage 1: find parenthesized blocks containing a year (YYYY)
     paren_blocks = re.findall(r"\(([^()]*\d{4}[^()]*)\)", body)
@@ -251,19 +270,13 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
             # (English/APA style — comma before year)
             # or "Author(s) YYYY[, S. X]" (German author-year style — no comma)
             match = re.match(r"^((?:cf\.\s+|see\s+|vgl\.\s+|siehe\s+|nach\s+|zit\.\s+nach\s+)?[^,]+(?:\s+(?:et\s+al\.?|u\.\s*a\.))?(?:\s*(?:,\s*)?(?:&|and|und)\s+[\w'’-]+|,\s*[\w'’-]+)*),\s*\d{4}", fragment)
+            confirmed_only = False
             if not match:
                 # Try German style: "Author YYYY" without comma
-                # (lead word in any case: "(Vgl. Smith 2020)"; a filler only
-                # after a lead word: "(vgl. auch Müller 2020)", "(see also
-                # Smith 2020)", not "(auch Deutschland 2020)")
-                match = re.match(
-                    r"^((?i:(?:vgl\.|cf\.|see|siehe|nach|zit\.\s+nach)\s+(?:(?:auch|also|z\.\s*b\.|e\.g\.)\s+)?)?"
-                    + prefix + r"[A-ZÄÖÜ][\wäöüß'’-]+"
-                    + r"(?:(?:\s+(?:&|und|and)\s+|\s*/\s*)" + prefix + r"[A-ZÄÖÜ][\wäöüß'’-]+)?"
-                    + r"(?:\s+(?:et\s+al\.?|u\.\s*a\.))?)"
-                    + r"\s+\d{4}",
-                    fragment,
-                )
+                match = re.match(german_plain, fragment)
+            if not match:
+                match = re.match(german_confirmed, fragment)
+                confirmed_only = True
             if not match:
                 continue
             name_part = match.group(1)
@@ -291,11 +304,13 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
                 # acronyms and surname-like stopwords are kept here: in
                 # parentheses before a year, "(OECD, 2019)" or
                 # "(Winter, 2017)" is a citation, and a missing entry for it
-                # must still be reported. After a particle, a stopword is
-                # prose: "(von Mai 2020 bis Juni 2021)".
-                after_particle = any(t.lower() in NAME_PARTICLES for t in tokens[:idx])
+                # must still be reported. After the preposition "von" such a
+                # word is prose: "(von Mai 2020 bis Juni 2021)".
+                after_von = idx > 0 and tokens[idx - 1].lower() == "von"
+                if confirmed_only and surname not in keep:
+                    continue
                 if len(surname) > 1 and (surname not in stop or surname.isupper()
-                                         or (surname in SURNAME_LIKE_STOPWORDS and not after_particle)):
+                                         or (surname in SURNAME_LIKE_STOPWORDS and not after_von)):
                     authors.add(surname)
     
     # Pattern 2: narrative citations (Author (YYYY))
@@ -452,9 +467,11 @@ def extract_bibliography_authors(bibliography: list[str]) -> tuple[set[str], set
             surname = next((t for t in reversed(tokens) if t[:1].isupper()), tokens[-1])
             all_authors.add(surname)
         # Co-authors after / or ; with full given names ("Müller, Hans/Schmidt,
-        # Karl (2019)", "Smith, John; Jones, Robert (2019)"), in the head only,
-        # so a slash in the title ("Theory/Practice,") adds nothing.
-        for m in re.finditer(r"[/;]\s*(" + surname_token + r"),", head):
+        # Karl (2019)", "Smith, John; Jones, Robert (2019)"), in the head only
+        # and not after its first ": ", so a slash in the title
+        # ("Theory/Practice,") or editors ("In: Meier, Karl/Wolf, Eva (Hrsg.)"
+        # in an entry with the year at its end) add nothing.
+        for m in re.finditer(r"[/;]\s*(" + surname_token + r"),", re.split(r":\s", head, maxsplit=1)[0]):
             tokens = m.group(1).split()
             surname = next((t for t in reversed(tokens) if t[:1].isupper()), tokens[-1])
             all_authors.add(surname)

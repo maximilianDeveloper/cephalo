@@ -499,6 +499,17 @@ jobs:
                         "De Vries, R. (2018). D.", "Weber, E. (2020). E.", "Fischer, Hans/Wolf, Karl (2017): G."):
               f.add_paragraph(entry)
           f.save(os.path.join(w, "forms.docx"))
+          # prose that looks like a citation with a capitalized particle or a filler
+          # (counts only for names in the bibliography), and real citations after
+          # "de"/"Der" that must still be reported when their entry is missing
+          r = Document()
+          r.add_paragraph("(Von der Rentenreform 2001 profitierten viele.) (Chirac/Le Pen 2002; La Liga 2018/19). "
+                          "(see also Horizon 2020). (De Vries 2018). (Der Freitag, 2020). (de Winter et al., 2014). "
+                          "(Meier 2019, S. 3).")
+          r.add_heading("References", 1)
+          for entry in ("De Vries, R. (2018). A.", "Fischer, Hans: Titel. In: Schulz, Eva/Meier, Karl (Hrsg.): Band. Berlin 2019."):
+              r.add_paragraph(entry)
+          r.save(os.path.join(w, "prose.docx"))
           n = Document()
           n.add_paragraph("As shown in [1], it works.")
           n.add_heading("References", 1)
@@ -568,6 +579,11 @@ jobs:
           expect 2 python scripts/bibliography_check.py "$W/notword.docx"
           test "$(wc -l < "$W/out.txt")" -eq 1
           expect 0 python scripts/bibliography_check.py "$W/forms.docx"
+          expect 1 python scripts/bibliography_check.py "$W/prose.docx"
+          for a in Freitag Winter Meier Fischer; do grep -qx "    $a" "$W/out.txt"; done
+          for a in Rentenreform Chirac Pen Liga Horizon Vries; do
+            if grep -qx "    $a" "$W/out.txt"; then echo "prose read as a citation of $a"; exit 1; fi
+          done
           # a numeric bibliography cannot be checked: exit 2, not a passed check
           expect 2 python scripts/bibliography_check.py "$W/numeric.docx"
           # the bibliography ends at the next top-level heading (appendix, declaration)
