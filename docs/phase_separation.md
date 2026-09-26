@@ -40,7 +40,7 @@ cephalo splits the project lifecycle into two distinct phases:
 
 ### Cost reduction
 
-Format work uses fast (cheap) models exclusively. For a typical bachelor thesis, this cuts overall token spending by an estimated 60-70% versus running capable models throughout.
+Format work uses fast (cheap) models exclusively. For a typical bachelor thesis, this cuts overall token spending by an estimated 60-70% versus running capable models throughout, provided Phase B really runs on a fast model (see the next paragraph).
 
 The saving depends on how you run Phase B: `format-verifier` and the orchestrators are defined with `model: inherit`, so they use whatever model the main chat runs. Start Phase B chats on a fast model (for example with `/model`), or pin `format-verifier` to a fast model in its frontmatter; otherwise Phase B runs on your default model.
 

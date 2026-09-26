@@ -120,7 +120,7 @@ Long-form works go through two distinct phases:
 
 **Phase B (Formatting):** format-verifier and utility scripts (fast models) iterate on presentation, citations, bibliography and abbreviation checks. The writer agent is dormant unless a real content issue surfaces.
 
-This split reduces cost by ~60–70% versus running capable models throughout. See `docs/phase_separation.md`.
+This split reduces cost by ~60–70% versus running capable models throughout, provided the Phase B chats run on a fast main model: `format-verifier` and the orchestrators inherit the chat's model. See `docs/phase_separation.md`.
 
 ## Universal rules (apply in every project)
 

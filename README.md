@@ -45,7 +45,7 @@ To make that concrete, this is the kind of finding the source-verifier produces 
 
 **Dynamic guideline extraction.** Most writing tools hardcode citation rules (APA, Chicago, etc.). cephalo reads whatever style guide your institution gives you — however idiosyncratic — and extracts the rules into a structured configuration. If the rules change, you update the document; the agents update themselves.
 
-**Phase separation.** Content quality stabilizes well before formatting does. cephalo formalizes this: a Content phase uses capable, expensive models; a Formatting phase uses fast, cheap models. This cuts costs significantly without sacrificing quality.
+**Phase separation.** Content quality stabilizes well before formatting does. cephalo formalizes this: a Content phase uses capable, expensive models; a Formatting phase uses fast, cheap models. This cuts costs significantly without sacrificing quality, provided the formatting chats really run on a fast model (see `docs/phase_separation.md`).
 
 **Source fidelity as first-class concern.** The most valuable agent in the system is the source verifier — catching subtle errors like "your text says *X*, but the source says *Y* (close but not identical)." These errors are invisible without a dedicated review pass, and they are the difference between good and publishable work.
 
@@ -270,7 +270,7 @@ For small works (seminar papers), yes. For theses, you will regret not using Git
 
 ### How much does it cost?
 
-cephalo itself is free. You pay for the Claude Code subscription (standard Anthropic pricing). Typical thesis projects use a mix of expensive and cheap models, with the phase separation feature cutting total costs by an estimated 60–70% versus naive use of the capable model throughout.
+cephalo itself is free. You pay for the Claude Code subscription (standard Anthropic pricing). Typical thesis projects use a mix of expensive and cheap models, with the phase separation feature cutting total costs by an estimated 60–70% versus naive use of the capable model throughout. That saving needs the formatting-phase chats to run on a fast model (e.g. switch with `/model`): the formatting agents inherit the chat's model.
 
 ### Can I contribute?
 
