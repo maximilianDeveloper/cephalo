@@ -254,13 +254,16 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
     # lead word ("(vgl. auch Müller 2020)", "(see also Smith 2020)"). Both
     # also open prose ("(Von Anfang 2020 bis ...)", "(La Liga 2018/19)",
     # "(see also Horizon 2020)"), so such a name counts only if the
-    # bibliography lists it (keep), and only if the fragment is the whole
-    # citation: after the year, a year suffix or a locator at most, not
-    # "(Von Mai 2020 bis Juni 2021 ...)" with an unrelated author Mai.
+    # bibliography lists it (keep), and only if the year ends the citation:
+    # after it a year suffix, then only a locator or further years after a
+    # comma, colon or bracket, or a second year ("(De Vries 2018a, b)", "(Di
+    # Fabio 2019, Rn. 12)", "(Van Gennep 1909/1986)"), not running text as in
+    # "(Von Mai 2020 bis Juni 2021 ...)" or "(siehe auch Winter 2022/23)"
+    # with an unrelated author Mai or Winter.
     german_confirmed = german_form(
         NAME_PREFIX,
         r"(?i:(?:vgl\.|cf\.|see|siehe|nach|zit\.\s+nach)\s+(?:(?:auch|also|z\.\s*b\.|e\.g\.)\s+)?)?"
-    ) + r"[a-z]?(?:\s*[,:]\s*(?:S\.|p\.|pp\.|\d)[^()]*)?$"
+    ) + r"[a-z]?(?:(?:\s*[,:]|\s*\[|\s*/\s*\d{4}\b|\s+(?:und|and|&)\s+\d)[^()]*)?$"
     
     # Stage 1: find parenthesized blocks containing a year (YYYY)
     paren_blocks = re.findall(r"\(([^()]*\d{4}[^()]*)\)", body)
@@ -274,6 +277,7 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
             # or "Author(s) YYYY[, S. X]" (German author-year style — no comma)
             match = re.match(r"^((?:cf\.\s+|see\s+|vgl\.\s+|siehe\s+|nach\s+|zit\.\s+nach\s+)?[^,]+(?:\s+(?:et\s+al\.?|u\.\s*a\.))?(?:\s*(?:,\s*)?(?:&|and|und)\s+" + NAME_PREFIX + r"[\w'’-]+|,\s*" + NAME_PREFIX + r"[\w'’-]+)*),\s*\d{4}", fragment)
             confirmed_only = False
+            comma_form = bool(match)
             if not match:
                 # Try German style: "Author YYYY" without comma
                 match = re.match(german_plain, fragment)
@@ -289,11 +293,15 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
             name_part = re.sub(r"\s+(?:et\s+al\.?|u\.\s*a\.)", "", name_part, flags=re.IGNORECASE)
             # Split on & or , or / or "and"/"und"
             parts = re.split(r"\s*[&,/]\s*|\s+(?:and|und)\s+", name_part)
-            # Names after the first comma with a capitalized particle ("(e.g.,
-            # De Dreu & Weingart, 2003)") also match prose ("(for example, La
-            # Liga, 2018)"): they count only if the bibliography lists them.
+            # A name after the first comma with a capitalized particle ("(e.g.,
+            # De Dreu & Weingart, 2003)") also matches prose ("(for example, La
+            # Liga, 2018)", "(Interview 7, La Paz, 2019)"): then every name of
+            # the fragment counts only if the bibliography lists it.
             head_parts = len(re.split(r"\s*[&/]\s*|\s+(?:and|und)\s+", name_part.split(",", 1)[0]))
-            for n, part in enumerate(parts):
+            gated = confirmed_only or any(
+                t[:1].isupper() and t.lower() in NAME_PARTICLES
+                for later in parts[head_parts:] for t in later.split()[:-1])
+            for part in parts:
                 # The surname is the last capitalized token ("van den Berg" ->
                 # Berg); numbers ("Tabelle 3") and lowercase words never
                 # qualify, single letters ("N = 1200") are rejected
@@ -306,6 +314,10 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
                 # fragment is prose ("eigene Darstellung", "etwa Deutschland").
                 if any(t[:1].islower() and t.lower() not in PAREN_LOWERCASE_OK for t in tokens[:idx]):
                     continue
+                # A capitalized particle followed by lowercase words is a title,
+                # not a surname: "(Kopernikus, De revolutionibus, 1543)".
+                if idx < len(tokens) - 1 and tokens[idx].lower() in NAME_PARTICLES:
+                    continue
                 surname = tokens[idx]
                 # Safety net: skip known non-author capitalized words
                 # (e.g., "(März 2021)", "(Tabelle 3, 2020)"). All-caps
@@ -313,11 +325,10 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
                 # parentheses before a year, "(OECD, 2019)" or
                 # "(Winter, 2017)" is a citation, and a missing entry for it
                 # must still be reported. After the preposition "von" such a
-                # word is prose: "(von Mai 2020 bis Juni 2021)".
-                after_von = idx > 0 and tokens[idx - 1].lower() == "von"
-                later_particle = n >= head_parts and any(
-                    t[:1].isupper() and t.lower() in NAME_PARTICLES for t in tokens[:idx])
-                if (confirmed_only or later_particle) and surname not in keep:
+                # word is prose, in the form without a comma: "(von Mai 2020 bis
+                # Juni 2021)", unlike "(Studie von Sommer, 2019)".
+                after_von = not comma_form and idx > 0 and tokens[idx - 1].lower() == "von"
+                if gated and surname not in keep:
                     continue
                 if len(surname) > 1 and (surname not in stop or surname.isupper()
                                          or (surname in SURNAME_LIKE_STOPWORDS and not after_von)):
@@ -367,7 +378,11 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
     # name, the joint form above sees only "Vries (2019)". The first name counts
     # only if the bibliography lists it: prose has the same shape ("Teneriffa
     # und La Palma (2021)").
-    narrative_confirmed = r"(" + name_token + r")\s+(?:&|and|und)\s+" + NAME_PREFIX + name_token + r"\s+\(\d{4}"
+    narrative_confirmed = (
+        r"(" + name_token + r")\s+(?:&|and|und)\s+"
+        + r"(?:Van|Von|De|Del|Della|Di|La|Le|Du|Dos|Ter|Ten)\s+(?:der\s+|den\s+|de\s+|la\s+)?"
+        + name_token + r"\s+\(\d{4}[a-z]?"
+        + r"(?:,\s*(?:S\.|p\.|pp\.)\s*\d[^()]*|:\s*\d+(?:\s*[-–]\s*\d+)?|[,;]\s*\d{4}[a-z]?[^()]*)?\)")
     for surname in re.findall(narrative_confirmed, body):
         if surname in keep:
             authors.add(surname)
