@@ -9,7 +9,6 @@
     --paper:#eef1f0; --card:#ffffff; --ink:#0d2226; --ink-soft:#4a5b5d;
     --accent:#0f6e66; --accent-deep:#0a4c46; --line:#d6dedd; --line-soft:#e6ebea;
     --term-bg:#0c1a1d; --term-fg:#d7e4e2; --term-dim:#6f8a86; --term-accent:#5fd0c4;
-    --warn:#9a6b1e; --warn-bg:#fbf3e2;
     --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
     --mono:ui-monospace,"SF Mono","Cascadia Code","Cascadia Mono",Menlo,Consolas,monospace;
@@ -113,10 +112,6 @@
   .safenote{margin:6px 2px 0; font-size:12px; color:var(--ink-soft); opacity:.82; line-height:1.5}
   .runnote{margin:12px 2px 0; font-size:13px; color:var(--ink-soft); line-height:1.5; text-wrap:pretty}
   .runnote code{font-family:var(--mono); font-size:12px; background:#e2e9e8; padding:1px 5px; border-radius:4px; color:var(--ink)}
-
-  .caveat{display:none; margin-top:14px; background:var(--warn-bg); border:1px solid #ecd9ac; border-left:3px solid var(--warn); border-radius:8px; padding:12px 14px; font-size:13px; line-height:1.5; color:#5c431a}
-  .caveat.show{display:block}
-  .caveat b{color:var(--warn)}
 
   /* tree preview */
   .tree-wrap{margin-top:22px}
@@ -235,8 +230,6 @@
       <p class="launchnote" id="launchnote"></p>
       <p class="safenote">The launcher is a small script that runs the command for you. A browser cannot run terminal commands directly &mdash; that boundary is exactly what keeps this page safe.</p>
 
-      <div class="caveat" id="caveat"><b>Heads up &mdash;</b> Multi-project uses symbolic links on Windows. Enable <b>Developer Mode</b> (Settings &rarr; For developers) once, or run the command from an elevated terminal. Otherwise setup falls back to copying the shared materials, and later edits to the shared style guide will not propagate between sub-projects.</div>
-
       <div class="tree-wrap">
         <div class="tree-cap">What gets created</div>
         <div class="tree" id="tree"></div>
@@ -300,7 +293,6 @@
 <p><strong>Windows (PowerShell):</strong></p>
 <pre><code>Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 .\setup.ps1</code></pre>
-<p>Only multi-project setups create symlinks — for those, enable Developer Mode once (Settings -&gt; For developers) or run from an elevated shell; see the FAQ. Flat and long-form setups need neither.</p>
 <p><strong>macOS / Linux / Git Bash:</strong></p>
 <pre><code>chmod +x setup.sh
 ./setup.sh</code></pre>
@@ -386,10 +378,6 @@ List any open questions for me to resolve before we proceed.</code></pre>
 <p>cephalo itself is free. You pay for the Claude Code subscription (standard Anthropic pricing). Typical thesis projects use a mix of expensive and cheap models, with the phase separation feature cutting total costs by an estimated 60–70% versus naive use of the capable model throughout. That saving needs the formatting-phase chats to run on a fast model (e.g. switch with <code>/model</code>): the formatting agents inherit the chat&#x27;s model.</p>
 <h3>Can I contribute?</h3>
 <p>This is an early project. Feedback on the agent definitions, workflow configurations, and error catalog is welcome — <code>CONTRIBUTING.md</code> explains how. Specifically: if your institution&#x27;s style guide produces unusual results with the style-resolver, a sample (anonymized) plus the problematic output is valuable.</p>
-<h3>Symlinks don&#x27;t work on my Windows machine — what do I do?</h3>
-<p>Creating symlinks on Windows requires Administrator privileges OR Developer Mode enabled (Settings -&gt; For developers -&gt; Developer Mode: on). Developer Mode is the less invasive option — enable it once and symlinks work without Admin rights. With <code>setup.sh</code> in Git Bash, also set <code>MSYS=winsymlinks:nativestrict</code>, or <code>ln -s</code> still makes copies.</p>
-<p>If neither is possible, the multi-project setup script falls back to copying <code>00_Shared_Materials/</code> into each sub-project. The setup succeeds, but updates to the styleguide will not propagate automatically. See <code>docs/multiproject_structure.md</code> for the diagnostic command (<code>Get-Item shared | Select-Object LinkType</code>) and a re-sync PowerShell snippet.</p>
-<p>Alternative: use the flat or long-form structure instead. Both avoid symlinks entirely.</p>
 <h3>My institution has no citation guide — what should I put in <code>styleguide.md</code>?</h3>
 <p>Two options:</p>
 <ol><li><strong>Ask.</strong> Contact the program coordinator or your supervisor. Institutions nearly always have conventions, just sometimes not written down. A short email often yields the information faster than searching.</li><li><strong>Adopt a published standard.</strong> If nothing exists, APA 7 is the safest default for social sciences and business; Chicago for humanities; IEEE for engineering. Document the choice explicitly in <code>00_Decisions.md</code>: &quot;Institution provides no style guide; adopting APA 7 as default.&quot; Then extract that standard into <code>styleguide.md</code> using the style-resolver (most published standards have PDFs available).</li></ol>
@@ -473,7 +461,6 @@ List any open questions for me to resolve before we proceed.</code></pre>
 <pre><code>Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 .\setup.ps1</code></pre>
 <p><strong><code>git: command not found</code></strong> (or <code>! Git not installed.</code> / <code>! Git not available</code> in the setup output) — install Git. On Windows: download Git for Windows (includes Git Bash, which is needed for the <code>.sh</code> helper scripts). On Linux/macOS: <code>apt install git</code> / <code>brew install git</code>. Setup creates no repository without Git (<code>git add .</code> then fails with <code>not a git repository</code>): afterwards, re-run setup with the same choices in the project folder (for multi-project, the root, not a sub-project).</p>
-<p><strong><code>New-Item: Administrator privilege required</code></strong> on Windows (Multi-project setup) — symlinks need Admin rights or Developer Mode. The easier fix: Settings -&gt; For developers -&gt; Developer Mode: on. Then delete the three <code>shared/</code> copies the setup created instead (<code>01_Proposal/shared</code>, <code>02_Main_Work/shared</code>, <code>03_Defense/shared</code>) and re-run setup; a re-run keeps existing copies as they are.</p>
 <p><strong><code>Error: python-docx not installed.</code></strong> (or <code>ModuleNotFoundError: No module named &#x27;docx&#x27;</code>) — the Python utility scripts need their dependencies. From the project root: <code>pip install -r requirements.txt</code>. If you installed <code>docx</code> instead, that is a different, abandoned package: run <code>pip uninstall docx</code>, then <code>pip install python-docx</code>.</p>
 <p><strong>Setup finishes but no workflow is mentioned</strong> — check the script output. The last lines name the active workflow. Invalid arguments make the script exit with an error message naming the valid options — fix the argument and re-run.</p>
 <p><strong>Something else went wrong</strong> — re-run with verbose output: <code>bash -x setup.sh</code> (Linux/macOS) or add <code>-Verbose</code> to the PowerShell invocation. Open an issue with the output.</p>
@@ -634,9 +621,6 @@ List any open questions for me to resolve before we proceed.</code></pre>
     document.getElementById('struct-note').textContent=flatOnly
       ? state.work+' always uses the flat structure.'
       : '';
-
-    // caveat
-    document.getElementById('caveat').classList.toggle('show', win && state.struct==="Multi-project");
 
     // tree
     document.getElementById('tree').innerHTML=tree(state.struct,state.scaf,state.work);

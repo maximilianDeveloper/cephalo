@@ -72,7 +72,7 @@ project-root/
 └── 03_Defense/                  ← independent sub-project
 ```
 
-Each sub-project has its own `00_Status.md`, `00_Decisions.md`, and phase directories.
+Each sub-project has its own `00_Status.md`, `00_Decisions.md`, and phase directories. The sub-projects read the shared materials in `../00_Shared_Materials/` directly; a `shared/` link or copy in a sub-project, left from an earlier cephalo version, is not used.
 
 ## Agent locations
 
@@ -140,36 +140,6 @@ Agents should ask rather than guess when:
 - The setup has open `❓` items in `styleguide.md` (`[content]` items block drafting, `[format]` items block the formatting phase)
 
 ## Platform caveats
-
-### Windows: multi-project setups need elevated privileges for symlinks
-
-The multi-project structure uses symlinks from each sub-project into `00_Shared_Materials/`. On Windows, creating a symlink requires EITHER:
-
-- **Developer Mode enabled** (Settings -> For developers -> Developer Mode: on — recommended, one-time setup), OR
-- **Administrator / elevated shell**
-
-This applies to BOTH setup scripts:
-
-**`setup.ps1` (PowerShell):** on Windows the script first tries `mklink`, for which Developer Mode is enough, then `New-Item -ItemType SymbolicLink`, which needs elevation (in Windows PowerShell 5.1 even with Developer Mode on). Only if both fail does it fall back to copying `00_Shared_Materials/` into each sub-project, with a visible warning that shows the `New-Item` error.
-
-**`setup.sh` (Git Bash / MinGW64):** even more subtle. By default, `ln -s` in Git Bash silently creates a directory **copy** instead of failing — exit code 0, no error. The setup script detects this after the fact (checks whether a real symlink was created) and issues the same visible warning.
-
-For Git Bash specifically, setting `MSYS=winsymlinks:nativestrict` in your environment makes `ln -s` create real NTFS symlinks — but you still need Developer Mode or Administrator rights for the creation itself.
-
-**Either fallback works**, but:
-
-**Updates to `00_Shared_Materials/styleguide.md` will NOT propagate.** You would have to copy the updated file into each sub-project manually, or delete the three `shared/` copies first and then re-run setup. The symptom: Proposal, Main Work, and Defense can silently drift apart in formatting.
-
-Diagnostic commands:
-
-- PowerShell: `Get-Item 01_Proposal\shared | Select-Object LinkType` — empty means fallback was used
-- Git Bash: `readlink 01_Proposal/shared` — empty output means fallback was used
-
-If you are on Windows and plan a multi-project setup: enable Developer Mode once. Otherwise use the flat or long-form structure, which avoid symlinks entirely.
-
-### macOS and Linux
-
-No special requirements. Symlinks work out of the box.
 
 ### Encoding on Windows consoles
 

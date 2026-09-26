@@ -48,7 +48,6 @@ project_root/                          ← Git repo root (one repo for all)
 │   ├── 00_Status.md
 │   ├── 00_Decisions.md
 │   ├── 00_Feedback_log.md
-│   ├── shared/                        ← symlink to ../00_Shared_Materials
 │   ├── 01_Research/
 │   ├── 02_Outline/
 │   ├── 03_Drafting/
@@ -59,7 +58,6 @@ project_root/                          ← Git repo root (one repo for all)
 │   ├── 00_Status.md
 │   ├── 00_Decisions.md
 │   ├── 00_Feedback_log.md
-│   ├── shared/                        ← symlink to ../00_Shared_Materials
 │   ├── 01_Proposal_Reference/         ← copy of accepted proposal (read-only)
 │   ├── 02_Literature/
 │   ├── 03_Theory_chapters/
@@ -75,7 +73,6 @@ project_root/                          ← Git repo root (one repo for all)
 │   ├── 00_Status.md
 │   ├── 00_Decisions.md
 │   ├── 00_Feedback_log.md
-│   ├── shared/                        ← symlink to ../00_Shared_Materials
 │   ├── 01_Slides/
 │   ├── 02_Speaker_Notes/
 │   ├── 03_Defense_Prep/
@@ -216,60 +213,9 @@ git tag -a defense_passed_<date> -m "Defense passed"
 
 ### Access to shared materials
 
-The three sub-projects need access to `00_Shared_Materials/` even when opened individually. The setup script creates a `shared/` symlink in each sub-project pointing to `../00_Shared_Materials`.
+The three sub-projects read the shared materials one level up, in `../00_Shared_Materials/` (guidelines, course materials, styleguide), just as they read the framework folders `../templates/`, `../checklists/`, `../scripts/` and `../workflows/`. No link or copy is involved: a change to the styleguide reaches all three sub-projects at once, on every system, and Windows needs neither Developer Mode nor an elevated shell. Claude Code, opened on a sub-project, may ask for permission before it reads or writes files outside that folder; allow it.
 
-**On Windows:** symlink creation requires either Administrator privileges OR Developer Mode enabled (Settings -> For developers -> Developer Mode: on). This applies to both setup scripts. Behavior differs in how the failure is surfaced:
-
-- **`setup.ps1`** (PowerShell): tries `mklink` first (enough with Developer Mode), then `New-Item -ItemType SymbolicLink` (in Windows PowerShell 5.1 this needs elevation even with Developer Mode on), and falls back to copying only if both fail; the warning shows the `New-Item` error.
-- **`setup.sh`** (Git Bash): `ln -s` silently succeeds but produces a directory copy instead of a real symlink. The setup script detects this after the fact by checking whether a real symlink exists, and warns accordingly.
-
-**Fallback if symlinks fail:** copy `00_Shared_Materials/` into each sub-project. Downside: when the styleguide updates, you must update three copies.
-
-**Diagnosing the fallback state** — run from a sub-project directory:
-
-PowerShell:
-```powershell
-Get-Item shared | Select-Object Name, LinkType, Target
-```
-If `LinkType` is `SymbolicLink`, the link worked. If it is empty, the setup fell back to a copy.
-
-Git Bash:
-```bash
-readlink shared
-```
-Prints the target if it is a symlink. Empty output means fallback.
-
-**Re-syncing shared materials manually** (only needed if the fallback was used):
-
-PowerShell:
-```powershell
-# Run from the multi-project root
-foreach ($sub in @("01_Proposal", "02_Main_Work", "03_Defense")) {
-    # Skip a real link: it is already current, and Windows PowerShell 5.1 can
-    # delete the link target's contents (00_Shared_Materials) on Remove-Item -Recurse.
-    if ((Get-Item "$sub\shared" -Force -ErrorAction SilentlyContinue).LinkType) { continue }
-    if (Test-Path "$sub\shared") {
-        Remove-Item "$sub\shared" -Recurse -Force
-    }
-    Copy-Item -Path "00_Shared_Materials" -Destination "$sub\shared" -Recurse
-}
-```
-
-Git Bash:
-```bash
-# Run from the multi-project root
-for sub in 01_Proposal 02_Main_Work 03_Defense; do
-    [ -L "$sub/shared" ] && continue    # real symlink: already current
-    rm -rf "$sub/shared"
-    cp -r 00_Shared_Materials "$sub/shared"
-done
-```
-
-Re-run this after every change to `00_Shared_Materials/`, especially after styleguide updates.
-
-In the copy state, change the guidelines and the styleguide (including answers to `❓` items) only in `00_Shared_Materials/`, never in a sub-project's `shared/` copy: both the re-sync above and deleting the copies to switch to links (below) discard anything that exists only in a copy. If a styleguide was written into `<sub-project>/shared/styleguide.md`, move it to `00_Shared_Materials/` first.
-
-**Recommended fix:** enable Developer Mode once. The setting persists. On Git Bash, additionally set `MSYS=winsymlinks:nativestrict` in your shell profile so `ln -s` produces real symlinks on the first try. Existing `shared/` copies stay copies: re-running setup skips them as existing, so delete the three copies first (`01_Proposal/shared`, `02_Main_Work/shared`, `03_Defense/shared`), then re-run setup to create the links.
+**Projects set up with an earlier cephalo version** have a `shared/` link or copy in each sub-project (in a clone without symlink support, a small text file of that name). The agents no longer use it, and re-running setup names it in "Next steps": delete the three `shared/` entries in Explorer or Finder, which removes a link without touching `00_Shared_Materials/`. In Windows PowerShell 5.1, do not use `Remove-Item -Recurse` on a link: it can delete the contents of `00_Shared_Materials/` too. If an entry is a copy, first move anything you changed there (for example a styleguide written into `<sub-project>/shared/styleguide.md`) to `00_Shared_Materials/`.
 
 ### Agent assignment per sub-project
 
@@ -315,7 +261,6 @@ One-time at project start:
 - [ ] Place institutional guidelines in `00_Shared_Materials/guidelines/`
 - [ ] Place supplementary course material in `00_Shared_Materials/course_materials/` (the assignment briefing belongs in `guidelines/`)
 - [ ] Initialize Git (done by setup script)
-- [ ] Symlinks in each sub-project to `00_Shared_Materials/` (done by setup script if Developer Mode is enabled or the shell is elevated — in Git Bash also with `MSYS=winsymlinks:nativestrict`; otherwise the copy-fallback applies — see "Access to shared materials" above)
 - [ ] Run style-resolver once -> `00_Shared_Materials/styleguide.md`
 - [ ] Reference manager collection for the main work, auto-export to `02_Main_Work/02_Literature/literature.bib`
 - [ ] Initial `00_Status.md` in all three sub-projects (done by setup script from templates)

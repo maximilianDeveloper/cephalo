@@ -101,8 +101,6 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 .\setup.ps1
 ```
 
-Only multi-project setups create symlinks — for those, enable Developer Mode once (Settings -> For developers) or run from an elevated shell; see the FAQ. Flat and long-form setups need neither.
-
 **macOS / Linux / Git Bash:**
 
 ```bash
@@ -275,14 +273,6 @@ cephalo itself is free. You pay for the Claude Code subscription (standard Anthr
 ### Can I contribute?
 
 This is an early project. Feedback on the agent definitions, workflow configurations, and error catalog is welcome — [CONTRIBUTING.md](CONTRIBUTING.md) explains how. Specifically: if your institution's style guide produces unusual results with the style-resolver, a sample (anonymized) plus the problematic output is valuable.
-
-### Symlinks don't work on my Windows machine — what do I do?
-
-Creating symlinks on Windows requires Administrator privileges OR Developer Mode enabled (Settings -> For developers -> Developer Mode: on). Developer Mode is the less invasive option — enable it once and symlinks work without Admin rights. With `setup.sh` in Git Bash, also set `MSYS=winsymlinks:nativestrict`, or `ln -s` still makes copies.
-
-If neither is possible, the multi-project setup script falls back to copying `00_Shared_Materials/` into each sub-project. The setup succeeds, but updates to the styleguide will not propagate automatically. See `docs/multiproject_structure.md` for the diagnostic command (`Get-Item shared | Select-Object LinkType`) and a re-sync PowerShell snippet.
-
-Alternative: use the flat or long-form structure instead. Both avoid symlinks entirely.
 
 ### My institution has no citation guide — what should I put in `styleguide.md`?
 

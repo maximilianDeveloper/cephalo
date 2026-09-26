@@ -79,13 +79,13 @@ For each platform, test at least:
 
 1. Flat structure (simplest, least moving parts)
 2. Long-form structure (validates phase directory creation)
-3. Multi-project structure (validates symlinks — this is where platform differences hurt most)
+3. Multi-project structure (validates the three sub-projects and `00_Shared_Materials/`)
 
 After each run, verify:
 
 - All expected directories exist
 - `.gitignore` and `.gitattributes` are present
-- Symlinks, where expected, are real symlinks (not copies)
+- Multi-project: the sub-projects contain no `shared/` link or copy (the agents read `../00_Shared_Materials/`)
 - Templates were copied from `templates/`, not echo-stubbed
 - The reported workflow name matches what the configuration says
 
