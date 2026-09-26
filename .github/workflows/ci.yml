@@ -821,6 +821,12 @@ jobs:
           Expect-Failure 2 @("-WorkType", "Bachelor thesis", "-Structure", "Long-form", "-Scaffolding", "full", "-Target", ".\ci_inside\sub", "-NonInteractive")
           Expect-Failure 0 @("-WorkType", "Bachelor thesis", "-Structure", "Long-form", "-Scaffolding", "full", "-Taget", $typo, "-NonInteractive")
           Expect-Failure 0 @("Bachelor thesis", "Long-form", "full", $typo, "extra", "-NonInteractive")
+          # An empty -Target (e.g. an unset variable) exits 2 instead of setting up here.
+          # (Through -Command: Windows PowerShell 5.1 drops an empty argument to -File.)
+          $ErrorActionPreference = 'Continue'
+          & powershell -NoProfile -ExecutionPolicy Bypass -Command "& .\setup.ps1 -WorkType 'Seminar paper' -Structure Flat -Scaffolding full -Target `$NotSet -NonInteractive; exit `$LASTEXITCODE" *> $null
+          if ($LASTEXITCODE -ne 2) { Write-Host "empty -Target: expected exit 2, got $LASTEXITCODE"; exit 1 }
+          if (Test-Path workspace) { Write-Host "empty -Target: set up in the template folder"; exit 1 }
           $LASTEXITCODE = 0
 
       - name: setup.ps1 keeps its UTF-8 BOM (Windows PowerShell 5.1 needs it)

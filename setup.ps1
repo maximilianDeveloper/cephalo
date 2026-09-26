@@ -402,6 +402,15 @@ Write-Host ""
 # validates its positional arguments up front. Interactive runs with missing
 # values are validated after the prompts instead.
 
+# An empty -Target (e.g. an unset variable: -Target $ThesisDir) is not the
+# same as none: it must not fall through to a setup of the template folder
+# itself. setup.sh rejects an empty --target the same way.
+if ($PSBoundParameters.ContainsKey('Target') -and [string]::IsNullOrWhiteSpace($Target)) {
+    Write-Host ""
+    Write-Host "Error: -Target requires a path." -ForegroundColor Red
+    exit 2
+}
+
 if ($NonInteractive -or ($WorkType -ne "" -and $Structure -ne "" -and $Scaffolding -ne "")) {
     Resolve-CephaloConfiguration
 }
