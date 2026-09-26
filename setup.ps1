@@ -215,9 +215,16 @@ function Create-Symlink($Link, $Target) {
     # demands elevation even in Developer Mode, and it resolves a relative
     # -Target against the current location, so it could only make an absolute
     # link. The redirection is cmd's, so no PowerShell error record is raised.
+    # The paths reach cmd as environment variables inside quotes: passed as
+    # arguments, they arrive unquoted unless they contain a space, and cmd
+    # splits them at & or , ; = (a project folder such as R&D_Thesis).
     if ($env:OS -eq "Windows_NT") {
-        cmd /c mklink /D "$LinkAbs" "$Target" '>nul' '2>&1'
-        if ($LASTEXITCODE -eq 0 -and [System.IO.Directory]::Exists($LinkAbs)) {
+        $env:CEPHALO_LINK = $LinkAbs
+        $env:CEPHALO_LINK_TARGET = $Target
+        cmd /c 'mklink /D "%CEPHALO_LINK%" "%CEPHALO_LINK_TARGET%" >nul 2>&1'
+        $MklinkExit = $LASTEXITCODE
+        Remove-Item Env:CEPHALO_LINK, Env:CEPHALO_LINK_TARGET
+        if ($MklinkExit -eq 0 -and [System.IO.Directory]::Exists($LinkAbs)) {
             Write-Host "  + $Link --> $Target" -ForegroundColor Green
             return
         }

@@ -869,6 +869,17 @@ jobs:
           foreach ($sub in '01_Proposal', '02_Main_Work', '03_Defense') {
             if (-not (Test-Path (Join-Path $multi "$sub/shared/guidelines"))) { Write-Host "multi: $sub/shared missing"; exit 1 }
           }
+          # A project path with & and no space reaches mklink quoted: the links are made
+          # and stay relative (an elevated New-Item would make absolute ones).
+          $amp = Join-Path $env:TEMP 'ci_ps_R&D'
+          Invoke-Setup $PWD @('-WorkType', 'Bachelor thesis', '-Structure', 'Multi-project', '-Scaffolding', 'minimal', '-Target', $amp, '-NonInteractive')
+          $want = [System.IO.Path]::Combine('..', '00_Shared_Materials')
+          foreach ($sub in '01_Proposal', '02_Main_Work', '03_Defense') {
+            $item = Get-Item -LiteralPath (Join-Path $amp "$sub/shared") -Force
+            if ($item.LinkType -ne 'SymbolicLink' -or "$($item.Target)" -ne $want) {
+              Write-Host "R&D: $sub/shared is '$($item.LinkType)' -> '$($item.Target)', expected a link to $want"; exit 1
+            }
+          }
           # The template ships a .gitattributes; setup appends the six LFS rules once.
           $lfs = @(Select-String -Path (Join-Path $flat '.gitattributes') -Pattern 'filter=lfs').Count
           if ($lfs -ne 6) { Write-Host "flat: expected 6 LFS rules in .gitattributes, found $lfs"; exit 1 }
