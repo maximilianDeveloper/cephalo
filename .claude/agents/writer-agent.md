@@ -109,6 +109,8 @@ phase: A
 ---
 ```
 
+After finishing a chapter, add it to the **Used in:** line of each source extract you drew on (the research-agent leaves that line to you). Not in `03_Defense/`: the main work's extracts are read-only there.
+
 ## Feedback loop behavior
 
 When the source-verifier sends immediate feedback:
