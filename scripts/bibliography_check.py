@@ -83,13 +83,15 @@ GERMAN_NON_AUTHOR_CAPS = {
 # parenthetical stage does not filter them: a missing entry is still reported.
 SURNAME_LIKE_STOPWORDS = {"Sommer", "Winter", "Herbst", "Freitag", "Montag", "Mai", "August"}
 
-# Lowercase words that may precede a surname inside a parenthetical citation:
-# name particles and short fillers after a lead word ("see also", "vgl. z. B.").
-PAREN_LOWERCASE_OK = {
+# Name particles that may precede a surname: van der Berg, de la Rosa, von Wagner.
+NAME_PARTICLES = {
     "van", "von", "de", "del", "della", "di", "la", "le", "du", "dos", "das",
     "ter", "ten", "der", "den",
-    "also", "auch", "z.", "z.b.", "e.g.",
 }
+
+# Lowercase words that may precede a surname inside a parenthetical citation:
+# name particles and short fillers after a lead word ("see also", "vgl. z. B.").
+PAREN_LOWERCASE_OK = NAME_PARTICLES | {"also", "auch", "z.", "z.b.", "e.g."}
 
 
 def heading_level(paragraph) -> Optional[int]:
@@ -281,9 +283,11 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
                 # acronyms and surname-like stopwords are kept here: in
                 # parentheses before a year, "(OECD, 2019)" or
                 # "(Winter, 2017)" is a citation, and a missing entry for it
-                # must still be reported.
+                # must still be reported. After a particle, a stopword is
+                # prose: "(von Mai 2020 bis Juni 2021)".
+                after_particle = any(t.lower() in NAME_PARTICLES for t in tokens[:idx])
                 if len(surname) > 1 and (surname not in stop or surname.isupper()
-                                         or surname in SURNAME_LIKE_STOPWORDS):
+                                         or (surname in SURNAME_LIKE_STOPWORDS and not after_particle)):
                     authors.add(surname)
     
     # Pattern 2: narrative citations (Author (YYYY))
