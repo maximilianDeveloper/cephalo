@@ -274,8 +274,8 @@ jobs:
             git -C /tmp/ci_steps check-ignore -q "02_Main_Work/05_Empirical/data/$d/interviews.csv"
             if git -C /tmp/ci_steps check-ignore -q "02_Main_Work/05_Empirical/data/$d/.gitkeep"; then echo "data/$d/.gitkeep is ignored"; exit 1; fi
           done
-          # A command that fails inside a function is reported, once, also from
-          # the shared/ link subshells (here with a failing ln and dirname).
+          # A command that fails inside a function is reported, once, also in the
+          # shared/ link step (here with a failing ln and dirname).
           bash setup.sh "Seminar paper" "Flat" full --target /tmp/ci_err </dev/null >/dev/null
           rmdir /tmp/ci_err/workspace/sources/_guidelines
           touch /tmp/ci_err/workspace/sources/_guidelines
@@ -1046,8 +1046,8 @@ jobs:
           # (Compared with Git's copy: a Windows checkout may have CRLF in .gitignore.)
           git show HEAD:.gitignore | cmp - /tmp/ci_flat/.gitignore
           test "$(grep -c 'filter=lfs' /tmp/ci_long/.gitattributes)" -eq 6
-          # A command that fails inside a function is reported, once, also from
-          # the shared/ link subshells (here with a failing ln and dirname).
+          # A command that fails inside a function is reported, once, also in the
+          # shared/ link step (here with a failing ln and dirname).
           "$SH" setup.sh "Seminar paper" "Flat" full --target /tmp/ci_err </dev/null >/dev/null
           rmdir /tmp/ci_err/workspace/sources/_guidelines
           touch /tmp/ci_err/workspace/sources/_guidelines

@@ -64,9 +64,10 @@ on_error() {
     local exit_code=$?
     # Skip if already handling interrupt (avoid double-pause)
     [ "$SETUP_INTERRUPTED" = "1" ] && exit $exit_code
-    # In a subshell ( ... ) or $( ... ), carry on as without the trap: a
-    # failed ( ... ) fails its caller, which reports once, and the output of
-    # a $( ... ) must not take in the message.
+    # In a subshell ( ... ) or $( ... ), carry on as without the trap: the
+    # output of a $( ... ) must not take in the message, and a failed ( ... )
+    # fails its caller, which reports it (not under bash 3.2: see the
+    # shared/ links below).
     if [ "${BASH_SUBSHELL:-0}" -gt 0 ]; then
         return 0
     fi
@@ -999,12 +1000,15 @@ elif [[ "$STRUCTURE" =~ ^Multi-project ]]; then
         create_gitkeep "03_Defense/05_Rehearsals"
     fi
     
-    # Symlinks
+    # Symlinks, made from inside each sub-project (the relative target, and
+    # Git Bash's copy in place of a link, resolve from there). Not in a
+    # ( cd ... ) subshell: bash 3.2 runs no ERR trap for a failed subshell,
+    # so a failure would end the setup without the report.
     step "Creating symlinks to 00_Shared_Materials"
-    (cd "01_Proposal" && create_symlink "shared" "../00_Shared_Materials")
-    (cd "$MAIN_NAME" && create_symlink "shared" "../00_Shared_Materials")
-    (cd "03_Defense" && create_symlink "shared" "../00_Shared_Materials")
     for p in "01_Proposal" "$MAIN_NAME" "03_Defense"; do
+        cd "$p"
+        create_symlink "shared" "../00_Shared_Materials"
+        cd ..
         [ -L "$p/shared" ] || SHARED_COPIED=true
     done
     
