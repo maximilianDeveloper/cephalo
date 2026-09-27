@@ -576,7 +576,8 @@ if [ -z "$TARGET_DIR" ] && ! $NON_INTERACTIVE && [ -t 0 ] && [ -t 1 ]; then
                     # run with the error below, which a --target gets.
                     if inside_path="$(prompt_target_inside "$TARGET_DIR")"; then
                         echo -e "${YELLOW}That folder lies inside the cephalo template folder:${NC}"
-                        echo -e "${YELLOW}  $inside_path${NC}"
+                        # printf %s: a backslash in the folder name is no escape.
+                        printf '%b  %s%b\n' "$YELLOW" "$inside_path" "$NC"
                         echo "Enter a full path outside it, such as the example above,"
                         echo "or leave it empty to set up here."
                         continue
