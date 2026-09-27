@@ -136,7 +136,7 @@ Agents should ask rather than guess when:
 
 - A guideline rule is ambiguous or contradictory in the source documents
 - A source is cited in the text but the underlying file is not accessible
-- A decision would have cross-chapter implications (always log in `00_Decisions.md`)
+- A decision would have cross-chapter implications (always log in `00_Decisions.md`; flat projects: the decision log in `workspace/state.md`)
 - The setup has open `❓` items in `styleguide.md` (`[content]` items block drafting, `[format]` items block the formatting phase)
 
 ## Platform caveats
