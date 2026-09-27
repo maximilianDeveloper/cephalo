@@ -351,7 +351,8 @@ phases:
     trigger: Defense passed
     
     actions:
-      - Git tag: defense_passed_<date>
       - Set 00_Status.md to "completed"
       - Update README.md with grade (optional)
       - Record committee feedback (for future projects)
+      - Commit: git add -A, then git commit -m "defense passed"
+      - Git tag: defense_passed_<date>

@@ -294,11 +294,12 @@ phases:
     trigger: Proposal accepted by supervisor
     
     actions:
-      - Git tag: proposal_accepted_<date>
       - Set 00_Status.md to "completed"
       - Copy final DOCX to: ../02_Main_Work/01_Proposal_Reference/proposal_final_<date>.docx
-      - 01_Proposal/ becomes read-only
       - Update README.md: "FROZEN — as of <date>"
+      - Commit: git add -A (it also stages the copy in ../02_Main_Work/), then git commit -m "proposal accepted"
+      - Git tag: proposal_accepted_<date>
+      - 01_Proposal/ becomes read-only
     
     important: |
       From this point on, 01_Proposal/ is read-only. Any deviation of the 
