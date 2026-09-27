@@ -4,7 +4,7 @@
 # Creates project structure based on user choices.
 #
 # Usage:
-#   Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+#   Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 #   .\setup.ps1
 
 [CmdletBinding()]
