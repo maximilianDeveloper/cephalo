@@ -96,6 +96,8 @@ pause_before_close() {
         # Ctrl+C here closes like Enter, with that exit code: the run has
         # already ended (and in Git Bash, Ctrl+C is how many users try to copy
         # the messages above), so there is no cancellation left to report.
+        # At the pauses of on_interrupt, which runs as the Ctrl+C trap, bash
+        # before 5.1 holds a second Ctrl+C back, so only Enter closes those.
         PAUSE_EXIT="$code"
         trap 'echo ""; exit "$PAUSE_EXIT"' INT
         # Use read with a short timeout fallback, in case even Enter is blocked

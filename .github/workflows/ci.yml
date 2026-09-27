@@ -328,8 +328,12 @@ jobs:
           # Ctrl+C at such a pause (in Git Bash also a habit for copying the text) closes
           # like Enter, with the run's exit code, instead of reporting a cancelled setup.
           python - bash <<'EOF'
-          import os, pty, re, select, sys, time
+          import os, pty, re, select, subprocess, sys, time
           sh = sys.argv[1]
+          # Bash before 5.1 runs no Ctrl+C trap while one is running: at the pauses of
+          # the Ctrl+C handler itself (a real cancellation, Ctrl+C after the setup), a
+          # second Ctrl+C is held back there, and Enter closes the pause instead.
+          old_bash = subprocess.run([sh, "-c", '[ "$(( BASH_VERSINFO[0] * 100 + BASH_VERSINFO[1] ))" -lt 501 ]']).returncode == 0
           def drive(args, steps, enter_later):
               pid, fd = pty.fork()
               if pid == 0:
@@ -357,16 +361,15 @@ jobs:
                   if done:
                       return os.waitstatus_to_exitcode(status), out.decode(errors="replace"), i
           cases = [
-              ("error pause", [], [(rb"Your choice \[1-2", b"2\n"), (rb"Target path:", b"ThesisSub\n"), (rb"check the messages above", b"\x03")], 2, 0, False),
-              ("ten invalid answers", [], [(rb"Your choice \[1-2", b"1\n"), (rb"What kind of work", b"x\n" * 10), (rb"check the messages above", b"\x03")], 2, 0, False),
-              # The pause of a real cancellation runs inside the Ctrl+C handler; bash 3.2
-              # holds back a second Ctrl+C there, so Enter closes it (bash 5: Ctrl+C does).
-              ("cancelled at a menu", [], [(rb"Your choice \[1-2", b"1\n"), (rb"What kind of work", b"\x03"), (rb"Press Enter to close", b"\x03")], 130, 1, True),
-              ("completed setup", ["Seminar paper", "Flat", "full", "--target", "/tmp/ci_pause_done"], [(rb"Delete it now\?", b"n\n"), (rb"Press Enter to close", b"\x03")], 0, 0, False),
+              ("error pause", [], [(rb"Your choice \[1-2", b"2\n"), (rb"Target path:", b"ThesisSub\n"), (rb"check the messages above", b"\x03")], 2, "Setup cancelled by user", 0, False),
+              ("ten invalid answers", [], [(rb"Your choice \[1-2", b"1\n"), (rb"What kind of work", b"x\n" * 10), (rb"check the messages above", b"\x03")], 2, "Setup cancelled by user", 0, False),
+              ("cancelled at a menu", [], [(rb"Your choice \[1-2", b"1\n"), (rb"What kind of work", b"\x03"), (rb"Press Enter to close", b"\x03")], 130, "Setup cancelled by user", 1, old_bash),
+              ("completed setup", ["Seminar paper", "Flat", "full", "--target", "/tmp/ci_pause_done"], [(rb"Delete it now\?", b"n\n"), (rb"Press Enter to close", b"\x03")], 0, "Setup cancelled by user", 0, False),
+              ("stopped after the setup", ["Seminar paper", "Flat", "full", "--target", "/tmp/ci_pause_done2"], [(rb"Delete it now\?", b"\x03"), (rb"Press Enter to close", b"\x03")], 0, "after the setup had completed", 1, old_bash),
           ]
-          for name, args, steps, want, cancelled, enter_later in cases:
+          for name, args, steps, want, text, count, enter_later in cases:
               code, out, sent = drive(args, steps, enter_later)
-              if code != want or sent != len(steps) or out.count("Setup cancelled by user") != cancelled:
+              if code != want or sent != len(steps) or out.count(text) != count:
                   sys.exit(f"{name}: exit {code}, {sent} of {len(steps)} inputs sent\n{out}")
           EOF
           test ! -e ThesisSub
@@ -1151,11 +1154,15 @@ jobs:
           if [ "$code1" -ne 1 ] || [ "$(grep -c 'Setup exited unexpectedly' /tmp/ci_err1.out)" -ne 1 ]; then
             cat /tmp/ci_err1.out; echo "exit $code1: the failure was not reported exactly once"; exit 1
           fi
-          # Ctrl+C at a pause closes like Enter, with the run's exit code, also under
-          # bash 3.2 (Python has no pty module on Windows, so not under Git Bash).
+          # The same Ctrl+C test under macOS /bin/bash 3.2 (Python has no pty module on
+          # Windows, so not under Git Bash).
           [ "$RUNNER_OS" = Windows ] || python - "$SH" <<'EOF'
-          import os, pty, re, select, sys, time
+          import os, pty, re, select, subprocess, sys, time
           sh = sys.argv[1]
+          # Bash before 5.1 runs no Ctrl+C trap while one is running: at the pauses of
+          # the Ctrl+C handler itself (a real cancellation, Ctrl+C after the setup), a
+          # second Ctrl+C is held back there, and Enter closes the pause instead.
+          old_bash = subprocess.run([sh, "-c", '[ "$(( BASH_VERSINFO[0] * 100 + BASH_VERSINFO[1] ))" -lt 501 ]']).returncode == 0
           def drive(args, steps, enter_later):
               pid, fd = pty.fork()
               if pid == 0:
@@ -1183,16 +1190,15 @@ jobs:
                   if done:
                       return os.waitstatus_to_exitcode(status), out.decode(errors="replace"), i
           cases = [
-              ("error pause", [], [(rb"Your choice \[1-2", b"2\n"), (rb"Target path:", b"ThesisSub\n"), (rb"check the messages above", b"\x03")], 2, 0, False),
-              ("ten invalid answers", [], [(rb"Your choice \[1-2", b"1\n"), (rb"What kind of work", b"x\n" * 10), (rb"check the messages above", b"\x03")], 2, 0, False),
-              # The pause of a real cancellation runs inside the Ctrl+C handler; bash 3.2
-              # holds back a second Ctrl+C there, so Enter closes it (bash 5: Ctrl+C does).
-              ("cancelled at a menu", [], [(rb"Your choice \[1-2", b"1\n"), (rb"What kind of work", b"\x03"), (rb"Press Enter to close", b"\x03")], 130, 1, True),
-              ("completed setup", ["Seminar paper", "Flat", "full", "--target", "/tmp/ci_pause_done"], [(rb"Delete it now\?", b"n\n"), (rb"Press Enter to close", b"\x03")], 0, 0, False),
+              ("error pause", [], [(rb"Your choice \[1-2", b"2\n"), (rb"Target path:", b"ThesisSub\n"), (rb"check the messages above", b"\x03")], 2, "Setup cancelled by user", 0, False),
+              ("ten invalid answers", [], [(rb"Your choice \[1-2", b"1\n"), (rb"What kind of work", b"x\n" * 10), (rb"check the messages above", b"\x03")], 2, "Setup cancelled by user", 0, False),
+              ("cancelled at a menu", [], [(rb"Your choice \[1-2", b"1\n"), (rb"What kind of work", b"\x03"), (rb"Press Enter to close", b"\x03")], 130, "Setup cancelled by user", 1, old_bash),
+              ("completed setup", ["Seminar paper", "Flat", "full", "--target", "/tmp/ci_pause_done"], [(rb"Delete it now\?", b"n\n"), (rb"Press Enter to close", b"\x03")], 0, "Setup cancelled by user", 0, False),
+              ("stopped after the setup", ["Seminar paper", "Flat", "full", "--target", "/tmp/ci_pause_done2"], [(rb"Delete it now\?", b"\x03"), (rb"Press Enter to close", b"\x03")], 0, "after the setup had completed", 1, old_bash),
           ]
-          for name, args, steps, want, cancelled, enter_later in cases:
+          for name, args, steps, want, text, count, enter_later in cases:
               code, out, sent = drive(args, steps, enter_later)
-              if code != want or sent != len(steps) or out.count("Setup cancelled by user") != cancelled:
+              if code != want or sent != len(steps) or out.count(text) != count:
                   sys.exit(f"{name}: exit {code}, {sent} of {len(steps)} inputs sent\n{out}")
           EOF
           test ! -e ThesisSub
