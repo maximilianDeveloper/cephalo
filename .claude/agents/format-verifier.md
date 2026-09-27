@@ -109,7 +109,7 @@ This enables `<w:autoHyphenation/>` in the document's settings.xml — python-do
 
 **Pronoun check** (styleguide-configured):
 ```bash
-pandoc workspace/output/document.docx -o /dev/stdout --to plain --wrap=none | \
+pandoc workspace/output/document.docx --to plain --wrap=none | \
   grep -inwE "(<forbidden_pronouns_from_styleguide>)"
 ```
 (Requires `pandoc` — an optional tool per `checklists/precheck.md`, section

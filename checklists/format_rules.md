@@ -114,12 +114,12 @@ python3 scripts/bibliography_check.py workspace/output/document.docx
 python3 scripts/abbreviations_extract.py workspace/output/document.docx
 
 # Pronoun check (use forbidden pronouns from styleguide)
-pandoc workspace/output/document.docx -o /dev/stdout --to plain --wrap=none | \
+pandoc workspace/output/document.docx --to plain --wrap=none | \
   grep -inwE "(<forbidden_pronouns_from_styleguide>)"
 
 # Page-range notation consistency check
 # (the character class also holds a non-breaking space; "S." covers German "Seite")
-pandoc workspace/output/document.docx -o /dev/stdout --to plain --wrap=none | \
+pandoc workspace/output/document.docx --to plain --wrap=none | \
   grep -oE "(pp?|S)\.[[:space:] ]*[0-9]+([[:space:] ]*(to|bis|–|-)[[:space:] ]*[0-9]+)?" | sort | uniq -c
 # Compare results against styleguide.md
 ```
