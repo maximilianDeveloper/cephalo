@@ -255,6 +255,43 @@ canon_path() {
     printf '%s\n' "$out"
 }
 
+path_inside() {
+    # Whether the canonical path $1 lies inside the canonical folder $2 (a
+    # path equal to $2 counts as inside: callers check that case first).
+    # Besides the text, -ef compares each existing ancestor with $2, as the
+    # letter case of a path may differ (APFS on macOS and NTFS under Git
+    # Bash usually ignore case).
+    local ancestor
+    if [[ "${1%/}/" == "${2%/}/"* ]]; then
+        return 0
+    fi
+    ancestor="${1%/*}"
+    while [ -n "$ancestor" ]; do
+        if [ "$ancestor" -ef "$2" ]; then
+            return 0
+        fi
+        ancestor="${ancestor%/*}"
+    done
+    return 1
+}
+
+prompt_target_inside() {
+    # For the target prompt: print the canonical form of path $1 if it lies
+    # inside the template folder (the current directory), as a bare folder
+    # name does, so the prompt can ask again. Resolved as below for a target.
+    local t="$1" canon here
+    case "$t" in
+        \~|\~/*) t="$HOME${t#\~}" ;;
+    esac
+    canon="$(canon_path "$t")" || return 1
+    here="$(pwd -P)"
+    if [ "$canon" = "$here" ] || [ "$canon" -ef "$here" ]; then
+        return 1
+    fi
+    path_inside "$canon" "$here" || return 1
+    printf '%s\n' "$canon"
+}
+
 shell_quote() {
     # Print $1 in single quotes (' as '\''), for commands the user may paste:
     # nothing in it expands, in bash and zsh alike. The substitution runs in
@@ -516,22 +553,36 @@ if [ -z "$TARGET_DIR" ] && ! $NON_INTERACTIVE && [ -t 0 ] && [ -t 1 ]; then
                 echo "Enter a target path. The cephalo template will be copied there,"
                 echo "and the project structure will be created inside it."
                 echo "Example: ~/Documents/Bachelorarbeit_KMU_OSS"
-                read -r -p "Target path: " TARGET_DIR || TARGET_DIR=""
-                # A folder dragged into the terminal arrives quoted ('/a/My
-                # Thesis') or shell-escaped (/a/My\ Thesis, macOS Terminal).
-                # Undo that as the shell does for --target; backslashes in
-                # other paths stay (C:\... typed in Git Bash).
-                case "$TARGET_DIR" in
-                    \'*\') TARGET_DIR="${TARGET_DIR#\'}"; TARGET_DIR="${TARGET_DIR%\'}"
-                           # An apostrophe inside comes as '\'' (John'\''s Thesis).
-                           TARGET_DIR="$(printf '%s\n' "$TARGET_DIR" | sed "s/'\\\\''/'/g")" ;;
-                    \"*\") TARGET_DIR="${TARGET_DIR#\"}"; TARGET_DIR="${TARGET_DIR%\"}" ;;
-                    /*|\~*) TARGET_DIR="$(printf '%s\n' "$TARGET_DIR" | sed 's/\\\(.\)/\1/g')" ;;
-                esac
-                if [ -z "$TARGET_DIR" ]; then
-                    echo -e "${YELLOW}Empty path — using current location instead.${NC}"
-                    TARGET_DIR=""
-                fi
+                while true; do
+                    read -r -p "Target path: " TARGET_DIR || TARGET_DIR=""
+                    # A folder dragged into the terminal arrives quoted ('/a/My
+                    # Thesis') or shell-escaped (/a/My\ Thesis, macOS Terminal).
+                    # Undo that as the shell does for --target; backslashes in
+                    # other paths stay (C:\... typed in Git Bash).
+                    case "$TARGET_DIR" in
+                        \'*\') TARGET_DIR="${TARGET_DIR#\'}"; TARGET_DIR="${TARGET_DIR%\'}"
+                               # An apostrophe inside comes as '\'' (John'\''s Thesis).
+                               TARGET_DIR="$(printf '%s\n' "$TARGET_DIR" | sed "s/'\\\\''/'/g")" ;;
+                        \"*\") TARGET_DIR="${TARGET_DIR#\"}"; TARGET_DIR="${TARGET_DIR%\"}" ;;
+                        /*|\~*) TARGET_DIR="$(printf '%s\n' "$TARGET_DIR" | sed 's/\\\(.\)/\1/g')" ;;
+                    esac
+                    if [ -z "$TARGET_DIR" ]; then
+                        echo -e "${YELLOW}Empty path — using current location instead.${NC}"
+                        TARGET_DIR=""
+                        break
+                    fi
+                    # A folder inside the template, such as a bare folder name,
+                    # cannot take a copy of it: ask again rather than end the
+                    # run with the error below, which a --target gets.
+                    if inside_path="$(prompt_target_inside "$TARGET_DIR")"; then
+                        echo -e "${YELLOW}That folder lies inside the cephalo template folder:${NC}"
+                        echo -e "${YELLOW}  $inside_path${NC}"
+                        echo "Enter a full path outside it, such as the example above,"
+                        echo "or leave it empty to set up here."
+                        continue
+                    fi
+                    break
+                done
                 break
                 ;;
             *) echo "Please enter 1 or 2." ;;
@@ -577,20 +628,7 @@ if [ -n "$TARGET_DIR" ]; then
         # copy the source into one of its own subdirectories (self-copy), fail
         # mid-way, and leave a half-populated directory behind. Reject up front
         # with an actionable message (mirrors setup.ps1's equivalent guard).
-        SOURCE_PREFIX="${SOURCE_CANON%/}/"
-        TARGET_INSIDE=false
-        if [[ "${TARGET_CANON%/}/" == "$SOURCE_PREFIX"* ]]; then
-            TARGET_INSIDE=true
-        fi
-        # The same with -ef for each existing ancestor (letter case, see above).
-        ancestor="${TARGET_CANON%/*}"
-        while ! $TARGET_INSIDE && [ -n "$ancestor" ]; do
-            if [ "$ancestor" -ef "$SOURCE_CANON" ]; then
-                TARGET_INSIDE=true
-            fi
-            ancestor="${ancestor%/*}"
-        done
-        if $TARGET_INSIDE; then
+        if path_inside "$TARGET_CANON" "$SOURCE_CANON"; then
             echo "" >&2
             echo -e "${RED}Error: the target directory must not be inside the cephalo template directory.${NC}" >&2
             echo -e "${RED}  Template: $SOURCE_CANON${NC}" >&2

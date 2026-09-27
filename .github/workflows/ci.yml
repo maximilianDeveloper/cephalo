@@ -311,10 +311,15 @@ jobs:
           test -d "/tmp/ci_dd/Other Thesis/workspace/sources/_guidelines"
           test -d "/tmp/ci_dd/John's Thesis/workspace/sources/_guidelines"
           test "$(ls -A /tmp/ci_dd | wc -l)" -eq 3
-          # An error a double-clicked run can reach (a bare folder name at the target
-          # prompt lies inside the template) waits for Enter before the window closes;
-          # with all three arguments, as the setup assistant's launchers pass them, not.
-          out=$(printf '2\nThesisSub\n\n' | script -qec "bash setup.sh" /dev/null || true)
+          # At the target prompt, a folder inside the template (a bare folder name) is
+          # asked for again, and the next answer is used.
+          printf '2\nThesisSub\n/tmp/ci_reask\n3\n1\n1\ny\nn\n\n' | script -qec "bash setup.sh" /dev/null >/tmp/ci_reask.out
+          grep -q 'lies inside the cephalo template folder' /tmp/ci_reask.out
+          test -d /tmp/ci_reask/workspace/sources/_guidelines
+          # An error exit of an interactive run (here a --target inside the template)
+          # waits for Enter, so a double-clicked window does not close at once; with
+          # all three arguments, as the setup assistant's launchers pass them, not.
+          out=$(printf '\n' | script -qec "bash setup.sh --target ThesisSub" /dev/null || true)
           printf '%s\n' "$out" | grep -q 'check the messages above'
           out=$(script -qec "bash setup.sh 'Seminar paper' Flat full --target ThesisSub" /dev/null </dev/null || true)
           if printf '%s\n' "$out" | grep -q 'check the messages above'; then echo "setup.sh paused with all three arguments"; exit 1; fi
@@ -361,7 +366,8 @@ jobs:
                   if done:
                       return os.waitstatus_to_exitcode(status), out.decode(errors="replace"), i
           cases = [
-              ("error pause", [], [(rb"Your choice \[1-2", b"2\n"), (rb"Target path:", b"ThesisSub\n"), (rb"check the messages above", b"\x03")], 2, "Setup cancelled by user", 0, False),
+              ("error pause", ["--target", "ThesisSub"], [(rb"check the messages above", b"\x03")], 2, "Setup cancelled by user", 0, False),
+              ("asked again", [], [(rb"Your choice \[1-2", b"2\n"), (rb"Target path:", b"ThesisSub\n"), (rb"Target path:", b"/tmp/ci_reask_pty\n"), (rb"What kind of work", b"1\n"), (rb"How much scaffolding", b"1\n"), (rb"Proceed\?", b"y\n"), (rb"Delete it now\?", b"n\n"), (rb"Press Enter to close", b"\n")], 0, "lies inside the cephalo template folder", 1, False),
               ("ten invalid answers", [], [(rb"Your choice \[1-2", b"1\n"), (rb"What kind of work", b"x\n" * 10), (rb"check the messages above", b"\x03")], 2, "Setup cancelled by user", 0, False),
               ("cancelled at a menu", [], [(rb"Your choice \[1-2", b"1\n"), (rb"What kind of work", b"\x03"), (rb"Press Enter to close", b"\x03")], 130, "Setup cancelled by user", 1, old_bash),
               ("completed setup", ["Seminar paper", "Flat", "full", "--target", "/tmp/ci_pause_done"], [(rb"Delete it now\?", b"n\n"), (rb"Press Enter to close", b"\x03")], 0, "Setup cancelled by user", 0, False),
@@ -1190,7 +1196,8 @@ jobs:
                   if done:
                       return os.waitstatus_to_exitcode(status), out.decode(errors="replace"), i
           cases = [
-              ("error pause", [], [(rb"Your choice \[1-2", b"2\n"), (rb"Target path:", b"ThesisSub\n"), (rb"check the messages above", b"\x03")], 2, "Setup cancelled by user", 0, False),
+              ("error pause", ["--target", "ThesisSub"], [(rb"check the messages above", b"\x03")], 2, "Setup cancelled by user", 0, False),
+              ("asked again", [], [(rb"Your choice \[1-2", b"2\n"), (rb"Target path:", b"ThesisSub\n"), (rb"Target path:", b"/tmp/ci_reask_pty\n"), (rb"What kind of work", b"1\n"), (rb"How much scaffolding", b"1\n"), (rb"Proceed\?", b"y\n"), (rb"Delete it now\?", b"n\n"), (rb"Press Enter to close", b"\n")], 0, "lies inside the cephalo template folder", 1, False),
               ("ten invalid answers", [], [(rb"Your choice \[1-2", b"1\n"), (rb"What kind of work", b"x\n" * 10), (rb"check the messages above", b"\x03")], 2, "Setup cancelled by user", 0, False),
               ("cancelled at a menu", [], [(rb"Your choice \[1-2", b"1\n"), (rb"What kind of work", b"\x03"), (rb"Press Enter to close", b"\x03")], 130, "Setup cancelled by user", 1, old_bash),
               ("completed setup", ["Seminar paper", "Flat", "full", "--target", "/tmp/ci_pause_done"], [(rb"Delete it now\?", b"n\n"), (rb"Press Enter to close", b"\x03")], 0, "Setup cancelled by user", 0, False),
