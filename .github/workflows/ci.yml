@@ -325,6 +325,47 @@ jobs:
           out=$(printf '1\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\n' | script -qec "bash setup.sh" /dev/null || true)
           printf '%s\n' "$out" | grep -q 'too many invalid attempts'
           printf '%s\n' "$out" | grep -q 'check the messages above'
+          # Ctrl+C at such a pause (in Git Bash also a habit for copying the text) closes
+          # like Enter, with the run's exit code, instead of reporting a cancelled setup.
+          python - bash <<'EOF'
+          import os, pty, re, select, sys, time
+          sh = sys.argv[1]
+          def drive(args, steps):
+              pid, fd = pty.fork()
+              if pid == 0:
+                  os.execvp(sh, [sh, "setup.sh"] + args)
+              out, pos, i, end = b"", 0, 0, time.time() + 60
+              while True:
+                  m = i < len(steps) and re.search(steps[i][0], out[pos:])
+                  if m:
+                      pos += m.end(); time.sleep(0.2); os.write(fd, steps[i][1]); i += 1
+                      continue
+                  if time.time() > end:
+                      os.kill(pid, 9)
+                      sys.exit("timeout:\n" + out.decode(errors="replace"))
+                  if select.select([fd], [], [], 0.2)[0]:
+                      try:
+                          data = os.read(fd, 4096)
+                      except OSError:
+                          data = b""
+                      if data:
+                          out += data
+                          continue
+                  done, status = os.waitpid(pid, os.WNOHANG)
+                  if done:
+                      return os.waitstatus_to_exitcode(status), out.decode(errors="replace"), i
+          cases = [
+              ("error pause", [], [(rb"Your choice \[1-2", b"2\n"), (rb"Target path:", b"ThesisSub\n"), (rb"check the messages above", b"\x03")], 2, 0),
+              ("ten invalid answers", [], [(rb"Your choice \[1-2", b"1\n"), (rb"What kind of work", b"x\n" * 10), (rb"check the messages above", b"\x03")], 2, 0),
+              ("cancelled at a menu", [], [(rb"Your choice \[1-2", b"1\n"), (rb"What kind of work", b"\x03"), (rb"Press Enter to close", b"\x03")], 130, 1),
+              ("completed setup", ["Seminar paper", "Flat", "full", "--target", "/tmp/ci_pause_done"], [(rb"Delete it now\?", b"n\n"), (rb"Press Enter to close", b"\x03")], 0, 0),
+          ]
+          for name, args, steps, want, cancelled in cases:
+              code, out, sent = drive(args, steps)
+              if code != want or sent != len(steps) or out.count("Setup cancelled by user") != cancelled:
+                  sys.exit(f"{name}: exit {code}, {sent} of {len(steps)} inputs sent\n{out}")
+          EOF
+          test ! -e ThesisSub
 
       # setup.sh and setup.ps1 must scaffold the same project. pwsh (PowerShell 7,
       # preinstalled on the runner) runs setup.ps1 here; the Windows job covers 5.1.
@@ -1106,6 +1147,47 @@ jobs:
           if [ "$code1" -ne 1 ] || [ "$(grep -c 'Setup exited unexpectedly' /tmp/ci_err1.out)" -ne 1 ]; then
             cat /tmp/ci_err1.out; echo "exit $code1: the failure was not reported exactly once"; exit 1
           fi
+          # Ctrl+C at a pause closes like Enter, with the run's exit code, also under
+          # bash 3.2 (Python has no pty module on Windows, so not under Git Bash).
+          [ "$RUNNER_OS" = Windows ] || python - "$SH" <<'EOF'
+          import os, pty, re, select, sys, time
+          sh = sys.argv[1]
+          def drive(args, steps):
+              pid, fd = pty.fork()
+              if pid == 0:
+                  os.execvp(sh, [sh, "setup.sh"] + args)
+              out, pos, i, end = b"", 0, 0, time.time() + 60
+              while True:
+                  m = i < len(steps) and re.search(steps[i][0], out[pos:])
+                  if m:
+                      pos += m.end(); time.sleep(0.2); os.write(fd, steps[i][1]); i += 1
+                      continue
+                  if time.time() > end:
+                      os.kill(pid, 9)
+                      sys.exit("timeout:\n" + out.decode(errors="replace"))
+                  if select.select([fd], [], [], 0.2)[0]:
+                      try:
+                          data = os.read(fd, 4096)
+                      except OSError:
+                          data = b""
+                      if data:
+                          out += data
+                          continue
+                  done, status = os.waitpid(pid, os.WNOHANG)
+                  if done:
+                      return os.waitstatus_to_exitcode(status), out.decode(errors="replace"), i
+          cases = [
+              ("error pause", [], [(rb"Your choice \[1-2", b"2\n"), (rb"Target path:", b"ThesisSub\n"), (rb"check the messages above", b"\x03")], 2, 0),
+              ("ten invalid answers", [], [(rb"Your choice \[1-2", b"1\n"), (rb"What kind of work", b"x\n" * 10), (rb"check the messages above", b"\x03")], 2, 0),
+              ("cancelled at a menu", [], [(rb"Your choice \[1-2", b"1\n"), (rb"What kind of work", b"\x03"), (rb"Press Enter to close", b"\x03")], 130, 1),
+              ("completed setup", ["Seminar paper", "Flat", "full", "--target", "/tmp/ci_pause_done"], [(rb"Delete it now\?", b"n\n"), (rb"Press Enter to close", b"\x03")], 0, 0),
+          ]
+          for name, args, steps, want, cancelled in cases:
+              code, out, sent = drive(args, steps)
+              if code != want or sent != len(steps) or out.count("Setup cancelled by user") != cancelled:
+                  sys.exit(f"{name}: exit {code}, {sent} of {len(steps)} inputs sent\n{out}")
+          EOF
+          test ! -e ThesisSub
 
       - name: --target rules and invalid arguments
         run: |

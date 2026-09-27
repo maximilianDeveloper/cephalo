@@ -73,12 +73,17 @@ on_error() {
     fi
     echo ""
     echo -e "\033[0;31m! Setup exited unexpectedly (exit code $exit_code).\033[0m"
-    pause_before_close "error"
+    pause_before_close "error" "$exit_code"
     exit $exit_code
 }
 
 pause_before_close() {
     local reason="${1:-done}"
+    # The exit code the caller ends with after the pause.
+    local code="${2:-}"
+    if [ -z "$code" ]; then
+        case "$reason" in cancelled) code=130 ;; error) code=1 ;; *) code=0 ;; esac
+    fi
     # Only pause if we're attached to a real interactive terminal.
     # In CI, piped, or non-interactive runs, exit immediately.
     if [ -t 0 ] && [ -t 1 ]; then
@@ -88,6 +93,11 @@ pause_before_close() {
             error)     echo "Press Enter to close (check the messages above)..." ;;
             *)         echo "Press Enter to close..." ;;
         esac
+        # Ctrl+C here closes like Enter, with that exit code: the run has
+        # already ended (and in Git Bash, Ctrl+C is how many users try to copy
+        # the messages above), so there is no cancellation left to report.
+        PAUSE_EXIT="$code"
+        trap 'echo ""; exit "$PAUSE_EXIT"' INT
         # Use read with a short timeout fallback, in case even Enter is blocked
         read -r _ 2>/dev/null || sleep 3
     fi
@@ -158,7 +168,7 @@ ask_choice() {
             echo "Error: too many invalid attempts. Aborting." >&2
             # A menu shows only in runs without all three arguments, such as a
             # double-clicked one, whose window would close at once.
-            pause_before_close "error"
+            pause_before_close "error" 2
             exit 2
         fi
     done
@@ -355,7 +365,7 @@ if [ ! -f "setup.sh" ] || [ ! -d ".claude" ] || [ ! -d "templates" ]; then
         printf '%bRun:  cd %s && ./setup.sh [args]%b\n' "$YELLOW" "$(shell_quote "$SCRIPT_DIR")" "$NC" >&2
         echo -e "${YELLOW}Use --target PATH to create the project elsewhere.${NC}" >&2
     fi
-    pause_before_close "error"
+    pause_before_close "error" 2
     exit 2
 fi
 
@@ -471,7 +481,7 @@ fi
 # Runs with all three arguments do not (the setup assistant's launchers,
 # which pass them, pause themselves).
 exit_with_pause() {
-    $NON_INTERACTIVE || pause_before_close "error"
+    $NON_INTERACTIVE || pause_before_close "error" "$1"
     exit "$1"
 }
 
@@ -1180,6 +1190,4 @@ fi
 
 # Disable error-trap for the clean-exit pause (we are done, not erroring)
 trap - ERR
-# Ctrl+C at this last pause closes like Enter.
-trap 'exit 0' INT
 pause_before_close "done"
