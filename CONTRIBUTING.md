@@ -68,7 +68,7 @@ python3 -m py_compile scripts/abbreviations_extract.py scripts/bibliography_chec
 
 **This is the lesson from the v6.1 release review.** Static checks miss platform-specific issues. Setup scripts that use `ln`, `New-Item`, `curl`, or any shell primitive that behaves differently across OSes must be run on each target platform before release.
 
-At minimum, before a release, execute `setup.sh` or `setup.ps1` in a clean directory on:
+At minimum, before a release, execute `setup.sh` or `setup.ps1` in a fresh copy of the template (extracted archive or clone) on:
 
 - **Linux** (any recent distro — Ubuntu, Fedora, Arch): `bash setup.sh`
 - **macOS** (any recent version): `bash setup.sh`
