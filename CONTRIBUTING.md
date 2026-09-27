@@ -94,7 +94,7 @@ After each run, verify:
 On each Windows shell:
 
 1. **Git Bash, double-click start.** Double-click `setup.sh` in Explorer (or `bash setup.sh` without an already-open terminal). Press Ctrl+C before answering the first prompt. Expected: yellow cancellation message appears, window stays open with "Press Enter to close..."
-2. **PowerShell, "Run with PowerShell" from context menu.** Same test: Ctrl+C early. Expected: the script stops without creating anything, and the window closes at once. PowerShell runs no trap on Ctrl+C (see the comment in `setup.ps1`), so there is no message or pause here; the yellow message and pause belong to terminating errors.
+2. **PowerShell, "Run with PowerShell" from context menu.** Same test: Ctrl+C early. Expected: the script stops without creating anything, and the window closes at once. PowerShell runs no trap on Ctrl+C (see the comment in `setup.ps1`), so there is no message or pause here; the yellow message and pause belong to terminating errors. On Windows 11 the entry is under "Show more options" (or select the file and press Shift+F10). Where it is missing, open PowerShell in the template folder (type `powershell` in Explorer's address bar) and run `Start-Process powershell -ArgumentList '-NoProfile -ExecutionPolicy Bypass -File .\setup.ps1'`: it opens a window that closes when the script ends, as the entry does.
 
 If the Git Bash window disappears silently, it's a regression of v6.1.3. Most users first learn about a tool by accidentally triggering Ctrl+C — a silent-close here is a confidence-killer.
 
@@ -102,7 +102,7 @@ On Linux and macOS, running from an already-open shell: Ctrl+C should print the 
 
 ### Target-directory tests (5 minutes, covers the v6.2 feature)
 
-On each platform, run all four target scenarios:
+On each platform, run all five target scenarios:
 
 1. **Flag-based, clean target:**
    ```bash
@@ -120,6 +120,8 @@ On each platform, run all four target scenarios:
    Expected: exits 2, yellow warning printed, target folder untouched.
 
 4. **Target = source:** in a throwaway copy of the template, run `./setup.sh "Seminar paper" "Flat" full --target "$(pwd)"`. Expected: prints "Target path equals current location — proceeding here." and sets up in place without copy.
+
+5. **Folder inside the template at the prompt:** run `./setup.sh` (or `.\setup.ps1`), answer `2`, and enter a bare folder name such as `Thesis`. Expected: "That folder lies inside the cephalo template folder:" with the full path, then "Target path:" again, and nothing is created. A full path outside the template entered next is used.
 
 If any of these fail on any platform, the release is blocked.
 
