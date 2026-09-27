@@ -323,7 +323,10 @@ jobs:
           printf '%s\n' "$out" | grep -q 'check the messages above'
           out=$(script -qec "bash setup.sh 'Seminar paper' Flat full --target ThesisSub" /dev/null </dev/null || true)
           if printf '%s\n' "$out" | grep -q 'check the messages above'; then echo "setup.sh paused with all three arguments"; exit 1; fi
-          out=$(printf '2\nThesisSub\n' | pwsh -NoProfile -File ./setup.ps1 || true)
+          printf '2\nThesisSub\n/tmp/ci_reask_ps\n3\n1\n1\ny\nn\n\n' | pwsh -NoProfile -File ./setup.ps1 >/tmp/ci_reask_ps.out
+          grep -q 'lies inside the cephalo template folder' /tmp/ci_reask_ps.out
+          test -d /tmp/ci_reask_ps/workspace/sources/_guidelines
+          out=$(printf '\n' | pwsh -NoProfile -File ./setup.ps1 -Target ThesisSub || true)
           printf '%s\n' "$out" | grep -q 'check the messages above'
           test ! -e ThesisSub
           # So does setup.sh's exit after ten invalid menu answers.
@@ -1042,18 +1045,30 @@ jobs:
           $null = $p.Handle   # keeps ExitCode available after the process ends
           if (-not $p.WaitForExit(120000)) { $p.Kill(); Write-Host "setup.ps1 kept prompting on closed stdin"; exit 1 }
           if ($p.ExitCode -ne 2) { Get-Content $out -TotalCount 40; Write-Host "expected exit 2, got $($p.ExitCode)"; exit 1 }
-          # A bare folder name at the target prompt lies inside the template: the error
-          # waits for Enter, so a "Run with PowerShell" window does not close at once.
+          # A bare folder name at the target prompt lies inside the template: the prompt
+          # asks again (the closed input then ends the run at the next question).
           $answers = Join-Path $env:TEMP 'ci_inside_answers.txt'
           [System.IO.File]::WriteAllText($answers, "2`r`nThesisSub`r`n")
           $p = Start-Process -FilePath powershell -NoNewWindow -PassThru `
             -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', './setup.ps1' `
             -RedirectStandardInput $answers -RedirectStandardOutput $out
           $null = $p.Handle
+          if (-not $p.WaitForExit(120000)) { $p.Kill(); Write-Host "setup.ps1 hung at the target prompt"; exit 1 }
+          if ($p.ExitCode -ne 2 -or -not (Select-String -Path $out -Pattern 'lies inside the cephalo template folder' -Quiet)) {
+            Get-Content $out -TotalCount 60; Write-Host "the target prompt did not ask again (exit $($p.ExitCode))"; exit 1
+          }
+          # A -Target inside the template ends with an error that waits for Enter, so a
+          # "Run with PowerShell" window does not close at once.
+          [System.IO.File]::WriteAllText($answers, "`r`n")
+          $p = Start-Process -FilePath powershell -NoNewWindow -PassThru `
+            -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', './setup.ps1', '-Target', 'ThesisSub' `
+            -RedirectStandardInput $answers -RedirectStandardOutput $out
+          $null = $p.Handle
           if (-not $p.WaitForExit(120000)) { $p.Kill(); Write-Host "setup.ps1 hung at the error pause"; exit 1 }
           if ($p.ExitCode -ne 2 -or -not (Select-String -Path $out -Pattern 'check the messages above' -Quiet)) {
             Get-Content $out -TotalCount 60; Write-Host "no pause before the error exit (exit $($p.ExitCode))"; exit 1
           }
+          if (Test-Path -LiteralPath 'ThesisSub') { Write-Host "ThesisSub was created"; exit 1 }
           $LASTEXITCODE = 0
 
       - name: Python syntax (Windows)

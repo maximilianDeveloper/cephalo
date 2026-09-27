@@ -374,6 +374,30 @@ if ($NonInteractive -or ($WorkType -ne "" -and $Structure -ne "" -and $Scaffoldi
 
 $script:SourceDirBeforeMove = ""
 
+# The absolute form of a target path: ~ expanded, resolved against the
+# PowerShell location, not the process working directory that GetFullPath
+# alone would use (see Write-Utf8NoBom). A trailing separator is dropped
+# (not that of a drive root such as C:\): Windows PowerShell 5.1 would pass
+# "C:\My Thesis" to git with its closing quote escaped, and git init would
+# fail.
+function Resolve-TargetPath([string]$Path) {
+    # Expand ~ manually for PowerShell (it does not do this by default)
+    if ($Path.StartsWith("~")) {
+        $Path = Join-Path $env:USERPROFILE $Path.Substring(1).TrimStart('\', '/')
+    }
+    $Path = [System.IO.Path]::GetFullPath($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Path))
+    $Root = [System.IO.Path]::GetPathRoot($Path)
+    if ($Path.Length -gt $Root.Length) { $Path = $Path.TrimEnd('\', '/') }
+    return $Path
+}
+
+# Whether an absolute path lies inside the template folder (not equal to
+# it), compared case-insensitively as on Windows.
+function Test-InsideTemplate([string]$Path) {
+    $Prefix = $StartDir.TrimEnd('\', '/') + [System.IO.Path]::DirectorySeparatorChar
+    return $Path.TrimEnd('\', '/').StartsWith($Prefix, [System.StringComparison]::OrdinalIgnoreCase)
+}
+
 # Interactive Target prompt
 if ($Target -eq "" -and -not $NonInteractive) {
     Write-Host ""
@@ -390,12 +414,24 @@ if ($Target -eq "" -and -not $NonInteractive) {
             Write-Host "Enter a target path. The cephalo template will be copied there,"
             Write-Host "and the project structure will be created inside it."
             Write-Host "Example: C:\Users\You\Documents\Bachelorarbeit_KMU_OSS"
-            $Target = Read-Host "Target path"
-            # Explorer's "Copy as path" adds double quotes; a Windows path never contains them.
-            if ($Target) { $Target = $Target.Trim().Trim('"') }
-            if ([string]::IsNullOrWhiteSpace($Target)) {
-                Write-Host "Empty path - using current location instead." -ForegroundColor Yellow
-                $Target = ""
+            while ($true) {
+                $Target = Read-Host "Target path"
+                # Explorer's "Copy as path" adds double quotes; a Windows path never contains them.
+                if ($Target) { $Target = $Target.Trim().Trim('"') }
+                if ([string]::IsNullOrWhiteSpace($Target)) {
+                    Write-Host "Empty path - using current location instead." -ForegroundColor Yellow
+                    $Target = ""
+                    break
+                }
+                # A folder inside the template, such as a bare folder name, cannot
+                # take a copy of it: ask again rather than end the run with the
+                # error below, which a -Target gets.
+                $InsidePath = Resolve-TargetPath $Target
+                if (-not (Test-InsideTemplate $InsidePath)) { break }
+                Write-Host "That folder lies inside the cephalo template folder:" -ForegroundColor Yellow
+                Write-Host "  $InsidePath" -ForegroundColor Yellow
+                Write-Host "Enter a full path outside it, such as the example above,"
+                Write-Host "or leave it empty to set up here."
             }
             break
         }
@@ -405,19 +441,7 @@ if ($Target -eq "" -and -not $NonInteractive) {
 
 # Process Target if specified
 if ($Target -ne "") {
-    # Expand ~ manually for PowerShell (it does not do this by default)
-    if ($Target.StartsWith("~")) {
-        $Target = Join-Path $env:USERPROFILE $Target.Substring(1).TrimStart('\', '/')
-    }
-    
-    # Resolve to absolute path against the PowerShell location, not the process
-    # working directory that GetFullPath alone would use (see Write-Utf8NoBom)
-    $Target = [System.IO.Path]::GetFullPath($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Target))
-    # Drop a trailing separator (not that of a drive root such as C:\): Windows
-    # PowerShell 5.1 would pass "C:\My Thesis" to git with its closing quote
-    # escaped, and git init would fail.
-    $TargetRoot = [System.IO.Path]::GetPathRoot($Target)
-    if ($Target.Length -gt $TargetRoot.Length) { $Target = $Target.TrimEnd('\', '/') }
+    $Target = Resolve-TargetPath $Target
     $SourceDir = $StartDir
 
     if ($Target -eq $SourceDir) {
@@ -431,8 +455,7 @@ if ($Target -ne "") {
         # copy the source into one of its own subdirectories (self-copy), fail
         # mid-way, and leave a half-populated directory behind. Reject up front
         # (case-insensitive on Windows) with an actionable message.
-        $SourcePrefix = $SourceDir.TrimEnd('\','/') + [System.IO.Path]::DirectorySeparatorChar
-        if ($Target.TrimEnd('\','/').StartsWith($SourcePrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+        if (Test-InsideTemplate $Target) {
             Write-Host ""
             Write-Host "Error: the target directory must not be inside the cephalo template directory." -ForegroundColor Red
             Write-Host "  Template: $SourceDir" -ForegroundColor Red
