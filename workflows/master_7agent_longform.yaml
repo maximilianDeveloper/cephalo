@@ -83,7 +83,7 @@ longform:
     - 07_Introduction
     - 08_Formal_Review
   
-  guidelines_directory: guidelines
+  guidelines_directory: guidelines   # multi-project main work: ../00_Shared_Materials/guidelines
   
   data_directory_rules:
     raw:
@@ -150,7 +150,8 @@ phases:
         output: styleguide.md
         blocking: true
         note: |
-          Multi-project main work: ../00_Shared_Materials/styleguide.md
+          Multi-project main work: the guidelines are in
+          ../00_Shared_Materials/guidelines/, and ../00_Shared_Materials/styleguide.md
           normally exists already (extracted in the proposal). Only verify it (no open
           ❓ [content] items; ❓ [format] items may wait until Phase B);
           re-extract only when the guidelines change.
