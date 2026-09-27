@@ -330,16 +330,18 @@ jobs:
           python - bash <<'EOF'
           import os, pty, re, select, sys, time
           sh = sys.argv[1]
-          def drive(args, steps):
+          def drive(args, steps, enter_later):
               pid, fd = pty.fork()
               if pid == 0:
                   os.execvp(sh, [sh, "setup.sh"] + args)
-              out, pos, i, end = b"", 0, 0, time.time() + 60
+              out, pos, i, end, last = b"", 0, 0, time.time() + 60, 0
               while True:
                   m = i < len(steps) and re.search(steps[i][0], out[pos:])
                   if m:
-                      pos += m.end(); time.sleep(0.2); os.write(fd, steps[i][1]); i += 1
+                      pos += m.end(); time.sleep(0.2); os.write(fd, steps[i][1]); i += 1; last = time.time()
                       continue
+                  if enter_later and i == len(steps) and time.time() - last > 3:
+                      os.write(fd, b"\n"); enter_later = False
                   if time.time() > end:
                       os.kill(pid, 9)
                       sys.exit("timeout:\n" + out.decode(errors="replace"))
@@ -355,13 +357,15 @@ jobs:
                   if done:
                       return os.waitstatus_to_exitcode(status), out.decode(errors="replace"), i
           cases = [
-              ("error pause", [], [(rb"Your choice \[1-2", b"2\n"), (rb"Target path:", b"ThesisSub\n"), (rb"check the messages above", b"\x03")], 2, 0),
-              ("ten invalid answers", [], [(rb"Your choice \[1-2", b"1\n"), (rb"What kind of work", b"x\n" * 10), (rb"check the messages above", b"\x03")], 2, 0),
-              ("cancelled at a menu", [], [(rb"Your choice \[1-2", b"1\n"), (rb"What kind of work", b"\x03"), (rb"Press Enter to close", b"\x03")], 130, 1),
-              ("completed setup", ["Seminar paper", "Flat", "full", "--target", "/tmp/ci_pause_done"], [(rb"Delete it now\?", b"n\n"), (rb"Press Enter to close", b"\x03")], 0, 0),
+              ("error pause", [], [(rb"Your choice \[1-2", b"2\n"), (rb"Target path:", b"ThesisSub\n"), (rb"check the messages above", b"\x03")], 2, 0, False),
+              ("ten invalid answers", [], [(rb"Your choice \[1-2", b"1\n"), (rb"What kind of work", b"x\n" * 10), (rb"check the messages above", b"\x03")], 2, 0, False),
+              # The pause of a real cancellation runs inside the Ctrl+C handler; bash 3.2
+              # holds back a second Ctrl+C there, so Enter closes it (bash 5: Ctrl+C does).
+              ("cancelled at a menu", [], [(rb"Your choice \[1-2", b"1\n"), (rb"What kind of work", b"\x03"), (rb"Press Enter to close", b"\x03")], 130, 1, True),
+              ("completed setup", ["Seminar paper", "Flat", "full", "--target", "/tmp/ci_pause_done"], [(rb"Delete it now\?", b"n\n"), (rb"Press Enter to close", b"\x03")], 0, 0, False),
           ]
-          for name, args, steps, want, cancelled in cases:
-              code, out, sent = drive(args, steps)
+          for name, args, steps, want, cancelled, enter_later in cases:
+              code, out, sent = drive(args, steps, enter_later)
               if code != want or sent != len(steps) or out.count("Setup cancelled by user") != cancelled:
                   sys.exit(f"{name}: exit {code}, {sent} of {len(steps)} inputs sent\n{out}")
           EOF
@@ -1152,16 +1156,18 @@ jobs:
           [ "$RUNNER_OS" = Windows ] || python - "$SH" <<'EOF'
           import os, pty, re, select, sys, time
           sh = sys.argv[1]
-          def drive(args, steps):
+          def drive(args, steps, enter_later):
               pid, fd = pty.fork()
               if pid == 0:
                   os.execvp(sh, [sh, "setup.sh"] + args)
-              out, pos, i, end = b"", 0, 0, time.time() + 60
+              out, pos, i, end, last = b"", 0, 0, time.time() + 60, 0
               while True:
                   m = i < len(steps) and re.search(steps[i][0], out[pos:])
                   if m:
-                      pos += m.end(); time.sleep(0.2); os.write(fd, steps[i][1]); i += 1
+                      pos += m.end(); time.sleep(0.2); os.write(fd, steps[i][1]); i += 1; last = time.time()
                       continue
+                  if enter_later and i == len(steps) and time.time() - last > 3:
+                      os.write(fd, b"\n"); enter_later = False
                   if time.time() > end:
                       os.kill(pid, 9)
                       sys.exit("timeout:\n" + out.decode(errors="replace"))
@@ -1177,13 +1183,15 @@ jobs:
                   if done:
                       return os.waitstatus_to_exitcode(status), out.decode(errors="replace"), i
           cases = [
-              ("error pause", [], [(rb"Your choice \[1-2", b"2\n"), (rb"Target path:", b"ThesisSub\n"), (rb"check the messages above", b"\x03")], 2, 0),
-              ("ten invalid answers", [], [(rb"Your choice \[1-2", b"1\n"), (rb"What kind of work", b"x\n" * 10), (rb"check the messages above", b"\x03")], 2, 0),
-              ("cancelled at a menu", [], [(rb"Your choice \[1-2", b"1\n"), (rb"What kind of work", b"\x03"), (rb"Press Enter to close", b"\x03")], 130, 1),
-              ("completed setup", ["Seminar paper", "Flat", "full", "--target", "/tmp/ci_pause_done"], [(rb"Delete it now\?", b"n\n"), (rb"Press Enter to close", b"\x03")], 0, 0),
+              ("error pause", [], [(rb"Your choice \[1-2", b"2\n"), (rb"Target path:", b"ThesisSub\n"), (rb"check the messages above", b"\x03")], 2, 0, False),
+              ("ten invalid answers", [], [(rb"Your choice \[1-2", b"1\n"), (rb"What kind of work", b"x\n" * 10), (rb"check the messages above", b"\x03")], 2, 0, False),
+              # The pause of a real cancellation runs inside the Ctrl+C handler; bash 3.2
+              # holds back a second Ctrl+C there, so Enter closes it (bash 5: Ctrl+C does).
+              ("cancelled at a menu", [], [(rb"Your choice \[1-2", b"1\n"), (rb"What kind of work", b"\x03"), (rb"Press Enter to close", b"\x03")], 130, 1, True),
+              ("completed setup", ["Seminar paper", "Flat", "full", "--target", "/tmp/ci_pause_done"], [(rb"Delete it now\?", b"n\n"), (rb"Press Enter to close", b"\x03")], 0, 0, False),
           ]
-          for name, args, steps, want, cancelled in cases:
-              code, out, sent = drive(args, steps)
+          for name, args, steps, want, cancelled, enter_later in cases:
+              code, out, sent = drive(args, steps, enter_later)
               if code != want or sent != len(steps) or out.count("Setup cancelled by user") != cancelled:
                   sys.exit(f"{name}: exit {code}, {sent} of {len(steps)} inputs sent\n{out}")
           EOF
