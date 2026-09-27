@@ -282,7 +282,7 @@ Months 1-2: Proposal sub-project active
 └── Acceptance -> proposal frozen
 
 Months 3-8: Main work sub-project active
-├── Proposal copy moved to 01_Proposal_Reference/
+├── Proposal copied to 01_Proposal_Reference/
 ├── Literature, chapters, empirical work
 ├── Formal review phase
 ├── Submission
