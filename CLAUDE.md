@@ -84,7 +84,7 @@ All agents are in `.claude/agents/`. There are three orchestrators:
 
 Non-orchestrator agents (`research-agent`, `writer-agent`, `source-verifier`, `format-verifier`, `style-resolver`, `methods-agent`, `data-agent`) are shared across all structures.
 
-The orchestrators invoke these agents themselves through the `Agent` tool; the `Agent(...)` entry in each orchestrator's `tools:` line names the agents it may call. A session can also run as an orchestrator: `claude --agent orchestrator-longform`.
+The orchestrators invoke these agents themselves through the `Agent` tool; the `Agent(...)` entry in each orchestrator's `tools:` line names the agents it is meant to call. A session can also run as an orchestrator: `claude --agent orchestrator-longform`. Claude Code enforces the `Agent(...)` list only in that mode; an orchestrator invoked as a subagent may call any agent.
 
 Each agent definition includes its own file path conventions in a `File paths` section. Agents must be self-contained: Claude Code may pass this CLAUDE.md to subagents as well, but an agent definition must not depend on it.
 
