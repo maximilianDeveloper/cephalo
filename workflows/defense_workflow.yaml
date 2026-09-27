@@ -146,7 +146,7 @@ phases:
         blocking: true
         task: |
           In multi-project setups, verify that `../00_Shared_Materials/styleguide.md` 
-          exists and has no open ❓ entries. The defense reuses the styleguide 
+          exists and has no open ❓ [content] entries (see below). The defense reuses the styleguide 
           from the main work.
           
           In stand-alone defense setups (rare — defense without prior cephalo project), 
