@@ -122,7 +122,7 @@ phases:
           missing, copy it from its template):
           - 00_Status.md (from templates/status.md): fill initially
           - 00_Decisions.md (from templates/decisions.md): add research question
-          - 00_Feedback_log.md (from templates/feedback_log.md): keep as is
+          - 00_Feedback_log.md (from templates/feedback_log.md): delete its example section, otherwise keep as is
       
       - step: 0.3
         name: Materials pre-check
