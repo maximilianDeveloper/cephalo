@@ -36,7 +36,7 @@ agents:
     role: One-time extraction of institutional rules into styleguide.md
 
 # Optional: if formal compliance is critical, the format-verifier can be added.
-# In that case, consider presentation_3agent instead.
+# In that case, consider bachelor_5agent instead (its Phase B runs it).
 
 # Constraints
 
