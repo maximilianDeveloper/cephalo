@@ -679,7 +679,7 @@ jobs:
           # the other forms docs/scripts.md lists: year suffixes, lowercase particles,
           # lead words, narrative page locators, a narrative et al.
           f.add_paragraph("(Wagner, 2022a) Schulz (2022a) zeigt. (van der Linde, 2020). (von Wright 2019). (de la Rosa, 2018). "
-                          "(ter Horst, 2020). (ten Brink 2017). (siehe Hahn, 2020, S. 3). (cf. Smith, 2020, p. 15). (nach Otto 2020). "
+                          "(ter Horst, 2020). (ten Brink 2017). (siehe Hahn, 2020, S. 3). (cf. Smith, 2020, p. 15). (nach Vogel 2020). "
                           "Mayer (2020, S. 15) zeigt. Krause (2021: 15) auch. Brown et al. (2021) argue.")
           f.add_heading("7 Literaturverzeichnis:", 1)
           for entry in ("Müller, H./Schmidt, K. (2019). A.", "Öztürk, A. (2020). B.", "Dawson, R., Ellis, S., & Fowler, T. (2018). C.",
@@ -690,7 +690,7 @@ jobs:
                         "Nagel, N., Otto, O., & Peters, P. (2014). Q.", "Quinn, Q., Ross, R., & Stone, S. (2013). R.",
                         "Luhmann, N. (1984). S.", "Wagner, A. (2022a). T.", "Schulz, B. (2022a). U.", "van der Linde, C. (2020). V.",
                         "von Wright, G. H. (2019). W.", "de la Rosa, E. (2018). X.", "ter Horst, F. (2020). Y.", "ten Brink, G. (2017). Z.",
-                        "Hahn, H. (2020). AA.", "Smith, J. (2020). AB.", "Otto, O. (2020). AC.", "Mayer, M. (2020). AD.",
+                        "Hahn, H. (2020). AA.", "Smith, J. (2020). AB.", "Vogel, V. (2020). AC.", "Mayer, M. (2020). AD.",
                         "Krause, K. (2021). AE.", "Brown, B., Green, G., & White, W. (2021). AF."):
               f.add_paragraph(entry)
           f.save(os.path.join(w, "forms.docx"))
@@ -891,8 +891,12 @@ jobs:
           expect 1 bash scripts/docx_postprocess.sh "$W/link.docx"
           grep -q "symbolic links" "$W/out.txt"
           cmp "$W/link.docx" "$W/link.orig"
-          # also a link declared only in Info-ZIP's ASi extra field, whose mode unzip applies
-          python - "$W/ok.docx" "$W/asilink.docx" <<'EOF'
+          # also a link declared only in Info-ZIP's ASi extra field: unzip applies its
+          # mode when the attributes carry no Unix bits (0x20, the MS-DOS archive bit;
+          # Git Bash's unzip then writes a copy of the target). The pre-check reads
+          # the field in any case (0o644 variant).
+          for attr in 0x20 0o644; do
+            python - "$W/ok.docx" "$W/asilink.docx" "$attr" <<'EOF'
           import stat, struct, sys, zipfile, zlib
           with zipfile.ZipFile(sys.argv[1]) as z, zipfile.ZipFile(sys.argv[2], "w") as out:
               for i in z.infolist():
@@ -901,14 +905,15 @@ jobs:
               asi = struct.pack("<IHIHH", zlib.crc32(target), stat.S_IFLNK | 0o777, 0, 0, 0) + target
               link = zipfile.ZipInfo("word/media/image1.png")
               link.create_system = 3
-              link.external_attr = 0o644 << 16
+              link.external_attr = int(sys.argv[3], 0) if sys.argv[3] == "0x20" else 0o644 << 16
               link.extra = struct.pack("<HH", 0x756E, len(asi)) + asi
               out.writestr(link, target)
           EOF
-          cp "$W/asilink.docx" "$W/asilink.orig"
-          expect 1 bash scripts/docx_postprocess.sh "$W/asilink.docx"
-          grep -q "symbolic links" "$W/out.txt"
-          cmp "$W/asilink.docx" "$W/asilink.orig"
+            cp "$W/asilink.docx" "$W/asilink.orig"
+            expect 1 bash scripts/docx_postprocess.sh "$W/asilink.docx"
+            grep -q "symbolic links" "$W/out.txt"
+            cmp "$W/asilink.docx" "$W/asilink.orig"
+          done
           # a file named like the repacked document is not ours: it is neither
           # overwritten nor deleted, and no temporary archive is left behind
           cp "$W/ok.docx" "$W/own.docx"; echo notes > "$W/own.docx.new"
