@@ -34,7 +34,7 @@
   .lede b{color:var(--accent-deep); font-weight:600}
 
   /* two-column tool */
-  .grid{display:grid; grid-template-columns:1fr; gap:26px}
+  .grid{display:grid; grid-template-columns:minmax(0,1fr); gap:26px}
   @media(min-width:860px){ .grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)} }
 
   section.panel{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:22px}
