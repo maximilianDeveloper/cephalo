@@ -687,7 +687,7 @@ List any open questions for me to resolve before we proceed.</code></pre>
         "@echo off",
         "chcp 65001 >nul",   // this file is UTF-8, but cmd.exe decodes batch lines in the console code page: switch it so non-ASCII targets survive
         "REM cephalo launcher -- save this file INTO your cephalo folder (next to setup.ps1), then double-click it.",
-        'cd /d "%~dp0"',
+        'pushd "%~dp0"',   // not cd /d: cmd.exe cannot make a UNC path (redirected Documents, network share) its current folder; pushd maps a drive letter for it
         'if not exist ".\\setup.ps1" (',
         "  echo Could not find setup.ps1 next to this launcher.",
         "  echo Move this file into your cephalo folder, then run it again.",
