@@ -93,6 +93,8 @@ Confirm understanding, then proceed.
 
 ## Suggested Git commit
 
+(In a multi-project sub-project: `git add -A`, so that changes in `../00_Shared_Materials/` are included.)
+
 ```bash
 git add .
 git commit -m "[phase]: [brief description]"

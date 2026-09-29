@@ -123,7 +123,7 @@ If recurring patterns were observed: append to `00_Feedback_log.md`.
 
 ### Step 5: Git commit suggestion
 
-Give the user a commit suggestion. In a multi-project sub-project, prefix the phase with the sub-project: `proposal/<phase>: ...` in `01_Proposal/`, `main/<phase>: ...` in `02_Main_Work/` (see `docs/multiproject_structure.md`).
+Give the user a commit suggestion. In a multi-project sub-project, prefix the phase with the sub-project: `proposal/<phase>: ...` in `01_Proposal/`, `main/<phase>: ...` in `02_Main_Work/` (see `docs/multiproject_structure.md`), and suggest `git add -A` instead of `git add .`: run in a sub-project, `git add .` leaves changes in `../00_Shared_Materials/` (such as `styleguide.md`) out of the commit.
 
 ````markdown
 ## Chat closure
