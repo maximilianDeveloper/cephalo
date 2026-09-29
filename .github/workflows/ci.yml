@@ -370,6 +370,18 @@ jobs:
           test -d /tmp/ci_self/workspace/sources/_guidelines
           test -d /tmp/ci_moved/workspace/sources/_guidelines
           test -d /tmp/ci_moved_ps/workspace/sources/_guidelines
+          # Into a non-empty target (here the projects just made), a project is not
+          # copied: its own files (a styleguide.md here) would replace the target's.
+          echo "source notes" > /tmp/ci_self/styleguide.md
+          for t in /tmp/ci_moved /tmp/ci_moved_ps; do echo "target notes" > "$t/styleguide.md"; done
+          set +e
+          (cd /tmp/ci_self && printf '1\n1\ny\ny\n\n' | script -qec "bash setup.sh --target /tmp/ci_moved" /dev/null >/tmp/ci_over.out); c1=$?
+          (cd /tmp/ci_self && printf '1\n1\ny\ny\n\n' | pwsh -NoProfile -File ./setup.ps1 -Target /tmp/ci_moved_ps >/tmp/ci_over_ps.out); c2=$?
+          set -e
+          test "$c1 $c2" = "2 2"
+          grep -q 'would replace the target' /tmp/ci_over.out
+          grep -q 'would replace the target' /tmp/ci_over_ps.out
+          test "$(cat /tmp/ci_moved/styleguide.md /tmp/ci_moved_ps/styleguide.md)" = "$(printf 'target notes\ntarget notes')"
           out=$(printf '\n' | pwsh -NoProfile -File ./setup.ps1 -Target ThesisSub || true)
           printf '%s\n' "$out" | grep -q 'check the messages above'
           test ! -e ThesisSub

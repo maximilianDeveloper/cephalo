@@ -34,6 +34,7 @@ SETUP_INTERRUPTED=0
 # copy into a new --target begins, and when the setup has completed.
 COPY_STARTED=0
 TARGET_HAD_FILES=false
+SOURCE_IS_PROJECT=false
 SETUP_DONE=0
 
 on_interrupt() {
@@ -715,6 +716,12 @@ fi
 # ==========================================================
 
 if [ -n "$TARGET_DIR" ]; then
+    # Started from a project (set up here earlier), not a bare template: the
+    # copy carries its own 00_Status.md, styleguide.md, chapters and so on.
+    for marker in 00_Status.md 00_Shared_Materials workspace styleguide.md; do
+        if [ -e "$SOURCE_DIR_BEFORE_MOVE/$marker" ]; then SOURCE_IS_PROJECT=true; fi
+    done
+
     # Create the parent directory chain if needed
     TARGET_PARENT="$(dirname "$TARGET_DIR")"
     if [ ! -d "$TARGET_PARENT" ]; then
@@ -731,6 +738,15 @@ if [ -n "$TARGET_DIR" ]; then
         # folder it shows) does not make the target non-empty.
         if [ -n "$(find "$TARGET_DIR" -mindepth 1 -maxdepth 1 ! -name .DS_Store ! -name Thumbs.db ! -name desktop.ini 2>/dev/null)" ]; then
             TARGET_HAD_FILES=true
+            # Copied over another project, a project's own files would
+            # replace that project's, though the warning below says they are kept.
+            if $SOURCE_IS_PROJECT; then
+                echo "" >&2
+                echo -e "${RED}Error: this folder is a project, not a bare template (it has 00_Status.md, workspace/ or the like),${NC}" >&2
+                echo -e "${RED}  and the target is not empty: this project's status files, styleguide and chapters would replace the target's.${NC}" >&2
+                echo -e "${RED}  To update the target, run setup from a fresh cephalo template folder.${NC}" >&2
+                exit_with_pause 2
+            fi
             echo ""
             echo -e "${YELLOW}Warning: target directory already exists and is not empty:${NC}"
             echo -e "${YELLOW}  $TARGET_DIR${NC}"
@@ -1200,13 +1216,9 @@ echo ""
 # ==========================================================
 
 if [ -n "$SOURCE_DIR_BEFORE_MOVE" ] && [ -d "$SOURCE_DIR_BEFORE_MOVE" ]; then
-    # Started from a project (set up here earlier), not a bare template: the
-    # copy left out its .git history and local Claude Code files, so it is
-    # not offered for deletion.
-    SOURCE_IS_PROJECT=false
-    for marker in 00_Status.md 00_Shared_Materials workspace styleguide.md; do
-        if [ -e "$SOURCE_DIR_BEFORE_MOVE/$marker" ]; then SOURCE_IS_PROJECT=true; fi
-    done
+    # Started from a project (SOURCE_IS_PROJECT, set before the copy), not a
+    # bare template: the copy left out its .git history and local Claude Code
+    # files, so it is not offered for deletion.
     echo -e "${GRAY}The original cephalo template folder is still at:${NC}"
     echo -e "${GRAY}  $SOURCE_DIR_BEFORE_MOVE${NC}"
     echo ""

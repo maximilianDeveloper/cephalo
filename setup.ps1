@@ -573,6 +573,10 @@ if ($NonInteractive) {
 
 if ($Target -ne "") {
     $SourceDir = $StartDir
+    # Started from a project (set up here earlier), not a bare template: the
+    # copy carries its own 00_Status.md, styleguide.md, chapters and so on.
+    $SourceIsProject = @("00_Status.md", "00_Shared_Materials", "workspace", "styleguide.md" |
+        Where-Object { Test-Path -LiteralPath (Join-Path $SourceDir $_) }).Count -gt 0
     
     # Create parent directory chain if needed
     $TargetParent = Split-Path -Parent $Target
@@ -597,6 +601,16 @@ if ($Target -ne "") {
                 Where-Object { @(".DS_Store", "Thumbs.db", "desktop.ini") -notcontains $_.Name }
             if ($existing) {
                 $TargetWasEmpty = $false
+                # Copied over another project, a project's own files would
+                # replace that project's, though the warning below says they are kept.
+                if ($SourceIsProject) {
+                    Write-Host ""
+                    Write-Host "Error: this folder is a project, not a bare template (it has 00_Status.md, workspace\ or the like)," -ForegroundColor Red
+                    Write-Host "  and the target is not empty: this project's status files, styleguide and chapters would replace the target's." -ForegroundColor Red
+                    Write-Host "  To update the target, run setup from a fresh cephalo template folder." -ForegroundColor Red
+                    Pause-BeforeClose "error"
+                    exit 2
+                }
                 Write-Host ""
                 Write-Host "Warning: target directory already exists and is not empty:" -ForegroundColor Yellow
                 Write-Host "  $Target" -ForegroundColor Yellow
@@ -1084,11 +1098,9 @@ Write-Host ""
 # ==========================================================
 
 if ($script:SourceDirBeforeMove -and (Test-Path -LiteralPath $script:SourceDirBeforeMove)) {
-    # Started from a project (set up here earlier), not a bare template: the
-    # copy left out its .git history and local Claude Code files, so it is
-    # not offered for deletion.
-    $SourceIsProject = @("00_Status.md", "00_Shared_Materials", "workspace", "styleguide.md" |
-        Where-Object { Test-Path -LiteralPath (Join-Path $script:SourceDirBeforeMove $_) }).Count -gt 0
+    # Started from a project ($SourceIsProject, set before the copy), not a
+    # bare template: the copy left out its .git history and local Claude Code
+    # files, so it is not offered for deletion.
     Write-Host "The original cephalo template folder is still at:" -ForegroundColor Gray
     Write-Host "  $($script:SourceDirBeforeMove)" -ForegroundColor Gray
     Write-Host ""
