@@ -144,6 +144,15 @@ jobs:
               for o in sorted(stems & calls.keys()):
                   for a in sorted(stems - calls.keys() - calls[o]):
                       errors.append(f"{f}: {o} cannot call {a} (not in the Agent(...) entry of its tools line)")
+          # Framework files named in free text exist too (task:, note: and lists of
+          # strings in workflows; agents, checklists, templates), also as ../ from a
+          # sub-project.
+          framework_ref = re.compile(r"(?<![\w./-])(?:\.\./)?((?:checklists|scripts|docs|templates|workflows)/[\w.-]+\.(?:md|py|sh|yaml))")
+          for f in sorted(glob.glob("workflows/*.yaml") + glob.glob("checklists/*.md") + glob.glob("templates/*.md")) + agent_files:
+              for n, line in enumerate(open(f, encoding="utf-8"), 1):
+                  for p in framework_ref.findall(line):
+                      if not os.path.isfile(p):
+                          errors.append(f"{f}:{n}: references missing {p}")
           # Every styleguide key that agents, checklists, workflows and docs name
           # (document.hyphenation, captions.table_position, ...) is a slot in the template.
           keys, prefixes, current = set(), set(), []
