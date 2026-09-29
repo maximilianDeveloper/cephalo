@@ -1067,12 +1067,17 @@ if ($script:SourceDirBeforeMove -and (Test-Path -LiteralPath $script:SourceDirBe
             if ((Test-Path -LiteralPath (Join-Path $script:SourceDirBeforeMove "setup.ps1")) -and `
                 (Test-Path -LiteralPath (Join-Path $script:SourceDirBeforeMove ".claude"))) {
                 try {
+                    # Set-Location moved only PowerShell's location: the process
+                    # working directory is still the template folder, and Windows
+                    # cannot delete a folder that is a process's working directory.
+                    [System.Environment]::CurrentDirectory = $script:ProjectRoot
                     # -ErrorAction Stop: without it a failed (partial) deletion only
                     # printed errors and still reported the folder as deleted.
                     Remove-Item -LiteralPath $script:SourceDirBeforeMove -Recurse -Force -ErrorAction Stop
                     Write-Host "+ Original folder deleted." -ForegroundColor Green
                 } catch {
                     Write-Host "! Could not delete original folder: $($_.Exception.Message)" -ForegroundColor Yellow
+                    Write-Host "  Parts of it may be gone already. Close other windows open in it, then delete the rest manually." -ForegroundColor Yellow
                 }
             } else {
                 Write-Host "! Source folder no longer looks like a cephalo template." -ForegroundColor Yellow
