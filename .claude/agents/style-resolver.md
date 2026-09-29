@@ -114,7 +114,7 @@ At the end, give the user:
 - How many rules were extracted, with brief categorization
 - List of `❓` items requiring clarification, `[content]` items first (they block drafting; `[format]` items block only the formatting phase)
 - If applicable: the directory proposal
-- A git commit suggestion
+- A git commit suggestion (in a multi-project sub-project with `git add -A`: run there, `git add .` leaves `../00_Shared_Materials/styleguide.md` out)
 
 ## Output structure
 

@@ -241,6 +241,6 @@ git add .
 git commit -m "meta: initial setup"           # baseline commit
 ```
 
-That's it. From here on, follow the chat closure ritual: at the end of each chat, the orchestrator gives you a `git add .` + `git commit -m "..."` to run.
+That's it. From here on, follow the chat closure ritual: at the end of each chat, the orchestrator gives you a `git add .` + `git commit -m "..."` to run (in a multi-project sub-project `git add -A`, which also stages changes in `../00_Shared_Materials/`; `git add .` stages only the folder you are in).
 
 Over months, you'll build a complete history of your project. You'll be glad you did.
