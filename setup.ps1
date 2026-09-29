@@ -93,6 +93,14 @@ function Test-CephaloTemplate([string]$Dir) {
         [System.IO.Directory]::Exists([System.IO.Path]::Combine($Dir, ".claude")) -and
         [System.IO.Directory]::Exists([System.IO.Path]::Combine($Dir, "templates")))
 }
+
+# A path as a single-quoted PowerShell literal, for the commands printed to
+# paste: in double quotes, a $ or backtick in a folder name is evaluated
+# (a pasted Remove-Item would delete a different folder). PowerShell also
+# reads U+2018-U+201B as single quotes, so those are doubled too.
+function ConvertTo-PSLiteral([string]$Text) {
+    return "'" + ($Text -replace "['$([char]0x2018)$([char]0x2019)$([char]0x201A)$([char]0x201B)]", '$0$0') + "'"
+}
 $StartDir = (Get-Location).ProviderPath
 # Windows PowerShell 5.1 started in a folder whose name contains [ ] (e.g.
 # "powershell -File .\setup.ps1" there) cannot enter it and starts in its own
@@ -114,7 +122,7 @@ if (-not (Test-CephaloTemplate $StartDir)) {
     Write-Host "(setup.ps1, .claude/ and templates/ expected in: $(Get-Location))." -ForegroundColor Red
     if ($ScriptDir -and (Test-Path -LiteralPath (Join-Path $ScriptDir ".claude"))) {
         Write-Host "The template appears to be at: $ScriptDir" -ForegroundColor Yellow
-        Write-Host "Run:  Set-Location -LiteralPath `"$ScriptDir`"; .\setup.ps1 [args]" -ForegroundColor Yellow
+        Write-Host "Run:  Set-Location -LiteralPath $(ConvertTo-PSLiteral $ScriptDir); .\setup.ps1 [args]" -ForegroundColor Yellow
         Write-Host "Use -Target PATH to create the project elsewhere." -ForegroundColor Yellow
     }
     Pause-BeforeClose "error"
@@ -1108,7 +1116,7 @@ if ($script:SourceDirBeforeMove -and (Test-Path -LiteralPath $script:SourceDirBe
     } else {
         Write-Host "Non-interactive run: keeping the original in place." -ForegroundColor Gray
         Write-Host "Delete manually if no longer needed:" -ForegroundColor Gray
-        Write-Host "  Remove-Item -LiteralPath `"$($script:SourceDirBeforeMove)`" -Recurse -Force" -ForegroundColor Gray
+        Write-Host "  Remove-Item -LiteralPath $(ConvertTo-PSLiteral $script:SourceDirBeforeMove) -Recurse -Force" -ForegroundColor Gray
     }
     Write-Host ""
 }
