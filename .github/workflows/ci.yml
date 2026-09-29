@@ -13,6 +13,11 @@ jobs:
     name: Lint & setup smoke (Ubuntu, Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # "shell: bash" runs each step with -e -o pipefail; the default for run:
+    # is bash -e only, so a failing setup.sh before "| tee" went unnoticed.
+    defaults:
+      run:
+        shell: bash
     strategy:
       fail-fast: false
       matrix:
