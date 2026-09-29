@@ -2,7 +2,7 @@
 
 **This template is filled by the style-resolver agent.**
 **After extraction, clarify all open ❓ items with the supervisor: `[content]` items before any chapter is drafted, `[format]` items before the formatting phase (Phase B).**
-**File path:** `styleguide.md` at the project root (or `00_Shared_Materials/styleguide.md` in multi-project setups).
+**File path:** `styleguide.md` at the project root (or 00_Shared_Materials/styleguide.md in multi-project setups).
 
 ---
 
