@@ -134,13 +134,36 @@ cp "$DOC_ABS" "$WORK_DIR/in.docx"
 # its target, which the check after unpacking cannot see).
 "$PY" - "$(py_path "$WORK_DIR/in.docx")" << 'PYEOF'
 import stat
+import struct
 import sys
 import zipfile
 
+def asi_link(extra):
+    """Whether an extra field holds Info-ZIP's ASi Unix block (0x756e) with a
+    link mode: unzip applies that mode too, also when the entry's external
+    attributes show none."""
+    i = 0
+    while i + 4 <= len(extra):
+        tag, size = struct.unpack('<HH', extra[i:i + 4])
+        data = extra[i + 4:i + 4 + size]
+        if tag == 0x756e and len(data) >= 6 and stat.S_ISLNK(struct.unpack('<H', data[4:6])[0]):
+            return True
+        i += 4 + size
+    return False
+
 try:
-    with zipfile.ZipFile(sys.argv[1]) as zf:
-        links = any(stat.S_ISLNK(i.external_attr >> 16) for i in zf.infolist())
-except zipfile.BadZipFile:
+    with zipfile.ZipFile(sys.argv[1]) as zf, open(sys.argv[1], 'rb') as raw:
+        links = False
+        for info in zf.infolist():
+            # The local header has its own extra field, which unzip reads too.
+            raw.seek(info.header_offset)
+            name_len, extra_len = struct.unpack('<HH', raw.read(30)[26:30])
+            raw.seek(info.header_offset + 30 + name_len)
+            local_extra = raw.read(extra_len)
+            if (stat.S_ISLNK(info.external_attr >> 16) or asi_link(info.extra)
+                    or asi_link(local_extra)):
+                links = True
+except (zipfile.BadZipFile, struct.error):
     sys.exit('Error: not a valid .docx (ZIP) file')
 if links:
     sys.exit('Error: document contains symbolic links; refusing to process it')
