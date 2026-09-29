@@ -72,11 +72,19 @@ jobs:
           in_span = re.compile(r"`[^`]*?(?:" + cmd + r")[^`]*`")
           in_block = re.compile(cmd)
           for f in agent_files + sorted(glob.glob("checklists/*.md")):
-              fenced = False
+              # The opening fence of the current code block: only the same kind of
+              # fence, at least as long and without an info string, closes it, so a
+              # ```bash block inside a ```` block is content (CommonMark).
+              fence = ""
               for n, line in enumerate(open(f, encoding="utf-8").read().splitlines(), 1):
-                  if line.lstrip().startswith("```"):
-                      fenced = not fenced
+                  m = re.match(r"\s*(`{3,}|~{3,})(.*)$", line)
+                  if m and not fence:
+                      fence = m.group(1)
                       continue
+                  if m and m.group(1)[0] == fence[0] and len(m.group(1)) >= len(fence) and not m.group(2).strip():
+                      fence = ""
+                      continue
+                  fenced = bool(fence)
                   # In a code block, any extractor call counts (after dropping a shell comment).
                   code = re.sub(r"(^|\s)#.*", "", line)
                   if in_span.search(line) or (fenced and in_block.search(code)):
