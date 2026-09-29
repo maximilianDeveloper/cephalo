@@ -50,6 +50,8 @@ Verify the following categories. Concrete values (font size, page-range notation
 - [ ] Line spacing per styleguide
 - [ ] Margins per styleguide
 - [ ] Paragraph alignment per styleguide
+- [ ] Paragraph spacing per styleguide (`body.paragraph_spacing`)
+- [ ] Emphasis style per styleguide (`style.emphasis`)
 - [ ] Forbidden pronouns check per styleguide
 - [ ] Hyphenation status
 - [ ] Total page count within range
@@ -84,6 +86,11 @@ Verify the following categories. Concrete values (font size, page-range notation
 - [ ] Page number requirement per styleguide
 - [ ] Non-breaking space before page number per styleguide
 - [ ] Page range notation per styleguide
+
+## Style
+- [ ] Forbidden evaluative wording per styleguide (`style.forbidden_evaluative`)
+- [ ] Block quotes per styleguide (`style.block_quote_word_threshold`)
+- [ ] Footnote policy per styleguide (`style.footnotes`)
 ```
 
 ### 3. Automated mechanical checks
