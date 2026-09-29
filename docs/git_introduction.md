@@ -198,6 +198,8 @@ Tools like OneDrive, iCloud Drive, Dropbox, or Google Drive can sync the project
 
 **Caveat:** Real-time sync of binary files can occasionally cause conflicts. Resolve them by keeping the local version and letting the sync service re-upload it.
 
+**Personal data:** a sync service ignores `.gitignore`. It uploads `data/raw/` and `data/processed/` too, which the project keeps out of Git because raw data may carry personal identifiers. If your data-protection plan does not allow that cloud, exclude those folders from syncing or keep the data outside the synced folder.
+
 ### Option 2: Remote Git repository
 
 Push your repository to a remote Git host (GitHub, GitLab, your institution's Git server). This is more robust but requires creating an account and learning a few more Git commands.
