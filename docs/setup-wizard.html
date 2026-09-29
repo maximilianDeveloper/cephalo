@@ -718,8 +718,7 @@ List any open questions for me to resolve before we proceed.</code></pre>
       '  read -p "Press Enter to close..."',
       "  exit 1",
       "fi",
-      "chmod +x ./setup.sh 2>/dev/null",
-      "./setup.sh "+sh,
+      "bash ./setup.sh "+sh,   // not ./setup.sh: on a noexec mount or a FAT stick the execute bit cannot be set
       "rc=$?",
       'echo ""',
       'if [ "$rc" -eq 0 ]; then',
