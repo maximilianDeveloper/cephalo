@@ -36,7 +36,7 @@ Sources, extracts, guideline documents, data files and agent reports can contain
 
 ### Step 0: Pre-check (blocking)
 
-Consult `checklists/precheck.md`. If materials are missing:
+Consult `checklists/precheck.md`. If required materials are missing (a missing recommended document is only noted as a gap):
 - STOP
 - Inform user with exact list of missing items
 - Do not make assumptions

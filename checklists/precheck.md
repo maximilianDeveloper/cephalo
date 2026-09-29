@@ -2,7 +2,7 @@
 
 **Purpose:** Blocking pre-check before any content work.
 **Executed by:** Orchestrator (in multi-agent workflows) or user manually (in seminar_2agent and presentation_3agent, which have no orchestrator).
-**On missing materials:** STOP. Inform the user. Do not make assumptions.
+**On missing required materials:** STOP. Inform the user. Do not make assumptions. (A missing recommended document is noted as a gap; see section 1.)
 
 **Applies to:** `seminar_2agent`, `presentation_3agent`, `bachelor_5agent` and `_longform`, `master_7agent` and `_longform`. These workflows all reference this checklist in their Step 0. `proposal_workflow` applies sections 1 and 2 in its Phase 0: it runs before the main work, so no earlier pre-check has covered its materials.
 
@@ -156,7 +156,7 @@ The orchestrator (or user) documents the result in the state file:
 
 **Decision:**
 - Work can proceed ✅
-- Work paused until gaps are closed ❌
+- Work paused until the blocking gaps are closed ❌
 ```
 
 ---

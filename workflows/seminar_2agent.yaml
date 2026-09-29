@@ -80,8 +80,9 @@ phases:
         blocking: true
         manual: true
         note: |
-          Verify that the citation guide, formatting guidelines, and 
-          assignment description are present, and all sources are accessible.
+          Verify that the citation guide and formatting guidelines are present
+          and all sources are accessible. The assignment description is
+          recommended: if it is missing, note it and continue.
       
       - step: 0.5
         name: Style resolution
