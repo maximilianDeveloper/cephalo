@@ -18,15 +18,15 @@ The pre-check prevents this by ensuring **before** content work starts that all 
 
 ---
 
-## 1. Examination materials (MUST be present)
+## 1. Examination materials (citation and formatting rules MUST be present)
 
-These documents define the rules the work must follow.
+These documents define the rules the work must follow. The citation guide and the formatting guidelines are required (if the institution has none, the published standard adopted instead, logged as a decision). The other three are recommended: if one is missing, ask the user whether the institution provides it, list it as a gap in the pre-check result (⚠️ with gaps), and continue.
 
-- [ ] **Course assignment** — describes topic, scope, formal requirements
-- [ ] **Examination guide** — assessment criteria, structure of the work
-- [ ] **Citation guide** — verify version is current (versions differ)
-- [ ] **Formatting guidelines** — layout requirements
-- [ ] **Plagiarism prevention guide** — institution-specific definition
+- [ ] **Course assignment** — describes topic, scope, formal requirements (recommended)
+- [ ] **Examination guide** — assessment criteria, structure of the work (recommended)
+- [ ] **Citation guide** — verify version is current (versions differ) (required)
+- [ ] **Formatting guidelines** — layout requirements (required)
+- [ ] **Plagiarism prevention guide** — institution-specific definition (recommended)
 
 **Storage location:**
 - Flat structure: `workspace/sources/_guidelines/`
@@ -129,7 +129,7 @@ Step 0 runs before the style-resolver (Step 0.5), so on a new project `styleguid
    - [list of open items]
    ```
 3. **Suggest concrete next steps** (upload, supervisor clarification, etc.)
-4. **Resume only after** all items are addressed
+4. **Resume only after** all items are addressed (a missing recommended document from section 1 is a gap, not a block)
 
 ### Do NOT
 
