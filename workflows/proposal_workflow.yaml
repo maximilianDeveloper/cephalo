@@ -297,7 +297,7 @@ phases:
       - Set 00_Status.md to "completed"
       - Copy final DOCX to: ../02_Main_Work/01_Proposal_Reference/proposal_final_<date>.docx
       - Update README.md: "FROZEN — as of <date>"
-      - Commit: git add -A (it also stages the copy in ../02_Main_Work/), then git commit -m "proposal accepted"
+      - Commit: 'git add -A (it also stages the copy in ../02_Main_Work/), then git commit -m "meta: proposal accepted, copied to main/01_Proposal_Reference/"'
       - Git tag: proposal_accepted_<date>
       - 01_Proposal/ becomes read-only
     
