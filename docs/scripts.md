@@ -199,9 +199,9 @@ A bare repository (`git clone --bare` with linked worktrees) has no main worktre
 
 **`Error: python-docx not installed.`** (from `abbreviations_extract.py` and `bibliography_check.py`; the underlying import error is `ModuleNotFoundError: No module named 'docx'`) — install it: `pip install python-docx` (or `pip install -r requirements.txt`). If you installed `docx` instead, that is a different package: run `pip uninstall docx`, then `pip install python-docx`.
 
-**`Error: neither pypdf nor pdftotext available for PDF extraction.`** (from `extract_styleguide.sh`; the underlying import error is `ModuleNotFoundError: No module named 'pypdf'`) — install it: `pip install -r requirements.txt` (or `pip install "pypdf[crypto]"`; the quotes keep zsh from reading the brackets as a pattern). Alternatively, install `pdftotext` (poppler) as fallback.
+**`Error: neither pypdf nor pdftotext available for PDF extraction.`** (from `extract_styleguide.sh`; the underlying import error is `ModuleNotFoundError: No module named 'pypdf'`) — install it: `pip install -r requirements.txt` (not `pypdf[crypto]` alone: requirements.txt keeps `cryptography` below 49 on Intel Macs, where newer releases have no wheels and pip would try to build them). Alternatively, install `pdftotext` (poppler) as fallback.
 
-**`pypdf failed (cryptography>=3.1 is required for AES algorithm)`** (from `extract_styleguide.sh`) — the guideline PDF is AES-encrypted, typically copy protection with an empty open password, and pypdf was installed without its `[crypto]` extra. Run `pip install -r requirements.txt` again, or `pip install "pypdf[crypto]"`.
+**`pypdf failed (cryptography>=3.1 is required for AES algorithm)`** (from `extract_styleguide.sh`) — the guideline PDF is AES-encrypted, typically copy protection with an empty open password, and pypdf was installed without its `[crypto]` extra. Run `pip install -r requirements.txt` again.
 
 **`UnicodeEncodeError: 'charmap'`** on Windows — the Python scripts switch their output to UTF-8 at startup, so this should not appear with Python 3.9 or later. If it does, run `set PYTHONIOENCODING=utf-8` (cmd) or `$env:PYTHONIOENCODING = "utf-8"` (PowerShell) and try again.
 
