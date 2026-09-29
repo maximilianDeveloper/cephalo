@@ -753,8 +753,9 @@ if [ -n "$TARGET_DIR" ]; then
                 exit 2
             fi
         fi
-    elif [ -e "$TARGET_DIR" ]; then
-        echo -e "${RED}Error: target path exists and is not a directory.${NC}" >&2
+    elif [ -e "$TARGET_DIR" ] || [ -L "$TARGET_DIR" ]; then
+        # -L: a link to a folder that is gone (an unmounted drive) fails -e too.
+        echo -e "${RED}Error: target path exists and is not a directory (or is a broken link).${NC}" >&2
         exit_with_pause 2
     else
         mkdir -p "$TARGET_DIR"
