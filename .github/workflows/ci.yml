@@ -665,6 +665,11 @@ jobs:
                                                "(see Le Grand 2007 for a critique). (De Beers, n.d.). (Weber, 1922, zit. nach Keller, 2018, S. 5). Braun (2017: 15 f.) widerspricht. "
                                                "Kraus, Lang und Roth (2016) zeigen es (vgl. Adam/Berg/Cohn 2015). (Nagel, Otto und Peters 2014). "
                                                "However, Quinn, Ross, and Stone (2013) argue. Luhmanns (1984) Begriff und Van Dijks (2019) Ansatz."))
+          # the other forms docs/scripts.md lists: year suffixes, lowercase particles,
+          # lead words, narrative page locators, a narrative et al.
+          f.add_paragraph("(Wagner, 2022a) Schulz (2022a) zeigt. (van der Linde, 2020). (von Wright 2019). (de la Rosa, 2018). "
+                          "(ter Horst, 2020). (ten Brink 2017). (siehe Hahn, 2020, S. 3). (cf. Smith, 2020, p. 15). (nach Otto 2020). "
+                          "Mayer (2020, S. 15) zeigt. Krause (2021: 15) auch. Brown et al. (2021) argue.")
           f.add_heading("7 Literaturverzeichnis:", 1)
           for entry in ("Müller, H./Schmidt, K. (2019). A.", "Öztürk, A. (2020). B.", "Dawson, R., Ellis, S., & Fowler, T. (2018). C.",
                         "De Vries, R. (2018). D.", "Weber, E. (2020). E.", "Fischer, Hans/Wolf, Karl (2017): G.",
@@ -672,7 +677,10 @@ jobs:
                         "Le Grand, J. (2007). J.", "De Beers. (n.d.). K.", "Keller, T. (2018). L.", "Braun, P. (2017). M.", "Ders. (2019). N.",
                         "Kraus, A., Lang, B., & Roth, C. (2016). O.", "Adam, A./Berg, B./Cohn, C. (2015): P.",
                         "Nagel, N., Otto, O., & Peters, P. (2014). Q.", "Quinn, Q., Ross, R., & Stone, S. (2013). R.",
-                        "Luhmann, N. (1984). S."):
+                        "Luhmann, N. (1984). S.", "Wagner, A. (2022a). T.", "Schulz, B. (2022a). U.", "van der Linde, C. (2020). V.",
+                        "von Wright, G. H. (2019). W.", "de la Rosa, E. (2018). X.", "ter Horst, F. (2020). Y.", "ten Brink, G. (2017). Z.",
+                        "Hahn, H. (2020). AA.", "Smith, J. (2020). AB.", "Otto, O. (2020). AC.", "Mayer, M. (2020). AD.",
+                        "Krause, K. (2021). AE.", "Brown, B., Green, G., & White, W. (2021). AF."):
               f.add_paragraph(entry)
           f.save(os.path.join(w, "forms.docx"))
           # prose that looks like a citation with a capitalized particle, a filler or
