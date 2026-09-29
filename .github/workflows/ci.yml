@@ -359,6 +359,17 @@ jobs:
           set +e; pwsh -NoProfile -File ./setup.ps1 -WorkType "Seminar paper" -Structure Flat -Scaffolding full -Target 'Q:\ci_nodrive' -NonInteractive >/tmp/ci_nodrive_ps2.out 2>&1; code=$?; set -e
           test "$code" -eq 2
           grep -q 'cannot resolve target path' /tmp/ci_nodrive_ps2.out
+          # Started from a project (the one set up in place above) with a new target,
+          # neither script offers to delete it: its Git history is not copied.
+          (cd /tmp/ci_self && printf '2\n/tmp/ci_moved\n3\n1\n1\ny\ny\n\n' | script -qec "bash setup.sh" /dev/null >/tmp/ci_moved.out)
+          (cd /tmp/ci_self && printf '2\n/tmp/ci_moved_ps\n3\n1\n1\ny\ny\n\n' | pwsh -NoProfile -File ./setup.ps1 >/tmp/ci_moved_ps.out)
+          for f in /tmp/ci_moved.out /tmp/ci_moved_ps.out; do
+            grep -q 'is a project, not a bare template' "$f"
+            if grep -q 'Delete it now' "$f"; then echo "$f: deletion offered for a project"; exit 1; fi
+          done
+          test -d /tmp/ci_self/workspace/sources/_guidelines
+          test -d /tmp/ci_moved/workspace/sources/_guidelines
+          test -d /tmp/ci_moved_ps/workspace/sources/_guidelines
           out=$(printf '\n' | pwsh -NoProfile -File ./setup.ps1 -Target ThesisSub || true)
           printf '%s\n' "$out" | grep -q 'check the messages above'
           test ! -e ThesisSub
