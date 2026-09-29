@@ -1244,7 +1244,7 @@ if [ -n "$SOURCE_DIR_BEFORE_MOVE" ] && [ -d "$SOURCE_DIR_BEFORE_MOVE" ]; then
     else
         echo -e "${GRAY}Non-interactive run: keeping the original in place.${NC}"
         echo -e "${GRAY}Delete manually if no longer needed:${NC}"
-        printf '%b  rm -rf %s%b\n' "$GRAY" "$(shell_quote "$SOURCE_DIR_BEFORE_MOVE")" "$NC"
+        printf '%b  rm -rf %s%b\n' "$GRAY" "$(shell_quote "$SOURCE_CANON")" "$NC"
     fi
     echo ""
 fi
