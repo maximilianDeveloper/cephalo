@@ -16,6 +16,7 @@ Usage:
     python scripts/bibliography_check.py --help
 """
 
+import os
 import re
 import sys
 import unicodedata
@@ -562,12 +563,25 @@ def main():
         sys.exit(0)
 
     doc_path = Path(sys.argv[1])
-    if not doc_path.exists():
+    # Probe with open() rather than Path.exists(), as abbreviations_extract.py
+    # does: exists() raises PermissionError when a parent folder is not
+    # searchable, which ended in a traceback and exit 1 ("asymmetries found").
+    try:
+        with open(doc_path, "rb"):
+            pass
+    except FileNotFoundError:
         print(f"Error: file not found: {doc_path}", file=sys.stderr)
+        sys.exit(2)
+    except OSError as exc:
+        # Windows reports a directory as "Permission denied"
+        reason = "is a directory" if os.path.isdir(doc_path) else exc.strerror or exc
+        print(f"Error: cannot open {doc_path}: {reason}", file=sys.stderr)
         sys.exit(2)
 
     if doc_path.suffix.lower() != ".docx":
-        print(f"Error: expected a .docx file, got {doc_path.suffix}", file=sys.stderr)
+        print(f"Error: expected a .docx file, got "
+              f"{doc_path.suffix or 'a file without extension'}: {doc_path}",
+              file=sys.stderr)
         sys.exit(2)
     
     paragraphs = read_docx_paragraphs(doc_path)
