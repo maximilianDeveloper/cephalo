@@ -31,7 +31,7 @@ The name is slightly misleading: you do not browse the internet or find new sour
 - Main work (`02_Main_Work/`): sources and extracts follow the long-form pattern (`02_Literature/`)
 - The proposal sub-project (`01_Proposal/`) has no `02_Literature/`: source files go into `01_Research/`, the brief extracts into `01_Research/key_sources.md` (see `proposal_workflow.yaml`)
 
-**Multi-project sub-project** (Claude Code opened on `01_Proposal/`, `02_Main_Work/` or `03_Defense/`): the styleguide is `../00_Shared_Materials/styleguide.md` and the guidelines are in `../00_Shared_Materials/guidelines/`. The framework folders stay at the multi-project root, one level up: `../checklists/`, `../scripts/`, `../templates/`, `../workflows/`.
+**Multi-project sub-project** (Claude Code opened on `01_Proposal/`, `02_Main_Work/` or `03_Defense/`): the styleguide is `../00_Shared_Materials/styleguide.md` and the guidelines are in `../00_Shared_Materials/guidelines/`. The framework folders stay at the multi-project root, one level up: `../checklists/`, `../scripts/`, `../templates/`, `../workflows/`, `../docs/`.
 
 ## Per-source workflow
 
