@@ -47,8 +47,8 @@ Verify the following categories. Concrete values (font size, page-range notation
 ```markdown
 ## General
 - [ ] Font and size (body, footnotes) per styleguide
-- [ ] Line spacing per styleguide
-- [ ] Margins per styleguide
+- [ ] Line spacing per styleguide (body and footnotes)
+- [ ] Page size and margins per styleguide
 - [ ] Paragraph alignment per styleguide
 - [ ] Paragraph spacing per styleguide (`body.paragraph_spacing`)
 - [ ] Emphasis style per styleguide (`style.emphasis`)

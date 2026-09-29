@@ -18,7 +18,8 @@ For every category below: **read concrete values from `styleguide.md`**, not fro
 
 - [ ] Body font (styleguide: `body.font` + `.size`)
 - [ ] Footnote font (styleguide: `footnotes.font` + `.size`)
-- [ ] Line spacing (styleguide: `body.line_spacing`)
+- [ ] Line spacing (styleguide: `body.line_spacing`; footnotes: `footnotes.line_spacing`)
+- [ ] Page size (styleguide: `document.page_size`)
 - [ ] Page margins (styleguide: `document.margins`)
 - [ ] Body alignment (styleguide: `body.alignment`)
 - [ ] Hyphenation as specified (styleguide: `document.hyphenation`)
