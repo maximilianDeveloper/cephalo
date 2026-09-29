@@ -166,8 +166,10 @@ project/
 │   ├── sources/
 │   │   ├── _guidelines/
 │   │   └── extracts/
-│   └── output/
-│       └── chapters/
+│   ├── output/
+│   │   ├── chapters/
+│   │   └── slides/        (presentations)
+│   └── data/              (presentations: chart data)
 └── styleguide.md
 ```
 
