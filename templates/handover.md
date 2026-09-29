@@ -54,6 +54,7 @@ This document is the bridge between chats. The orchestrator at the start of the 
 
 ```
 This is a continuation of the [project name] long-form workflow.
+Invoke the orchestrator-longform agent for it (defense sub-project: orchestrator-defense).
 
 Please read:
 - 00_Status.md
