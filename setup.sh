@@ -1224,7 +1224,9 @@ if [ -n "$SOURCE_DIR_BEFORE_MOVE" ] && [ -d "$SOURCE_DIR_BEFORE_MOVE" ]; then
                     # "if": a failed deletion (a file without write access, or
                     # on Windows a folder still open in another window) is no
                     # failed setup for the ERR trap: the project is complete.
-                    if rm -rf "$SOURCE_DIR_BEFORE_MOVE"; then
+                    # The physical folder: entered through a symbolic link,
+                    # rm -rf on the path would remove only the link.
+                    if rm -rf "$SOURCE_CANON"; then
                         echo -e "${GREEN}+ Original folder deleted.${NC}"
                     else
                         echo -e "${YELLOW}! Could not delete the original folder completely (see above).${NC}"
