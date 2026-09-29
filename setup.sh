@@ -1210,8 +1210,15 @@ if [ -n "$SOURCE_DIR_BEFORE_MOVE" ] && [ -d "$SOURCE_DIR_BEFORE_MOVE" ]; then
                 # to avoid catastrophic rm -rf on an unrelated directory.
                 if [ -f "$SOURCE_DIR_BEFORE_MOVE/setup.sh" ] \
                    && [ -d "$SOURCE_DIR_BEFORE_MOVE/.claude" ]; then
-                    rm -rf "$SOURCE_DIR_BEFORE_MOVE"
-                    echo -e "${GREEN}+ Original folder deleted.${NC}"
+                    # "if": a failed deletion (a file without write access, or
+                    # on Windows a folder still open in another window) is no
+                    # failed setup for the ERR trap: the project is complete.
+                    if rm -rf "$SOURCE_DIR_BEFORE_MOVE"; then
+                        echo -e "${GREEN}+ Original folder deleted.${NC}"
+                    else
+                        echo -e "${YELLOW}! Could not delete the original folder completely (see above).${NC}"
+                        echo -e "${YELLOW}  Parts of it may be gone already. Close other windows open in it, then delete the rest manually.${NC}"
+                    fi
                 else
                     echo -e "${YELLOW}! Source folder no longer looks like a cephalo template.${NC}"
                     echo -e "${YELLOW}  Skipped for safety. Please review and delete manually if needed.${NC}"
