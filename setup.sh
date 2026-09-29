@@ -1112,13 +1112,13 @@ if [ ! -e ".git" ]; then
                 fi
             else
                 echo -e "  ${GREEN}+ Git repository initialized${NC}"
-                echo -e "  ${YELLOW}! Git LFS not installed. Recommended: brew install git-lfs / apt install git-lfs${NC}"
+                echo -e "  ${YELLOW}! Git LFS not installed. Recommended: brew install git-lfs / apt install git-lfs (Windows: https://git-lfs.com)${NC}"
             fi
         else
             echo -e "  ${RED}! git init failed. Re-run manually to see the error: git init${NC}"
         fi
     else
-        echo -e "  ${RED}! Git not installed.${NC}"
+        echo -e "  ${RED}! Git not installed. Install it from https://git-scm.com${NC}"
     fi
 else
     echo -e "  ${GRAY}. Git repository exists${NC}"
