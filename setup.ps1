@@ -423,10 +423,20 @@ if ($Target -eq "" -and -not $NonInteractive) {
                     $Target = ""
                     break
                 }
+                # A path that cannot be resolved (a drive letter that does not
+                # exist, such as an unplugged USB stick) is asked for again too.
+                try {
+                    $InsidePath = Resolve-TargetPath $Target
+                } catch {
+                    $Why = if ($_.Exception.InnerException) { $_.Exception.InnerException.Message } else { $_.Exception.Message }
+                    Write-Host "Cannot use that path: $Why" -ForegroundColor Yellow
+                    Write-Host "Enter a full path, such as the example above,"
+                    Write-Host "or leave it empty to set up here."
+                    continue
+                }
                 # A folder inside the template, such as a bare folder name, cannot
                 # take a copy of it: ask again rather than end the run with the
                 # error below, which a -Target gets.
-                $InsidePath = Resolve-TargetPath $Target
                 if (-not (Test-InsideTemplate $InsidePath)) { break }
                 Write-Host "That folder lies inside the cephalo template folder:" -ForegroundColor Yellow
                 Write-Host "  $InsidePath" -ForegroundColor Yellow
@@ -441,7 +451,16 @@ if ($Target -eq "" -and -not $NonInteractive) {
 
 # Process Target if specified
 if ($Target -ne "") {
-    $Target = Resolve-TargetPath $Target
+    try {
+        $Target = Resolve-TargetPath $Target
+    } catch {
+        # Otherwise the script-level trap would report a cancelled run (exit 130).
+        $Why = if ($_.Exception.InnerException) { $_.Exception.InnerException.Message } else { $_.Exception.Message }
+        Write-Host ""
+        Write-Host "Error: cannot resolve target path '$Target': $Why" -ForegroundColor Red
+        Pause-BeforeClose "error"
+        exit 2
+    }
     $SourceDir = $StartDir
 
     if ($Target -eq $SourceDir) {
