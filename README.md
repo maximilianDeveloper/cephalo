@@ -54,7 +54,7 @@ To make that concrete, this is the kind of finding the source-verifier produces 
 - Medium works (bachelor theses)
 - Long-running works (master theses, dissertations) — with phase-based directories, handover rituals, Git versioning, and reference manager integration
 
-Dissertations do not currently have their own dedicated workflow; cephalo uses `master_7agent_longform.yaml` as the closest match and expects adaptation (more phases, longer timeline, possibly multiple sub-projects per chapter). A native dissertation workflow may be added in a future version.
+Dissertations do not currently have their own dedicated workflow; cephalo uses `master_7agent_longform.yaml` (flat structure: `master_7agent.yaml`) as the closest match and expects adaptation (more phases, longer timeline, possibly multiple sub-projects per chapter). A native dissertation workflow may be added in a future version.
 
 ---
 
