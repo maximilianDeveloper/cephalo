@@ -329,11 +329,12 @@ def safe_extract_zip(zip_path, target_dir):
             # Reject absolute paths and any '..' components
             if member.startswith('/') or member.startswith('\\'):
                 raise ValueError(f"Zip contains absolute path: {member}")
-            normalized = Path(member).as_posix()
             # An entry without a name: Python 3.9/3.10 fail on it in extractall()
-            # with an IndexError, which would end the whole run.
-            if normalized == '.':
-                raise ValueError(f"Zip contains an entry without a file name: {member!r}")
+            # with an IndexError, which would end the whole run. (A "./" folder
+            # entry, as bsdtar writes it, is fine.)
+            if member == '':
+                raise ValueError("Zip contains an entry without a file name")
+            normalized = Path(member).as_posix()
             if '..' in normalized.split('/'):
                 raise ValueError(f"Zip contains path traversal: {member}")
             destination = (target_dir / member).resolve()

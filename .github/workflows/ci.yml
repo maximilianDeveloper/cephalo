@@ -768,7 +768,8 @@ jobs:
               z.writestr("rules.txt", "Rule text")
               z.writestr(zipfile.ZipInfo(""), "x")
           with zipfile.ZipFile(os.path.join(w, "badzip", "c_guide.pdf"), "w") as z:
-              z.writestr("rules.txt", "Example rule text")
+              z.writestr("./", "")  # a "./" folder entry, as bsdtar writes it, is no nameless entry
+              z.writestr("./rules.txt", "Example rule text")
           # ok.docx plus a footnote whose acronym Word split across two runs
           with zipfile.ZipFile(os.path.join(w, "ok.docx")) as z, zipfile.ZipFile(os.path.join(w, "notes.docx"), "w") as out:
               for i in z.infolist():
