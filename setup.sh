@@ -1200,10 +1200,20 @@ echo ""
 # ==========================================================
 
 if [ -n "$SOURCE_DIR_BEFORE_MOVE" ] && [ -d "$SOURCE_DIR_BEFORE_MOVE" ]; then
+    # Started from a project (set up here earlier), not a bare template: the
+    # copy left out its .git history and local Claude Code files, so it is
+    # not offered for deletion.
+    SOURCE_IS_PROJECT=false
+    for marker in 00_Status.md 00_Shared_Materials workspace styleguide.md; do
+        if [ -e "$SOURCE_DIR_BEFORE_MOVE/$marker" ]; then SOURCE_IS_PROJECT=true; fi
+    done
     echo -e "${GRAY}The original cephalo template folder is still at:${NC}"
     echo -e "${GRAY}  $SOURCE_DIR_BEFORE_MOVE${NC}"
     echo ""
-    if [ -t 0 ] && [ -t 1 ]; then
+    if $SOURCE_IS_PROJECT; then
+        echo -e "${YELLOW}! That folder is a project, not a bare template (it has 00_Status.md, workspace/ or the like).${NC}"
+        echo -e "${YELLOW}  Kept: its Git history and local Claude Code files were not copied. Delete it only if you no longer need them.${NC}"
+    elif [ -t 0 ] && [ -t 1 ]; then
         read -r -p "Delete it now? [y/N]: " del_ans || del_ans=""
         case "$del_ans" in
             [yYjJ]|[yY][eE][sS]|[jJ][aA])

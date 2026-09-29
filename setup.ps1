@@ -1084,10 +1084,18 @@ Write-Host ""
 # ==========================================================
 
 if ($script:SourceDirBeforeMove -and (Test-Path -LiteralPath $script:SourceDirBeforeMove)) {
+    # Started from a project (set up here earlier), not a bare template: the
+    # copy left out its .git history and local Claude Code files, so it is
+    # not offered for deletion.
+    $SourceIsProject = @("00_Status.md", "00_Shared_Materials", "workspace", "styleguide.md" |
+        Where-Object { Test-Path -LiteralPath (Join-Path $script:SourceDirBeforeMove $_) }).Count -gt 0
     Write-Host "The original cephalo template folder is still at:" -ForegroundColor Gray
     Write-Host "  $($script:SourceDirBeforeMove)" -ForegroundColor Gray
     Write-Host ""
-    if (-not $NonInteractive) {
+    if ($SourceIsProject) {
+        Write-Host "! That folder is a project, not a bare template (it has 00_Status.md, workspace/ or the like)." -ForegroundColor Yellow
+        Write-Host "  Kept: its Git history and local Claude Code files were not copied. Delete it only if you no longer need them." -ForegroundColor Yellow
+    } elseif (-not $NonInteractive) {
         $delAns = Read-Host "Delete it now? [y/N]"
         if ($delAns -match '^(y|Y|j|J|yes|Yes|ja|Ja)$') {
             # Safety: only delete if it still looks like a cephalo template
