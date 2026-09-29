@@ -54,7 +54,7 @@ This document records the architectural and methodological decisions of the proj
 - **New:** Three separate chapters: 4 Theme A, 5 Theme B, 6 Theme C.
 - **Rationale:** Themes are too distinct to combine; readability and depth suffer.
 - **Affected:** Outline, introduction (chapter preview), table of contents, page budget allocation.
-- **Reference:** 03_Theory_chapters/handover_2026-03-12.md
+- **Reference:** 03_Theory_chapters/handover.md of 2026-03-12 (Git history)
 
 ---
 

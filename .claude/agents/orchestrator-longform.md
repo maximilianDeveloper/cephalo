@@ -131,7 +131,7 @@ Give the user a commit suggestion. In a multi-project sub-project, prefix the ph
 I updated:
 - `03_Theory_chapters/handover.md`
 - `00_Status.md`
-- `03_Theory_chapters/chapter_3.md` (+142 lines)
+- `03_Theory_chapters/chapter_3_framework.md` (+142 lines)
 - `02_Literature/extracts/author_a_2021.md` (+38 lines)
 
 **Suggested Git commit:**

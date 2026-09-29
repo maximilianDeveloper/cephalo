@@ -14,7 +14,7 @@ This document is the bridge between chats. The orchestrator at the start of the 
 
 [Concrete artifacts produced. Reference files by path.]
 
-- Drafted Ch. 3.1 (`03_Theory_chapters/chapter_3.md`, lines 1-145)
+- Drafted Ch. 3.1 (`03_Theory_chapters/chapter_3_framework.md`, lines 1-145)
 - Verified extracts for sources A, B, C (`02_Literature/extracts/`)
 - ...
 
@@ -75,7 +75,7 @@ Confirm understanding, then proceed.
 [Output of `git status --short` (it lists new, still untracked files) and `git diff --stat HEAD`, edited for clarity]
 
 ```
-03_Theory_chapters/chapter_3.md           | +145 lines
+03_Theory_chapters/chapter_3_framework.md | +145 lines
 02_Literature/extracts/source_a.md        |  +38 lines
 02_Literature/extracts/source_b.md        |  +42 lines
 00_Status.md                              |    edited
