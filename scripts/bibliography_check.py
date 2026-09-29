@@ -621,12 +621,19 @@ def main():
         if re.search(r"\b" + name + r"(?:s|['’]s?)?(?![\w'’-])", body):
             cited_authors.add(surname)
     # A German genitive without apostrophe is read as a surname with a final
-    # s: "Webers (1922) Begriff" as "Webers", "Van Dijks (2019)" as "Dijks".
-    # Count the listed name instead when only the name without the s is listed.
+    # s: "Webers (1922) Begriff" as "Webers", "Van Dijks (2019) Ansatz" as
+    # "Dijks". Count the listed name instead when only the name without the s
+    # is listed and every mention of the name has that form (a capitalized
+    # noun after the parenthesis): "(Adams, 2019)" or "Adams (2019) argues"
+    # next to a listed "Adam" is still reported.
     for name in [a for a in cited_authors
                  if a.endswith("s") and a not in bib_all_authors and a[:-1] in bib_all_authors]:
-        cited_authors.discard(name)
-        cited_authors.add(name[:-1])
+        word = r"(?<![\w'’-])" + re.escape(name)
+        mentions = len(re.findall(word + r"(?![\w'’-])", body))
+        genitives = len(re.findall(word + r"\s+\(\d{4}[a-z]?[^()]*\)\s+[A-ZÄÖÜ]", body))
+        if mentions and mentions == genitives:
+            cited_authors.discard(name)
+            cited_authors.add(name[:-1])
     
     # Asymmetry check:
     # - cited_only: cited in text but no matching lead author in bibliography
