@@ -644,7 +644,7 @@ jobs:
 
       - name: Utility scripts on generated files (exit codes, safety checks)
         run: |
-          W=/tmp/ci_util; rm -rf "$W"; mkdir -p "$W/good" "$W/evil" "$W/aes" "$W/zipmix" "$W/bomb"
+          W=/tmp/ci_util; rm -rf "$W"; mkdir -p "$W/good" "$W/evil" "$W/aes" "$W/zipmix" "$W/bomb" "$W/badzip"
           python - "$W" <<'EOF'
           import os, sys, unicodedata, zipfile
           from docx import Document
@@ -756,6 +756,19 @@ jobs:
           with zipfile.ZipFile(os.path.join(w, "zipmix", "guide.pdf"), "w") as z:
               z.writestr("rules.txt", "Example rule text")
               z.writestr("broken.pdf", b"%PDF-1.4 broken")
+          # a corrupt LZMA member and an entry without a name, then a good archive
+          p = os.path.join(w, "badzip", "a_lzma.pdf")
+          with zipfile.ZipFile(p, "w", zipfile.ZIP_LZMA) as z:
+              z.writestr("rules.txt", "Rule text " * 2000)
+          b = bytearray(open(p, "rb").read())
+          i = b.find(b"rules.txt") + len(b"rules.txt") + 20
+          b[i:i + 16] = bytes(x ^ 0xFF for x in b[i:i + 16])
+          open(p, "wb").write(bytes(b))
+          with zipfile.ZipFile(os.path.join(w, "badzip", "b_noname.pdf"), "w") as z:
+              z.writestr("rules.txt", "Rule text")
+              z.writestr(zipfile.ZipInfo(""), "x")
+          with zipfile.ZipFile(os.path.join(w, "badzip", "c_guide.pdf"), "w") as z:
+              z.writestr("rules.txt", "Example rule text")
           # ok.docx plus a footnote whose acronym Word split across two runs
           with zipfile.ZipFile(os.path.join(w, "ok.docx")) as z, zipfile.ZipFile(os.path.join(w, "notes.docx"), "w") as out:
               for i in z.infolist():
@@ -943,6 +956,11 @@ jobs:
           expect 1 bash scripts/extract_styleguide.sh "$W/zipmix" "$W/out_zipmix"
           grep -q "ERR broken.pdf (in archive)" "$W/out.txt"
           grep -q "Example rule text" "$W/out_zipmix/guide.txt"
+          # a corrupt or nameless archive entry is reported for its file, and the run goes on
+          expect 1 bash scripts/extract_styleguide.sh "$W/badzip" "$W/out_badzip"
+          grep -q "ERR a_lzma.pdf - could not unpack archive" "$W/out.txt"
+          grep -q "Blocked (security): Zip contains an entry without a file name" "$W/out.txt"
+          grep -q "Example rule text" "$W/out_badzip/c_guide.txt"
           expect 0 bash scripts/extract_styleguide.sh "$W/aes" "$W/out_aes"
           grep -q "Encrypted rule text" "$W/out_aes/guide.txt"
           # cross_session_audit.py: 0 = clean, 1 = findings, 2 = not a repository

@@ -215,6 +215,14 @@ import zipfile
 import zlib
 from pathlib import Path
 
+# A corrupt LZMA member raises lzma.LZMAError, which is no OSError (the lzma
+# module is missing from some Python builds, which then cannot unpack one).
+try:
+    import lzma
+    LZMA_ERRORS = (lzma.LZMAError,)
+except ImportError:
+    LZMA_ERRORS = ()
+
 # Encoding guard for Windows consoles (CP1252 by default) — same pattern as
 # the framework's standalone Python scripts.
 for stream in (sys.stdout, sys.stderr):
@@ -322,6 +330,10 @@ def safe_extract_zip(zip_path, target_dir):
             if member.startswith('/') or member.startswith('\\'):
                 raise ValueError(f"Zip contains absolute path: {member}")
             normalized = Path(member).as_posix()
+            # An entry without a name: Python 3.9/3.10 fail on it in extractall()
+            # with an IndexError, which would end the whole run.
+            if normalized == '.':
+                raise ValueError(f"Zip contains an entry without a file name: {member!r}")
             if '..' in normalized.split('/'):
                 raise ValueError(f"Zip contains path traversal: {member}")
             destination = (target_dir / member).resolve()
@@ -393,7 +405,7 @@ for pdf in pdf_files:
                 errors += 1
                 continue
             except (zipfile.BadZipFile, zlib.error, RuntimeError,
-                    NotImplementedError, EOFError, OSError) as e:
+                    NotImplementedError, EOFError, OSError) + LZMA_ERRORS as e:
                 # Corrupt, encrypted or unsupported archive: report it and
                 # continue with the next file instead of aborting the run.
                 print(f"  ERR {rel_path} - could not unpack archive ({type(e).__name__}: {e})", file=sys.stderr)
