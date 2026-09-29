@@ -115,7 +115,7 @@ All analyses must be reproducible:
 - Analysis script available (`data/scripts/`)
 - Seed set for randomized procedures
 - Package versions documented (`sessionInfo()` in R, `pip freeze` in Python)
-- Raw data archived (or, for personal data: pseudonymization key)
+- Raw data archived (or, for personal data: pseudonymization key). The key re-identifies participants: it belongs outside the project, never in a folder that is committed (`.gitignore` keeps only `data/raw/` and `data/processed/` out of Git)
 
 ## Coordination with other agents
 
