@@ -481,7 +481,7 @@ List any open questions for me to resolve before we proceed.</code></pre>
 <script>
 (function(){
   "use strict";
-  var state={os:"windows",work:"Bachelor thesis",struct:"Long-form",scaf:"full",target:""};
+  var state={os:"windows",work:"Bachelor thesis",struct:"Long-form",scaf:"full",target:"",here:hereDir(location)};
 
   var FLAT_ONLY={"Seminar paper":true,"Presentation":true};
 
@@ -559,6 +559,16 @@ List any open questions for me to resolve before we proceed.</code></pre>
     if(/^~(?:[A-Za-z_][A-Za-z0-9_.-]*)?$/.test(x)) return x;                 // a bare ~ or ~user (safe chars only) — leave unquoted so it expands
     return shQuote(x);
   }
+  // The cephalo folder this page was opened from (<folder>/docs/setup-wizard.html as a
+  // local file), so the macOS/Linux command and launcher find it on their own. Empty when
+  // the page is served over http(s), was moved out of docs/, or sits on a Windows drive or share.
+  function hereDir(loc){
+    if(!loc || loc.protocol!=="file:" || loc.host) return "";
+    var p;
+    try{p=decodeURIComponent(loc.pathname);}catch(e){return "";}
+    var m=p.match(/^(\/.+)\/docs\/setup-wizard\.html$/);
+    return m && !/^\/[A-Za-z]:\//.test(p) ? m[1] : "";
+  }
   function psQuote(x){return "'"+String(x).replace(/['\u2018\u2019\u201A\u201B]/g,"$&$&")+"'";} // PowerShell single-quote literal (on-page PS command; no expansion of $(...) / backtick); PS also treats U+2018-U+201B as single quotes, so they are doubled too
   function winCmdArg(x){return String(x).replace(/["\r\n]/g,"").replace(/%/g,"%%").replace(/(\\+)$/,"$1$1");} // inside a .cmd "..." passed to powershell -File; trailing backslashes doubled so they do not escape the closing quote
 
@@ -576,9 +586,11 @@ List any open questions for me to resolve before we proceed.</code></pre>
       parts.push(f('-NonInteractive'));
       return parts.join(' ');
     } else {
-      var p=['./setup.sh', str('"'+w+'"'), str('"'+s+'"'), c];
+      // Opened from a cephalo folder: cd there first, so the command runs from any terminal
+      // window, and use bash so a missing execute bit does not matter.
+      var p=[state.here?'bash setup.sh':'./setup.sh', str('"'+w+'"'), str('"'+s+'"'), c];
       if(t) p.push(f('--target')+' '+str(shTarget(t)));
-      return p.join(' ');
+      return (state.here?'cd '+str(shQuote(state.here))+' &amp;&amp; ':'')+p.join(' ');
     }
   }
   function f(x){return '<span class="flag">'+esc(x)+'</span>';}
@@ -603,14 +615,21 @@ List any open questions for me to resolve before we proceed.</code></pre>
     var rn=document.getElementById('runnote');
     rn.innerHTML=win
       ? 'Run it from the cephalo folder. If PowerShell blocks the script, first run <code>Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force</code> in the same window (this session only), then the command again.'
-      : 'Make it executable once with <code>chmod +x setup.sh</code>, then run it from the cephalo folder.';
+      : (!state.here
+        ? 'Make it executable once with <code>chmod +x setup.sh</code>, then run it from the cephalo folder.'
+        : (state.os==='macos'
+          ? 'Click <b>Copy</b>, open Terminal (press Cmd+Space, type <code>Terminal</code>, press Enter), paste with Cmd+V and press Enter. The command finds your cephalo folder by itself. If macOS asks whether Terminal may access the folder, allow it.'
+          : 'Click <b>Copy</b>, open a terminal, paste (usually Ctrl+Shift+V) and press Enter. The command finds your cephalo folder by itself.'));
 
     var ln=document.getElementById('launchnote');
+    var lname=state.os==='macos'?'cephalo-setup.command':'cephalo-setup.sh';
+    var term=state.os==='macos'?'Terminal':'a terminal';
     ln.innerHTML=win
       ? 'Rather not touch a terminal? Click <b>Download launcher</b>, save <code>cephalo-setup.cmd</code> into your cephalo folder, and double-click it.'
-      : (state.os==='macos'
-        ? 'Rather not type the command? Click <b>Download launcher</b>, save <code>cephalo-setup.command</code> into your cephalo folder, then open Terminal, type <code>bash</code> and a space, drag the file into the window and press Enter.'
-        : 'Rather not type the command? Click <b>Download launcher</b>, save <code>cephalo-setup.sh</code> into your cephalo folder, then open a terminal, type <code>bash</code> and a space, drag the file into the window and press Enter.');
+      : (state.here
+        ? 'Or click <b>Download launcher</b>, then open '+term+', type <code>bash</code> and a space, drag <code>'+lname+'</code> from your Downloads folder into the window and press Enter.'
+        : 'Rather not type the command? Click <b>Download launcher</b>, save <code>'+lname+'</code> into your cephalo folder, then open '+term+', type <code>bash</code> and a space, drag the file into the window and press Enter.')
+        +(state.os==='macos'?' Double-clicking it does not work: macOS blocks scripts downloaded with a browser.':'');
 
     // structure lock for flat-only work types
     var flatOnly=!!FLAT_ONLY[state.work];
@@ -712,10 +731,15 @@ List any open questions for me to resolve before we proceed.</code></pre>
     var sh='"'+w+'" "'+s+'" '+c+(t?' --target '+shTarget(t):'');
     return {name:(state.os==="macos"?"cephalo-setup.command":"cephalo-setup.sh"),crlf:false,text:[
       "#!/bin/bash",
-      "# cephalo launcher -- save this file INTO your cephalo folder (next to setup.sh).",
+      "# cephalo launcher -- "+(state.here
+        ? "it uses the cephalo folder next to it or else the one the setup assistant was opened from."
+        : "save this file INTO your cephalo folder (next to setup.sh)."),
       "# A downloaded file is not executable, so run it this way: open a terminal, type bash and a space,",
       "# drag this file into the window, press Enter.",
-      'cd "$(dirname "$0")" || exit 1',
+      'cd "$(dirname "$0")" || exit 1'
+    ].concat(state.here   // not next to setup.sh (e.g. still in Downloads): use the folder the assistant was opened from
+      ? ['if [ ! -f "./setup.sh" ] && [ -f '+shQuote(state.here+'/setup.sh')+' ]; then cd '+shQuote(state.here)+' || exit 1; fi']
+      : [], [
       'if [ ! -f "./setup.sh" ]; then',
       '  echo "Could not find setup.sh next to this launcher."',
       '  echo "Move this file into your cephalo folder, then run it again."',
@@ -732,7 +756,7 @@ List any open questions for me to resolve before we proceed.</code></pre>
       '  read -r -p "Press Enter to close..." _',
       "fi",
       'exit "$rc"'
-    ]};
+    ])};
   }
   var dlBtn=document.getElementById('download');
   dlBtn.addEventListener('click',function(){

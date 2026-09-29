@@ -581,7 +581,7 @@ jobs:
           const state = { work: "Bachelor thesis", struct: "Long-form", scaf: "full" };
           const F = new Function("state", "document", grab("function esc(s)", "// ----- command -----") +
             grab("function shQuote(x)", "  // ----- render -----") + grab("function launcher()", "  var dlBtn=") +
-            "\nreturn { buildCmd: buildCmd, launcher: launcher };")(state, null);
+            "\nreturn { buildCmd: buildCmd, launcher: launcher, hereDir: hereDir };")(state, null);
           const text = h => h.replace(/<[^>]*>/g, "").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
           const Q = ["\u2018", "\u2019", "\u201A", "\u201B"];
           const sh = ["~", "~/Documents/Thesis", "~/x y", "~/it's", "~/$(touch PWNED)", "~-/x", "~+", "~1/x", "a;touch PWNED",
@@ -629,6 +629,38 @@ jobs:
           check("launcher", "failing setup", failed.status + " " + /Setup failed \(exit 3\)/.test(failed.stdout), "3 true", failed.stdout);
           const away = runLauncher("away", "t");
           check("launcher", "no setup.sh", away.status + " " + /Could not find setup\.sh/.test(away.stdout), "1 true", away.stdout);
+          // Opened from a local cephalo folder, the command and the launcher cd there
+          // themselves, from any directory, with an odd folder name and without the
+          // execute bit; the folder comes only from a file: URL ending in docs/setup-wizard.html.
+          const odd = path.join(W, "it's $(touch PWNED) & x");
+          fs.mkdirSync(odd); fs.copyFileSync(path.join(W, "sh", "setup.sh"), path.join(odd, "setup.sh"));
+          fs.chmodSync(path.join(odd, "setup.sh"), 0o644);
+          for (const here of [path.join(W, "sh"), odd]) {
+            const out = path.join(here, "target.txt");
+            Object.assign(state, { os: "macos", target: "~/x y", here });
+            const cmd = text(F.buildCmd());
+            fs.rmSync(out, { force: true });
+            cp.spawnSync("bash", ["-c", cmd], { cwd: HOME, env: { ...process.env, HOME } });
+            check("located", here, fs.existsSync(out) ? fs.readFileSync(out, "utf8") : null, HOME + "/x y", cmd);
+            fs.rmSync(out, { force: true });
+            const r = runLauncher("away", "~/x y");
+            check("located launcher", here, fs.existsSync(out) ? fs.readFileSync(out, "utf8") : null, HOME + "/x y", "status " + r.status);
+          }
+          state.here = HOME;  // no setup.sh there either
+          const lost = runLauncher("away", "t");
+          check("located launcher", "no setup.sh", lost.status + " " + /Could not find setup\.sh/.test(lost.stdout), "1 true", lost.stdout);
+          state.here = "";
+          for (const [loc, want] of [
+            [["file:", "", "/home/a/Downloads/cephalo-1.0.0/docs/setup-wizard.html"], "/home/a/Downloads/cephalo-1.0.0"],
+            [["file:", "", "/home/a/My%20Files/M%C3%BCller's%20%25/docs/setup-wizard.html"], "/home/a/My Files/M\u00fcller's %"],
+            [["file:", "", "/C:/Thesis/cephalo/docs/setup-wizard.html"], ""],
+            [["file:", "server", "/share/cephalo/docs/setup-wizard.html"], ""],
+            [["https:", "example.org", "/cephalo/docs/setup-wizard.html"], ""],
+            [["file:", "", "/home/a/Desktop/setup-wizard.html"], ""],
+            [["file:", "", "/docs/setup-wizard.html"], ""],
+            [["file:", "", "/home/a/%E0%A4%A/docs/setup-wizard.html"], ""]]) {
+            check("hereDir", loc.join(" "), F.hereDir({ protocol: loc[0], host: loc[1], pathname: loc[2] }), want, "");
+          }
           // The .cmd launcher (cmd.exe is not available here): CRLF, UTF-8 code page,
           // and the -Target argument as cmd.exe and powershell -File will parse it.
           for (const [x, arg] of [["D:\\Thesis\\", '-Target "D:\\Thesis\\\\"'], ["\"D:\\x y\"", '-Target "D:\\x y"'], ["50% off", '-Target "50%% off"']]) {
