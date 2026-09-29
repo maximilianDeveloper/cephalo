@@ -94,7 +94,7 @@ Confirm understanding, then proceed.
 
 ## Suggested Git commit
 
-(In a multi-project sub-project: `git add -A`, so that changes in `../00_Shared_Materials/` are included.)
+(In a multi-project sub-project: `git add -A`, so that changes in `../00_Shared_Materials/` are included, and the sub-project as prefix, e.g. `main/[phase]: ...`; see `docs/multiproject_structure.md`.)
 
 ```bash
 git add .
