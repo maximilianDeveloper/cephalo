@@ -263,7 +263,10 @@ fi
 # compression method), but it maximizes compatibility with strict/streaming
 # consumers. Use Python's zipfile for this — `zip -r` does not guarantee
 # entry order.
-NEW_DOC="${DOC_ABS}.new"
+# A new file next to the document (so the final mv stays on one file
+# system), with a unique name: a fixed "<document>.new" would overwrite or,
+# on failure, delete a file of that name that is not ours.
+NEW_DOC=$(mktemp "${DOC_ABS}.XXXXXX")
 # If the repack or the final mv fails, do not leave a partial archive behind
 # (after a successful mv, NEW_DOC no longer exists).
 trap 'rm -rf "$WORK_DIR"; rm -f "$NEW_DOC"' EXIT

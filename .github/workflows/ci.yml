@@ -894,6 +894,12 @@ jobs:
           expect 1 bash scripts/docx_postprocess.sh "$W/asilink.docx"
           grep -q "symbolic links" "$W/out.txt"
           cmp "$W/asilink.docx" "$W/asilink.orig"
+          # a file named like the repacked document is not ours: it is neither
+          # overwritten nor deleted, and no temporary archive is left behind
+          cp "$W/ok.docx" "$W/own.docx"; echo notes > "$W/own.docx.new"
+          expect 0 bash scripts/docx_postprocess.sh "$W/own.docx"
+          test "$(cat "$W/own.docx.new")" = notes
+          test "$(ls "$W" | grep -c '^own\.docx\.')" -eq 1
           # [ ] in the name is not a wildcard: unzip must not open "Chapter 2.docx" instead
           cp "$W/ok.docx" "$W/Chapter [2].docx"; cp "$W/findings.docx" "$W/Chapter 2.docx"
           expect 0 bash scripts/docx_postprocess.sh "$W/Chapter [2].docx"
