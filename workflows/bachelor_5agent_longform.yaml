@@ -210,10 +210,6 @@ phases:
       - source-verifier: sentence-by-sentence verification
       - format-verifier: critical format errors only
       - Feedback loop max 3
-    
-    consistency_check:
-      after_every_n_chapters: 2
-      checklist: checklists/consistency.md
   
   # ===========================================================
   # Synthesis: Discussion + Conclusion
@@ -243,6 +239,17 @@ phases:
     
     chat_structure:
       - One chat for the full introduction (research question, objectives, structure)
+  
+  # ===========================================================
+  # Cross-phase consistency check (runs during Phase A)
+  # ===========================================================
+  consistency_check:
+    after_every_n_chapters: 2
+    checklist: checklists/consistency.md
+    agent: source-verifier
+    scope: |
+      Cross-chapter cross-references, terminology drift, self-plagiarism 
+      between introduction and conclusion, argumentation coherence.
   
   # ===========================================================
   # Phase transition A -> B
