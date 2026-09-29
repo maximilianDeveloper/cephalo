@@ -142,6 +142,10 @@ phases:
       - step: 0.4
         name: Reference manager check
         manual: true
+        task: |
+          - Reference manager collection created?
+          - BibTeX export configured (Better BibTeX or equivalent)?
+          - Auto-export to 02_Literature/literature.bib?
       
       - step: 0.5
         name: Style resolution
