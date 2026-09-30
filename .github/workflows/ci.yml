@@ -593,7 +593,7 @@ jobs:
           const state = { work: "Bachelor thesis", struct: "Long-form", scaf: "full" };
           const F = new Function("state", "document", grab("function esc(s)", "// ----- command -----") +
             grab("function shQuote(x)", "  // ----- render -----") + grab("function launcher()", "  var dlBtn=") +
-            "\nreturn { buildCmd: buildCmd, launcher: launcher, hereDir: hereDir };")(state, null);
+            "\nreturn { buildCmd: buildCmd, launcher: launcher, hereDir: hereDir, detectOs: detectOs };")(state, null);
           const text = h => h.replace(/<[^>]*>/g, "").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
           const Q = ["\u2018", "\u2019", "\u201A", "\u201B"];
           const sh = ["~", "~/Documents/Thesis", "~/x y", "~/it's", "~/$(touch PWNED)", "~-/x", "~+", "~1/x", "a;touch PWNED",
@@ -672,6 +672,17 @@ jobs:
             [["file:", "", "/docs/setup-wizard.html"], ""],
             [["file:", "", "/home/a/%E0%A4%A/docs/setup-wizard.html"], ""]]) {
             check("hereDir", loc.join(" "), F.hereDir({ protocol: loc[0], host: loc[1], pathname: loc[2] }), want, "");
+          }
+          // The preselected system: from the platform or the user agent, none for phones.
+          for (const [nav, want] of [
+            [{ platform: "Win32", userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/140.0" }, "windows"],
+            [{ userAgentData: { platform: "Windows" }, platform: "", userAgent: "" }, "windows"],
+            [{ platform: "MacIntel", userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15" }, "macos"],
+            [{ platform: "Linux x86_64", userAgent: "Mozilla/5.0 (X11; Linux x86_64) Firefox/140.0" }, "linux"],
+            [{ platform: "Linux armv8l", userAgent: "Mozilla/5.0 (Linux; Android 14) Chrome/140.0" }, ""],
+            [{ platform: "iPhone", userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)" }, ""],
+            [{}, ""]]) {
+            check("detectOs", JSON.stringify(nav), F.detectOs(nav), want, "");
           }
           // The .cmd launcher (cmd.exe is not available here): CRLF, UTF-8 code page,
           // and the -Target argument as cmd.exe and powershell -File will parse it.

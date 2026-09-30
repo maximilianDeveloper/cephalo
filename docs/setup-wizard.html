@@ -571,6 +571,15 @@ List any open questions for me to resolve before we proceed.</code></pre>
     var m=p.match(/^(\/.+)\/docs\/setup-wizard\.html$/);
     return m && !/^\/[A-Za-z]:\//.test(p) ? m[1] : "";
   }
+  // The visitor's system, to preselect it (the markup defaults to Windows): "" when unknown,
+  // and for phones and tablets, which cannot run the setup scripts anyway.
+  function detectOs(nav){
+    var p=((nav.userAgentData&&nav.userAgentData.platform)||nav.platform||"")+" "+(nav.userAgent||"");
+    if(/Win/.test(p)) return "windows";   // case-sensitive: not the "win" in Darwin
+    if(/Mac/.test(p) && !/iPhone|iPad|iPod/.test(p)) return "macos";
+    if(/Linux|X11|CrOS/.test(p) && !/Android/.test(p)) return "linux";
+    return "";
+  }
   function psQuote(x){return "'"+String(x).replace(/['\u2018\u2019\u201A\u201B]/g,"$&$&")+"'";} // PowerShell single-quote literal (on-page PS command; no expansion of $(...) / backtick); PS also treats U+2018-U+201B as single quotes, so they are doubled too
   function winCmdArg(x){return String(x).replace(/["\r\n]/g,"").replace(/%/g,"%%").replace(/(\\+)$/,"$1$1");} // inside a .cmd "..." passed to powershell -File; trailing backslashes doubled so they do not escape the closing quote
 
@@ -833,6 +842,12 @@ List any open questions for me to resolve before we proceed.</code></pre>
   }
   window.addEventListener('pageshow',function(){ syncFromDom(); render(); });
 
+  // Preselect the visitor's system, unless the browser restored another choice (Back, reload).
+  var osIn=document.querySelector('input[name="os"]:checked'), osDetected=detectOs(navigator);
+  if(osDetected && (!osIn || osIn.defaultChecked)){
+    var osPick=document.querySelector('input[name="os"][value="'+osDetected+'"]');
+    if(osPick) osPick.checked=true;
+  }
   syncFromDom();
   render();
 })();
