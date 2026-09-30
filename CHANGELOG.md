@@ -8,6 +8,14 @@ Dates follow ISO 8601 (`YYYY-MM-DD`).
 
 ---
 
+## [1.0.1] — unreleased
+
+### Documentation
+
+- `docs/setup_guide.md` walks through the setup assistant step by step, with screenshots taken with neutral example folders, and is linked from the quick start of `README.md`, its documentation roadmap and `docs/QUICKSTART.md` (and their copies in the setup assistant).
+
+---
+
 ## [1.0.0] — 2026-09-24
 
 **First public release.** A browser-based setup assistant, a documentation and utility-script hardening pass, removal of hard-coded formatting rules from three agent definitions, a pre-publication review sweep (license text, distribution docs, GitHub project files), and a pre-publication security pass (see **Security** below). A final pre-release audit then fixed bugs in both setup scripts, the setup assistant and all five utility scripts, closed further security and privacy gaps, brought workflows, checklists, templates and agents in line with the styleguide-only principle, and widened CI coverage.
