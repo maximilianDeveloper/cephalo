@@ -459,6 +459,7 @@ List any open questions for me to resolve before we proceed.</code></pre>
 <hr>
 <h2>Troubleshooting</h2>
 <p><strong><code>./setup.sh: Permission denied</code></strong> — the script needs the execute bit: <code>chmod +x setup.sh</code>.</p>
+<p><strong>macOS: the downloaded launcher cannot be opened (unverified developer)</strong> — macOS blocks a double-click on scripts downloaded with a browser, so nothing has run. Click OK and start the launcher from Terminal instead: <code>bash ~/Downloads/cephalo-setup.command</code>. Easier still: in <code>setup-wizard.html</code>, click <strong>Copy</strong>, paste the command into Terminal and press Enter.</p>
 <p><strong><code>setup.ps1 cannot be loaded because running scripts is disabled</code></strong> — PowerShell&#x27;s execution policy. Allow this session only:</p>
 <pre><code>Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 .\setup.ps1</code></pre>
@@ -627,9 +628,10 @@ List any open questions for me to resolve before we proceed.</code></pre>
     ln.innerHTML=win
       ? 'Rather not touch a terminal? Click <b>Download launcher</b>, save <code>cephalo-setup.cmd</code> into your cephalo folder, and double-click it.'
       : (state.here
-        ? 'Or click <b>Download launcher</b>, then open '+term+', type <code>bash</code> and a space, drag <code>'+lname+'</code> from your Downloads folder into the window and press Enter.'
+        ? 'Or click <b>Download launcher</b>, then open '+term+', type <code>bash</code> and a space, drag <code>'+lname+'</code> from your Downloads folder into the window and press Enter'
+          +(state.os==='macos'?' (or type <code>bash ~/Downloads/cephalo-setup.command</code>).':'.')
         : 'Rather not type the command? Click <b>Download launcher</b>, save <code>'+lname+'</code> into your cephalo folder, then open '+term+', type <code>bash</code> and a space, drag the file into the window and press Enter.')
-        +(state.os==='macos'?' Double-clicking it does not work: macOS blocks scripts downloaded with a browser.':'');
+        +(state.os==='macos'?' Do not double-click it: macOS blocks scripts downloaded with a browser and says the file cannot be opened.':'');
 
     // structure lock for flat-only work types
     var flatOnly=!!FLAT_ONLY[state.work];

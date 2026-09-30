@@ -159,6 +159,8 @@ The agents work with what's already there. You don't need to rewrite anything th
 
 **`./setup.sh: Permission denied`** — the script needs the execute bit: `chmod +x setup.sh`.
 
+**macOS: the downloaded launcher cannot be opened (unverified developer)** — macOS blocks a double-click on scripts downloaded with a browser, so nothing has run. Click OK and start the launcher from Terminal instead: `bash ~/Downloads/cephalo-setup.command`. Easier still: in `setup-wizard.html`, click **Copy**, paste the command into Terminal and press Enter.
+
 **`setup.ps1 cannot be loaded because running scripts is disabled`** — PowerShell's execution policy. Allow this session only:
 ```powershell
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
