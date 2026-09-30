@@ -17,6 +17,7 @@ Dates follow ISO 8601 (`YYYY-MM-DD`).
 
 ### Documentation
 
+- `docs/QUICKSTART.md` (and its copy in the setup assistant) gives `Unblock-File` the full path of a launcher in Downloads; with `.\cephalo-setup.cmd` it worked only in a PowerShell window already open in that folder.
 - `docs/setup_guide.md` walks through the setup assistant step by step, with screenshots taken with neutral example folders, and is linked from the quick start of `README.md`, its documentation roadmap and `docs/QUICKSTART.md` (and their copies in the setup assistant).
 
 ---
