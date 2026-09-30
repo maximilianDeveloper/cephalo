@@ -565,15 +565,25 @@ List any open questions for me to resolve before we proceed.</code></pre>
     return shQuote(x);
   }
   // The cephalo folder this page was opened from (<folder>/docs/setup-wizard.html as a
-  // local file), so the macOS/Linux command and launcher find it on their own. Empty when
-  // the page is served over http(s), was moved out of docs/, or sits on a Windows drive or share.
+  // local file), so the commands and launchers find it on their own: a POSIX path, a
+  // Windows drive path or a UNC path. Empty when the page is served over http(s) or was
+  // moved out of docs/.
   function hereDir(loc){
-    if(!loc || loc.protocol!=="file:" || loc.host) return "";
+    if(!loc || loc.protocol!=="file:") return "";
     var p;
     try{p=decodeURIComponent(loc.pathname);}catch(e){return "";}
     var m=p.match(/^(\/.+)\/docs\/setup-wizard\.html$/);
-    return m && !/^\/[A-Za-z]:\//.test(p) ? m[1] : "";
+    if(!m) return "";
+    if(loc.host) return "\\\\"+loc.host+m[1].replace(/\//g,"\\");            // file://server/share/... (UNC)
+    if(/^\/[A-Za-z]:(\/|$)/.test(m[1])){                                      // file:///C:/... (C:\ for a drive root)
+      var d=m[1].slice(1).replace(/\//g,"\\");
+      return d.length===2 ? d+"\\" : d;
+    }
+    return m[1];
   }
+  function isWinPath(p){return /^[A-Za-z]:\\|^\\\\/.test(p);}
+  // The folder for the chosen system's command: a Windows path only for Windows.
+  function hereFor(os){var h=state.here; return h && (os==="windows")===isWinPath(h) ? h : "";}
   // The visitor's system, to preselect it (the markup defaults to Windows): "" when unknown,
   // and for phones and tablets, which cannot run the setup scripts anyway.
   function detectOs(nav){
@@ -587,7 +597,7 @@ List any open questions for me to resolve before we proceed.</code></pre>
   function winCmdArg(x){return String(x).replace(/["\r\n]/g,"").replace(/%/g,"%%").replace(/(\\+)$/,"$1$1");} // inside a .cmd "..." passed to powershell -File; trailing backslashes doubled so they do not escape the closing quote
 
   function buildCmd(){
-    var w=state.work,s=state.struct,c=state.scaf,t=state.target.trim();
+    var w=state.work,s=state.struct,c=state.scaf,t=state.target.trim(),here=hereFor(state.os);
     if(state.os==="windows"){
       // Explorer's "Copy as path" adds double quotes; a Windows path never
       // contains them (the .cmd launcher drops them too).
@@ -598,13 +608,16 @@ List any open questions for me to resolve before we proceed.</code></pre>
         f('-Scaffolding')+' '+c];
       if(t) parts.push(f('-Target')+' '+str(psQuote(t)));
       parts.push(f('-NonInteractive'));
-      return parts.join(' ');
+      // Opened from a cephalo folder: change there first and allow the script for this
+      // window only, so the command runs from any PowerShell window.
+      return (here?'Set-Location '+f('-LiteralPath')+' '+str(psQuote(here))+'; Set-ExecutionPolicy '+f('-Scope')+' Process '+f('-ExecutionPolicy')+' Bypass '+f('-Force')+'; ':'')
+        +parts.join(' ');
     } else {
       // Opened from a cephalo folder: cd there first, so the command runs from any terminal
       // window, and use bash so a missing execute bit does not matter.
-      var p=[state.here?'bash setup.sh':'./setup.sh', str('"'+w+'"'), str('"'+s+'"'), c];
+      var p=[here?'bash setup.sh':'./setup.sh', str('"'+w+'"'), str('"'+s+'"'), c];
       if(t) p.push(f('--target')+' '+str(shTarget(t)));
-      return (state.here?'cd '+str(shQuote(state.here))+' &amp;&amp; ':'')+p.join(' ');
+      return (here?'cd '+str(shQuote(here))+' &amp;&amp; ':'')+p.join(' ');
     }
   }
   function f(x){return '<span class="flag">'+esc(x)+'</span>';}
@@ -626,7 +639,7 @@ List any open questions for me to resolve before we proceed.</code></pre>
       ? "C:\\Users\\you\\Documents\\Thesis" : "~/Documents/Thesis";
 
     // An empty target sets up inside the cephalo folder itself (often still in Downloads).
-    var tn=document.getElementById('targetnote'), hereShown=(!win && state.here) ? state.here : "";
+    var tn=document.getElementById('targetnote'), hereShown=hereFor(state.os);
     tn.hidden=!!state.target.trim();
     tn.innerHTML='<b>No target set:</b> the project will be created inside the cephalo folder itself'
       +(hereShown ? ' (<code>'+esc(hereShown)+'</code>)' : '')
@@ -635,8 +648,10 @@ List any open questions for me to resolve before we proceed.</code></pre>
     // run note
     var rn=document.getElementById('runnote');
     rn.innerHTML=win
-      ? 'Run it from the cephalo folder. If PowerShell blocks the script, first run <code>Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force</code> in the same window (this session only), then the command again.'
-      : (!state.here
+      ? (hereShown
+        ? 'Click <b>Copy</b>, open PowerShell (press the Windows key, type <code>PowerShell</code>, press Enter), paste with a right-click or Ctrl+V and press Enter. The command switches to your cephalo folder and allows the script for this PowerShell window only.'
+        : 'Run it from the cephalo folder. If PowerShell blocks the script, first run <code>Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force</code> in the same window (this session only), then the command again.')
+      : (!hereShown
         ? 'Make it executable once with <code>chmod +x setup.sh</code>, then run it from the cephalo folder.'
         : (state.os==='macos'
           ? 'Click <b>Copy</b>, open Terminal (press Cmd+Space, type <code>Terminal</code>, press Enter), paste with Cmd+V and press Enter. The command finds your cephalo folder by itself. If macOS asks whether Terminal may access the folder, allow it.'
@@ -649,9 +664,13 @@ List any open questions for me to resolve before we proceed.</code></pre>
     document.getElementById('safenote').hidden=mac;
     var ln=document.getElementById('launchnote');
     ln.innerHTML=win
-      ? 'Rather not touch a terminal? Click <b>Download launcher</b>, save <code>cephalo-setup.cmd</code> into your cephalo folder and unblock it once: right-click it, choose <b>Properties</b>, tick <b>Unblock</b> and click <b>OK</b>. Then double-click it. Without that step, Windows blocks the downloaded file and says it cannot be opened.'
+      ? 'Rather not touch a terminal? Click <b>Download launcher</b>, '
+        +(hereShown ? 'unblock the downloaded <code>cephalo-setup.cmd</code> once' : 'save <code>cephalo-setup.cmd</code> into your cephalo folder and unblock it once')
+        +': right-click it, choose <b>Properties</b>, tick <b>Unblock</b> and click <b>OK</b>. Then double-click it'
+        +(hereShown ? '; it finds your cephalo folder by itself, so it can stay in Downloads.' : '.')
+        +' Without the unblock step, Windows blocks the downloaded file and says it cannot be opened.'
       : mac ? ''
-      : (state.here
+      : (hereShown
         ? 'Or click <b>Download launcher</b>, then open a terminal, type <code>bash</code> and a space, drag <code>cephalo-setup.sh</code> from your Downloads folder into the window and press Enter.'
         : 'Rather not type the command? Click <b>Download launcher</b>, save <code>cephalo-setup.sh</code> into your cephalo folder, then open a terminal, type <code>bash</code> and a space, drag the file into the window and press Enter.');
 
@@ -726,13 +745,18 @@ List any open questions for me to resolve before we proceed.</code></pre>
   function launcher(){
     var w=state.work,s=state.struct,c=state.scaf,t=state.target.trim();
     if(state.os==="windows"){
-      var tgt=winCmdArg(t);
+      var tgt=winCmdArg(t), here=hereFor("windows").replace(/%/g,"%%");
       var args='-WorkType "'+w+'" -Structure "'+s+'" -Scaffolding '+c+(tgt?' -Target "'+tgt+'"':'')+' -NonInteractive';
       return {name:"cephalo-setup.cmd",crlf:true,text:[
         "@echo off",
         "chcp 65001 >nul",   // this file is UTF-8, but cmd.exe decodes batch lines in the console code page: switch it so non-ASCII targets survive
-        "REM cephalo launcher -- save this file INTO your cephalo folder (next to setup.ps1), then double-click it.",
-        'pushd "%~dp0"',   // not cd /d: cmd.exe cannot make a UNC path (redirected Documents, network share) its current folder; pushd maps a drive letter for it
+        "REM cephalo launcher -- "+(here
+          ? "double-click it; it uses the cephalo folder next to it or else the one the setup assistant was opened from."
+          : "save this file INTO your cephalo folder (next to setup.ps1), then double-click it."),
+        'pushd "%~dp0"'   // not cd /d: cmd.exe cannot make a UNC path (redirected Documents, network share) its current folder; pushd maps a drive letter for it
+      ].concat(here   // not next to setup.ps1 (e.g. still in Downloads): use the folder the assistant was opened from
+        ? ['if not exist ".\\setup.ps1" if exist "'+here+'\\setup.ps1" (', "  popd", '  pushd "'+here+'"', ")"]
+        : [], [
         'if not exist ".\\setup.ps1" (',
         "  echo Could not find setup.ps1 next to this launcher.",
         "  echo Move this file into your cephalo folder, then run it again.",
@@ -750,7 +774,7 @@ List any open questions for me to resolve before we proceed.</code></pre>
         ")",
         "popd",
         "pause"
-      ]};
+      ])};
     }
     var sh='"'+w+'" "'+s+'" '+c+(t?' --target '+shTarget(t):'');
     return {name:"cephalo-setup.sh",crlf:false,text:[

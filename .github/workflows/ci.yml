@@ -593,7 +593,7 @@ jobs:
           const state = { work: "Bachelor thesis", struct: "Long-form", scaf: "full" };
           const F = new Function("state", "document", grab("function esc(s)", "// ----- command -----") +
             grab("function shQuote(x)", "  // ----- render -----") + grab("function launcher()", "  var dlBtn=") +
-            "\nreturn { buildCmd: buildCmd, launcher: launcher, hereDir: hereDir, detectOs: detectOs };")(state, null);
+            "\nreturn { buildCmd: buildCmd, launcher: launcher, hereDir: hereDir, detectOs: detectOs, psQuote: psQuote };")(state, null);
           const text = h => h.replace(/<[^>]*>/g, "").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
           const Q = ["\u2018", "\u2019", "\u201A", "\u201B"];
           const sh = ["~", "~/Documents/Thesis", "~/x y", "~/it's", "~/$(touch PWNED)", "~-/x", "~+", "~1/x", "a;touch PWNED",
@@ -643,7 +643,8 @@ jobs:
           check("launcher", "no setup.sh", away.status + " " + /Could not find setup\.sh/.test(away.stdout), "1 true", away.stdout);
           // Opened from a local cephalo folder, the command and the launcher cd there
           // themselves, from any directory, with an odd folder name and without the
-          // execute bit; the folder comes only from a file: URL ending in docs/setup-wizard.html.
+          // execute bit; the folder comes only from a file: URL ending in docs/setup-wizard.html
+          // (a drive or UNC location gives a Windows path, used only for the Windows command).
           const odd = path.join(W, "it's $(touch PWNED) & x");
           fs.mkdirSync(odd); fs.copyFileSync(path.join(W, "sh", "setup.sh"), path.join(odd, "setup.sh"));
           fs.chmodSync(path.join(odd, "setup.sh"), 0o644);
@@ -665,14 +666,42 @@ jobs:
           for (const [loc, want] of [
             [["file:", "", "/home/a/Downloads/cephalo-1.0.0/docs/setup-wizard.html"], "/home/a/Downloads/cephalo-1.0.0"],
             [["file:", "", "/home/a/My%20Files/M%C3%BCller's%20%25/docs/setup-wizard.html"], "/home/a/My Files/M\u00fcller's %"],
-            [["file:", "", "/C:/Thesis/cephalo/docs/setup-wizard.html"], ""],
-            [["file:", "server", "/share/cephalo/docs/setup-wizard.html"], ""],
+            [["file:", "", "/C:/Thesis/cephalo/docs/setup-wizard.html"], "C:\\Thesis\\cephalo"],
+            [["file:", "", "/D:/x%20y/%25/docs/setup-wizard.html"], "D:\\x y\\%"],
+            [["file:", "", "/C:/docs/setup-wizard.html"], "C:\\"],
+            [["file:", "server", "/share/cephalo/docs/setup-wizard.html"], "\\\\server\\share\\cephalo"],
+            [["file:", "localhost", "/C$/Thesis/w5/docs/setup-wizard.html"], "\\\\localhost\\C$\\Thesis\\w5"],
             [["https:", "example.org", "/cephalo/docs/setup-wizard.html"], ""],
             [["file:", "", "/home/a/Desktop/setup-wizard.html"], ""],
             [["file:", "", "/docs/setup-wizard.html"], ""],
             [["file:", "", "/home/a/%E0%A4%A/docs/setup-wizard.html"], ""]]) {
             check("hereDir", loc.join(" "), F.hereDir({ protocol: loc[0], host: loc[1], pathname: loc[2] }), want, "");
           }
+          // Windows: the command changes to the folder and allows the script for this window
+          // only; a folder name with a quote, $( ) and & reaches Set-Location unchanged (read
+          // back from the parsed command), and the rest of the command runs. A folder of the
+          // other kind is not used, and the .cmd launcher falls back to the folder.
+          const winHere = "D:\\Thesis\\it's $(New-Item -ItemType File PWNED) & x";
+          Object.assign(state, { os: "windows", target: "x y", here: winHere });
+          const wcmd = text(F.buildCmd());
+          const parsed = cp.spawnSync("pwsh", ["-NoProfile", "-NonInteractive", "-Command",
+            "$e = $null; $a = [System.Management.Automation.Language.Parser]::ParseInput($env:WCMD, [ref]$null, [ref]$e); " +
+            "$a.Find({ param($n) $n -is [System.Management.Automation.Language.CommandAst] }, $true).CommandElements[2].Value"],
+            { env: { ...process.env, WCMD: wcmd }, encoding: "utf8" });
+          check("windows located", "parsed folder", parsed.stdout.trim(), winHere, wcmd);
+          const wout = path.join(W, "ps", "target.txt");
+          fs.rmSync(wout, { force: true });
+          cp.spawnSync("pwsh", ["-NoProfile", "-NonInteractive", "-Command", wcmd.replace(F.psQuote(winHere), F.psQuote(path.join(W, "ps")))], { cwd: HOME });
+          check("windows located", "run", fs.existsSync(wout) ? fs.readFileSync(wout, "utf8") : null, "x y|True", wcmd);
+          Object.assign(state, { os: "linux", target: "", here: "D:\\Thesis\\cephalo" });
+          check("windows located", "not for bash", /^cd /.test(text(F.buildCmd())), false, text(F.buildCmd()));
+          Object.assign(state, { os: "windows", here: "/home/a/cephalo" });
+          check("windows located", "no POSIX folder", /Set-Location/.test(text(F.buildCmd())), false, text(F.buildCmd()));
+          Object.assign(state, { os: "windows", here: "D:\\Thesis\\50% off (1)\\cephalo" });
+          const LW = F.launcher().text;
+          check("windows located", "cmd fallback", LW.includes('if not exist ".\\setup.ps1" if exist "D:\\Thesis\\50%% off (1)\\cephalo\\setup.ps1" (')
+            && LW.includes('  pushd "D:\\Thesis\\50%% off (1)\\cephalo"'), true, LW.join("\n"));
+          state.here = "";
           // The preselected system: from the platform or the user agent, none for phones.
           for (const [nav, want] of [
             [{ platform: "Win32", userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/140.0" }, "windows"],
