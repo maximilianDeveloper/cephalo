@@ -760,11 +760,12 @@ jobs:
                                                "(see Le Grand 2007 for a critique). (De Beers, n.d.). (Weber, 1922, zit. nach Keller, 2018, S. 5). Braun (2017: 15 f.) widerspricht. "
                                                "Kraus, Lang und Roth (2016) zeigen es (vgl. Adam/Berg/Cohn 2015). (Nagel, Otto und Peters 2014). "
                                                "However, Quinn, Ross, and Stone (2013) argue. Luhmanns (1984) Begriff und Van Dijks (2019) Ansatz."))
-          # the other forms docs/scripts.md lists: year suffixes, lowercase particles,
-          # lead words, narrative page locators, a narrative et al.
+          # the other forms docs/scripts.md lists: year suffixes, lowercase particles
+          # (also abbreviated: v., v. d.), lead words, narrative page locators, a narrative et al.
           f.add_paragraph("(Wagner, 2022a) Schulz (2022a) zeigt. (van der Linde, 2020). (von Wright 2019). (de la Rosa, 2018). "
                           "(ter Horst, 2020). (ten Brink 2017). (siehe Hahn, 2020, S. 3). (cf. Smith, 2020, p. 15). (nach Vogel 2020). "
-                          "Mayer (2020, S. 15) zeigt. Krause (2021: 15) auch. Brown et al. (2021) argue.")
+                          "Mayer (2020, S. 15) zeigt. Krause (2021: 15) auch. Brown et al. (2021) argue. "
+                          "(v. Rosenstiel 2007). (v. d. Oelsnitz, 2019).")
           f.add_heading("7 Literaturverzeichnis:", 1)
           for entry in ("Müller, H./Schmidt, K. (2019). A.", "Öztürk, A. (2020). B.", "Dawson, R., Ellis, S., & Fowler, T. (2018). C.",
                         "De Vries, R. (2018). D.", "Weber, E. (2020). E.", "Fischer, Hans/Wolf, Karl (2017): G.",
@@ -775,7 +776,8 @@ jobs:
                         "Luhmann, N. (1984). S.", "Wagner, A. (2022a). T.", "Schulz, B. (2022a). U.", "van der Linde, C. (2020). V.",
                         "von Wright, G. H. (2019). W.", "de la Rosa, E. (2018). X.", "ter Horst, F. (2020). Y.", "ten Brink, G. (2017). Z.",
                         "Hahn, H. (2020). AA.", "Smith, J. (2020). AB.", "Vogel, V. (2020). AC.", "Mayer, M. (2020). AD.",
-                        "Krause, K. (2021). AE.", "Brown, B., Green, G., & White, W. (2021). AF."):
+                        "Krause, K. (2021). AE.", "Brown, B., Green, G., & White, W. (2021). AF.",
+                        "von Rosenstiel, L. (2007). AG.", "von der Oelsnitz, D. (2019). AH."):
               f.add_paragraph(entry)
           f.save(os.path.join(w, "forms.docx"))
           # prose that looks like a citation with a capitalized particle, a filler or
@@ -789,7 +791,8 @@ jobs:
                           "Thatcher and Major (1979–1997) privatised. (von Herbst 2012 mit Daten für 1991 bis 2010 geschätzt). "
                           "However, Smith and Jones (2019) argue. Das Verfahren, das Müller und Schmidt (2019) entwickelt haben, gilt. "
                           "(Juni, Juli und August 2020). (January, February, and March 2021). "
-                          "Reagan, Kohl und Thatcher (1980–1990) prägten die Dekade. (Adams, 2019). Adam (2015) stimmt zu.")
+                          "Reagan, Kohl und Thatcher (1980–1990) prägten die Dekade. (Adams, 2019). Adam (2015) stimmt zu. "
+                          "(v. Wedel 2015).")
           r.add_heading("References", 1)
           for entry in ("De Vries, R. (2018). A.", "Fischer, Hans, Titel, in Schulz, Eva/Meier, Karl (Hrsg.), Band, Berlin 2019.",
                         "Mai, Manfred (2018): Medienpolitik.", "Thatcher, M. (1993). Memoirs.", "Adam, A. (2015). B."):
@@ -896,7 +899,7 @@ jobs:
           expect 0 python scripts/bibliography_check.py "$W/forms.docx"
           expect 1 python scripts/bibliography_check.py "$W/prose.docx"
           # (Adams: a German genitive counts as the listed name only in that form)
-          for a in Freitag Winter Meier Fischer Mai Sommer Thatcher Herbst Adams; do grep -qx "    $a" "$W/out.txt"; done
+          for a in Freitag Winter Meier Fischer Mai Sommer Thatcher Herbst Adams Wedel; do grep -qx "    $a" "$W/out.txt"; done
           for a in Rentenreform Chirac Pen Liga Horizon Vries De Interview However Verfahren Juni Juli August January February March; do
             if grep -qx "    $a" "$W/out.txt"; then echo "prose read as a citation of $a"; exit 1; fi
           done

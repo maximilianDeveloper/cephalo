@@ -112,7 +112,7 @@ NAME_PREFIX = (r"(?:(?:van|von|de|del|della|di|la|le|du|dos|das|ter|ten|" + CAPI
 
 # Lowercase words that may precede a surname inside a parenthetical citation:
 # name particles and short fillers after a lead word ("see also", "vgl. z. B.").
-PAREN_LOWERCASE_OK = NAME_PARTICLES | {"also", "auch", "z.", "z.b.", "e.g."}
+PAREN_LOWERCASE_OK = NAME_PARTICLES | {"also", "auch", "z.", "z.b.", "e.g.", "v.", "d."}
 
 
 def heading_level(paragraph) -> Optional[int]:
@@ -259,8 +259,9 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
     """
     authors = set()
     stop = GERMAN_NON_AUTHOR_CAPS - keep
-    # Name particles: van der Berg, de la Rosa, von Wagner, ter Horst
-    prefix = NAME_PREFIX_LOWER
+    # Name particles: van der Berg, de la Rosa, von Wagner, ter Horst; German
+    # texts abbreviate "von"/"von der": "(v. Rosenstiel 2007)", "(v. d. Oelsnitz 2019)"
+    prefix = r"(?:" + NAME_PREFIX_LOWER + r"|v\.\s*(?:d\.\s*)?)"
 
     def german_form(particles: str, lead: str) -> str:
         """German author-year citation without a comma: "Author YYYY"."""
