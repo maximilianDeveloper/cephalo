@@ -620,7 +620,7 @@ jobs:
             cp.spawnSync("pwsh", ["-NoProfile", "-NonInteractive", "-Command", cmd], { cwd: path.join(W, "ps") });
             check("pwsh", x, fs.existsSync(out) ? fs.readFileSync(out, "utf8") : null, x.replace(/"/g, "").trim() + "|True", cmd);
           }
-          // The .sh/.command launcher: the same targets arrive unchanged, a failing
+          // The .sh launcher: the same targets arrive unchanged, a failing
           // setup is reported with its exit code, and a misplaced launcher stops.
           fs.mkdirSync(path.join(W, "fail")); fs.mkdirSync(path.join(W, "away"));
           fs.writeFileSync(path.join(W, "fail", "setup.sh"), "#!/bin/bash\nexit 3\n");

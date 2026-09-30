@@ -159,7 +159,7 @@ The agents work with what's already there. You don't need to rewrite anything th
 
 **`./setup.sh: Permission denied`** — the script needs the execute bit: `chmod +x setup.sh`.
 
-**macOS: the downloaded launcher cannot be opened (unverified developer)** — macOS blocks a double-click on scripts downloaded with a browser, so nothing has run. Click OK and start the launcher from Terminal instead: `bash ~/Downloads/cephalo-setup.command`. Easier still: in `setup-wizard.html`, click **Copy**, paste the command into Terminal and press Enter.
+**macOS: a downloaded script cannot be opened (unverified developer)** — macOS blocks a double-click on scripts downloaded with a browser, so nothing has run. Click OK. For this reason `setup-wizard.html` offers no launcher for macOS: click **Copy** there, paste the command into Terminal and press Enter.
 
 **Windows: the downloaded launcher cannot be opened (Internet security settings)** — Windows blocks a `.cmd` file downloaded with the browser, so nothing has run. Right-click `cephalo-setup.cmd`, choose **Properties**, tick **Unblock** at the bottom of the **General** tab and click **OK**, then double-click it again. In PowerShell, `Unblock-File .\cephalo-setup.cmd` does the same.
 

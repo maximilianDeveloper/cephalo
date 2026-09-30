@@ -228,7 +228,7 @@
       </div>
       <p class="runnote" id="runnote"></p>
       <p class="launchnote" id="launchnote"></p>
-      <p class="safenote">The launcher is a small script that runs the command for you. A browser cannot run terminal commands directly &mdash; that boundary is exactly what keeps this page safe.</p>
+      <p class="safenote" id="safenote">The launcher is a small script that runs the command for you. A browser cannot run terminal commands directly &mdash; that boundary is exactly what keeps this page safe.</p>
 
       <div class="tree-wrap">
         <div class="tree-cap">What gets created</div>
@@ -459,7 +459,7 @@ List any open questions for me to resolve before we proceed.</code></pre>
 <hr>
 <h2>Troubleshooting</h2>
 <p><strong><code>./setup.sh: Permission denied</code></strong> — the script needs the execute bit: <code>chmod +x setup.sh</code>.</p>
-<p><strong>macOS: the downloaded launcher cannot be opened (unverified developer)</strong> — macOS blocks a double-click on scripts downloaded with a browser, so nothing has run. Click OK and start the launcher from Terminal instead: <code>bash ~/Downloads/cephalo-setup.command</code>. Easier still: in <code>setup-wizard.html</code>, click <strong>Copy</strong>, paste the command into Terminal and press Enter.</p>
+<p><strong>macOS: a downloaded script cannot be opened (unverified developer)</strong> — macOS blocks a double-click on scripts downloaded with a browser, so nothing has run. Click OK. For this reason <code>setup-wizard.html</code> offers no launcher for macOS: click <strong>Copy</strong> there, paste the command into Terminal and press Enter.</p>
 <p><strong>Windows: the downloaded launcher cannot be opened (Internet security settings)</strong> — Windows blocks a <code>.cmd</code> file downloaded with the browser, so nothing has run. Right-click <code>cephalo-setup.cmd</code>, choose <strong>Properties</strong>, tick <strong>Unblock</strong> at the bottom of the <strong>General</strong> tab and click <strong>OK</strong>, then double-click it again. In PowerShell, <code>Unblock-File .\cephalo-setup.cmd</code> does the same.</p>
 <p><strong><code>setup.ps1 cannot be loaded because running scripts is disabled</code></strong> — PowerShell&#x27;s execution policy. Allow this session only:</p>
 <pre><code>Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
@@ -632,16 +632,18 @@ List any open questions for me to resolve before we proceed.</code></pre>
           ? 'Click <b>Copy</b>, open Terminal (press Cmd+Space, type <code>Terminal</code>, press Enter), paste with Cmd+V and press Enter. The command finds your cephalo folder by itself. If macOS asks whether Terminal may access the folder, allow it.'
           : 'Click <b>Copy</b>, open a terminal, paste (usually Ctrl+Shift+V) and press Enter. The command finds your cephalo folder by itself.'));
 
+    // No launcher for macOS: it blocks a double-click on a script downloaded with a
+    // browser, so Copy and paste in Terminal is the shorter way there.
+    var mac=state.os==='macos';
+    document.getElementById('download').hidden=mac;
+    document.getElementById('safenote').hidden=mac;
     var ln=document.getElementById('launchnote');
-    var lname=state.os==='macos'?'cephalo-setup.command':'cephalo-setup.sh';
-    var term=state.os==='macos'?'Terminal':'a terminal';
     ln.innerHTML=win
       ? 'Rather not touch a terminal? Click <b>Download launcher</b>, save <code>cephalo-setup.cmd</code> into your cephalo folder and unblock it once: right-click it, choose <b>Properties</b>, tick <b>Unblock</b> and click <b>OK</b>. Then double-click it. Without that step, Windows blocks the downloaded file and says it cannot be opened.'
+      : mac ? ''
       : (state.here
-        ? 'Or click <b>Download launcher</b>, then open '+term+', type <code>bash</code> and a space, drag <code>'+lname+'</code> from your Downloads folder into the window and press Enter'
-          +(state.os==='macos'?' (or type <code>bash ~/Downloads/cephalo-setup.command</code>).':'.')
-        : 'Rather not type the command? Click <b>Download launcher</b>, save <code>'+lname+'</code> into your cephalo folder, then open '+term+', type <code>bash</code> and a space, drag the file into the window and press Enter.')
-        +(state.os==='macos'?' Do not double-click it: macOS blocks scripts downloaded with a browser and says the file cannot be opened.':'');
+        ? 'Or click <b>Download launcher</b>, then open a terminal, type <code>bash</code> and a space, drag <code>cephalo-setup.sh</code> from your Downloads folder into the window and press Enter.'
+        : 'Rather not type the command? Click <b>Download launcher</b>, save <code>cephalo-setup.sh</code> into your cephalo folder, then open a terminal, type <code>bash</code> and a space, drag the file into the window and press Enter.');
 
     // structure lock for flat-only work types
     var flatOnly=!!FLAT_ONLY[state.work];
@@ -741,7 +743,7 @@ List any open questions for me to resolve before we proceed.</code></pre>
       ]};
     }
     var sh='"'+w+'" "'+s+'" '+c+(t?' --target '+shTarget(t):'');
-    return {name:(state.os==="macos"?"cephalo-setup.command":"cephalo-setup.sh"),crlf:false,text:[
+    return {name:"cephalo-setup.sh",crlf:false,text:[
       "#!/bin/bash",
       "# cephalo launcher -- "+(state.here
         ? "it uses the cephalo folder next to it or else the one the setup assistant was opened from."
