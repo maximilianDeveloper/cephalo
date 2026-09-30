@@ -47,7 +47,9 @@ UNDERSCORE_GLOB = "**/_*.md"
 EXCLUDE_DIRS = {".git", ".claude", "node_modules", "__pycache__", "_Backups"}
 
 # Framework documentation files that are not project-specific
-# (refs inside them are examples from the cephalo template, not real project refs)
+# (refs inside them are examples from the cephalo template, not real project refs).
+# They exist at the repository top level only: a phase README.md or a
+# project's own docs/ folder further down is project content and is scanned.
 FRAMEWORK_DOC_FILES = {
     "README.md",
     "CHANGELOG.md",
@@ -155,18 +157,26 @@ def _dict_to_worktree(d: dict) -> WorktreeInfo:
     )
 
 
-def get_uncommitted(worktree_path: Path) -> list[str]:
+def get_uncommitted(worktree_path: Path, exclude: Path | None = None) -> list[str]:
     """Return porcelain status lines for the worktree, raising on error.
 
     --no-optional-locks: do not refresh the worktree's index under index.lock,
     which could make a parallel session's git command in that worktree fail.
+    `exclude` (the resolved --report-file) is left out by an exclude
+    pathspec, so git hides it also inside a new folder (listed as `?? dir/`)
+    and with a quoted name (a space in it).
     """
     # core.quotepath=false: show non-ASCII file names (umlauts) as they are,
     # not as octal escapes like "\303\274".
-    out = run_git(
-        ["-c", "core.quotepath=false", "--no-optional-locks", "status", "--porcelain"],
-        worktree_path,
-    )
+    args = ["-c", "core.quotepath=false", "--no-optional-locks", "status", "--porcelain"]
+    if exclude is not None:
+        try:
+            rel = exclude.relative_to(worktree_path.resolve())
+        except ValueError:
+            pass
+        else:
+            args += ["--", ".", ":(exclude,literal)" + rel.as_posix()]
+    out = run_git(args, worktree_path)
     return [line for line in out.splitlines() if line]
 
 
@@ -214,27 +224,28 @@ def file_mtime(path: Path) -> str:
     return datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M")
 
 
-def collect_worktree_data(worktrees: list[WorktreeInfo]) -> None:
-    """Populate uncommitted + underscore_files for each worktree (in place)."""
-    for wt in worktrees:
-        # A bare main repository has no working tree to inspect.
-        if wt.is_bare or not wt.path.exists():
-            continue
-        wt.uncommitted = get_uncommitted(wt.path)
-        wt.underscore_files = find_underscore_files(wt.path)
+def collect_worktree_data(worktrees: list[WorktreeInfo], report_path: Path | None = None) -> None:
+    """Populate uncommitted + underscore_files for each worktree (in place).
 
-
-def drop_report_file(worktrees: list[WorktreeInfo], report_path: Path) -> None:
-    """Remove the --report-file itself from the uncommitted-change lists.
-
-    Otherwise a report written into a worktree shows up there as an untracked
-    file on the next run, and the audit never returns 0 again.
+    The --report-file (`report_path`, resolved) is left out of both lists:
+    otherwise a report written into a worktree shows up there on the next
+    run, and the audit never returns 0 again.
     """
     for wt in worktrees:
-        wt.uncommitted = [
-            line
-            for line in wt.uncommitted
-            if " -> " in line or (wt.path / line[3:]).resolve() != report_path
+        # A bare main repository has no working tree to inspect.
+        if wt.is_bare:
+            continue
+        # A missing folder cannot be inspected: its notes and drafts would
+        # silently count as clean.
+        if not wt.path.exists():
+            raise RuntimeError(
+                f"worktree {wt.path} not found: mount its drive, run "
+                "`git worktree repair <new path>` if it was moved, or "
+                "`git worktree prune` if it was deleted"
+            )
+        wt.uncommitted = get_uncommitted(wt.path, report_path)
+        wt.underscore_files = [
+            p for p in find_underscore_files(wt.path) if (wt.path / p).resolve() != report_path
         ]
 
 
@@ -268,8 +279,9 @@ def find_dangling_refs(
     """Scan all .md files in the main worktree for cross-refs that point to non-existent files.
 
     Returns list of (source_file, line_text, missing_target). `skip` is the
-    resolved --report-file path: an earlier report quotes the refs it found
-    and must not be scanned as a source.
+    resolved --report-file path: a report quotes the refs it found and must
+    not be scanned as a source. Earlier reports under other names (e.g.
+    dated ones) are recognized by their title and skipped too.
 
     The regex requires a directory separator (slash or backslash) in the
     candidate path — otherwise generic mentions like `00_Status.md` in
@@ -299,15 +311,17 @@ def find_dangling_refs(
             continue
         if skip is not None and md_path.resolve() == skip:
             continue
-        # Skip framework documentation files
-        if relpath.name in FRAMEWORK_DOC_FILES:
+        # Skip framework documentation files (top level only, see above)
+        if len(relpath.parts) == 1 and relpath.name in FRAMEWORK_DOC_FILES:
             continue
-        if any(part in FRAMEWORK_DOC_DIRS for part in relpath.parts):
+        if relpath.parts[0] in FRAMEWORK_DOC_DIRS:
             continue
         try:
             text = md_path.read_text(encoding="utf-8", errors="replace")
         except OSError:
             continue
+        if text.lstrip("\ufeff").startswith("# Cross-Session Audit Report"):
+            continue  # an earlier report of this script
         for line_num, line in enumerate(text.splitlines(), start=1):
             for match in REF_PATTERN.finditer(line):
                 target = match.group(1).replace("\\", "/")
@@ -491,15 +505,17 @@ def main() -> int:
     try:
         repo_root = find_repo_root(args.repo_root)
         worktrees = list_worktrees(repo_root)
-        collect_worktree_data(worktrees)
         # The report file of this (and every earlier) run is not a finding.
         report_path = args.report_file.resolve() if args.report_file else None
-        if report_path is not None:
-            drop_report_file(worktrees, report_path)
+        collect_worktree_data(worktrees, report_path)
         master_only_diff = find_master_only_diff(worktrees)
 
         main_wt = next((wt for wt in worktrees if wt.is_main), None)
-        dangling = find_dangling_refs(main_wt.path, report_path) if main_wt else []
+        # A bare main repository has no working tree: Layer 2 has nothing to
+        # check there, and its folder may hold worktrees made inside it, whose
+        # files would be read with references resolved from the wrong root.
+        dangling = (find_dangling_refs(main_wt.path, report_path)
+                    if main_wt and not main_wt.is_bare else [])
 
         report = generate_report(repo_root, worktrees, master_only_diff, dangling)
         print(report)

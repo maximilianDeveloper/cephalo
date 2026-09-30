@@ -75,6 +75,7 @@ longform:
     - 08_Formal_Review
   
   guidelines_directory: guidelines        # replaces workspace/sources/_guidelines/
+                                          # (multi-project main work: ../00_Shared_Materials/guidelines)
   
   per_phase_directory_contents:
     - handover.md             # updated at every chat closure
@@ -99,7 +100,8 @@ phases:
         task: |
           Created by setup.sh / setup.ps1 per docs/longform_structure.md
           ("Directory layout" section). With minimal scaffolding only
-          guidelines/ exists; add the phase directories as needed.
+          guidelines/ exists (multi-project main work: only the 00_*.md
+          files); add the phase directories as needed.
 
       - step: 0.1
         name: Verify Git
@@ -120,14 +122,14 @@ phases:
           missing, copy it from its template):
           - 00_Status.md (from templates/status.md): fill initially
           - 00_Decisions.md (from templates/decisions.md): add research question
-          - 00_Feedback_log.md (from templates/feedback_log.md): keep as is
+          - 00_Feedback_log.md (from templates/feedback_log.md): delete its example section, otherwise keep as is
       
       - step: 0.3
         name: Materials pre-check
         agent: orchestrator-longform
         checklist: checklists/precheck.md
         blocking: true
-        note: Institutional guidelines must be in guidelines/
+        note: Institutional guidelines must be in guidelines/ (in a multi-project main work, in ../00_Shared_Materials/guidelines/)
       
       - step: 0.4
         name: Reference manager check
@@ -143,6 +145,12 @@ phases:
         input_directory: guidelines/
         output: styleguide.md
         blocking: true
+        note: |
+          Multi-project main work: the guidelines are in
+          ../00_Shared_Materials/guidelines/, and ../00_Shared_Materials/styleguide.md
+          normally exists already (extracted in the proposal). Only verify it (no open
+          ❓ [content] items; ❓ [format] items may wait until Phase B);
+          re-extract only when the guidelines change.
   
   # ===========================================================
   # Lead-in: Proposal
@@ -150,6 +158,11 @@ phases:
   phase_01_proposal:
     directory: 01_Proposal/
     agents: [orchestrator-longform, writer, source-verifier]
+    optional: true
+    note: |
+      Optional within long-form. In a multi-project main work, skip it: the
+      accepted proposal is the read-only 01_Proposal_Reference/, and
+      deviations from it go to 00_Decisions.md.
     
     goals:
       - Finalize research question (-> 00_Decisions.md)
@@ -197,10 +210,6 @@ phases:
       - source-verifier: sentence-by-sentence verification
       - format-verifier: critical format errors only
       - Feedback loop max 3
-    
-    consistency_check:
-      after_every_n_chapters: 2
-      checklist: checklists/consistency.md
   
   # ===========================================================
   # Synthesis: Discussion + Conclusion
@@ -221,7 +230,7 @@ phases:
   # ===========================================================
   phase_07_introduction:
     directory: 07_Introduction/
-    agents: [orchestrator-longform, writer, source-verifier]
+    agents: [orchestrator-longform, writer, source-verifier, format-verifier]
     content_or_form_phase: A
     
     important: |
@@ -230,6 +239,17 @@ phases:
     
     chat_structure:
       - One chat for the full introduction (research question, objectives, structure)
+  
+  # ===========================================================
+  # Cross-phase consistency check (runs during Phase A)
+  # ===========================================================
+  consistency_check:
+    after_every_n_chapters: 2
+    checklist: checklists/consistency.md
+    agent: source-verifier
+    scope: |
+      Cross-chapter cross-references, terminology drift, self-plagiarism 
+      between introduction and conclusion, argumentation coherence.
   
   # ===========================================================
   # Phase transition A -> B
@@ -292,11 +312,12 @@ phases:
   submission:
     manual: true
     task: |
-      - Final DOCX export to submissions/v_final_<date>.docx
+      - Full-document final check: checklists/consistency.md, Part B (orchestrator-longform; B.6 is completed by the commit and tag below)
+      - Final DOCX export to 08_Formal_Review/submissions/v_final_<date>.docx
       - Run scripts/docx_postprocess.sh on this v_final file (only if styleguide.md document.hyphenation = automatic; a fresh export may not carry the earlier patch)
-      - Tag in Git: git tag v_final_<date>
       - Update table of contents (Ctrl+A then F9)
       - Confirm the hyphenation setting matches styleguide.md (document.hyphenation)
       - Visual proofreading
       - Sign declaration of academic integrity
+      - Commit the final state (git add -A then git commit -m "submission: final version", in a multi-project main work "main/submission: final version"), then tag it: git tag v_final_<date>
       - Mentally rehearse defending each sentence

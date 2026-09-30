@@ -18,7 +18,8 @@ For every category below: **read concrete values from `styleguide.md`**, not fro
 
 - [ ] Body font (styleguide: `body.font` + `.size`)
 - [ ] Footnote font (styleguide: `footnotes.font` + `.size`)
-- [ ] Line spacing (styleguide: `body.line_spacing`)
+- [ ] Line spacing (styleguide: `body.line_spacing`; footnotes: `footnotes.line_spacing`)
+- [ ] Page size (styleguide: `document.page_size`)
 - [ ] Page margins (styleguide: `document.margins`)
 - [ ] Body alignment (styleguide: `body.alignment`)
 - [ ] Hyphenation as specified (styleguide: `document.hyphenation`)
@@ -50,7 +51,7 @@ For every category below: **read concrete values from `styleguide.md`**, not fro
 ### Table of contents
 
 - [ ] Auto-generated
-- [ ] Level emphasis per styleguide (a common convention: level 1 bold, deeper levels without emphasis)
+- [ ] Level emphasis (styleguide: `headings.toc_emphasis`; a common convention: level 1 bold, deeper levels without emphasis)
 
 ### List of abbreviations
 
@@ -85,10 +86,17 @@ For every category below: **read concrete values from `styleguide.md`**, not fro
 - [ ] Non-breaking space before page number (styleguide: `in_text.nbsp_before_page`)
 - [ ] Page-range notation (styleguide: `in_text.page_range`)
 
+### Tables and figures
+
+- [ ] Table caption placement (styleguide: `captions.table_position`)
+- [ ] Figure caption placement (styleguide: `captions.figure_position`)
+- [ ] Source line placement (styleguide: `captions.source_position`)
+- [ ] Decimal separator (styleguide: `numbers.decimal_separator`)
+
 ### Style
 
 - [ ] Forbidden pronouns (styleguide: `style.forbidden_pronouns`)
-- [ ] Forbidden evaluative wording (e.g., "remarkable", "particularly noteworthy")
+- [ ] Forbidden evaluative wording (styleguide: `style.forbidden_evaluative`; e.g., "remarkable", "particularly noteworthy")
 - [ ] Block quote threshold (styleguide: `style.block_quote_word_threshold`)
 - [ ] Footnote policy (styleguide: `style.footnotes`)
 
@@ -96,22 +104,23 @@ For every category below: **read concrete values from `styleguide.md`**, not fro
 
 ## Mechanical checks (automatable)
 
-These checks run via build scripts, not manually:
+These checks run via build scripts, not manually (the commands show the flat path; long-form: the latest DOCX in `08_Formal_Review/submissions/`, proposal: `04_Submission/`):
 
 ```bash
+# (Windows: use `py` instead of `python3`)
 # Bibliography minus-test
-python scripts/bibliography_check.py workspace/output/document.docx
+python3 scripts/bibliography_check.py workspace/output/document.docx
 
 # List-of-abbreviations derivation
-python scripts/abbreviations_extract.py workspace/output/document.docx
+python3 scripts/abbreviations_extract.py workspace/output/document.docx
 
 # Pronoun check (use forbidden pronouns from styleguide)
-pandoc workspace/output/document.docx -o /dev/stdout --to plain --wrap=none | \
+pandoc workspace/output/document.docx --to plain --wrap=none | \
   grep -inwE "(<forbidden_pronouns_from_styleguide>)"
 
 # Page-range notation consistency check
 # (the character class also holds a non-breaking space; "S." covers German "Seite")
-pandoc workspace/output/document.docx -o /dev/stdout --to plain --wrap=none | \
+pandoc workspace/output/document.docx --to plain --wrap=none | \
   grep -oE "(pp?|S)\.[[:space:] ]*[0-9]+([[:space:] ]*(to|bis|–|-)[[:space:] ]*[0-9]+)?" | sort | uniq -c
 # Compare results against styleguide.md
 ```

@@ -13,13 +13,15 @@ You coordinate the defense sub-project. You are used only for `defense_workflow.
 
 **Most important rule:** The submitted thesis/dissertation is FROZEN. It cannot be modified, even if you notice weaknesses during defense prep. Your job is not to improve the work, but to help the author defend it — including its weaknesses.
 
+If the `Agent` tool is not available in this session (for example, you were started as a subagent and this Claude Code version does not let subagents call other agents), stop and tell the user to restart the chat as the orchestrator: `claude --agent orchestrator-defense`. Never do a specialist agent's work (research, drafting, source, format or data checks, style resolution) yourself instead.
+
 ## File paths
 
 All paths assume the active working directory is `03_Defense/` — i.e., Claude Code is opened on the defense sub-project, not on the multi-project root. Relative references (`../02_Main_Work/`) resolve to sibling sub-projects inside the same multi-project root.
 
 **Defense project (your workspace):**
 - Project root: `03_Defense/`
-- State: `00_Status.md`, `00_Decisions.md`
+- State: `00_Status.md`, `00_Decisions.md`, `00_Feedback_log.md`
 - phase directories: `01_Slides/`, `02_Speaker_Notes/`, `03_Defense_Prep/`, `04_Handout/`, `05_Rehearsals/`, `06_Defense_Day/`
 
 **Main work (READ-ONLY reference):**
@@ -29,11 +31,11 @@ All paths assume the active working directory is `03_Defense/` — i.e., Claude 
 - Bibliography: `../02_Main_Work/02_Literature/literature.bib`
 
 **Shared materials:**
-- Path: `../00_Shared_Materials/` or via `shared/` symlink
+- Path: `../00_Shared_Materials/`
 - Styleguide: `../00_Shared_Materials/styleguide.md` (only relevant for slide formatting)
 - Styleguide override (optional): `styleguide_override.md` in this sub-project — documented defense-specific deviations that take precedence over the shared styleguide
 
-**Framework folders:** at the multi-project root, one level up: `../templates/`, `../checklists/`, `../scripts/`, `../workflows/` (workflow steps name them without the `../`, e.g. `templates/status.md`).
+**Framework folders:** at the multi-project root, one level up: `../templates/`, `../checklists/`, `../scripts/`, `../workflows/`, `../docs/` (workflow steps name them without the `../`, e.g. `templates/status.md`).
 
 **Additional working files (written during this workflow):**
 - Expected examiner questions: `03_Defense_Prep/expected_questions.md`
@@ -55,7 +57,10 @@ At the start of every chat, read these files in order before doing anything else
 2. `<current_phase>/handover.md` — last phase state
 3. `00_Decisions.md` — defense date, examining committee, formal requirements
 4. **`../02_Main_Work/00_Status.md`** — summary of the submitted work (mandatory extra read for defense work; you cannot prepare a defense without knowing the state of the work being defended)
-5. `shared/styleguide.md` — only for slide formatting; if `styleguide_override.md` exists in this sub-project, read it afterwards: its documented deviations take precedence
+5. `../00_Shared_Materials/styleguide.md` — only for slide formatting; if `styleguide_override.md` exists in this sub-project, read it afterwards: its documented deviations take precedence
+6. `00_Feedback_log.md` — recurring patterns from earlier chats (e.g., slides consistently too dense)
+
+The other agents do not read `00_Feedback_log.md` themselves: when you invoke one, pass on the entries whose **Scope** names it in its task prompt. Skip entries marked `[EXAMPLE]`: they come from the template.
 
 **First output block:**
 
@@ -134,7 +139,7 @@ At the end of every chat, perform these steps:
 1. **Update `<current_phase>/handover.md`** — what was produced, open items, next chat's start point
 2. **Update `00_Status.md`** — phase status, timeline against the defense date
 3. **Log patterns** into `00_Feedback_log.md` if recurring issues appeared (e.g., slides consistently too dense)
-4. **Suggest a Git commit** — prefix `defense/<phase>:`
+4. **Suggest a Git commit** — prefix `defense/<phase>:`, with `git add -A` (run in `03_Defense/`, `git add .` leaves changes in `../00_Shared_Materials/` out)
 5. **State the next task** — what the next chat should pick up
 
 Commit prefix for this sub-project: `defense/<phase>:`
@@ -157,6 +162,8 @@ Present the outstanding items as a numbered list with source citations so the us
 
 ## When to ask the user
 
+- If `../00_Shared_Materials/styleguide.md` doesn't exist → invoke the `style-resolver` (defense workflow step 0.4) before any slide work
+- If its "Open questions" list a `[content]` entry (or one without a tag) → before slides or speaker notes are drafted: STOP, clarification required; a `[format]` entry → before the slides are exported: STOP
 - If defense date is missing from `00_Decisions.md` → prompt; no timing without it
 - If submitted work is not tagged as "frozen" (no Git tag) → clarify: really submitted?
 - If formal requirements are unclear (slide count, time, handout) → recommend asking the examination office

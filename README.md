@@ -45,7 +45,7 @@ To make that concrete, this is the kind of finding the source-verifier produces 
 
 **Dynamic guideline extraction.** Most writing tools hardcode citation rules (APA, Chicago, etc.). cephalo reads whatever style guide your institution gives you — however idiosyncratic — and extracts the rules into a structured configuration. If the rules change, you update the document; the agents update themselves.
 
-**Phase separation.** Content quality stabilizes well before formatting does. cephalo formalizes this: a Content phase uses capable, expensive models; a Formatting phase uses fast, cheap models. This cuts costs significantly without sacrificing quality.
+**Phase separation.** Content quality stabilizes well before formatting does. cephalo formalizes this: a Content phase uses capable, expensive models; a Formatting phase uses fast, cheap models. This cuts costs significantly without sacrificing quality, provided the formatting chats really run on a fast model (see `docs/phase_separation.md`).
 
 **Source fidelity as first-class concern.** The most valuable agent in the system is the source verifier — catching subtle errors like "your text says *X*, but the source says *Y* (close but not identical)." These errors are invisible without a dedicated review pass, and they are the difference between good and publishable work.
 
@@ -54,7 +54,7 @@ To make that concrete, this is the kind of finding the source-verifier produces 
 - Medium works (bachelor theses)
 - Long-running works (master theses, dissertations) — with phase-based directories, handover rituals, Git versioning, and reference manager integration
 
-Dissertations do not currently have their own dedicated workflow; cephalo uses `master_7agent_longform.yaml` as the closest match and expects adaptation (more phases, longer timeline, possibly multiple sub-projects per chapter). A native dissertation workflow may be added in a future version.
+Dissertations do not currently have their own dedicated workflow; cephalo uses `master_7agent_longform.yaml` (flat structure: `master_7agent.yaml`) as the closest match and expects adaptation (more phases, longer timeline, possibly multiple sub-projects per chapter). A native dissertation workflow may be added in a future version.
 
 ---
 
@@ -97,11 +97,9 @@ If you cloned instead of unzipping: use a `--target` path in step 2, so your pro
 **Windows (PowerShell):**
 
 ```powershell
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 .\setup.ps1
 ```
-
-Only multi-project setups create symlinks — for those, enable Developer Mode once (Settings -> For developers) or run from an elevated shell; see the FAQ. Flat and long-form setups need neither.
 
 **macOS / Linux / Git Bash:**
 
@@ -145,7 +143,7 @@ and citation rules from the guidelines directory into styleguide.md.
 List any open questions for me to resolve before we proceed.
 ```
 
-The resolver produces a structured `styleguide.md`. Open questions are marked `❓` — resolve these (usually by asking your supervisor) before content work begins.
+The resolver produces a structured `styleguide.md`. Open questions are marked `❓` and tagged: resolve the `[content]` ones (voice, citation wording, length — usually by asking your supervisor) before content work begins; the `[format]` ones (fonts, margins, pagination, ...) can wait until the formatting phase.
 
 ### 5. Begin writing
 
@@ -168,8 +166,10 @@ project/
 │   ├── sources/
 │   │   ├── _guidelines/
 │   │   └── extracts/
-│   └── output/
-│       └── chapters/
+│   ├── output/
+│   │   ├── chapters/
+│   │   └── slides/        (presentations)
+│   └── data/              (presentations: chart data)
 └── styleguide.md
 ```
 
@@ -268,21 +268,17 @@ You can import an existing project. See `docs/QUICKSTART.md` for migration steps
 
 For small works (seminar papers), yes. For theses, you will regret not using Git by month three. The setup script initializes a repository automatically — unless the folder already is one: if you cloned cephalo instead of downloading the ZIP, set up with `--target` so your thesis gets its own fresh history instead of sitting on top of cephalo's. `docs/git_introduction.md` explains the three commands you need: `status`, `add`, `commit`.
 
+### Why do I have to unblock the launcher on Windows, and why is there none for macOS?
+
+Both systems mark every file a browser downloads. Windows then refuses to open the setup assistant's `cephalo-setup.cmd` and says it cannot be opened; macOS refuses a double-click on a downloaded script (unverified developer). The launcher cannot lift this itself: as long as the mark is set, it never runs. Only signed software from a registered developer passes this check, and cephalo ships scripts, not signed programs. So on Windows, unblock the launcher once (right-click it, choose **Properties**, tick **Unblock**, click **OK**), and on macOS the assistant offers no launcher at all. The simplest way needs no download on either system: click **Copy** in the setup assistant, paste the command into PowerShell or Terminal and press Enter.
+
 ### How much does it cost?
 
-cephalo itself is free. You pay for the Claude Code subscription (standard Anthropic pricing). Typical thesis projects use a mix of expensive and cheap models, with the phase separation feature cutting total costs by an estimated 60–70% versus naive use of the capable model throughout.
+cephalo itself is free. You pay for the Claude Code subscription (standard Anthropic pricing). Typical thesis projects use a mix of expensive and cheap models, with the phase separation feature cutting total costs by an estimated 60–70% versus naive use of the capable model throughout. That saving needs the formatting-phase chats to run on a fast model (e.g. switch with `/model`): the formatting agents inherit the chat's model.
 
 ### Can I contribute?
 
 This is an early project. Feedback on the agent definitions, workflow configurations, and error catalog is welcome — [CONTRIBUTING.md](CONTRIBUTING.md) explains how. Specifically: if your institution's style guide produces unusual results with the style-resolver, a sample (anonymized) plus the problematic output is valuable.
-
-### Symlinks don't work on my Windows machine — what do I do?
-
-Creating symlinks on Windows requires Administrator privileges OR Developer Mode enabled (Settings -> For developers -> Developer Mode: on). Developer Mode is the less invasive option — enable it once and symlinks work without Admin rights. With `setup.sh` in Git Bash, also set `MSYS=winsymlinks:nativestrict`, or `ln -s` still makes copies.
-
-If neither is possible, the multi-project setup script falls back to copying `00_Shared_Materials/` into each sub-project. The setup succeeds, but updates to the styleguide will not propagate automatically. See `docs/multiproject_structure.md` for the diagnostic command (`Get-Item shared | Select-Object LinkType`) and a re-sync PowerShell snippet.
-
-Alternative: use the flat or long-form structure instead. Both avoid symlinks entirely.
 
 ### My institution has no citation guide — what should I put in `styleguide.md`?
 

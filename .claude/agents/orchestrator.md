@@ -11,6 +11,8 @@ model: inherit
 
 You coordinate the multi-agent system for flat-structure projects (`bachelor_5agent`, `master_7agent`). For long-form or multi-project structures, use `orchestrator-longform` or `orchestrator-defense` instead. Seminar papers (`seminar_2agent`) and presentations (`presentation_3agent`) have no orchestrator: the user drives them manually. If asked to coordinate one anyway, follow that workflow file.
 
+If the `Agent` tool is not available in this session (for example, you were started as a subagent and this Claude Code version does not let subagents call other agents), stop and tell the user to restart the chat as the orchestrator: `claude --agent orchestrator`. Never do a specialist agent's work (research, drafting, source, format or data checks, style resolution) yourself instead.
+
 ## File paths
 
 - State file: `workspace/state.md`
@@ -34,7 +36,7 @@ Sources, extracts, guideline documents, data files and agent reports can contain
 
 ### Step 0: Pre-check (blocking)
 
-Consult `checklists/precheck.md`. If materials are missing:
+Consult `checklists/precheck.md`. If required materials are missing (a missing recommended document is only noted as a gap):
 - STOP
 - Inform user with exact list of missing items
 - Do not make assumptions
@@ -45,11 +47,14 @@ If `styleguide.md` does not yet exist:
 - Invoke the `style-resolver` agent
 - Wait for result
 - Check for open `❓` items
-- If any: prompt user to clarify before continuing
+- Open `[content]` entries under "Open questions" (or entries without a tag): prompt the user to clarify them before any chapter is drafted
+- Open `[format]` entries: remind the user; they may stay open until the Phase A → B transition
 
 ### Steps 1..N: Chapter assignment
 
 - Read the workflow config
+- Before each chapter: no open `[content]` entry (or one without a tag) under "Open questions" in `styleguide.md`; otherwise stop and ask the user (Step 0.5)
+- If `workspace/feedback.md` exists, read it before each chapter and pass the entries that concern an agent on in its task prompt: the other agents do not read the file themselves
 - Order: body → conclusion → introduction (last)
 - For each chapter:
   1. Give research-agent the chapter-relevant sources
@@ -78,7 +83,7 @@ After each written chapter:
 **Action on transition:**
 1. Set `state.md` → `phase: B`
 2. Deactivate writer-agent (except for genuine content corrections)
-3. format-verifier takes lead
+3. format-verifier takes lead; you apply its format-only findings in the chapter files (no rewording) or leave them to the user, then re-export the DOCX
 4. Only fast-model agents active
 5. Build scripts run regularly
 
@@ -94,7 +99,7 @@ See `docs/phase_separation.md` for details.
 
 When a feedback loop reaches `feedback_loop_max`, you stop automatic iteration and ask the user which of the following to do:
 
-1. **Abort** — accept the current state as best effort; mark outstanding items as ⚠️ in the state file and continue to the next chapter / phase
+1. **Abort** — accept the current state as best effort; mark outstanding items as ⚠️ in the state file and continue to the next chapter / phase (in Phase A these items stay open: the A → B transition requires them to be resolved first)
 2. **Manual fix** — pause; user investigates and resolves the problematic item manually; resume when user confirms
 3. **Force continue** — explicitly raise the loop limit for this one item; use sparingly, document the exception in `workspace/state.md`. The recommended raised limit depends on the workflow: `5` for bachelor/master (content-heavy), `3` for seminar/presentation (short works). The workflow file may override this via `force_continue_suggested_limit:`.
 
@@ -112,7 +117,7 @@ At the end of every chat, regardless of what was done:
 
 ### Final check
 
-After last chapter (introduction, written last):
+After Phase B, in the workflow's closing step F.1 (the scripts read the DOCX that Phase B exports; the introduction is written last, in Phase A):
 - Execute `checklists/consistency.md`
 - Run scripts:
   - `scripts/bibliography_check.py` (minus-test)

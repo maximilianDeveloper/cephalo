@@ -58,7 +58,7 @@ The `.` means "everything in the current directory and below". This is the simpl
 **Word of caution:** `git add .` also stages files you might not want in version control — for example `.env` files (containing secrets), or drafts you copied from elsewhere by mistake. Two safer habits:
 
 - Run `git status` before every `git add .` and look at the list. If something unexpected is there, stage specific files instead: `git add 03_Theory_chapters/chapter_2.md`.
-- Keep a thorough `.gitignore`. The setup script creates a reasonable default, but add anything project-specific you know you never want committed.
+- Keep a thorough `.gitignore`. The setup script creates a reasonable default, but add anything project-specific you know you never want committed. A template update (setup with `--target` into the project) keeps your rules and only appends the template rules your file lacks.
 
 For a thesis project where everything in the project is meant to be versioned anyway, `git add .` is usually fine. For projects with mixed confidential data, be more deliberate.
 
@@ -121,6 +121,8 @@ git reset --soft HEAD~1
 
 This undoes the last commit but keeps your file changes. You can then fix and re-commit.
 
+If it was your very first commit, Git answers `fatal: ambiguous argument 'HEAD~1'`. Use `git update-ref -d HEAD` instead: it removes that commit and keeps your files, still staged.
+
 **Warning:** `git reset --hard` deletes your changes too. Don't use it unless you're sure.
 
 ### "I want to see what was in the file last week"
@@ -132,10 +134,10 @@ git log -- path/to/file.md
 Shows all commits that touched that file. Pick a commit hash, then:
 
 ```bash
-git show <hash>:path/to/file.md
+git show <hash>:./path/to/file.md
 ```
 
-This prints the file as it was in that commit. You can copy what you need.
+This prints the file as it was in that commit. You can copy what you need. (The `./` makes the path relative to the folder you are in, as in the `git log` command above; without it, Git reads the path from the repository root, which fails inside a sub-project such as `02_Main_Work/`.)
 
 ### "I want to actually revert to last week's state"
 
@@ -196,6 +198,8 @@ Tools like OneDrive, iCloud Drive, Dropbox, or Google Drive can sync the project
 
 **Caveat:** Real-time sync of binary files can occasionally cause conflicts. Resolve them by keeping the local version and letting the sync service re-upload it.
 
+**Personal data:** a sync service ignores `.gitignore`. It uploads `data/raw/` and `data/processed/` too, which the project keeps out of Git because raw data may carry personal identifiers. If your data-protection plan does not allow that cloud, exclude those folders from syncing or keep the data outside the synced folder.
+
 ### Option 2: Remote Git repository
 
 Push your repository to a remote Git host (GitHub, GitLab, your institution's Git server). This is more robust but requires creating an account and learning a few more Git commands.
@@ -237,6 +241,6 @@ git add .
 git commit -m "meta: initial setup"           # baseline commit
 ```
 
-That's it. From here on, follow the chat closure ritual: at the end of each chat, the orchestrator gives you a `git add .` + `git commit -m "..."` to run.
+That's it. From here on, follow the chat closure ritual: at the end of each chat, the orchestrator gives you a `git add .` + `git commit -m "..."` to run (in a multi-project sub-project `git add -A`, which also stages changes in `../00_Shared_Materials/`; `git add .` stages only the folder you are in).
 
 Over months, you'll build a complete history of your project. You'll be glad you did.

@@ -36,7 +36,7 @@ agents:
     role: One-time extraction of institutional rules into styleguide.md
 
 # Optional: if formal compliance is critical, the format-verifier can be added.
-# In that case, consider presentation_3agent instead.
+# In that case, consider bachelor_5agent instead (its Phase B runs it).
 
 # Constraints
 
@@ -80,8 +80,9 @@ phases:
         blocking: true
         manual: true
         note: |
-          Verify that the citation guide, formatting guidelines, and 
-          assignment description are present, and all sources are accessible.
+          Verify that the citation guide and formatting guidelines are present
+          and all sources are accessible. The assignment description is
+          recommended: if it is missing, note it and continue.
       
       - step: 0.5
         name: Style resolution
@@ -89,8 +90,9 @@ phases:
         output: styleguide.md
         blocking: true
         note: |
-          Once per project. If the resolver leaves any open ❓ items,
-          clarify them before starting chapter work.
+          Once per project. If the resolver leaves open ❓ [content] items,
+          clarify them before starting chapter work; open ❓ [format] items
+          before the closing step F.1.
   
   # ===========================================================
   # Per-chapter work (one chat per chapter)
@@ -127,6 +129,7 @@ phases:
     - step: F.1
       manual: true
       task: |
+        - Resolve the open ❓ [format] entries in styleguide.md (usually with the supervisor)
         - Verify all chapters against styleguide (checklists/format_rules.md)
         - Export to DOCX (the scripts below read the DOCX, not the Markdown)
         - Derive list of abbreviations from text (scripts/abbreviations_extract.py)
@@ -151,5 +154,5 @@ minimal_setup_notes: |
   is not justified. Quality loss is modest.
   
   If the writer-agent frequently makes extraction errors during a project
-  (e.g., shifts technical terms), switch to presentation_3agent or
-  bachelor_5agent. Existing chats remain usable under the new workflow.
+  (e.g., shifts technical terms), switch to bachelor_5agent, which adds a
+  separate research-agent. Existing chats remain usable under the new workflow.

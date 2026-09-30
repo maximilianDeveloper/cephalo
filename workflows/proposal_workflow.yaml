@@ -86,7 +86,6 @@ directory_structure:
 
 shared_materials:
   relative_path: ../00_Shared_Materials/
-  symlink_path: ./shared/
   contains:
     - guidelines/
     - course_materials/
@@ -121,17 +120,17 @@ phases:
           - README.md describing the sub-project's purpose
 
       - step: 0.2
-        name: Verify symlink to shared materials
+        name: Verify the shared materials folder
         manual: true
         task: |
-          setup.sh / setup.ps1 created shared/ -> ../00_Shared_Materials (or a
-          copy if symlinks were not permitted; see CLAUDE.md, "Platform caveats").
-          Only if shared/ is missing, create it:
-          Windows (Developer Mode enabled — Settings -> For developers — or an
-          elevated PowerShell):
-            New-Item -ItemType SymbolicLink -Path "shared" -Target "..\00_Shared_Materials"
-          macOS/Linux:
-            ln -s ../00_Shared_Materials shared
+          The proposal reads the shared materials one level up, in
+          ../00_Shared_Materials/ (guidelines/, course_materials/, and the
+          styleguide.md of step 0.4). setup.sh / setup.ps1 created the
+          folder; only if it is missing, create it with guidelines/ and
+          course_materials/ inside. A shared/ link, copy or small text file
+          from an earlier cephalo version is no longer used: move anything
+          you changed in a copy to ../00_Shared_Materials/, then delete it in
+          Explorer or Finder (see docs/multiproject_structure.md).
 
       - step: 0.3
         name: Materials pre-check
@@ -141,8 +140,9 @@ phases:
         note: |
           The proposal runs before the main work, so no earlier pre-check has
           covered the materials. Apply sections "1. Examination materials" and
-          "2. Sources" (incl. "File disguise check") to shared/guidelines/ and
-          to every source the proposal will cite.
+          "2. Sources" (incl. "File disguise check") to
+          ../00_Shared_Materials/guidelines/ and to every source the proposal
+          will cite.
 
       - step: 0.4
         name: Verify or extract styleguide
@@ -152,9 +152,14 @@ phases:
           Two cases:
           
           (a) Proposal inside a multi-project setup (typical): verify that 
-          `../00_Shared_Materials/styleguide.md` (via `shared/` symlink) exists 
-          and contains no open ❓ items. The style-resolver only verifies; it 
+          `../00_Shared_Materials/styleguide.md` exists 
+          and contains no open ❓ [content] items (❓ [format] items must be
+          resolved before the format check in Phase 4). The style-resolver only verifies; it 
           does not re-extract, because the main work will reuse the same file.
+          If the file does not exist yet (the proposal is usually the first 
+          sub-project), the style-resolver extracts it once from 
+          `../00_Shared_Materials/guidelines/` into
+          `../00_Shared_Materials/styleguide.md`.
           
           (b) Proposal as stand-alone (rare — proposal written before the main 
           work's cephalo project exists): invoke the style-resolver to extract 
@@ -237,9 +242,9 @@ phases:
     
     style_note: |
       Proposal style is slightly more accessible than the final thesis text, 
-      but still scholarly. Voice and person per shared/styleguide.md
-      (style.forbidden_pronouns; do not assume), no evaluative adjectives,
-      clear citations for all substantive claims. shared/styleguide.md applies.
+      but still scholarly. Voice and person per ../00_Shared_Materials/styleguide.md
+      (style.forbidden_pronouns; do not assume), evaluative wording per style.forbidden_evaluative,
+      clear citations for all substantive claims. ../00_Shared_Materials/styleguide.md applies.
   
   # ===========================================================
   # Phase 4 - Submission
@@ -258,10 +263,10 @@ phases:
       - 04_Submission/proposal_final_<YYYY-MM-DD>.pdf (optional)
     
     steps:
-      - format-verifier: check against shared/styleguide.md
-      - Manual export to DOCX
+      - Manual export to DOCX (04_Submission/proposal_final_<YYYY-MM-DD>.docx)
+      - format-verifier: check this DOCX against ../00_Shared_Materials/styleguide.md; re-export after fixes
       - Manual export to PDF (if supervisor prefers)
-      - Git tag: proposal_v1_<date>
+      - Commit the exported files, then Git tag: proposal_v1_<date>
     
     submission_is_manual: true
     submission_note: |
@@ -289,13 +294,14 @@ phases:
     trigger: Proposal accepted by supervisor
     
     actions:
-      - Git tag: proposal_accepted_<date>
       - Set 00_Status.md to "completed"
-      - Copy final DOCX to: 02_Main_Work/01_Proposal_Reference/proposal_final_<date>.docx
-      - 01_Proposal/ becomes read-only
+      - Copy final DOCX to: ../02_Main_Work/01_Proposal_Reference/proposal_final_<date>.docx
       - Update README.md: "FROZEN — as of <date>"
+      - Commit: 'git add -A (it also stages the copy in ../02_Main_Work/), then git commit -m "meta: proposal accepted, copied to main/01_Proposal_Reference/"'
+      - Git tag: proposal_accepted_<date>
+      - 01_Proposal/ becomes read-only
     
     important: |
       From this point on, 01_Proposal/ is read-only. Any deviation of the 
       actual main work content from the proposal is documented in 
-      02_Main_Work/00_Decisions.md, not by retroactively editing the proposal.
+      ../02_Main_Work/00_Decisions.md, not by retroactively editing the proposal.

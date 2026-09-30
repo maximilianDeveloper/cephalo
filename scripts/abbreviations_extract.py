@@ -11,6 +11,8 @@ Steps:
 
 The output can be cross-checked against the document's actual list of 
 abbreviations to identify undocumented abbreviations or unused entries.
+Run it on a copy without the list of abbreviations: the list is read too,
+so every entry in it would count as used.
 
 Usage:
     python scripts/abbreviations_extract.py workspace/output/document.docx
@@ -34,6 +36,7 @@ if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
 try:
     from docx import Document
     from docx.opc.exceptions import PackageNotFoundError
+    from docx.table import _Cell
 except ImportError:
     print("Error: python-docx not installed.", file=sys.stderr)
     print("Install: pip install python-docx  (or: pip install -r requirements.txt)", file=sys.stderr)
@@ -72,6 +75,10 @@ def extract_abbreviations(text: str) -> set[str]:
     # pasted from PDFs): the combining mark is not a word character, so
     # ÖPNV would otherwise be cut to PNV.
     text = unicodedata.normalize("NFC", text)
+    # Subscript digits (CO₂, PM₁₀) are word characters for \b but not in
+    # [0-9], so the whole acronym was dropped: read them as ASCII digits.
+    # Superscripts stay as they are (R², footnote markers).
+    text = text.translate(str.maketrans("₀₁₂₃₄₅₆₇₈₉", "0123456789"))
 
     # Character classes for uppercase and lowercase that include umlauts
     upper = r"A-ZÄÖÜ"
@@ -142,10 +149,12 @@ def read_docx_text(path: Path) -> str:
         if p.text:
             chunks.append(p.text)
     
-    # Tables (including nested)
+    # Tables (including nested). The cells as written, not row.cells: that
+    # resolves merged cells, and python-docx raises on a vertical merge with no
+    # cell above it (found in converted documents), ending in a traceback.
     def collect_table_text(tbl):
         for row in tbl.rows:
-            for cell in row.cells:
+            for cell in (_Cell(tc, tbl) for tc in row._tr.tc_lst):
                 for p in cell.paragraphs:
                     if p.text:
                         chunks.append(p.text)
@@ -257,7 +266,8 @@ def main():
     
     print()
     print("Cross-check this list against your document's list of abbreviations.")
-    print("Add any missing entries; remove any unused entries.")
+    print("Add any missing entries; remove any unused entries. The list of abbreviations")
+    print("itself is read too: run this on a copy without it, or every entry counts as used.")
 
 
 if __name__ == "__main__":

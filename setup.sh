@@ -13,9 +13,11 @@
 # Run it from inside the cephalo template directory (it scaffolds into
 # the current directory, or copies the template to --target PATH).
 
-set -euo pipefail
-# An exported CDPATH would redirect the relative cd calls below (e.g. into
-# the sub-projects) to same-named directories elsewhere.
+# -E (errtrace): the ERR trap below also fires for a command that fails
+# inside a function (create_dir, copy_template_or_fallback, ...).
+set -Eeuo pipefail
+# An exported CDPATH would redirect the relative cd calls below (e.g. when
+# resolving a relative --target) to same-named directories elsewhere.
 unset CDPATH
 
 # ==========================================================
@@ -28,14 +30,33 @@ unset CDPATH
 # message, and pause briefly so the user sees what went on.
 
 SETUP_INTERRUPTED=0
+# Where the run was stopped, for the advice below: set when the template
+# copy into a new --target begins, and when the setup has completed.
+COPY_STARTED=0
+TARGET_HAD_FILES=false
+SOURCE_IS_PROJECT=false
+SETUP_DONE=0
 
 on_interrupt() {
     SETUP_INTERRUPTED=1
     echo ""
     echo ""
+    if [ "$SETUP_DONE" = "1" ]; then
+        # Ctrl+C after the summary (e.g. at "Delete it now?"): the project
+        # is complete, so this is no failure for a calling launcher.
+        echo -e "\033[0;90m  Stopped (Ctrl+C) after the setup had completed.\033[0m"
+        pause_before_close "done"
+        exit 0
+    fi
     echo -e "\033[1;33m! Setup cancelled by user (Ctrl+C).\033[0m"
-    echo -e "\033[0;90m  Any directories created up to this point remain in place.\033[0m"
-    echo -e "\033[0;90m  Re-run the script to resume; existing items will be skipped.\033[0m"
+    if [ "$COPY_STARTED" = "1" ] && [ "$TARGET_HAD_FILES" = "false" ]; then
+        # The same command would now refuse the non-empty target.
+        echo -e "\033[0;90m  The new project folder is only partly set up. Delete it, then re-run setup:\033[0m"
+        echo -e "\033[0;90m  $TARGET_DIR\033[0m"
+    else
+        echo -e "\033[0;90m  Any directories created up to this point remain in place.\033[0m"
+        echo -e "\033[0;90m  Re-run the script to resume; existing items will be skipped.\033[0m"
+    fi
     pause_before_close "cancelled"
     exit 130
 }
@@ -44,14 +65,26 @@ on_error() {
     local exit_code=$?
     # Skip if already handling interrupt (avoid double-pause)
     [ "$SETUP_INTERRUPTED" = "1" ] && exit $exit_code
+    # In a subshell ( ... ) or $( ... ), carry on as without the trap: the
+    # output of a $( ... ) must not take in the message, and a failed ( ... )
+    # fails its caller, which reports it (not under bash 3.2, which runs no
+    # ERR trap for a failed ( ... ): so no setup step runs in one).
+    if [ "${BASH_SUBSHELL:-0}" -gt 0 ]; then
+        return 0
+    fi
     echo ""
     echo -e "\033[0;31m! Setup exited unexpectedly (exit code $exit_code).\033[0m"
-    pause_before_close "error"
+    pause_before_close "error" "$exit_code"
     exit $exit_code
 }
 
 pause_before_close() {
     local reason="${1:-done}"
+    # The exit code the caller ends with after the pause.
+    local code="${2:-}"
+    if [ -z "$code" ]; then
+        case "$reason" in cancelled) code=130 ;; error) code=1 ;; *) code=0 ;; esac
+    fi
     # Only pause if we're attached to a real interactive terminal.
     # In CI, piped, or non-interactive runs, exit immediately.
     if [ -t 0 ] && [ -t 1 ]; then
@@ -61,6 +94,13 @@ pause_before_close() {
             error)     echo "Press Enter to close (check the messages above)..." ;;
             *)         echo "Press Enter to close..." ;;
         esac
+        # Ctrl+C here closes like Enter, with that exit code: the run has
+        # already ended (and in Git Bash, Ctrl+C is how many users try to copy
+        # the messages above), so there is no cancellation left to report.
+        # At the pauses of on_interrupt, which runs as the Ctrl+C trap, bash
+        # before 5.1 holds a second Ctrl+C back, so only Enter closes those.
+        PAUSE_EXIT="$code"
+        trap 'echo ""; exit "$PAUSE_EXIT"' INT
         # Use read with a short timeout fallback, in case even Enter is blocked
         read -r _ 2>/dev/null || sleep 3
     fi
@@ -129,6 +169,9 @@ ask_choice() {
         echo "Please enter a number between 1 and ${#options[@]}." >&2
         if [ "$attempts" -ge 10 ]; then
             echo "Error: too many invalid attempts. Aborting." >&2
+            # A menu shows only in runs without all three arguments, such as a
+            # double-clicked one, whose window would close at once.
+            pause_before_close "error" 2
             exit 2
         fi
     done
@@ -149,60 +192,6 @@ create_gitkeep() {
     # already exists, or set -e aborts every re-run of the setup.
     if [ ! -f "$gk" ]; then
         touch "$gk"
-    fi
-}
-
-create_symlink() {
-    local link="$1"
-    local target="$2"
-    
-    if [ -L "$link" ] || [ -e "$link" ]; then
-        echo -e "  ${GRAY}. $link (exists)${NC}"
-        return
-    fi
-    
-    # Try to create the symlink. On Git Bash (MinGW64) without either
-    # MSYS=winsymlinks:nativestrict or Developer Mode / Admin rights,
-    # `ln -s` silently creates a directory copy instead — with exit code 0.
-    # We must verify that a real symlink emerged. `|| true` keeps a FAILING
-    # ln (e.g. nativestrict without symlink privilege, or FAT32/exFAT)
-    # from aborting the subshell under set -e before the copy-fallback
-    # below can run.
-    ln -s "$target" "$link" 2>/dev/null || true
-    
-    if [ -L "$link" ]; then
-        echo -e "  ${GREEN}+ $link --> $target${NC}"
-        return
-    fi
-    
-    # No symlink was created. Possible outcomes:
-    #   (a) `ln -s` made a directory copy (Git Bash default) — already there.
-    #   (b) `ln -s` produced nothing — we need to copy ourselves.
-    # For case (b), the target path is relative to the LINK'S location,
-    # not to CWD, so we resolve it that way before copying. `|| true`: a
-    # failing cp must reach the "symlink AND copy failed" message below
-    # instead of aborting the whole setup under set -e.
-    if [ ! -e "$link" ]; then
-        local link_parent
-        link_parent=$(dirname "$link")
-        local resolved_target="$link_parent/$target"
-        if [ -d "$resolved_target" ] || [ -f "$resolved_target" ]; then
-            cp -r "$resolved_target" "$link" 2>/dev/null || true
-        elif [ -d "$target" ] || [ -f "$target" ]; then
-            # Fallback: target may be given relative to CWD
-            cp -r "$target" "$link" 2>/dev/null || true
-        fi
-    fi
-    
-    if [ -e "$link" ] && [ ! -L "$link" ]; then
-        echo -e "  ${YELLOW}! $link created as COPY (symlink not supported here).${NC}"
-        echo -e "  ${YELLOW}  Updates to $target will NOT propagate automatically.${NC}"
-        echo -e "  ${YELLOW}  On Git Bash: export MSYS=winsymlinks:nativestrict and enable${NC}"
-        echo -e "  ${YELLOW}  Developer Mode (Settings -> For developers), then delete the three${NC}"
-        echo -e "  ${YELLOW}  shared/ copies (01_Proposal, 02_Main_Work, 03_Defense) and re-run setup.${NC}"
-        echo -e "  ${YELLOW}  See docs/multiproject_structure.md for manual re-sync.${NC}"
-    else
-        echo -e "  ${RED}! $link could not be created (symlink AND copy failed).${NC}"
     fi
 }
 
@@ -265,6 +254,74 @@ canon_path() {
         esac
     done
     printf '%s\n' "$out"
+}
+
+path_inside() {
+    # Whether the canonical path $1 lies inside the canonical folder $2 (a
+    # path equal to $2 counts as inside: callers check that case first).
+    # Besides the text, -ef compares each existing ancestor with $2, as the
+    # letter case of a path may differ (APFS on macOS and NTFS under Git
+    # Bash usually ignore case).
+    local ancestor
+    if [[ "${1%/}/" == "${2%/}/"* ]]; then
+        return 0
+    fi
+    ancestor="${1%/*}"
+    while [ -n "$ancestor" ]; do
+        if [ "$ancestor" -ef "$2" ]; then
+            return 0
+        fi
+        ancestor="${ancestor%/*}"
+    done
+    return 1
+}
+
+prompt_target_inside() {
+    # For the target prompt: print the canonical form of path $1 if it lies
+    # inside the template folder (the current directory), as a bare folder
+    # name does, so the prompt can ask again. Resolved as below for a target.
+    local t="$1" canon here
+    case "$t" in
+        \~|\~/*) t="$HOME${t#\~}" ;;
+    esac
+    canon="$(canon_path "$t")" || return 1
+    here="$(pwd -P)"
+    if [ "$canon" = "$here" ] || [ "$canon" -ef "$here" ]; then
+        return 1
+    fi
+    path_inside "$canon" "$here" || return 1
+    printf '%s\n' "$canon"
+}
+
+shell_quote() {
+    # Print $1 in single quotes (' as '\''), for commands the user may paste:
+    # nothing in it expands, in bash and zsh alike. The substitution runs in
+    # an assignment, where bash 3.2 and 5 treat the quote characters the same.
+    local q="'\\''" s
+    s=${1//\'/$q}
+    printf "'%s'" "$s"
+}
+
+merge_missing_lines() {
+    # Append to the project's file $2 the rules of the template's file $1
+    # that it lacks (blank and comment lines aside), under one comment line.
+    # Prints how many rules were added. CR and a UTF-8 BOM are ignored when
+    # comparing, so a file edited on Windows is not filled with duplicates.
+    local missing count
+    missing="$(LC_ALL=C awk '
+        { sub(/\r$/, "") }
+        FNR == 1 && substr($0, 1, 3) == "\357\273\277" { $0 = substr($0, 4) }
+        FILENAME == ARGV[1] { have[$0] = 1; next }
+        $0 != "" && $0 !~ /^#/ && !($0 in have) && !seen[$0]++ { print }
+    ' "$2" "$1")" || return 1
+    count=0
+    [ -n "$missing" ] && count="$(printf '%s\n' "$missing" | wc -l | tr -d ' ')"
+    if [ "$count" -gt 0 ]; then
+        # Keep the file's last line intact if it has no line break.
+        if [ -s "$2" ] && [ -n "$(tail -c 1 "$2")" ]; then printf '\n' >> "$2"; fi
+        printf '\n# Added by cephalo setup: template rules this file lacked\n%s\n' "$missing" >> "$2"
+    fi
+    printf '%s\n' "$count"
 }
 
 # ==========================================================
@@ -345,10 +402,10 @@ if [ ! -f "setup.sh" ] || [ ! -d ".claude" ] || [ ! -d "templates" ]; then
     echo -e "${RED}(setup.sh, .claude/ and templates/ expected in: $(pwd)).${NC}" >&2
     if [ -n "$SCRIPT_DIR" ] && [ -d "$SCRIPT_DIR/.claude" ]; then
         echo -e "${YELLOW}The template appears to be at: $SCRIPT_DIR${NC}" >&2
-        echo -e "${YELLOW}Run:  cd \"$SCRIPT_DIR\" && ./setup.sh [args]${NC}" >&2
+        printf '%bRun:  cd %s && ./setup.sh [args]%b\n' "$YELLOW" "$(shell_quote "$SCRIPT_DIR")" "$NC" >&2
         echo -e "${YELLOW}Use --target PATH to create the project elsewhere.${NC}" >&2
     fi
-    pause_before_close "error"
+    pause_before_close "error" 2
     exit 2
 fi
 
@@ -427,6 +484,12 @@ if [ -n "$STRUCTURE" ]; then
     fi
 fi
 
+if [ -n "$SCAFFOLDING" ] && [ "$SCAFFOLDING" != "full" ] && [ "$SCAFFOLDING" != "minimal" ]; then
+    echo "Error: invalid SCAFFOLDING '$SCAFFOLDING'." >&2
+    echo "Valid options: full, minimal" >&2
+    exit 2
+fi
+
 # Seminar papers and presentations have flat workflows only: with Long-form
 # or Multi-project, setup would suggest a thesis workflow for them. The
 # interactive menu and the setup assistant pick Flat for them anyway.
@@ -436,7 +499,7 @@ check_flat_only() {
     if [[ "$WORK_TYPE" =~ ^(Seminar\ paper|Presentation)$ ]] && [ -n "$STRUCTURE" ] && [ "$STRUCTURE" != "Flat" ]; then
         echo "Error: '$WORK_TYPE' uses the Flat structure; there is no $STRUCTURE workflow for it." >&2
         if [ -n "$TARGET_DIR" ]; then
-            echo "Use: $0 \"$WORK_TYPE\" Flat ${SCAFFOLDING:-full} --target \"$TARGET_DIR\"" >&2
+            echo "Use: $0 \"$WORK_TYPE\" Flat ${SCAFFOLDING:-full} --target $(shell_quote "$TARGET_DIR")" >&2
         else
             echo "Use: $0 \"$WORK_TYPE\" Flat ${SCAFFOLDING:-full}" >&2
         fi
@@ -445,12 +508,6 @@ check_flat_only() {
 }
 check_flat_only
 
-if [ -n "$SCAFFOLDING" ] && [ "$SCAFFOLDING" != "full" ] && [ "$SCAFFOLDING" != "minimal" ]; then
-    echo "Error: invalid SCAFFOLDING '$SCAFFOLDING'." >&2
-    echo "Valid options: full, minimal" >&2
-    exit 2
-fi
-
 # All three positional arguments supplied -> documented non-interactive
 # mode (parity with setup.ps1 -NonInteractive): skip the location and
 # confirmation prompts so the run works with closed stdin (CI, scripts).
@@ -458,6 +515,15 @@ NON_INTERACTIVE=false
 if [ -n "$WORK_TYPE" ] && [ -n "$STRUCTURE" ] && [ -n "$SCAFFOLDING" ]; then
     NON_INTERACTIVE=true
 fi
+
+# For the error exits below, which a double-clicked run can reach: Git Bash
+# closes its window on exit, so an interactive run waits for Enter first.
+# Runs with all three arguments do not (the setup assistant's launchers,
+# which pass them, pause themselves).
+exit_with_pause() {
+    $NON_INTERACTIVE || pause_before_close "error" "$1"
+    exit "$1"
+}
 
 # ==========================================================
 # Target directory handling
@@ -488,11 +554,37 @@ if [ -z "$TARGET_DIR" ] && ! $NON_INTERACTIVE && [ -t 0 ] && [ -t 1 ]; then
                 echo "Enter a target path. The cephalo template will be copied there,"
                 echo "and the project structure will be created inside it."
                 echo "Example: ~/Documents/Bachelorarbeit_KMU_OSS"
-                read -r -p "Target path: " TARGET_DIR || TARGET_DIR=""
-                if [ -z "$TARGET_DIR" ]; then
-                    echo -e "${YELLOW}Empty path — using current location instead.${NC}"
-                    TARGET_DIR=""
-                fi
+                while true; do
+                    read -r -p "Target path: " TARGET_DIR || TARGET_DIR=""
+                    # A folder dragged into the terminal arrives quoted ('/a/My
+                    # Thesis') or shell-escaped (/a/My\ Thesis, macOS Terminal).
+                    # Undo that as the shell does for --target; backslashes in
+                    # other paths stay (C:\... typed in Git Bash).
+                    case "$TARGET_DIR" in
+                        \'*\') TARGET_DIR="${TARGET_DIR#\'}"; TARGET_DIR="${TARGET_DIR%\'}"
+                               # An apostrophe inside comes as '\'' (John'\''s Thesis).
+                               TARGET_DIR="$(printf '%s\n' "$TARGET_DIR" | sed "s/'\\\\''/'/g")" ;;
+                        \"*\") TARGET_DIR="${TARGET_DIR#\"}"; TARGET_DIR="${TARGET_DIR%\"}" ;;
+                        /*|\~*) TARGET_DIR="$(printf '%s\n' "$TARGET_DIR" | sed 's/\\\(.\)/\1/g')" ;;
+                    esac
+                    if [ -z "$TARGET_DIR" ]; then
+                        echo -e "${YELLOW}Empty path — using current location instead.${NC}"
+                        TARGET_DIR=""
+                        break
+                    fi
+                    # A folder inside the template, such as a bare folder name,
+                    # cannot take a copy of it: ask again rather than end the
+                    # run with the error below, which a --target gets.
+                    if inside_path="$(prompt_target_inside "$TARGET_DIR")"; then
+                        echo -e "${YELLOW}That folder lies inside the cephalo template folder:${NC}"
+                        # printf %s: a backslash in the folder name is no escape.
+                        printf '%b  %s%b\n' "$YELLOW" "$inside_path" "$NC"
+                        echo "Enter a full path outside it, such as the example above,"
+                        echo "or leave it empty to set up here."
+                        continue
+                    fi
+                    break
+                done
                 break
                 ;;
             *) echo "Please enter 1 or 2." ;;
@@ -512,7 +604,7 @@ if [ -n "$TARGET_DIR" ]; then
     # Reject obviously bad paths
     if [[ "$TARGET_DIR" == *$'\n'* ]] || [[ "$TARGET_DIR" == *$'\r'* ]]; then
         echo -e "${RED}Error: target path contains invalid characters.${NC}" >&2
-        exit 2
+        exit_with_pause 2
     fi
     
     # Resolve to absolute path (the source must stay resolvable too)
@@ -525,9 +617,11 @@ if [ -n "$TARGET_DIR" ]; then
     SOURCE_CANON="$(pwd -P)"
     if ! TARGET_CANON="$(canon_path "$TARGET_DIR")"; then
         echo -e "${RED}Error: cannot resolve target path '$TARGET_DIR'.${NC}" >&2
-        exit 2
+        exit_with_pause 2
     fi
-    if [ "$TARGET_CANON" = "$SOURCE_CANON" ]; then
+    # canon_path keeps the letter case as typed, but APFS (macOS) and NTFS
+    # (Git Bash) usually ignore case: -ef compares the directories themselves.
+    if [ "$TARGET_CANON" = "$SOURCE_CANON" ] || [ "$TARGET_CANON" -ef "$SOURCE_CANON" ]; then
         echo -e "${GRAY}Target path equals current location — proceeding here.${NC}"
         TARGET_DIR=""
         SOURCE_DIR_BEFORE_MOVE=""
@@ -536,14 +630,13 @@ if [ -n "$TARGET_DIR" ]; then
         # copy the source into one of its own subdirectories (self-copy), fail
         # mid-way, and leave a half-populated directory behind. Reject up front
         # with an actionable message (mirrors setup.ps1's equivalent guard).
-        SOURCE_PREFIX="${SOURCE_CANON%/}/"
-        if [[ "${TARGET_CANON%/}/" == "$SOURCE_PREFIX"* ]]; then
+        if path_inside "$TARGET_CANON" "$SOURCE_CANON"; then
             echo "" >&2
             echo -e "${RED}Error: the target directory must not be inside the cephalo template directory.${NC}" >&2
             echo -e "${RED}  Template: $SOURCE_CANON${NC}" >&2
             echo -e "${RED}  Target:   $TARGET_CANON${NC}" >&2
             echo -e "${RED}  Choose a target outside the template folder, or run without --target to set up here.${NC}" >&2
-            exit 2
+            exit_with_pause 2
         fi
         # Continue with the canonical path, so mkdir -p below never creates
         # stray directories for spellings like "a/zzz/../Thesis".
@@ -623,21 +716,37 @@ fi
 # ==========================================================
 
 if [ -n "$TARGET_DIR" ]; then
+    # Started from a project (set up here earlier), not a bare template: the
+    # copy carries its own 00_Status.md, styleguide.md, chapters and so on.
+    for marker in 00_Status.md 00_Shared_Materials workspace styleguide.md; do
+        if [ -e "$SOURCE_DIR_BEFORE_MOVE/$marker" ]; then SOURCE_IS_PROJECT=true; fi
+    done
+
     # Create the parent directory chain if needed
     TARGET_PARENT="$(dirname "$TARGET_DIR")"
     if [ ! -d "$TARGET_PARENT" ]; then
         echo -e "${GRAY}Creating parent directory: $TARGET_PARENT${NC}"
         if ! mkdir -p "$TARGET_PARENT"; then
             echo -e "${RED}Error: cannot create parent directory '$TARGET_PARENT'.${NC}" >&2
-            exit 2
+            exit_with_pause 2
         fi
     fi
 
     # Handle non-empty existing target
-    TARGET_HAD_FILES=false
     if [ -d "$TARGET_DIR" ]; then
-        if [ "$(ls -A "$TARGET_DIR" 2>/dev/null)" ]; then
+        # Folder metadata alone (.DS_Store: Finder writes one into every
+        # folder it shows) does not make the target non-empty.
+        if [ -n "$(find "$TARGET_DIR" -mindepth 1 -maxdepth 1 ! -name .DS_Store ! -name Thumbs.db ! -name desktop.ini 2>/dev/null)" ]; then
             TARGET_HAD_FILES=true
+            # Copied over another project, a project's own files would
+            # replace that project's, though the warning below says they are kept.
+            if $SOURCE_IS_PROJECT; then
+                echo "" >&2
+                echo -e "${RED}Error: this folder is a project, not a bare template (it has 00_Status.md, workspace/ or the like),${NC}" >&2
+                echo -e "${RED}  and the target is not empty: this project's status files, styleguide and chapters would replace the target's.${NC}" >&2
+                echo -e "${RED}  To update the target, run setup from a fresh cephalo template folder.${NC}" >&2
+                exit_with_pause 2
+            fi
             echo ""
             echo -e "${YELLOW}Warning: target directory already exists and is not empty:${NC}"
             echo -e "${YELLOW}  $TARGET_DIR${NC}"
@@ -646,7 +755,8 @@ if [ -n "$TARGET_DIR" ]; then
             echo "  .claude/agents/, workflows/, checklists/, templates/, scripts/, docs/,"
             echo "  CLAUDE.md, README.md and the template's other top-level files."
             echo "Files the template does not contain (00_Status.md, phase folders,"
-            echo "guidelines/, styleguide.md, ...) are kept."
+            echo "guidelines/, styleguide.md, ...) are kept. The project's own .gitignore"
+            echo "and .gitattributes are kept too; template rules they lack are appended."
             echo ""
             if ! $NON_INTERACTIVE && [ -t 0 ] && [ -t 1 ]; then
                 read -r -p "Continue and copy into this directory? [y/N]: " overwrite_ans || overwrite_ans=""
@@ -659,9 +769,10 @@ if [ -n "$TARGET_DIR" ]; then
                 exit 2
             fi
         fi
-    elif [ -e "$TARGET_DIR" ]; then
-        echo -e "${RED}Error: target path exists and is not a directory.${NC}" >&2
-        exit 2
+    elif [ -e "$TARGET_DIR" ] || [ -L "$TARGET_DIR" ]; then
+        # -L: a link to a folder that is gone (an unmounted drive) fails -e too.
+        echo -e "${RED}Error: target path exists and is not a directory (or is a broken link).${NC}" >&2
+        exit_with_pause 2
     else
         mkdir -p "$TARGET_DIR"
     fi
@@ -670,12 +781,27 @@ if [ -n "$TARGET_DIR" ]; then
     # We copy visible and dot-files, but exclude .git (user will init fresh).
     # Virtual environments (.venv/, venv/) are skipped at any depth, as in
     # setup.ps1 and .gitignore: their scripts point back into the template.
-    # The wizard launcher (cephalo-setup.* at the template root) is left out:
+    # The wizard launcher (cephalo-setup*, also a copy the browser renamed
+    # to e.g. "cephalo-setup (1).sh", at the template root) is left out:
     # it embeds the user's absolute path and would end up in the commit.
     # So is .github/: cephalo's own CI and issue templates would otherwise
     # run and show up in every thesis repository pushed to GitHub.
+    # The project's own .gitignore/.gitattributes may hold rules the user
+    # added (docs/git_introduction.md suggests it): they are not replaced,
+    # but completed with the template's rules after the copy.
+    KEEP_FILES=()
+    KEEP_EXCLUDES=()
+    if $TARGET_HAD_FILES; then
+        for f in .gitignore .gitattributes; do
+            if [ -f "$TARGET_DIR/$f" ] && [ -f "$SOURCE_DIR_BEFORE_MOVE/$f" ]; then
+                KEEP_FILES+=("$f")
+                KEEP_EXCLUDES+=("--exclude=./$f")
+            fi
+        done
+    fi
     echo ""
     echo -e "${CYAN}Copying cephalo template to target...${NC}"
+    COPY_STARTED=1
     # Use a tar-pipe to reliably include dotfiles and respect excludes
     # across Linux / macOS / Git Bash, without needing rsync.
     # tar's own messages stay visible (disk full, permissions, path too
@@ -686,12 +812,13 @@ if [ -n "$TARGET_DIR" ]; then
         tar --exclude='./.git' --exclude='./.git/*' \
             --exclude='./.claude/worktrees' --exclude='./.claude/worktrees/*' \
             --exclude='./.claude/settings.local.json' \
-            --exclude='./cephalo-setup.*' \
+            --exclude='./cephalo-setup*' \
             --exclude='./.github' --exclude='./.github/*' \
             --exclude='.venv' --exclude='*/.venv' --exclude='*/.venv/*' \
             --exclude='venv' --exclude='*/venv' --exclude='*/venv/*' \
             --exclude='__pycache__' --exclude='*/__pycache__' --exclude='*/__pycache__/*' \
             --exclude='*.pyc' \
+            ${KEEP_EXCLUDES[@]+"${KEEP_EXCLUDES[@]}"} \
             -cf - .
     ) | (
         cd "$TARGET_DIR" &&
@@ -706,7 +833,7 @@ if [ -n "$TARGET_DIR" ]; then
         else
             echo -e "${RED}  Delete the partial target directory, then re-run setup.${NC}" >&2
         fi
-        exit 3
+        exit_with_pause 3
     fi
 
     # Basic sanity check after copy
@@ -714,10 +841,17 @@ if [ -n "$TARGET_DIR" ]; then
         echo -e "${RED}Error: copy appears incomplete. Aborting.${NC}" >&2
         echo -e "${RED}  Source: $SOURCE_DIR_BEFORE_MOVE${NC}" >&2
         echo -e "${RED}  Target: $TARGET_DIR${NC}" >&2
-        exit 3
+        exit_with_pause 3
     fi
 
     echo -e "${GREEN}+ Template copied to: $TARGET_DIR${NC}"
+    for f in ${KEEP_FILES[@]+"${KEEP_FILES[@]}"}; do
+        if added="$(merge_missing_lines "$SOURCE_DIR_BEFORE_MOVE/$f" "$TARGET_DIR/$f")"; then
+            echo -e "${GRAY}. $f kept (project's own); template rules added: $added${NC}"
+        else
+            echo -e "${YELLOW}! $f kept, but the template's rules could not be added: compare it with $SOURCE_DIR_BEFORE_MOVE/$f${NC}"
+        fi
+    done
     echo ""
 
     # Change into target and continue the rest of the setup there
@@ -731,6 +865,8 @@ IS_MINIMAL=false
 
 # Set by exactly one of the structure branches below; guarded after them.
 WORKFLOW=""
+# Multi-project: shared/ entries left from an earlier cephalo version.
+OLD_SHARED=""
 
 # ==========================================================
 # Flat structure
@@ -866,6 +1002,7 @@ elif [[ "$STRUCTURE" =~ ^Multi-project ]]; then
             create_dir "$MAIN_NAME/05_Empirical/data/scripts"
             create_dir "$MAIN_NAME/05_Empirical/data/outputs"
             create_gitkeep "$MAIN_NAME/05_Empirical/data/raw"
+            create_gitkeep "$MAIN_NAME/05_Empirical/data/processed"
         fi
     fi
     
@@ -882,11 +1019,14 @@ elif [[ "$STRUCTURE" =~ ^Multi-project ]]; then
         create_gitkeep "03_Defense/05_Rehearsals"
     fi
     
-    # Symlinks
-    step "Creating symlinks to 00_Shared_Materials"
-    (cd "01_Proposal" && create_symlink "shared" "../00_Shared_Materials")
-    (cd "$MAIN_NAME" && create_symlink "shared" "../00_Shared_Materials")
-    (cd "03_Defense" && create_symlink "shared" "../00_Shared_Materials")
+    # The agents read ../00_Shared_Materials/ directly. Earlier versions
+    # linked or copied it into each sub-project as shared/: name such an
+    # entry in "Next steps" (a copy may hold changes), never delete it.
+    for p in "01_Proposal" "$MAIN_NAME" "03_Defense"; do
+        if [ -e "$p/shared" ] || [ -L "$p/shared" ]; then
+            OLD_SHARED="$OLD_SHARED $p/shared"
+        fi
+    done
     
     # Central files per sub-project
     step "Creating central state files per sub-project"
@@ -939,9 +1079,10 @@ venv/
 !**/data/raw/README.md
 !**/data/processed/.gitkeep
 
-# Claude Code runtime artifacts
-.claude/worktrees/
-.claude/settings.local.json
+# Claude Code runtime artifacts (in every folder: in a multi-project
+# setup, Claude Code is opened on a sub-project)
+**/.claude/worktrees/
+**/.claude/settings.local.json
 EOF
     echo -e "  ${GREEN}+ .gitignore${NC}"
 else
@@ -973,7 +1114,8 @@ EOF
     echo -e "  ${GREEN}+ .gitattributes${GITATTRIBUTES_NOTE}${NC}"
 fi
 
-if [ ! -d ".git" ]; then
+# -e, not -d: in a Git worktree or submodule, .git is a file.
+if [ ! -e ".git" ]; then
     if command -v git &> /dev/null; then
         if git init > /dev/null 2>&1; then
             if command -v git-lfs &> /dev/null; then
@@ -987,13 +1129,13 @@ if [ ! -d ".git" ]; then
                 fi
             else
                 echo -e "  ${GREEN}+ Git repository initialized${NC}"
-                echo -e "  ${YELLOW}! Git LFS not installed. Recommended: brew install git-lfs / apt install git-lfs${NC}"
+                echo -e "  ${YELLOW}! Git LFS not installed. Recommended: brew install git-lfs / apt install git-lfs (Windows: https://git-lfs.com)${NC}"
             fi
         else
             echo -e "  ${RED}! git init failed. Re-run manually to see the error: git init${NC}"
         fi
     else
-        echo -e "  ${RED}! Git not installed.${NC}"
+        echo -e "  ${RED}! Git not installed. Install it from https://git-scm.com${NC}"
     fi
 else
     echo -e "  ${GRAY}. Git repository exists${NC}"
@@ -1003,6 +1145,7 @@ fi
 # Summary
 # ==========================================================
 
+SETUP_DONE=1
 header "Setup complete"
 echo ""
 echo "Work type:    $WORK_TYPE"
@@ -1039,6 +1182,11 @@ elif [[ "$STRUCTURE" =~ ^Long-form ]]; then
     echo "   -> guidelines/"
 else
     echo "   -> 00_Shared_Materials/guidelines/"
+    if [ -n "$OLD_SHARED" ]; then
+        echo -e "   ${YELLOW}No longer used (the agents read ../00_Shared_Materials/):${OLD_SHARED}"
+        echo -e "   Delete them in Explorer or Finder: on the command line, deleting a link can"
+        echo -e "   empty 00_Shared_Materials/. Move changes out of a copy first (docs/multiproject_structure.md).${NC}"
+    fi
 fi
 echo ""
 STEP_NO=$((STEP_NO + 1))
@@ -1068,10 +1216,16 @@ echo ""
 # ==========================================================
 
 if [ -n "$SOURCE_DIR_BEFORE_MOVE" ] && [ -d "$SOURCE_DIR_BEFORE_MOVE" ]; then
+    # Started from a project (SOURCE_IS_PROJECT, set before the copy), not a
+    # bare template: the copy left out its .git history and local Claude Code
+    # files, so it is not offered for deletion.
     echo -e "${GRAY}The original cephalo template folder is still at:${NC}"
     echo -e "${GRAY}  $SOURCE_DIR_BEFORE_MOVE${NC}"
     echo ""
-    if [ -t 0 ] && [ -t 1 ]; then
+    if $SOURCE_IS_PROJECT; then
+        echo -e "${YELLOW}! That folder is a project, not a bare template (it has 00_Status.md, workspace/ or the like).${NC}"
+        echo -e "${YELLOW}  Kept: its Git history and local Claude Code files were not copied. Delete it only if you no longer need them.${NC}"
+    elif [ -t 0 ] && [ -t 1 ]; then
         read -r -p "Delete it now? [y/N]: " del_ans || del_ans=""
         case "$del_ans" in
             [yYjJ]|[yY][eE][sS]|[jJ][aA])
@@ -1079,8 +1233,17 @@ if [ -n "$SOURCE_DIR_BEFORE_MOVE" ] && [ -d "$SOURCE_DIR_BEFORE_MOVE" ]; then
                 # to avoid catastrophic rm -rf on an unrelated directory.
                 if [ -f "$SOURCE_DIR_BEFORE_MOVE/setup.sh" ] \
                    && [ -d "$SOURCE_DIR_BEFORE_MOVE/.claude" ]; then
-                    rm -rf "$SOURCE_DIR_BEFORE_MOVE"
-                    echo -e "${GREEN}+ Original folder deleted.${NC}"
+                    # "if": a failed deletion (a file without write access, or
+                    # on Windows a folder still open in another window) is no
+                    # failed setup for the ERR trap: the project is complete.
+                    # The physical folder: entered through a symbolic link,
+                    # rm -rf on the path would remove only the link.
+                    if rm -rf "$SOURCE_CANON"; then
+                        echo -e "${GREEN}+ Original folder deleted.${NC}"
+                    else
+                        echo -e "${YELLOW}! Could not delete the original folder completely (see above).${NC}"
+                        echo -e "${YELLOW}  Parts of it may be gone already. Close other windows open in it, then delete the rest manually.${NC}"
+                    fi
                 else
                     echo -e "${YELLOW}! Source folder no longer looks like a cephalo template.${NC}"
                     echo -e "${YELLOW}  Skipped for safety. Please review and delete manually if needed.${NC}"
@@ -1093,7 +1256,7 @@ if [ -n "$SOURCE_DIR_BEFORE_MOVE" ] && [ -d "$SOURCE_DIR_BEFORE_MOVE" ]; then
     else
         echo -e "${GRAY}Non-interactive run: keeping the original in place.${NC}"
         echo -e "${GRAY}Delete manually if no longer needed:${NC}"
-        echo -e "${GRAY}  rm -rf \"$SOURCE_DIR_BEFORE_MOVE\"${NC}"
+        printf '%b  rm -rf %s%b\n' "$GRAY" "$(shell_quote "$SOURCE_CANON")" "$NC"
     fi
     echo ""
 fi

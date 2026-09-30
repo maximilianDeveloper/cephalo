@@ -81,7 +81,7 @@ The resolver will:
 3. Flag ambiguous or missing rules as `❓`
 4. (For minimal-scaffolding setups) propose additional directories based on what your guidelines require
 
-Resolve all `❓` items before proceeding to content work. This usually means asking your supervisor about the ambiguous points.
+Each `❓` item is tagged. Resolve the `[content]` items (voice, evaluative wording, citation wording, length, outline depth, and the number formats, resolution and captions of tables and figures) before the first chapter is drafted: their answers change what the agents write. The `[format]` items (fonts, margins, pagination, title page, ...) only need an answer before the formatting phase. Resolving usually means asking your supervisor about the ambiguous points.
 
 ---
 
@@ -133,7 +133,7 @@ Institutional course files sometimes have misleading names. A `.pdf` may actuall
 
 ### Ignoring open `❓` items
 
-`❓` items in `styleguide.md` mean "I don't know". If you let them sit, the format-verifier will repeatedly flag the same issues. Resolve early.
+`❓` items in `styleguide.md` mean "I don't know". Open `[content]` items stop drafting; open `[format]` items stop the formatting phase, and until then the format-verifier keeps flagging the same issues. Resolve early.
 
 ### Working in the multi-project root
 
@@ -146,7 +146,7 @@ For multi-project setups, open the active sub-project (`01_Proposal/`, `02_Main_
 If you already have a draft (in Word, Markdown, etc.):
 
 1. Run setup as above
-2. Place existing chapters in the appropriate phase directories (long-form) or `workspace/output/chapters/` (flat)
+2. Place existing chapters in the appropriate phase directories (long-form) or `workspace/output/chapters/` (flat), as Markdown or plain text: the agents cannot open `.docx` files (in Word: Save As -> Plain Text, or `pandoc chapter.docx -o chapter.md`)
 3. Create an initial `00_Status.md` (long-form) or `workspace/state.md` (flat) summarizing where you stand
 4. Run the style-resolver
 5. Start a chat asking the source-verifier to verify your existing chapters
@@ -159,17 +159,19 @@ The agents work with what's already there. You don't need to rewrite anything th
 
 **`./setup.sh: Permission denied`** — the script needs the execute bit: `chmod +x setup.sh`.
 
+**macOS: a downloaded script cannot be opened (unverified developer)** — macOS blocks a double-click on scripts downloaded with a browser, so nothing has run. Click OK. For this reason `setup-wizard.html` offers no launcher for macOS: click **Copy** there, paste the command into Terminal and press Enter.
+
+**Windows: the downloaded launcher cannot be opened (Internet security settings)** — Windows blocks a `.cmd` file downloaded with the browser, so nothing has run. Right-click `cephalo-setup.cmd`, choose **Properties**, tick **Unblock** at the bottom of the **General** tab and click **OK**, then double-click it again. In PowerShell, `Unblock-File .\cephalo-setup.cmd` does the same. The launcher cannot do this itself, since Windows does not run it while the file is blocked; clicking **Copy** in `setup-wizard.html` and pasting the command into PowerShell needs no unblocking.
+
 **`setup.ps1 cannot be loaded because running scripts is disabled`** — PowerShell's execution policy. Allow this session only:
 ```powershell
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 .\setup.ps1
 ```
 
-**`git: command not found`** — install Git. On Windows: download Git for Windows (includes Git Bash, which is needed for the `.sh` helper scripts). On Linux/macOS: `apt install git` / `brew install git`.
+**`git: command not found`** (or `! Git not installed.` / `! Git not available` in the setup output) — install Git. On Windows: download Git for Windows (includes Git Bash, which is needed for the `.sh` helper scripts). On Linux/macOS: `apt install git` / `brew install git`. Setup creates no repository without Git (`git add .` then fails with `not a git repository`): afterwards, re-run setup with the same choices in the project folder (for multi-project, the root, not a sub-project).
 
-**`New-Item: Administrator privilege required`** on Windows (Multi-project setup) — symlinks need Admin rights or Developer Mode. The easier fix: Settings -> For developers -> Developer Mode: on. Then delete the three `shared/` copies the setup created instead (`01_Proposal/shared`, `02_Main_Work/shared`, `03_Defense/shared`) and re-run setup; a re-run keeps existing copies as they are.
-
-**`Error: python-docx not installed.`** (or `ModuleNotFoundError: No module named 'docx'`) — the Python utility scripts need their dependencies. From the project root: `pip install -r requirements.txt`. If you see `No module named 'docx'` specifically, you may have the wrong package — uninstall `docx` (the abandoned one) and install `python-docx`.
+**`Error: python-docx not installed.`** (or `ModuleNotFoundError: No module named 'docx'`) — the Python utility scripts need their dependencies. From the project root: `pip install -r requirements.txt`. If you installed `docx` instead, that is a different, abandoned package: run `pip uninstall docx`, then `pip install python-docx`.
 
 **Setup finishes but no workflow is mentioned** — check the script output. The last lines name the active workflow. Invalid arguments make the script exit with an error message naming the valid options — fix the argument and re-run.
 

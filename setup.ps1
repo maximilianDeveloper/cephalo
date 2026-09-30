@@ -3,11 +3,8 @@
 # cephalo setup script (Windows PowerShell).
 # Creates project structure based on user choices.
 #
-# Multi-project setups create symlinks: enable Developer Mode once (Settings ->
-# For developers) or run from an elevated shell; otherwise shared/ is copied.
-#
 # Usage:
-#   Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+#   Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 #   .\setup.ps1
 
 [CmdletBinding()]
@@ -96,6 +93,14 @@ function Test-CephaloTemplate([string]$Dir) {
         [System.IO.Directory]::Exists([System.IO.Path]::Combine($Dir, ".claude")) -and
         [System.IO.Directory]::Exists([System.IO.Path]::Combine($Dir, "templates")))
 }
+
+# A path as a single-quoted PowerShell literal, for the commands printed to
+# paste: in double quotes, a $ or backtick in a folder name is evaluated
+# (a pasted Remove-Item would delete a different folder). PowerShell also
+# reads U+2018-U+201B as single quotes, so those are doubled too.
+function ConvertTo-PSLiteral([string]$Text) {
+    return "'" + ($Text -replace "['$([char]0x2018)$([char]0x2019)$([char]0x201A)$([char]0x201B)]", '$0$0') + "'"
+}
 $StartDir = (Get-Location).ProviderPath
 # Windows PowerShell 5.1 started in a folder whose name contains [ ] (e.g.
 # "powershell -File .\setup.ps1" there) cannot enter it and starts in its own
@@ -117,9 +122,10 @@ if (-not (Test-CephaloTemplate $StartDir)) {
     Write-Host "(setup.ps1, .claude/ and templates/ expected in: $(Get-Location))." -ForegroundColor Red
     if ($ScriptDir -and (Test-Path -LiteralPath (Join-Path $ScriptDir ".claude"))) {
         Write-Host "The template appears to be at: $ScriptDir" -ForegroundColor Yellow
-        Write-Host "Run:  Set-Location -LiteralPath `"$ScriptDir`"; .\setup.ps1 [args]" -ForegroundColor Yellow
+        Write-Host "Run:  Set-Location -LiteralPath $(ConvertTo-PSLiteral $ScriptDir); .\setup.ps1 [args]" -ForegroundColor Yellow
         Write-Host "Use -Target PATH to create the project elsewhere." -ForegroundColor Yellow
     }
+    Pause-BeforeClose "error"
     exit 2
 }
 
@@ -197,55 +203,6 @@ function Create-Gitkeep($Path) {
     if (-not [System.IO.File]::Exists($kp)) { [System.IO.File]::WriteAllText($kp, "") }
 }
 
-function Create-Symlink($Link, $Target) {
-    $LinkAbs = Resolve-ProjectPath $Link
-    if ([System.IO.Directory]::Exists($LinkAbs) -or [System.IO.File]::Exists($LinkAbs)) {
-        Write-Host "  . $Link (exists)" -ForegroundColor Gray
-        return
-    }
-    # The link target stays relative ('..\00_Shared_Materials'), like the one
-    # setup.sh makes, so the project can be moved and a committed link does
-    # not record a local absolute path.
-    $RelativeTarget = $Target.Replace('\', [string][System.IO.Path]::DirectorySeparatorChar)
-    $AbsoluteTarget = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine(
-        [System.IO.Path]::GetDirectoryName($LinkAbs), $RelativeTarget))
-    # On Windows, try mklink first: it keeps the target relative and works with
-    # Developer Mode or an elevated shell. Windows PowerShell 5.1's New-Item
-    # demands elevation even in Developer Mode, and it resolves a relative
-    # -Target against the current location, so it could only make an absolute
-    # link. The redirection is cmd's, so no PowerShell error record is raised.
-    if ($env:OS -eq "Windows_NT") {
-        cmd /c mklink /D "$LinkAbs" "$Target" '>nul' '2>&1'
-        if ($LASTEXITCODE -eq 0 -and [System.IO.Directory]::Exists($LinkAbs)) {
-            Write-Host "  + $Link --> $Target" -ForegroundColor Green
-            return
-        }
-    }
-    # PowerShell 6+ keeps a relative -Target relative (resolved against the
-    # link's directory); 5.1 only gets here after mklink failed, and needs the
-    # absolute target so the error below is the real one (usually elevation).
-    if ($PSVersionTable.PSVersion.Major -ge 6) { $NewItemTarget = $RelativeTarget } else { $NewItemTarget = $AbsoluteTarget }
-    try {
-        New-Item -ItemType SymbolicLink -Path $LinkAbs -Target $NewItemTarget -ErrorAction Stop | Out-Null
-        Write-Host "  + $Link --> $Target" -ForegroundColor Green
-    } catch {
-        $NewItemError = $_.Exception.Message
-        # Fallback: copy the directory contents instead of symlinking.
-        # Surface the REAL exception rather than always blaming Administrator
-        # rights (path-resolution, filesystem, and elevation errors all land here).
-        Write-Host "  ! Symlink failed for $Link : $NewItemError" -ForegroundColor Yellow
-        Write-Host "    (On Windows, real symlinks need Developer Mode or an elevated shell.)" -ForegroundColor DarkGray
-        if ([System.IO.Directory]::Exists($AbsoluteTarget)) {
-            Copy-Item -LiteralPath $AbsoluteTarget -Destination $LinkAbs -Recurse -Force
-            Write-Host "    -> Copied $Target into $Link as fallback." -ForegroundColor Yellow
-            Write-Host "    Note: when guidelines change, you must update each copy manually, or enable" -ForegroundColor Yellow
-            Write-Host "    Developer Mode, delete the three shared\ copies and re-run setup." -ForegroundColor Yellow
-        } else {
-            Write-Host "    Could not create $Link nor copy from $Target. Please create manually." -ForegroundColor Red
-        }
-    }
-}
-
 function Write-Utf8NoBom($Path, $Content) {
     # PowerShell 5.1's "Set-Content -Encoding UTF8" writes a UTF-8 BOM.
     # For cross-platform compatibility (Linux tools, Git hooks), we avoid the BOM.
@@ -257,6 +214,32 @@ function Write-Utf8NoBom($Path, $Content) {
     $encoding = New-Object System.Text.UTF8Encoding $false
     $absolute = Resolve-ProjectPath $Path
     [System.IO.File]::WriteAllText($absolute, $Content, $encoding)
+}
+
+function Merge-MissingLines([string]$TemplateFile, [string]$ProjectFile) {
+    # Append to the project's file the rules of the template's file that it
+    # lacks (blank and comment lines aside), under one comment line, as
+    # setup.sh does. Returns how many rules were added. CR and a UTF-8 BOM
+    # (dropped by ReadAllText) are ignored when comparing, so a file edited
+    # on Windows is not filled with duplicates.
+    $utf8 = New-Object System.Text.UTF8Encoding $false
+    $existing = [System.IO.File]::ReadAllText($ProjectFile, $utf8)
+    $have = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::Ordinal)
+    foreach ($line in ($existing -split "`n")) { [void]$have.Add($line.TrimEnd("`r")) }
+    $missing = New-Object System.Collections.Generic.List[string]
+    foreach ($line in ([System.IO.File]::ReadAllText($TemplateFile, $utf8) -split "`n")) {
+        $line = $line.TrimEnd("`r")
+        if ($line -eq "" -or $line.StartsWith("#")) { continue }
+        if ($have.Add($line)) { $missing.Add($line) }
+    }
+    if ($missing.Count -gt 0) {
+        # Keep the file's last line intact if it has no line break.
+        $text = ""
+        if ($existing.Length -gt 0 -and -not $existing.EndsWith("`n")) { $text = "`n" }
+        $text += "`n# Added by cephalo setup: template rules this file lacked`n" + ($missing -join "`n") + "`n"
+        [System.IO.File]::AppendAllText($ProjectFile, $text, $utf8)
+    }
+    return $missing.Count
 }
 
 function Copy-TemplateIfExists($Template, $Destination, $FallbackContent) {
@@ -376,6 +359,15 @@ Write-Host ""
 # validates its positional arguments up front. Interactive runs with missing
 # values are validated after the prompts instead.
 
+# An empty -Target (e.g. an unset variable: -Target $ThesisDir) is not the
+# same as none: it must not fall through to a setup of the template folder
+# itself. setup.sh rejects an empty --target the same way.
+if ($PSBoundParameters.ContainsKey('Target') -and [string]::IsNullOrWhiteSpace($Target)) {
+    Write-Host ""
+    Write-Host "Error: -Target requires a path." -ForegroundColor Red
+    exit 2
+}
+
 if ($NonInteractive -or ($WorkType -ne "" -and $Structure -ne "" -and $Scaffolding -ne "")) {
     Resolve-CephaloConfiguration
 }
@@ -389,6 +381,30 @@ if ($NonInteractive -or ($WorkType -ne "" -and $Structure -ne "" -and $Scaffoldi
 # at the end the user is asked whether to delete it.
 
 $script:SourceDirBeforeMove = ""
+
+# The absolute form of a target path: ~ expanded, resolved against the
+# PowerShell location, not the process working directory that GetFullPath
+# alone would use (see Write-Utf8NoBom). A trailing separator is dropped
+# (not that of a drive root such as C:\): Windows PowerShell 5.1 would pass
+# "C:\My Thesis" to git with its closing quote escaped, and git init would
+# fail.
+function Resolve-TargetPath([string]$Path) {
+    # Expand ~ manually for PowerShell (it does not do this by default)
+    if ($Path.StartsWith("~")) {
+        $Path = Join-Path $env:USERPROFILE $Path.Substring(1).TrimStart('\', '/')
+    }
+    $Path = [System.IO.Path]::GetFullPath($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Path))
+    $Root = [System.IO.Path]::GetPathRoot($Path)
+    if ($Path.Length -gt $Root.Length) { $Path = $Path.TrimEnd('\', '/') }
+    return $Path
+}
+
+# Whether an absolute path lies inside the template folder (not equal to
+# it), compared case-insensitively as on Windows.
+function Test-InsideTemplate([string]$Path) {
+    $Prefix = $StartDir.TrimEnd('\', '/') + [System.IO.Path]::DirectorySeparatorChar
+    return $Path.TrimEnd('\', '/').StartsWith($Prefix, [System.StringComparison]::OrdinalIgnoreCase)
+}
 
 # Interactive Target prompt
 if ($Target -eq "" -and -not $NonInteractive) {
@@ -406,10 +422,34 @@ if ($Target -eq "" -and -not $NonInteractive) {
             Write-Host "Enter a target path. The cephalo template will be copied there,"
             Write-Host "and the project structure will be created inside it."
             Write-Host "Example: C:\Users\You\Documents\Bachelorarbeit_KMU_OSS"
-            $Target = Read-Host "Target path"
-            if ([string]::IsNullOrWhiteSpace($Target)) {
-                Write-Host "Empty path - using current location instead." -ForegroundColor Yellow
-                $Target = ""
+            while ($true) {
+                $Target = Read-Host "Target path"
+                # Explorer's "Copy as path" adds double quotes; a Windows path never contains them.
+                if ($Target) { $Target = $Target.Trim().Trim('"') }
+                if ([string]::IsNullOrWhiteSpace($Target)) {
+                    Write-Host "Empty path - using current location instead." -ForegroundColor Yellow
+                    $Target = ""
+                    break
+                }
+                # A path that cannot be resolved (a drive letter that does not
+                # exist, such as an unplugged USB stick) is asked for again too.
+                try {
+                    $InsidePath = Resolve-TargetPath $Target
+                } catch {
+                    $Why = if ($_.Exception.InnerException) { $_.Exception.InnerException.Message } else { $_.Exception.Message }
+                    Write-Host "Cannot use that path: $Why" -ForegroundColor Yellow
+                    Write-Host "Enter a full path, such as the example above,"
+                    Write-Host "or leave it empty to set up here."
+                    continue
+                }
+                # A folder inside the template, such as a bare folder name, cannot
+                # take a copy of it: ask again rather than end the run with the
+                # error below, which a -Target gets.
+                if (-not (Test-InsideTemplate $InsidePath)) { break }
+                Write-Host "That folder lies inside the cephalo template folder:" -ForegroundColor Yellow
+                Write-Host "  $InsidePath" -ForegroundColor Yellow
+                Write-Host "Enter a full path outside it, such as the example above,"
+                Write-Host "or leave it empty to set up here."
             }
             break
         }
@@ -419,14 +459,16 @@ if ($Target -eq "" -and -not $NonInteractive) {
 
 # Process Target if specified
 if ($Target -ne "") {
-    # Expand ~ manually for PowerShell (it does not do this by default)
-    if ($Target.StartsWith("~")) {
-        $Target = Join-Path $env:USERPROFILE $Target.Substring(1).TrimStart('\', '/')
+    try {
+        $Target = Resolve-TargetPath $Target
+    } catch {
+        # Otherwise the script-level trap would report a cancelled run (exit 130).
+        $Why = if ($_.Exception.InnerException) { $_.Exception.InnerException.Message } else { $_.Exception.Message }
+        Write-Host ""
+        Write-Host "Error: cannot resolve target path '$Target': $Why" -ForegroundColor Red
+        Pause-BeforeClose "error"
+        exit 2
     }
-    
-    # Resolve to absolute path against the PowerShell location, not the process
-    # working directory that GetFullPath alone would use (see Write-Utf8NoBom)
-    $Target = [System.IO.Path]::GetFullPath($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Target))
     $SourceDir = $StartDir
 
     if ($Target -eq $SourceDir) {
@@ -440,13 +482,13 @@ if ($Target -ne "") {
         # copy the source into one of its own subdirectories (self-copy), fail
         # mid-way, and leave a half-populated directory behind. Reject up front
         # (case-insensitive on Windows) with an actionable message.
-        $SourcePrefix = $SourceDir.TrimEnd('\','/') + [System.IO.Path]::DirectorySeparatorChar
-        if ($Target.TrimEnd('\','/').StartsWith($SourcePrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+        if (Test-InsideTemplate $Target) {
             Write-Host ""
             Write-Host "Error: the target directory must not be inside the cephalo template directory." -ForegroundColor Red
             Write-Host "  Template: $SourceDir" -ForegroundColor Red
             Write-Host "  Target:   $Target" -ForegroundColor Red
             Write-Host "  Choose a target outside the template folder, or run without -Target to set up here." -ForegroundColor Red
+            Pause-BeforeClose "error"
             exit 2
         }
     }
@@ -531,15 +573,20 @@ if ($NonInteractive) {
 
 if ($Target -ne "") {
     $SourceDir = $StartDir
+    # Started from a project (set up here earlier), not a bare template: the
+    # copy carries its own 00_Status.md, styleguide.md, chapters and so on.
+    $SourceIsProject = @("00_Status.md", "00_Shared_Materials", "workspace", "styleguide.md" |
+        Where-Object { Test-Path -LiteralPath (Join-Path $SourceDir $_) }).Count -gt 0
     
     # Create parent directory chain if needed
     $TargetParent = Split-Path -Parent $Target
     if ($TargetParent -and -not (Test-Path -LiteralPath $TargetParent)) {
         Write-Host "Creating parent directory: $TargetParent" -ForegroundColor Gray
         try {
-            New-Item -ItemType Directory -Path $TargetParent -Force | Out-Null
+            New-Item -ItemType Directory -Path $TargetParent -Force -ErrorAction Stop | Out-Null
         } catch {
             Write-Host "Error: cannot create parent directory '$TargetParent'." -ForegroundColor Red
+            Pause-BeforeClose "error"
             exit 2
         }
     }
@@ -548,9 +595,22 @@ if ($Target -ne "") {
     $TargetWasEmpty = $true
     if (Test-Path -LiteralPath $Target) {
         if (Test-Path -LiteralPath $Target -PathType Container) {
-            $existing = Get-ChildItem -LiteralPath $Target -Force -ErrorAction SilentlyContinue
+            # Folder metadata alone (Thumbs.db, desktop.ini, a .DS_Store from a
+            # Mac) does not make the target non-empty, as in setup.sh.
+            $existing = Get-ChildItem -LiteralPath $Target -Force -ErrorAction SilentlyContinue |
+                Where-Object { @(".DS_Store", "Thumbs.db", "desktop.ini") -notcontains $_.Name }
             if ($existing) {
                 $TargetWasEmpty = $false
+                # Copied over another project, a project's own files would
+                # replace that project's, though the warning below says they are kept.
+                if ($SourceIsProject) {
+                    Write-Host ""
+                    Write-Host "Error: this folder is a project, not a bare template (it has 00_Status.md, workspace\ or the like)," -ForegroundColor Red
+                    Write-Host "  and the target is not empty: this project's status files, styleguide and chapters would replace the target's." -ForegroundColor Red
+                    Write-Host "  To update the target, run setup from a fresh cephalo template folder." -ForegroundColor Red
+                    Pause-BeforeClose "error"
+                    exit 2
+                }
                 Write-Host ""
                 Write-Host "Warning: target directory already exists and is not empty:" -ForegroundColor Yellow
                 Write-Host "  $Target" -ForegroundColor Yellow
@@ -559,7 +619,8 @@ if ($Target -ne "") {
                 Write-Host "  .claude\agents\, workflows\, checklists\, templates\, scripts\, docs\,"
                 Write-Host "  CLAUDE.md, README.md and the template's other top-level files."
                 Write-Host "Files the template does not contain (00_Status.md, phase folders,"
-                Write-Host "guidelines\, styleguide.md, ...) are kept."
+                Write-Host "guidelines\, styleguide.md, ...) are kept. The project's own .gitignore"
+                Write-Host "and .gitattributes are kept too; template rules they lack are appended."
                 Write-Host ""
                 if (-not $NonInteractive) {
                     $overwriteAns = Read-Host "Continue and copy into this directory? [y/N]"
@@ -574,6 +635,7 @@ if ($Target -ne "") {
             }
         } else {
             Write-Host "Error: target path exists and is not a directory." -ForegroundColor Red
+            Pause-BeforeClose "error"
             exit 2
         }
     } else {
@@ -584,15 +646,28 @@ if ($Target -ne "") {
     # that the repo's own .gitignore protects (__pycache__, *.pyc, venvs, and
     # Claude Code's own worktrees/local settings). These must not leak into
     # a freshly scaffolded project. The setup-wizard launcher
-    # (cephalo-setup.*) is skipped too: it embeds the absolute path it was
+    # (cephalo-setup*, also a renamed re-download) is skipped too: it embeds the absolute path it was
     # generated for and would otherwise be committed with the project.
     Write-Verbose "Copying template from '$SourceDir' to target '$Target'"
     Write-Host ""
     Write-Host "Copying cephalo template to target..." -ForegroundColor Cyan
     $ExcludedTopLevelNames = @(".git", ".github", "__pycache__", ".venv", "venv")
+    # The project's own .gitignore/.gitattributes may hold rules the user
+    # added (docs/git_introduction.md suggests it): they are not replaced,
+    # but completed with the template's rules after the copy.
+    $KeepNames = @()
+    if (-not $TargetWasEmpty) {
+        foreach ($KeepName in ".gitignore", ".gitattributes") {
+            if ([System.IO.File]::Exists([System.IO.Path]::Combine($Target, $KeepName)) -and
+                [System.IO.File]::Exists([System.IO.Path]::Combine($SourceDir, $KeepName))) {
+                $KeepNames += $KeepName
+            }
+        }
+    }
     try {
         Get-ChildItem -LiteralPath $SourceDir -Force | Where-Object {
-            $ExcludedTopLevelNames -notcontains $_.Name -and $_.Extension -ne ".pyc" -and $_.Name -notlike "cephalo-setup.*"
+            $ExcludedTopLevelNames -notcontains $_.Name -and $KeepNames -notcontains $_.Name -and
+            $_.Extension -ne ".pyc" -and $_.Name -notlike "cephalo-setup*"
         } | ForEach-Object {
             if ($_.Name -eq ".claude" -and $_.PSIsContainer) {
                 # Copy .claude item by item, like setup.sh's tar excludes:
@@ -611,6 +686,7 @@ if ($Target -ne "") {
         }
     } catch {
         Write-Host "Error during copy: $($_.Exception.Message)" -ForegroundColor Red
+        Pause-BeforeClose "error"
         exit 3
     }
 
@@ -632,10 +708,20 @@ if ($Target -ne "") {
         Write-Host "Error: copy appears incomplete. Aborting." -ForegroundColor Red
         Write-Host "  Source: $SourceDir" -ForegroundColor Red
         Write-Host "  Target: $Target" -ForegroundColor Red
+        Pause-BeforeClose "error"
         exit 3
     }
     
     Write-Host "+ Template copied to: $Target" -ForegroundColor Green
+    foreach ($KeepName in $KeepNames) {
+        $KeepTemplate = [System.IO.Path]::Combine($SourceDir, $KeepName)
+        try {
+            $added = Merge-MissingLines $KeepTemplate ([System.IO.Path]::Combine($Target, $KeepName))
+            Write-Host ". $KeepName kept (project's own); template rules added: $added" -ForegroundColor Gray
+        } catch {
+            Write-Host "! $KeepName kept, but the template's rules could not be added: compare it with $KeepTemplate" -ForegroundColor Yellow
+        }
+    }
     Write-Host ""
     
     $script:SourceDirBeforeMove = $SourceDir
@@ -646,6 +732,8 @@ if ($Target -ne "") {
 if (-not $script:ProjectRoot) { $script:ProjectRoot = $StartDir }
 
 $IsMinimal = $Scaffolding -match "^Minimal"
+# Multi-project: shared\ entries left from an earlier cephalo version.
+$OldShared = @()
 Write-Verbose "Resolved configuration: WorkType='$WorkType', Structure='$Structure', Scaffolding='$Scaffolding' (minimal=$IsMinimal)."
 Write-Verbose "Working location: $((Get-Location).Path)"
 
@@ -789,6 +877,7 @@ elseif ($Structure -match "^Multi-project") {
             Create-DirSafe "$MainName\05_Empirical\data\scripts"
             Create-DirSafe "$MainName\05_Empirical\data\outputs"
             Create-Gitkeep "$MainName\05_Empirical\data\raw"
+            Create-Gitkeep "$MainName\05_Empirical\data\processed"
         }
     }
     
@@ -805,11 +894,13 @@ elseif ($Structure -match "^Multi-project") {
         Create-Gitkeep "03_Defense\05_Rehearsals"
     }
     
-    # Symlinks
-    Write-Step "Creating symlinks to 00_Shared_Materials"
-    Create-Symlink "01_Proposal\shared" "..\00_Shared_Materials"
-    Create-Symlink "$MainName\shared" "..\00_Shared_Materials"
-    Create-Symlink "03_Defense\shared" "..\00_Shared_Materials"
+    # The agents read ..\00_Shared_Materials\ directly. Earlier versions
+    # linked or copied it into each sub-project as shared\: name such an
+    # entry in "Next steps" (a copy may hold changes), never delete it.
+    foreach ($p in @("01_Proposal", $MainName, "03_Defense")) {
+        $SharedPath = Resolve-ProjectPath "$p\shared"
+        if ([System.IO.Directory]::Exists($SharedPath) -or [System.IO.File]::Exists($SharedPath)) { $OldShared += "$p\shared" }
+    }
     
     # Central files per sub-project
     Write-Step "Creating central state files per sub-project"
@@ -862,16 +953,18 @@ venv/
 !**/data/raw/README.md
 !**/data/processed/.gitkeep
 
-# Claude Code runtime artifacts
-.claude/worktrees/
-.claude/settings.local.json
+# Claude Code runtime artifacts (in every folder: in a multi-project
+# setup, Claude Code is opened on a sub-project)
+**/.claude/worktrees/
+**/.claude/settings.local.json
 "@
 
 if (-not [System.IO.File]::Exists((Resolve-ProjectPath ".gitignore"))) {
-    # The here-string above inherits CRLF from this CRLF-encoded .ps1 file,
-    # but the repo-root .gitignore (and most POSIX tooling) uses LF. Normalize
-    # to LF and add the trailing newline the here-string omits after its last
-    # line, so the generated file matches the repo-root .gitignore byte-for-byte.
+    # The here-string above inherits this .ps1 file's line endings (CRLF in a
+    # Windows checkout with core.autocrlf=true), but the repo-root .gitignore
+    # (and most POSIX tooling) uses LF. Normalize to LF and add the trailing
+    # newline the here-string omits after its last line, so the generated file
+    # matches the repo-root .gitignore byte-for-byte.
     $GitignoreContentLf = ($GitignoreContent -replace "`r`n", "`n") + "`n"
     Write-Utf8NoBom ".gitignore" $GitignoreContentLf
     Write-Host "  + .gitignore" -ForegroundColor Green
@@ -971,6 +1064,11 @@ if ($Structure -eq "Flat") {
     Write-Host "   -> guidelines\"
 } else {
     Write-Host "   -> 00_Shared_Materials\guidelines\"
+    if ($OldShared.Count -gt 0) {
+        Write-Host "   No longer used (the agents read ..\00_Shared_Materials\): $($OldShared -join ' ')" -ForegroundColor Yellow
+        Write-Host "   Delete them in Explorer or Finder: on the command line, deleting a link can" -ForegroundColor Yellow
+        Write-Host "   empty 00_Shared_Materials\. Move changes out of a copy first (docs\multiproject_structure.md)." -ForegroundColor Yellow
+    }
 }
 Write-Host ""
 $stepNo++
@@ -1001,20 +1099,33 @@ Write-Host ""
 # ==========================================================
 
 if ($script:SourceDirBeforeMove -and (Test-Path -LiteralPath $script:SourceDirBeforeMove)) {
+    # Started from a project ($SourceIsProject, set before the copy), not a
+    # bare template: the copy left out its .git history and local Claude Code
+    # files, so it is not offered for deletion.
     Write-Host "The original cephalo template folder is still at:" -ForegroundColor Gray
     Write-Host "  $($script:SourceDirBeforeMove)" -ForegroundColor Gray
     Write-Host ""
-    if (-not $NonInteractive) {
+    if ($SourceIsProject) {
+        Write-Host "! That folder is a project, not a bare template (it has 00_Status.md, workspace/ or the like)." -ForegroundColor Yellow
+        Write-Host "  Kept: its Git history and local Claude Code files were not copied. Delete it only if you no longer need them." -ForegroundColor Yellow
+    } elseif (-not $NonInteractive) {
         $delAns = Read-Host "Delete it now? [y/N]"
         if ($delAns -match '^(y|Y|j|J|yes|Yes|ja|Ja)$') {
             # Safety: only delete if it still looks like a cephalo template
             if ((Test-Path -LiteralPath (Join-Path $script:SourceDirBeforeMove "setup.ps1")) -and `
                 (Test-Path -LiteralPath (Join-Path $script:SourceDirBeforeMove ".claude"))) {
                 try {
-                    Remove-Item -LiteralPath $script:SourceDirBeforeMove -Recurse -Force
+                    # Set-Location moved only PowerShell's location: the process
+                    # working directory is still the template folder, and Windows
+                    # cannot delete a folder that is a process's working directory.
+                    [System.Environment]::CurrentDirectory = $script:ProjectRoot
+                    # -ErrorAction Stop: without it a failed (partial) deletion only
+                    # printed errors and still reported the folder as deleted.
+                    Remove-Item -LiteralPath $script:SourceDirBeforeMove -Recurse -Force -ErrorAction Stop
                     Write-Host "+ Original folder deleted." -ForegroundColor Green
                 } catch {
                     Write-Host "! Could not delete original folder: $($_.Exception.Message)" -ForegroundColor Yellow
+                    Write-Host "  Parts of it may be gone already. Close other windows open in it, then delete the rest manually." -ForegroundColor Yellow
                 }
             } else {
                 Write-Host "! Source folder no longer looks like a cephalo template." -ForegroundColor Yellow
@@ -1026,7 +1137,7 @@ if ($script:SourceDirBeforeMove -and (Test-Path -LiteralPath $script:SourceDirBe
     } else {
         Write-Host "Non-interactive run: keeping the original in place." -ForegroundColor Gray
         Write-Host "Delete manually if no longer needed:" -ForegroundColor Gray
-        Write-Host "  Remove-Item -LiteralPath `"$($script:SourceDirBeforeMove)`" -Recurse -Force" -ForegroundColor Gray
+        Write-Host "  Remove-Item -LiteralPath $(ConvertTo-PSLiteral $script:SourceDirBeforeMove) -Recurse -Force" -ForegroundColor Gray
     }
     Write-Host ""
 }

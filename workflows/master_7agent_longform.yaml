@@ -83,7 +83,7 @@ longform:
     - 07_Introduction
     - 08_Formal_Review
   
-  guidelines_directory: guidelines
+  guidelines_directory: guidelines   # multi-project main work: ../00_Shared_Materials/guidelines
   
   data_directory_rules:
     raw:
@@ -142,6 +142,10 @@ phases:
       - step: 0.4
         name: Reference manager check
         manual: true
+        task: |
+          - Reference manager collection created?
+          - BibTeX export configured (Better BibTeX or equivalent)?
+          - Auto-export to 02_Literature/literature.bib?
       
       - step: 0.5
         name: Style resolution
@@ -149,10 +153,17 @@ phases:
         input_directory: guidelines/
         output: styleguide.md
         blocking: true
+        note: |
+          Multi-project main work: the guidelines are in
+          ../00_Shared_Materials/guidelines/, and ../00_Shared_Materials/styleguide.md
+          normally exists already (extracted in the proposal). Only verify it (no open
+          ❓ [content] items; ❓ [format] items may wait until Phase B);
+          re-extract only when the guidelines change.
       
       - step: 0.6
-        name: Methodological design
+        name: Methodological design (only if empirical)
         agent: methods
+        condition: empirical == true
         output: 04_Methods/design.md
         blocking: true
         note: |
@@ -166,6 +177,11 @@ phases:
   phase_01_proposal:
     directory: 01_Proposal/
     agents: [orchestrator-longform, writer, source-verifier]
+    optional: true
+    note: |
+      Optional within long-form. In a multi-project main work, skip it: the
+      accepted proposal is the read-only 01_Proposal_Reference/, and
+      deviations from it go to 00_Decisions.md.
   
   phase_02_literature:
     directory: 02_Literature/
@@ -242,7 +258,7 @@ phases:
   # ===========================================================
   phase_07_introduction:
     directory: 07_Introduction/
-    agents: [orchestrator-longform, writer, source-verifier]
+    agents: [orchestrator-longform, writer, source-verifier, format-verifier]
     content_or_form_phase: A
     important: |
       Introduction is ALWAYS written LAST.
@@ -269,7 +285,7 @@ phases:
     
     triggers:
       - All content chapters complete with ✅ source verification
-      - Methods and empirical chapters consistent (data-agent confirmed)
+      - Methods and empirical chapters consistent (data-agent confirmed; empirical theses only)
       - No outstanding ⚠️ or ❓ items
       - Last 3 iterations were format-only (content has stabilized)
       - All ❓ items in styleguide.md clarified
@@ -277,7 +293,7 @@ phases:
     actions:
       - 00_Status.md  ->  overall phase: B
       - writer-agent deactivated
-      - data-agent deactivated (data work is done)
+      - data-agent deactivated (data work is done), except for the final data audit before submission
       - format-verifier + build scripts active
       - Begin phase 08_Formal_Review
     
@@ -321,11 +337,13 @@ phases:
   submission:
     manual: true
     task: |
+      - Full-document final check: checklists/consistency.md, Part B (orchestrator-longform; B.6 is completed by the commit and tag below)
+      - data-agent: final data audit, all numbers in the text vs. raw data (empirical theses only)
       - Final DOCX export to 08_Formal_Review/submissions/v_final_<date>.docx
       - Run scripts/docx_postprocess.sh on this v_final file (only if styleguide.md document.hyphenation = automatic; a fresh export may not carry the earlier patch)
-      - Tag in Git: git tag v_final_<date>
       - Update table of contents
       - Confirm the hyphenation setting matches styleguide.md (document.hyphenation)
       - Visual proofreading
       - Sign declaration of academic integrity
+      - Commit the final state (git add -A then git commit -m "submission: final version", in a multi-project main work "main/submission: final version"), then tag it: git tag v_final_<date>
       - Mentally rehearse defending each sentence (especially methods chapter)

@@ -21,7 +21,8 @@
 #   - python3 (or python, or the Windows `py` launcher) with the `pypdf`
 #     package installed (pure-python PDF parser), with its [crypto] extra for
 #     AES-encrypted PDFs. Install: pip3 install -r requirements.txt
-#     (or: pip3 install "pypdf[crypto]")
+#     (not pypdf[crypto] alone: requirements.txt keeps cryptography below 49
+#     on Intel Macs, where newer releases have no wheels)
 #   - pdftotext (poppler) as fallback if python / pypdf is not available
 #
 # Why not pdftotext directly?
@@ -85,7 +86,7 @@ fi
 if [ -z "$PYTHON_BIN" ] && [ "$HAVE_PDFTOTEXT" = "0" ]; then
     echo "Error: no working Python 3 interpreter (tried: python3, python, py) and no pdftotext found." >&2
     echo "Install one of:" >&2
-    echo "  - python3 + 'pip3 install \"pypdf[crypto]\"' (recommended, cross-platform)" >&2
+    echo "  - python3 + 'pip3 install -r requirements.txt' in the cephalo folder (recommended, cross-platform)" >&2
     echo "  - pdftotext (poppler-utils on Linux, poppler on macOS)" >&2
     exit 1
 fi
@@ -110,6 +111,9 @@ if [ -z "$PYTHON_BIN" ]; then
     written="|"
     base="${GUIDELINES_DIR%/}"
     while IFS= read -r -d '' pdf; do
+        # A link counts if it leads to a file, as in the Python path
+        # (is_file); a broken link is skipped there too.
+        [ -f "$pdf" ] || continue
         # Flatten the relative path; strip only the FINAL .pdf extension
         # (any case), so 'notes.pdf.pdf' does not collapse onto 'notes.pdf'.
         rel="${pdf#"$base"}"
@@ -151,7 +155,8 @@ if [ -z "$PYTHON_BIN" ]; then
             echo "  ERR $(basename "$pdf") - PDF extraction failed or produced no text" >&2
             errors=$((errors + 1))
         fi
-    done < <(find "$base" -type f -iname '*.pdf' -print0 | sort -z)
+    # -H: a guidelines folder given as a link is searched too (as by rglob).
+    done < <(find -H "$base" \( -type f -o -type l \) -iname '*.pdf' -print0 | sort -z)
 
     echo ""
     echo "Done."
@@ -187,9 +192,21 @@ if [ -z "$PYTHON_BIN" ]; then
     exit 0
 fi
 
+# Paths handed to Python. Under Git Bash the interpreter is a native Windows
+# program, and MSYS converts a /path argument for it only when it looks like
+# a path: not "/tmp/Chapter [2].docx" (brackets), for example. cygpath, part
+# of Git Bash, converts every path; elsewhere the path stays as it is.
+py_path() {
+    if command -v cygpath >/dev/null 2>&1; then
+        cygpath -m "$1"
+    else
+        printf '%s\n' "$1"
+    fi
+}
+
 # Delegate to Python for all heavy lifting — handles file-type detection,
 # recursive search, safe ZIP extraction (ZipSlip-hardened), and pypdf.
-"$PYTHON_BIN" - "$GUIDELINES_DIR" "$OUT_DIR" "$HAVE_PDFTOTEXT" << 'PYEOF'
+"$PYTHON_BIN" - "$(py_path "$GUIDELINES_DIR")" "$(py_path "$OUT_DIR")" "$HAVE_PDFTOTEXT" << 'PYEOF'
 import os
 import sys
 import subprocess
@@ -197,6 +214,14 @@ import tempfile
 import zipfile
 import zlib
 from pathlib import Path
+
+# A corrupt LZMA member raises lzma.LZMAError, which is no OSError (the lzma
+# module is missing from some Python builds, which then cannot unpack one).
+try:
+    import lzma
+    LZMA_ERRORS = (lzma.LZMAError,)
+except ImportError:
+    LZMA_ERRORS = ()
 
 # Encoding guard for Windows consoles (CP1252 by default) — same pattern as
 # the framework's standalone Python scripts.
@@ -219,7 +244,7 @@ except ImportError:
 
 if not have_pypdf and not have_pdftotext:
     print("Error: neither pypdf nor pdftotext available for PDF extraction.", file=sys.stderr)
-    print('  Install: pip3 install "pypdf[crypto]"', file=sys.stderr)
+    print('  Install: pip3 install -r requirements.txt (in the cephalo folder)', file=sys.stderr)
     sys.exit(1)
 
 
@@ -256,6 +281,13 @@ def extract_pdf_text(pdf_path, out_path):
             # "empty text".
             if texts and failed == len(texts):
                 raise last_err
+            if failed:
+                # Only some pages failed: their rules would be missing from the
+                # output unnoticed, so warn and count it as an error.
+                global errors
+                errors += 1
+                print(f"    WARN {pdf_path.name} - text of {failed} of {len(texts)} page(s) could not be "
+                      f"extracted ({last_err}); those pages are missing from the output", file=sys.stderr)
             out_path.write_text('\n\n'.join(texts), encoding='utf-8')
             return True
         except Exception as e:
@@ -297,6 +329,11 @@ def safe_extract_zip(zip_path, target_dir):
             # Reject absolute paths and any '..' components
             if member.startswith('/') or member.startswith('\\'):
                 raise ValueError(f"Zip contains absolute path: {member}")
+            # An entry without a name: Python 3.9/3.10 fail on it in extractall()
+            # with an IndexError, which would end the whole run. (A "./" folder
+            # entry, as bsdtar writes it, is fine.)
+            if member == '':
+                raise ValueError("Zip contains an entry without a file name")
             normalized = Path(member).as_posix()
             if '..' in normalized.split('/'):
                 raise ValueError(f"Zip contains path traversal: {member}")
@@ -369,7 +406,7 @@ for pdf in pdf_files:
                 errors += 1
                 continue
             except (zipfile.BadZipFile, zlib.error, RuntimeError,
-                    NotImplementedError, EOFError, OSError) as e:
+                    NotImplementedError, EOFError, OSError) + LZMA_ERRORS as e:
                 # Corrupt, encrypted or unsupported archive: report it and
                 # continue with the next file instead of aborting the run.
                 print(f"  ERR {rel_path} - could not unpack archive ({type(e).__name__}: {e})", file=sys.stderr)
@@ -378,6 +415,9 @@ for pdf in pdf_files:
             # Collect .txt members and extract text from contained PDFs
             members = sorted(p for p in tmp_path.rglob('*') if p.is_file())
             parts = []
+            # A failed or empty PDF member counts as an error of the archive,
+            # like the same PDF at the top level (once per archive).
+            member_problems = 0
             for member in members:
                 suffix = member.suffix.lower()
                 if suffix == '.txt':
@@ -385,16 +425,30 @@ for pdf in pdf_files:
                 elif suffix == '.pdf':
                     member_out = tmp_path / (member.name + '.extracted')
                     if extract_pdf_text(member, member_out):
-                        parts.append(member_out.read_text(encoding='utf-8', errors='replace'))
+                        member_text = member_out.read_text(encoding='utf-8', errors='replace')
+                        if not member_text.strip():
+                            print(f"    WARN {member.name} (in archive) - extracted text is empty (scanned/image-only PDF?)", file=sys.stderr)
+                            member_problems += 1
+                        parts.append(member_text)
                     else:
                         print(f"    ERR {member.name} (in archive) - PDF extraction failed", file=sys.stderr)
+                        member_problems += 1
             combined = '\n\n'.join(parts)
             if combined.strip():
-                out_file.write_text(combined, encoding='utf-8')
+                try:
+                    out_file.write_text(combined, encoding='utf-8')
+                except OSError as e:
+                    # e.g. a flattened name over the 255-byte limit: report it
+                    # and go on with the next file instead of aborting the run
+                    print(f"  ERR {rel_path} - cannot write {out_file.name} ({e})", file=sys.stderr)
+                    errors += 1
+                    continue
                 lines = len(combined.splitlines())
                 print(f"      -> {out_file.name} ({lines} lines)")
                 written.add(out_file.name)
                 count += 1
+                if member_problems:
+                    errors += 1
             else:
                 found = ', '.join(m.name for m in members[:10]) if members else 'none'
                 print(f"    No usable text in archive (members: {found})", file=sys.stderr)

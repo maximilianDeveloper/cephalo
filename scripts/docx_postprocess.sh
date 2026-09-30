@@ -92,8 +92,31 @@ if [ -z "$PY" ]; then
     exit 1
 fi
 
-# Absolute path before changing directory
+# Absolute path before changing directory. A leading '-' would be read as
+# an option by dirname, basename and cd (a folder named '-' even as OLDPWD).
+case "$DOC" in -*) DOC="./$DOC" ;; esac
 DOC_ABS=$(cd "$(dirname "$DOC")" && pwd)/$(basename "$DOC")
+# A symbolic link: patch the document it points to. Replacing the link
+# itself (the mv at the end) would leave that document unchanged.
+while [ -L "$DOC_ABS" ]; do
+    LINK_TARGET=$(readlink "$DOC_ABS")
+    case "$LINK_TARGET" in
+        /*) DOC_ABS="$LINK_TARGET" ;;
+        *)  DOC_ABS="$(dirname "$DOC_ABS")/$LINK_TARGET" ;;
+    esac
+done
+
+# Paths handed to Python. Under Git Bash the interpreter is a native Windows
+# program, and MSYS converts a /path argument for it only when it looks like
+# a path: not "/tmp/Chapter [2].docx" (brackets), for example. cygpath, part
+# of Git Bash, converts every path; elsewhere the path stays as it is.
+py_path() {
+    if command -v cygpath >/dev/null 2>&1; then
+        cygpath -m "$1"
+    else
+        printf '%s\n' "$1"
+    fi
+}
 
 # Work in a temporary directory. Deliberately NOT named TMPDIR: that is the
 # standard POSIX temp-dir override, and reassigning it would silently leak
@@ -101,8 +124,54 @@ DOC_ABS=$(cd "$(dirname "$DOC")" && pwd)/$(basename "$DOC")
 WORK_DIR=$(mktemp -d)
 trap 'rm -rf "$WORK_DIR"' EXIT
 
-cd "$WORK_DIR"
-unzip -q "$DOC_ABS"
+# unzip reads [ ] * ? in the archive name as wildcards and can open a
+# different file (e.g. "Chapter 2.docx" for "Chapter [2].docx"): unpack a
+# copy with a fixed name instead.
+cp "$DOC_ABS" "$WORK_DIR/in.docx"
+
+# Refuse symbolic-link entries before unpacking: how unzip restores them
+# depends on the platform (Git Bash by default turns a link into a COPY of
+# its target, which the check after unpacking cannot see).
+"$PY" - "$(py_path "$WORK_DIR/in.docx")" << 'PYEOF'
+import stat
+import struct
+import sys
+import zipfile
+
+def asi_link(extra):
+    """Whether an extra field holds Info-ZIP's ASi Unix block (0x756e) with a
+    link mode: unzip applies that mode too, also when the entry's external
+    attributes show none."""
+    i = 0
+    while i + 4 <= len(extra):
+        tag, size = struct.unpack('<HH', extra[i:i + 4])
+        data = extra[i + 4:i + 4 + size]
+        if tag == 0x756e and len(data) >= 6 and stat.S_ISLNK(struct.unpack('<H', data[4:6])[0]):
+            return True
+        i += 4 + size
+    return False
+
+try:
+    with zipfile.ZipFile(sys.argv[1]) as zf, open(sys.argv[1], 'rb') as raw:
+        links = False
+        for info in zf.infolist():
+            # The local header has its own extra field, which unzip reads too.
+            raw.seek(info.header_offset)
+            name_len, extra_len = struct.unpack('<HH', raw.read(30)[26:30])
+            raw.seek(info.header_offset + 30 + name_len)
+            local_extra = raw.read(extra_len)
+            if (stat.S_ISLNK(info.external_attr >> 16) or asi_link(info.extra)
+                    or asi_link(local_extra)):
+                links = True
+except (zipfile.BadZipFile, struct.error):
+    sys.exit('Error: not a valid .docx (ZIP) file')
+if links:
+    sys.exit('Error: document contains symbolic links; refusing to process it')
+PYEOF
+
+mkdir "$WORK_DIR/x"
+cd "$WORK_DIR/x"
+unzip -q ../in.docx
 
 # Refuse documents containing symbolic links: unzip restores symlink entries,
 # and following them would embed arbitrary local files in the re-zipped
@@ -187,7 +256,6 @@ if content == original:
 with open(path, 'w', encoding='utf-8') as f:
     f.write(content)
 PYEOF
-    echo "Auto-hyphenation enabled."
 fi
 
 # Re-zip. [Content_Types].xml is kept as the first entry and stored (not
@@ -195,11 +263,14 @@ fi
 # compression method), but it maximizes compatibility with strict/streaming
 # consumers. Use Python's zipfile for this — `zip -r` does not guarantee
 # entry order.
-NEW_DOC="${DOC_ABS}.new"
+# A new file next to the document (so the final mv stays on one file
+# system), with a unique name: a fixed "<document>.new" would overwrite or,
+# on failure, delete a file of that name that is not ours.
+NEW_DOC=$(mktemp "${DOC_ABS}.XXXXXX")
 # If the repack or the final mv fails, do not leave a partial archive behind
 # (after a successful mv, NEW_DOC no longer exists).
 trap 'rm -rf "$WORK_DIR"; rm -f "$NEW_DOC"' EXIT
-"$PY" - "$NEW_DOC" "$WORK_DIR" "$DOC_ABS" << 'PYEOF'
+"$PY" - "$(py_path "$NEW_DOC")" "$(py_path "$WORK_DIR/x")" "$(py_path "$DOC_ABS")" << 'PYEOF'
 import os
 import shutil
 import sys
@@ -249,6 +320,13 @@ with zipfile.ZipFile(out_path, 'w', zipfile.ZIP_DEFLATED, strict_timestamps=Fals
 shutil.copymode(original, out_path)
 PYEOF
 
-mv "$NEW_DOC" "$DOC_ABS"
+# -f: for a read-only document, mv would otherwise ask in a terminal (and
+# BSD mv reports success when the question is declined); the mode copied
+# above keeps it read-only.
+mv -f "$NEW_DOC" "$DOC_ABS"
 
+# Reported only now: the repack and the mv above can still fail.
+if [ "$SKIP_PATCH" = "0" ]; then
+    echo "Auto-hyphenation enabled."
+fi
 echo "Post-processing complete: $DOC"

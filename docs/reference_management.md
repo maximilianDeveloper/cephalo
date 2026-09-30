@@ -32,13 +32,13 @@ Optional: install the **Zotero Connector** browser extension. It captures biblio
 
 Better BibTeX is a Zotero plugin that produces clean, stable BibTeX exports. The default Zotero BibTeX export is workable; Better BibTeX is significantly better.
 
-[github.com/retorquere/zotero-better-bibtex/releases/latest](https://github.com/retorquere/zotero-better-bibtex/releases/latest) — download the `.xpi` file, install via Zotero: Tools -> Add-ons -> gear icon -> Install Add-on From File.
+[github.com/retorquere/zotero-better-bibtex/releases/latest](https://github.com/retorquere/zotero-better-bibtex/releases/latest) — download the `.xpi` file, install via Zotero: Tools -> Plugins -> gear icon -> Install Plugin From File.
 
 ### 3. Configure citekeys
 
 Citekeys are the short identifiers used in your text (e.g., `smith2020`). In Zotero with Better BibTeX:
 
-- Edit -> Preferences -> Better BibTeX -> Citation keys
+- Edit -> Settings (macOS: Zotero -> Settings) -> Better BibTeX -> Citation keys
 - Set the citation key formula (recommended: `[auth:lower][year]` -> `smith2020`)
 - For multiple works by same author/year: add disambiguator (`[auth:lower][year][shorttitle]`)
 
@@ -59,6 +59,7 @@ In Zotero:
 - Format: Better BibTeX
 - Check: "Keep updated" (this enables continuous auto-export)
 - Save to: the project's literature path
+  - Flat: `workspace/sources/literature.bib`
   - Long-form: `02_Literature/literature.bib`
   - Multi-project main work: `02_Main_Work/02_Literature/literature.bib`
 
@@ -156,9 +157,13 @@ pandoc chapter.md \
   --citeproc \
   --bibliography 02_Literature/literature.bib \
   --csl path/to/style.csl \
+  --metadata reference-section-title="References" \
+  --metadata title="" \
   --reference-doc template.docx \
   -o output.docx
 ```
+
+Use your structure's `literature.bib` path from "Set up auto-export" (flat: `--bibliography workspace/sources/literature.bib`), and your styleguide's bibliography heading as `reference-section-title`. Without it, Pandoc adds the reference list without a heading, and `scripts/bibliography_check.py` cannot find the bibliography (exit 2). For the whole work, list the chapter files in document order instead of `chapter.md`. `--metadata title=""` keeps the `title:` of the chapter files' frontmatter out of the document: without it, Pandoc puts that title (with several files, the last chapter's) above the text as a document title.
 
 **Prerequisite:** a CSL file matching your institution's citation style. APA 7 is the closest standard for many institutions; download from [zotero.org/styles](https://www.zotero.org/styles). For institution-specific deviations, you may need to edit the CSL.
 

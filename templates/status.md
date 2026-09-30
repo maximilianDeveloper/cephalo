@@ -99,5 +99,5 @@ Status symbols: ⬜ not started · 🔵 in progress · ✅ done · ⚠️ revisi
 
 - Decisions log: `00_Decisions.md`
 - Feedback log: `00_Feedback_log.md`
-- Styleguide: `styleguide.md`
-- Bibliography: `02_Literature/literature.bib` (if reference manager integrated)
+- Styleguide: `styleguide.md` (multi-project sub-project: `../00_Shared_Materials/styleguide.md`)
+- Bibliography: `02_Literature/literature.bib` (if reference manager integrated; multi-project: in `02_Main_Work/`, from `03_Defense/` `../02_Main_Work/02_Literature/literature.bib`)

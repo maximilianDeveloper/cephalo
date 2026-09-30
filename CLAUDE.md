@@ -72,7 +72,7 @@ project-root/
 └── 03_Defense/                  ← independent sub-project
 ```
 
-Each sub-project has its own `00_Status.md`, `00_Decisions.md`, and phase directories.
+Each sub-project has its own `00_Status.md`, `00_Decisions.md`, and phase directories. The sub-projects read the shared materials in `../00_Shared_Materials/` directly; a `shared/` link or copy in a sub-project, left from an earlier cephalo version, is not used.
 
 ## Agent locations
 
@@ -84,9 +84,9 @@ All agents are in `.claude/agents/`. There are three orchestrators:
 
 Non-orchestrator agents (`research-agent`, `writer-agent`, `source-verifier`, `format-verifier`, `style-resolver`, `methods-agent`, `data-agent`) are shared across all structures.
 
-The orchestrators invoke these agents themselves through the `Agent` tool; the `Agent(...)` entry in each orchestrator's `tools:` line names the agents it may call. A session can also run as an orchestrator: `claude --agent orchestrator-longform`.
+The orchestrators invoke these agents themselves through the `Agent` tool; the `Agent(...)` entry in each orchestrator's `tools:` line names the agents it is meant to call. A session can also run as an orchestrator: `claude --agent orchestrator-longform`. Claude Code enforces the `Agent(...)` list only in that mode; an orchestrator invoked as a subagent may call any agent.
 
-Each agent definition includes its own file path conventions in a `File paths` section. Agents cannot read this CLAUDE.md — they must be self-contained.
+Each agent definition includes its own file path conventions in a `File paths` section. Agents must be self-contained: Claude Code may pass this CLAUDE.md to subagents as well, but an agent definition must not depend on it.
 
 ## Workflow selection
 
@@ -120,7 +120,7 @@ Long-form works go through two distinct phases:
 
 **Phase B (Formatting):** format-verifier and utility scripts (fast models) iterate on presentation, citations, bibliography and abbreviation checks. The writer agent is dormant unless a real content issue surfaces.
 
-This split reduces cost by ~60–70% versus running capable models throughout. See `docs/phase_separation.md`.
+This split reduces cost by ~60–70% versus running capable models throughout, provided the Phase B chats run on a fast main model: `format-verifier` and the orchestrators inherit the chat's model. See `docs/phase_separation.md`.
 
 ## Universal rules (apply in every project)
 
@@ -136,40 +136,10 @@ Agents should ask rather than guess when:
 
 - A guideline rule is ambiguous or contradictory in the source documents
 - A source is cited in the text but the underlying file is not accessible
-- A decision would have cross-chapter implications (always log in `00_Decisions.md`)
-- The setup has open `❓` items in `styleguide.md`
+- A decision would have cross-chapter implications (always log in `00_Decisions.md`; flat projects: the decision log in `workspace/state.md`)
+- The setup has open `❓` items in `styleguide.md` (`[content]` items block drafting, `[format]` items block the formatting phase)
 
 ## Platform caveats
-
-### Windows: multi-project setups need elevated privileges for symlinks
-
-The multi-project structure uses symlinks from each sub-project into `00_Shared_Materials/`. On Windows, creating a symlink requires EITHER:
-
-- **Developer Mode enabled** (Settings -> For developers -> Developer Mode: on — recommended, one-time setup), OR
-- **Administrator / elevated shell**
-
-This applies to BOTH setup scripts:
-
-**`setup.ps1` (PowerShell):** `New-Item -ItemType SymbolicLink` fails without elevation (in Windows PowerShell 5.1 even with Developer Mode on). The script catches this and retries with `mklink`, for which Developer Mode is enough; only if that fails too does it fall back to copying `00_Shared_Materials/` into each sub-project, with a visible warning.
-
-**`setup.sh` (Git Bash / MinGW64):** even more subtle. By default, `ln -s` in Git Bash silently creates a directory **copy** instead of failing — exit code 0, no error. The setup script detects this after the fact (checks whether a real symlink was created) and issues the same visible warning.
-
-For Git Bash specifically, setting `MSYS=winsymlinks:nativestrict` in your environment makes `ln -s` create real NTFS symlinks — but you still need Developer Mode or Administrator rights for the creation itself.
-
-**Either fallback works**, but:
-
-**Updates to `00_Shared_Materials/styleguide.md` will NOT propagate.** You would have to copy the updated file into each sub-project manually, or delete the three `shared/` copies first and then re-run setup. The symptom: Proposal, Main Work, and Defense can silently drift apart in formatting.
-
-Diagnostic commands:
-
-- PowerShell: `Get-Item 01_Proposal\shared | Select-Object LinkType` — empty means fallback was used
-- Git Bash: `readlink 01_Proposal/shared` — empty output means fallback was used
-
-If you are on Windows and plan a multi-project setup: enable Developer Mode once. Otherwise use the flat or long-form structure, which avoid symlinks entirely.
-
-### macOS and Linux
-
-No special requirements. Symlinks work out of the box.
 
 ### Encoding on Windows consoles
 

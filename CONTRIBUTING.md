@@ -20,7 +20,7 @@ Before proposing larger changes, please read through these. They came out of rea
 
 **1. Institution-agnostic via style-resolver.** Never hardcode citation rules (APA 7, Chicago, institutional house styles, etc.) into agent prompts. The `style-resolver` extracts rules from institutional guidelines into `styleguide.md`; agents read that file. Exceptions undermine the entire architecture.
 
-**2. Self-contained agents.** Claude Code sub-agents cannot read `CLAUDE.md`. Every agent definition declares its own file paths and mandatory reads. Do not rely on external documentation being visible to the agent at runtime.
+**2. Self-contained agents.** Every agent definition declares its own file paths and mandatory reads. Do not rely on `CLAUDE.md` (which Claude Code may pass to sub-agents as well) or other documentation to instruct an agent at runtime: what an agent needs belongs in its own definition.
 
 **3. Phase separation.** Content work (Phase A, capable models) and formatting work (Phase B, fast models) must stay separated. Mixing them eliminates the cost saving that phase separation provides.
 
@@ -68,7 +68,7 @@ python3 -m py_compile scripts/abbreviations_extract.py scripts/bibliography_chec
 
 **This is the lesson from the v6.1 release review.** Static checks miss platform-specific issues. Setup scripts that use `ln`, `New-Item`, `curl`, or any shell primitive that behaves differently across OSes must be run on each target platform before release.
 
-At minimum, before a release, execute `setup.sh` or `setup.ps1` in a clean directory on:
+At minimum, before a release, execute `setup.sh` or `setup.ps1` in a fresh copy of the template (extracted archive or clone) on:
 
 - **Linux** (any recent distro — Ubuntu, Fedora, Arch): `bash setup.sh`
 - **macOS** (any recent version): `bash setup.sh`
@@ -79,13 +79,13 @@ For each platform, test at least:
 
 1. Flat structure (simplest, least moving parts)
 2. Long-form structure (validates phase directory creation)
-3. Multi-project structure (validates symlinks — this is where platform differences hurt most)
+3. Multi-project structure (validates the three sub-projects and `00_Shared_Materials/`)
 
 After each run, verify:
 
 - All expected directories exist
 - `.gitignore` and `.gitattributes` are present
-- Symlinks, where expected, are real symlinks (not copies)
+- Multi-project: the sub-projects contain no `shared/` link or copy (the agents read `../00_Shared_Materials/`)
 - Templates were copied from `templates/`, not echo-stubbed
 - The reported workflow name matches what the configuration says
 
@@ -94,7 +94,7 @@ After each run, verify:
 On each Windows shell:
 
 1. **Git Bash, double-click start.** Double-click `setup.sh` in Explorer (or `bash setup.sh` without an already-open terminal). Press Ctrl+C before answering the first prompt. Expected: yellow cancellation message appears, window stays open with "Press Enter to close..."
-2. **PowerShell, "Run with PowerShell" from context menu.** Same test: Ctrl+C early. Expected: the script stops without creating anything, and the window closes at once. PowerShell runs no trap on Ctrl+C (see the comment in `setup.ps1`), so there is no message or pause here; the yellow message and pause belong to terminating errors.
+2. **PowerShell, "Run with PowerShell" from context menu.** Same test: Ctrl+C early. Expected: the script stops without creating anything, and the window closes at once. PowerShell runs no trap on Ctrl+C (see the comment in `setup.ps1`), so there is no message or pause here; the yellow message and pause belong to terminating errors. On Windows 11 the entry is under "Show more options" (or select the file and press Shift+F10). Where it is missing, open PowerShell in the template folder (type `powershell` in Explorer's address bar) and run `Start-Process powershell -ArgumentList '-NoProfile -ExecutionPolicy Bypass -File .\setup.ps1'`: it opens a window that closes when the script ends, as the entry does.
 
 If the Git Bash window disappears silently, it's a regression of v6.1.3. Most users first learn about a tool by accidentally triggering Ctrl+C — a silent-close here is a confidence-killer.
 
@@ -102,7 +102,7 @@ On Linux and macOS, running from an already-open shell: Ctrl+C should print the 
 
 ### Target-directory tests (5 minutes, covers the v6.2 feature)
 
-On each platform, run all four target scenarios:
+On each platform, run all five target scenarios:
 
 1. **Flag-based, clean target:**
    ```bash
@@ -121,6 +121,8 @@ On each platform, run all four target scenarios:
 
 4. **Target = source:** in a throwaway copy of the template, run `./setup.sh "Seminar paper" "Flat" full --target "$(pwd)"`. Expected: prints "Target path equals current location — proceeding here." and sets up in place without copy.
 
+5. **Folder inside the template at the prompt:** run `./setup.sh` (or `.\setup.ps1`), answer `2`, and enter a bare folder name such as `Thesis`. Expected: "That folder lies inside the cephalo template folder:" with the full path, then "Target path:" again, and nothing is created. A full path outside the template entered next is used.
+
 If any of these fail on any platform, the release is blocked.
 
 ### Utility scripts
@@ -134,6 +136,7 @@ from docx import Document
 d = Document()
 d.add_heading('Test', 1)
 d.add_paragraph('Schmidt 2020, S. 15 führt aus. Müller (2021) stimmt zu.')
+d.add_paragraph('Im Jahr 2020 stieg die Zahl. Die EU (2020) reagierte. Das Kapitel (2020) fasst zusammen.')
 d.add_heading('Literaturverzeichnis', 1)
 d.add_paragraph('Schmidt, K. (2020). Test A.')
 d.add_paragraph('Müller, J. (2021). Test B.')
@@ -153,6 +156,7 @@ The `bibliography_check.py` output should not contain false positives for German
 - Update `CHANGELOG.md` in the same PR (add an `[Unreleased]` section at the top if none exists yet).
 - If the change touches the setup scripts, confirm in the PR description which platforms you tested on.
 - If the change touches `scripts/bibliography_check.py`, include a test case showing the new behavior.
+- If the change touches `README.md` or `docs/QUICKSTART.md`, re-render the embedded copy in `docs/setup-wizard.html` (between the `DOC_README_*` / `DOC_QUICKSTART_*` markers). CI fails while their wording differs; it compares words only, so check changed punctuation, options and paths (such as `--target` or `.\setup.ps1`) by eye.
 
 ## Versioning
 

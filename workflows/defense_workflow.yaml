@@ -72,7 +72,7 @@ directory_structure:
     - 02_Speaker_Notes/
     - 03_Defense_Prep/
     - 04_Handout/                # optional
-    - 05_Rehearsals/             # optional
+    - 05_Rehearsals/
     - 06_Defense_Day/            # final checklist, emergency notes
 
 # References to other sub-projects
@@ -88,7 +88,6 @@ references:
   
   shared_materials:
     relative_path: ../00_Shared_Materials/
-    symlink_path: ./shared/
 
 # Workflow
 
@@ -147,12 +146,16 @@ phases:
         blocking: true
         task: |
           In multi-project setups, verify that `../00_Shared_Materials/styleguide.md` 
-          exists and contains no open ❓ items. The defense reuses the styleguide 
+          exists and has no open ❓ [content] entries (see below). The defense reuses the styleguide 
           from the main work.
           
           In stand-alone defense setups (rare — defense without prior cephalo project), 
           extract the styleguide from institutional guidelines into `styleguide.md` 
           at the defense project root.
+          
+          Open ❓ [content] entries (or entries without a tag) must be resolved
+          before slides or speaker notes are drafted, ❓ [format] entries before
+          the slides are exported.
   
   # ===========================================================
   # Phase 1 - Slides
@@ -291,8 +294,6 @@ phases:
   phase_05_rehearsals:
     directory: 05_Rehearsals/
     agents: [orchestrator-defense]
-    optional: true
-    recommended: true
     
     goals:
       - Stay within timing (run a timer!)
@@ -350,7 +351,8 @@ phases:
     trigger: Defense passed
     
     actions:
-      - Git tag: defense_passed_<date>
       - Set 00_Status.md to "completed"
       - Update README.md with grade (optional)
       - Record committee feedback (for future projects)
+      - Commit: 'git add -A, then git commit -m "defense/closure: defense passed"'
+      - Git tag: defense_passed_<date>

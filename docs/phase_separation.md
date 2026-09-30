@@ -24,6 +24,7 @@ cephalo splits the project lifecycle into two distinct phases:
 
 - **Active agents:** writer-agent (capable model), source-verifier (capable model), research-agent, orchestrator
 - **Goal:** content-stable chapters
+- **Start condition:** no open `❓ [content]` items in `styleguide.md` (voice, evaluative wording, citation wording, length); `❓ [format]` items may stay open until the A → B transition
 - **Iterations:** typically 30-50 per project
 - **Format-verifier role:** flag only critical format errors that would mask content issues; defer the rest
 
@@ -40,7 +41,7 @@ cephalo splits the project lifecycle into two distinct phases:
 
 ### Cost reduction
 
-Format work uses fast (cheap) models exclusively. For a typical bachelor thesis, this cuts overall token spending by an estimated 60-70% versus running capable models throughout.
+Format work uses fast (cheap) models exclusively. For a typical bachelor thesis, this cuts overall token spending by an estimated 60-70% versus running capable models throughout, provided Phase B really runs on a fast model (see the next paragraph).
 
 The saving depends on how you run Phase B: `format-verifier` and the orchestrators are defined with `model: inherit`, so they use whatever model the main chat runs. Start Phase B chats on a fast model (for example with `/model`), or pin `format-verifier` to a fast model in its frontmatter; otherwise Phase B runs on your default model.
 
@@ -68,7 +69,7 @@ When all criteria are met, the orchestrator:
 - Sets `00_Status.md` (long-form) or `workspace/state.md` (flat) -> phase: B
 - Deactivates the writer-agent
 - Activates the format-verifier as the lead agent
-- Begins phase 08_Formal_Review (long-form) or moves into the closing checklist (flat)
+- Begins phase 08_Formal_Review (long-form) or the flat workflow's Phase B steps (`phase_B_form`, then its closing checklist)
 
 ---
 
@@ -96,7 +97,7 @@ In Phase B, the format-verifier handles:
 - Page-range notation consistency
 - Et al. rule consistency
 - Edition number consistency across the document
-- Hyphenation and final formatting (`scripts/docx_postprocess.sh`, only if the styleguide's `document.hyphenation` is automatic)
+- Automatic hyphenation (`scripts/docx_postprocess.sh`, only if the styleguide's `document.hyphenation` is automatic)
 
 What it does NOT do:
 - Add or remove citations

@@ -3,7 +3,7 @@
 **Append-only.** This file collects recurring patterns observed across chapters / phases, so the same mistake is not made twice.
 **File path:** `00_Feedback_log.md` at the project root.
 
-Entries are made by the orchestrator at chat closure whenever a pattern was observed. They are read by agents at the start of every following chat to avoid repeating the pattern.
+Entries are made by the orchestrator at chat closure whenever a pattern was observed. The orchestrator reads them at the start of every following chat and passes each entry on to the agents its **Scope** names, so the pattern is not repeated.
 
 ---
 
@@ -50,7 +50,7 @@ Keep entries short — a few lines each. Long narratives belong in `00_Decisions
 
 - **Observed in:** Ch. 2 and Ch. 5
 - **Pattern:** Some citations used `p. 15–16` (en-dash), others `p. 15 to 16` (word form). Styleguide says word form.
-- **Countermeasure:** Bulk-fix via format-verifier in Phase B. Writer-agent should follow styleguide from the first draft.
+- **Countermeasure:** Bulk-fix in Phase B from the format-verifier's findings. Writer-agent should follow styleguide from the first draft.
 - **Scope:** writer-agent, format-verifier
 
 ---

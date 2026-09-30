@@ -16,6 +16,7 @@ Usage:
     python scripts/bibliography_check.py --help
 """
 
+import os
 import re
 import sys
 import unicodedata
@@ -83,13 +84,35 @@ GERMAN_NON_AUTHOR_CAPS = {
 # parenthetical stage does not filter them: a missing entry is still reported.
 SURNAME_LIKE_STOPWORDS = {"Sommer", "Winter", "Herbst", "Freitag", "Montag", "Mai", "August"}
 
-# Lowercase words that may precede a surname inside a parenthetical citation:
-# name particles and short fillers after a lead word ("see also", "vgl. z. B.").
-PAREN_LOWERCASE_OK = {
+# What follows the year of "(von Mai 2020 bis Juni 2021)", "(von Winter 2019/20
+# an)" or "(von Mai 2020–Juni 2021)": the rest of a date range, so the word
+# after "von" is a date, not an author (unlike "(von Sommer 2019 an einer
+# Stichprobe ...)" or "(von Winter 2012 für 1991 bis 2010 geschätzt)").
+DATE_RANGE_AFTER_YEAR = (
+    r"(?:/\d{2,4})?\s*(?:bis\b|an\b(?=\s*(?:[,.;:]|$))|[-–]\s*(?:\d{2,4}\b|Januar|Februar|März|April|Mai"
+    r"|Juni|Juli|August|September|Oktober|November|Dezember|Frühjahr|Frühling|Sommer|Herbst|Winter"
+    r"|Anfang|Mitte|Ende)\b)")
+
+# Name particles that may precede a surname: van der Berg, de la Rosa, von Wagner.
+NAME_PARTICLES = {
     "van", "von", "de", "del", "della", "di", "la", "le", "du", "dos", "das",
     "ter", "ten", "der", "den",
-    "also", "auch", "z.", "z.b.", "e.g.",
 }
+
+# The particles as a regex prefix of a surname: lowercase (van der Berg) in
+# citations and entries, and also capitalized at the start of an entry (De
+# Vries, Van der Berg, La Porta). "Das" stays lowercase: capitalized, it is
+# the German article far more often. In the text, a capitalized particle opens
+# prose too often ("(Von Anfang 2020 bis ...)", "(La Liga 2018/19)") to be
+# parsed as one; see particle_lead_names.
+NAME_PREFIX_LOWER = r"(?:(?:van|von|de|del|della|di|la|le|du|dos|das|ter|ten)\s+(?:der\s+|den\s+|de\s+|la\s+)?)?"
+CAPITALIZED_PARTICLES = r"Van|Von|De|Del|Della|Di|La|Le|Du|Dos|Ter|Ten"
+NAME_PREFIX = (r"(?:(?:van|von|de|del|della|di|la|le|du|dos|das|ter|ten|" + CAPITALIZED_PARTICLES
+               + r")\s+(?:der\s+|den\s+|de\s+|la\s+)?)?")
+
+# Lowercase words that may precede a surname inside a parenthetical citation:
+# name particles and short fillers after a lead word ("see also", "vgl. z. B.").
+PAREN_LOWERCASE_OK = NAME_PARTICLES | {"also", "auch", "z.", "z.b.", "e.g.", "v.", "d."}
 
 
 def heading_level(paragraph) -> Optional[int]:
@@ -116,8 +139,10 @@ def read_docx_paragraphs(path: Path) -> list[tuple[str, Optional[int]]]:
     try:
         doc = Document(str(path))
         # NFC: decomposed umlauts (e.g. pasted from a PDF) would never match
-        # their precomposed form or the [ÄÖÜ]/\w name classes
-        return [(unicodedata.normalize("NFC", p.text), heading_level(p)) for p in doc.paragraphs]
+        # their precomposed form or the [ÄÖÜ]/\w name classes. ’ -> ': Word's
+        # AutoCorrect writes O’Brien in the text, a pasted entry keeps O'Brien.
+        return [(unicodedata.normalize("NFC", p.text).replace("’", "'"), heading_level(p))
+                for p in doc.paragraphs]
     except PackageNotFoundError:
         print(f"Error: {path} is not a valid .docx file (corrupt or renamed?)", file=sys.stderr)
     except Exception as exc:
@@ -151,10 +176,12 @@ def split_text_and_bibliography(
     common bibliography header (case-insensitive). Manually typed heading
     numbers ("7 Literaturverzeichnis", "7.1 Literatur") and trailing
     punctuation ("References:") are tolerated. If several paragraphs match,
-    the highest-level heading wins, the first one on a tie: a body
-    sub-heading "3.2 Sources" does not start the bibliography before the
-    "References" chapter, and "Literaturverzeichnis" wins over its own
-    sub-section "Literatur".
+    the highest-level heading wins (a paragraph not styled as a heading
+    counts as level 1 and yields to a styled one of that level), the first
+    one on a tie: a body sub-heading "3.2 Sources" does not start the
+    bibliography before the "References" chapter, "Literaturverzeichnis"
+    wins over its own sub-section "Literatur", and a body paragraph that
+    reads just "Literatur" does not start it either.
     
     It ends at the next top-level heading (Heading 1, or Title for a
     bibliography styled as Title) that is not itself a bibliography header,
@@ -167,30 +194,40 @@ def split_text_and_bibliography(
     Returns: (body_text, bibliography_paragraphs)
     """
     texts = [text for text, _level in paragraphs]
+    # Normalized like the paragraphs, so an entry added as the heading is
+    # spelled ("Quellenangaben", "A. Literaturverzeichnis") matches too.
+    headers = {_header_key(h) for h in BIBLIOGRAPHY_HEADERS}
     bib_start_idx = None
-    best_level = None
+    best_rank = None
     for i, p in enumerate(texts):
-        if _header_key(p) in BIBLIOGRAPHY_HEADERS:
-            # A header that is not styled as a heading counts as level 1.
-            level = paragraphs[i][1] if paragraphs[i][1] is not None else 1
-            if best_level is None or level < best_level:
-                bib_start_idx, best_level = i, level
+        if _header_key(p) in headers:
+            # A header that is not styled as a heading counts as level 1, but
+            # yields to a styled heading of the same level: a body paragraph
+            # that reads just "Literatur" does not start the bibliography
+            # before the "Literaturverzeichnis" heading.
+            level = paragraphs[i][1]
+            rank = (level, 0) if level is not None else (1, 1)
+            if best_rank is None or rank < best_rank:
+                bib_start_idx, best_rank = i, rank
     
     if bib_start_idx is None:
         # No clear bibliography heading found
         return "\n".join(texts), []
     
-    end_level = min(best_level, 1)
+    end_level = min(best_rank[0], 1)
     bib_end_idx = len(paragraphs)
     for j in range(bib_start_idx + 1, len(paragraphs)):
         level = paragraphs[j][1]
         if (level is not None and level <= end_level
-                and _header_key(texts[j]) not in BIBLIOGRAPHY_HEADERS):
+                and _header_key(texts[j]) not in headers):
             bib_end_idx = j
             break
 
     body = "\n".join(texts[:bib_start_idx] + texts[bib_end_idx:])
-    bibliography = [p for p in texts[bib_start_idx + 1:bib_end_idx] if p.strip()]
+    # Sub-headings belong to the section but are not entries: a heading such
+    # as "Gesetze, Verordnungen" would otherwise be read as an author.
+    bibliography = [p for p, level in paragraphs[bib_start_idx + 1:bib_end_idx]
+                    if p.strip() and level is None]
     return body, bibliography
 
 
@@ -210,7 +247,8 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
     
     Two-stage parsing:
       1. Find parenthesized blocks that look like citations
-      2. Split each block on semicolons, then parse each fragment
+      2. Split each block on semicolons and before "zit. nach", then parse
+         each fragment
     
     The recognition is heuristic and may produce false positives. The output
     is intended for cross-checking, not as ground truth.
@@ -221,31 +259,48 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
     """
     authors = set()
     stop = GERMAN_NON_AUTHOR_CAPS - keep
-    # Lowercase name particles: van der Berg, de la Rosa, von Wagner, ter Horst
-    prefix = r"(?:(?:van|von|de|del|della|di|la|le|du|dos|das|ter|ten)\s+(?:der\s+|den\s+|de\s+|la\s+)?)?"
+    # Name particles: van der Berg, de la Rosa, von Wagner, ter Horst; German
+    # texts abbreviate "von"/"von der": "(v. Rosenstiel 2007)", "(v. d. Oelsnitz 2019)"
+    prefix = r"(?:" + NAME_PREFIX_LOWER + r"|v\.\s*(?:d\.\s*)?)"
+
+    def german_form(particles: str, lead: str) -> str:
+        """German author-year citation without a comma: "Author YYYY"."""
+        return (r"^(" + lead + particles + r"[A-ZÄÖÜ][\wäöüß'’-]+"
+                + r"(?:(?:\s+(?:&|und|and)\s+|\s*/\s*)" + particles + r"[A-ZÄÖÜ][\wäöüß'’-]+)?"
+                + r"(?:\s+(?:et\s+al\.?|u\.\s*a\.))?)"
+                + r"\s+\d{4}")
+    # Lead word in any case: "(Vgl. Smith 2020)".
+    german_plain = german_form(prefix, r"(?i:vgl\.\s+|cf\.\s+|see\s+|siehe\s+|nach\s+|zit\.\s+nach\s+)?")
+    # Also a filler after the lead word: "(vgl. auch Müller 2020)", "(see
+    # also Smith 2020)". It opens prose too ("(see also Horizon 2020)"), so
+    # such a name counts only if the bibliography lists it (keep), and only
+    # if at most a year suffix and a page locator follow the year.
+    german_filler = german_form(
+        prefix,
+        r"(?i:(?:vgl\.|cf\.|see|siehe|nach|zit\.\s+nach)\s+(?:auch|also|z\.\s*b\.|e\.g\.)\s+)"
+    ) + r"[a-z]?(?:\s*[,:]\s*(?:S\.|p\.|pp\.|Rn\.)?\s*\d[^()]*)?$"
     
     # Stage 1: find parenthesized blocks containing a year (YYYY)
     paren_blocks = re.findall(r"\(([^()]*\d{4}[^()]*)\)", body)
     
-    # Stage 2: per block, split on semicolons and parse each fragment
+    # Stage 2: per block, split on semicolons and before "zit. nach" (the
+    # secondary source after the primary one: "(Weber 1922, zit. nach Keller
+    # 2018)"), and parse each fragment
     for block in paren_blocks:
-        for fragment in block.split(";"):
+        for fragment in re.split(r";|,?\s+(?=zit\.\s+nach\s)", block):
             fragment = fragment.strip()
             # A citation fragment typically has "Author(s), YYYY[, p. X]"
             # (English/APA style — comma before year)
             # or "Author(s) YYYY[, S. X]" (German author-year style — no comma)
             match = re.match(r"^((?:cf\.\s+|see\s+|vgl\.\s+|siehe\s+|nach\s+|zit\.\s+nach\s+)?[^,]+(?:\s+(?:et\s+al\.?|u\.\s*a\.))?(?:\s*(?:,\s*)?(?:&|and|und)\s+[\w'’-]+|,\s*[\w'’-]+)*),\s*\d{4}", fragment)
+            confirmed_only = False
+            comma_form = bool(match)
             if not match:
                 # Try German style: "Author YYYY" without comma
-                # (lead word in any case: "(Vgl. Smith 2020)")
-                match = re.match(
-                    r"^((?i:vgl\.\s+|cf\.\s+|see\s+|siehe\s+|nach\s+|zit\.\s+nach\s+)?"
-                    + prefix + r"[A-ZÄÖÜ][\wäöüß'’-]+"
-                    + r"(?:(?:\s+(?:&|und|and)\s+|\s*/\s*)" + prefix + r"[A-ZÄÖÜ][\wäöüß'’-]+)?"
-                    + r"(?:\s+(?:et\s+al\.?|u\.\s*a\.))?)"
-                    + r"\s+\d{4}",
-                    fragment,
-                )
+                match = re.match(german_plain, fragment)
+            if not match:
+                match = re.match(german_filler, fragment)
+                confirmed_only = True
             if not match:
                 continue
             name_part = match.group(1)
@@ -273,9 +328,15 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
                 # acronyms and surname-like stopwords are kept here: in
                 # parentheses before a year, "(OECD, 2019)" or
                 # "(Winter, 2017)" is a citation, and a missing entry for it
-                # must still be reported.
+                # must still be reported. After the preposition "von" in a date
+                # range such a word is prose: "(von Mai 2020 bis Juni 2021)",
+                # unlike "(von Winter 2010 eingeführt)" or "(Studie von Sommer, 2019)".
+                after_von = (not comma_form and idx > 0 and tokens[idx - 1].lower() == "von"
+                             and re.match(DATE_RANGE_AFTER_YEAR, fragment[match.end():]) is not None)
+                if confirmed_only and surname not in keep:
+                    continue
                 if len(surname) > 1 and (surname not in stop or surname.isupper()
-                                         or surname in SURNAME_LIKE_STOPWORDS):
+                                         or (surname in SURNAME_LIKE_STOPWORDS and not after_von)):
                     authors.add(surname)
     
     # Pattern 2: narrative citations (Author (YYYY))
@@ -297,10 +358,10 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
     narrative_paren = (
         r"(" + prefix + name_token
         + r"(?:" + joint + r"|" + et_al + r")?)\s+\(\d{4}[a-z]?"
-        # locator: page ("2020, S. 15", "2020: 15-17") or further years
-        # ("2019, 2020"); not any text, or "Deutschland (2020: 5,9 %)" and
-        # "Umsatz (2020, in Mio. €)" would count as citations
-        + r"(?:,\s*(?:S\.|p\.|pp\.)\s*\d[^()]*|:\s*\d+(?:\s*[-–]\s*\d+)?|[,;]\s*\d{4}[a-z]?[^()]*)?\)"
+        # locator: page ("2020, S. 15", "2020: 15-17", "2020: 15 f.") or
+        # further years ("2019, 2020"); not any text, or "Deutschland (2020:
+        # 5,9 %)" and "Umsatz (2020, in Mio. €)" would count as citations
+        + r"(?:,\s*(?:S\.|p\.|pp\.)\s*\d[^()]*|:\s*\d+(?:\s*[-–]\s*\d+)?(?:\s*ff?\.)?|[,;]\s*\d{4}[a-z]?[^()]*)?\)"
     )
     for match in re.findall(narrative_paren, body):
         cleaned = re.sub(et_al, "", match, flags=re.IGNORECASE)
@@ -310,8 +371,8 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
                 continue
             tokens = name.split()
             surname = next((t for t in reversed(tokens) if t[:1].isupper()), tokens[-1])
-            # English possessive: "Smith's (2020) study" -> Smith
-            surname = re.sub(r"['’]s$", "", surname)
+            # Possessive: "Smith's (2020) study", "Jones' (2020) model" -> Smith, Jones
+            surname = re.sub(r"['’]s?$", "", surname)
             # Safety net: skip known non-author capitalized words
             # (e.g., "Die EU (2020)", "Das Kapitel (2020)")
             if surname in stop:
@@ -358,6 +419,25 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
                 continue
             authors.add(surname)
     
+    # Three or more names before a year ("Dawson, Ellis und Fowler (2018)",
+    # "(Dawson/Ellis/Fowler 2018)"): the patterns above read at most the last
+    # two. Prose lists read the same way ("(Juni, Juli und August 2020)"), so
+    # a name counts here only if a bibliography entry starts with it (keep).
+    # At most ten names, so that a long list of words does not take quadratic
+    # time.
+    list_sep = r"(?:\s*/\s*|,\s*(?:(?:&|and|und)\s+)?|\s+(?:&|and|und)\s+)"
+    name_list = (r"(?<![\w'’-])(" + prefix + name_token
+                 + r"(?:" + list_sep + prefix + name_token + r"){2,9})"
+                 # the year closes the citation or a locator follows, unlike
+                 # "Marx und Weber (1890–1920)"
+                 + r"\s+\(?\d{4}[a-z]?(?=[,;:)])")
+    for match in re.findall(name_list, body):
+        for part in re.split(list_sep, match):
+            surname = next((t for t in reversed(part.split()) if t[:1].isupper()), "")
+            surname = re.sub(r"['’]s?$", "", surname)
+            if surname in keep:
+                authors.add(surname)
+    
     return authors
 
 
@@ -382,6 +462,7 @@ def extract_bibliography_authors(bibliography: list[str]) -> tuple[set[str], set
       Dawson, R., Ellis, S., & Fowler, T. (2020). ...
                                            -> first: Dawson; all: Dawson, Ellis, Fowler
       WHO. (2019). ...                     -> first: WHO
+      Ders. (2021). ...                    -> (the author of the entry above)
     """
     first_authors = set()
     all_authors = set()
@@ -390,10 +471,10 @@ def extract_bibliography_authors(bibliography: list[str]) -> tuple[set[str], set
     #   - non-ASCII initial: Öztürk (same class as the in-text patterns)
     #   - hyphenated: Müller-Schmidt
     #   - apostrophe, straight or typographic (Word AutoCorrect): O'Brien, O’Brien
-    #   - with prefix: van der Berg, van den Berg, de la Rosa, von Wagner
+    #   - with prefix: van der Berg, van den Berg, de la Rosa, von Wagner,
+    #     also capitalized: De Vries, Van der Berg
     surname_core = r"[A-ZÄÖÜ][\w'’-]+"
-    prefix = r"(?:(?:van|von|de|del|della|di|la|le|du|dos|das|ter|ten)\s+(?:der\s+|den\s+|de\s+|la\s+)?)?"
-    surname_token = prefix + surname_core
+    surname_token = NAME_PREFIX + surname_core
     
     for entry in bibliography:
         if not entry.strip():
@@ -404,6 +485,10 @@ def extract_bibliography_authors(bibliography: list[str]) -> tuple[set[str], set
         if not match:
             # Institutional entries: "WHO. (2019). ..." — period before the year.
             match = re.match(r"^(" + surname_token + r")\.\s*\(\d{4}", entry.strip())
+            # "Ders. (2021)" / "Dies. (2020)" (German "derselbe"/"dieselbe"):
+            # the author of the entry above, not an author of that name.
+            if match and match.group(1) in ("Ders", "Dies", "Derselbe", "Dieselbe"):
+                match = None
         if match:
             full = match.group(1)
             # Keep the last capitalized token as the canonical surname
@@ -413,7 +498,9 @@ def extract_bibliography_authors(bibliography: list[str]) -> tuple[set[str], set
             all_authors.add(surname)
         
         # Co-authors after & or "and" / "und"
-        coauthor_pattern = r"(?:&|and|und)\s+(" + surname_token + r"),"
+        # (lowercase particles only, as in the text: "und Van Dyk, Silke
+        # (Hrsg.)" is an editor, not a co-author)
+        coauthor_pattern = r"(?:&|and|und)\s+(" + NAME_PREFIX_LOWER + surname_core + r"),"
         for match in re.findall(coauthor_pattern, entry):
             tokens = match.split()
             surname = next((t for t in reversed(tokens) if t[:1].isupper()), tokens[-1])
@@ -426,13 +513,44 @@ def extract_bibliography_authors(bibliography: list[str]) -> tuple[set[str], set
         # subtracted from the cited-author set, so growing it can only
         # remove false positives, never add any.
         head = re.split(r"\(\d{4}", entry, maxsplit=1)[0]
-        middle_pattern = r"(" + surname_token + r"),\s*(?:[A-ZÄÖÜ]\.[\s-]*)+"
+        middle_pattern = r"(" + NAME_PREFIX_LOWER + surname_core + r"),\s*(?:[A-ZÄÖÜ]\.[\s-]*)+"
         for m in re.finditer(middle_pattern, head):
+            tokens = m.group(1).split()
+            surname = next((t for t in reversed(tokens) if t[:1].isupper()), tokens[-1])
+            all_authors.add(surname)
+        # Co-authors after / or ; with full given names ("Müller, Hans/Schmidt,
+        # Karl (2019)", "Smith, John; Jones, Robert (2019)"): only in the
+        # unbroken chain of "Surname, Given" names that starts the entry, so a
+        # slash in the title ("Theory/Practice,"), editors ("in Meier, Karl/
+        # Wolf, Eva (Hrsg.)") or places ("Wiesbaden/Berlin") add nothing.
+        # A given name is a word not followed by a period, or an initial or
+        # short abbreviation with one ("J.", "Chr."), so "Smith, John.
+        # Durkheim/Weber, Two Sociologies" (MLA) does not continue the chain.
+        # The chain must end where an author block ends, before "(" (year,
+        # "(Hrsg.)") or ":", so a title that follows the names directly
+        # (MLA, ISO 690: "Alexander, Jeffrey C. Marx/Weber, The ...") adds none.
+        given_word = r"(?:[A-ZÄÖÜ][\w'’-]*(?![\w.])|[A-ZÄÖÜ][a-zäöü]{0,2}\.)"
+        given = given_word + r"(?:(?:-|\s+)" + given_word + r")*"
+        chain = re.match(surname_token + r",\s*" + given
+                         + r"(?:\s*[/;]\s*" + surname_token + r",\s*" + given + r")*(?=\s*[(:])", entry.strip())
+        for m in re.finditer(r"[/;]\s*(" + surname_token + r"),", chain.group(0) if chain else ""):
             tokens = m.group(1).split()
             surname = next((t for t in reversed(tokens) if t[:1].isupper()), tokens[-1])
             all_authors.add(surname)
     
     return first_authors, all_authors
+
+
+def particle_lead_names(bibliography: list[str]) -> dict[str, str]:
+    """Lead authors of entries that start with a capitalized particle, with
+    their full name: "De Vries, R. (2018). ..." -> {"Vries": "De Vries"}."""
+    names = {}
+    for entry in bibliography:
+        match = re.match(r"^((?:" + CAPITALIZED_PARTICLES + r")\s+(?:(?:der|den|de|la)\s+)?"
+                         r"([A-ZÄÖÜ][\w'’-]+))[,.]", entry.strip())
+        if match:
+            names[match.group(2)] = match.group(1)
+    return names
 
 
 def main():
@@ -446,12 +564,25 @@ def main():
         sys.exit(0)
 
     doc_path = Path(sys.argv[1])
-    if not doc_path.exists():
+    # Probe with open() rather than Path.exists(), as abbreviations_extract.py
+    # does: exists() raises PermissionError when a parent folder is not
+    # searchable, which ended in a traceback and exit 1 ("asymmetries found").
+    try:
+        with open(doc_path, "rb"):
+            pass
+    except FileNotFoundError:
         print(f"Error: file not found: {doc_path}", file=sys.stderr)
+        sys.exit(2)
+    except OSError as exc:
+        # Windows reports a directory as "Permission denied"
+        reason = "is a directory" if os.path.isdir(doc_path) else exc.strerror or exc
+        print(f"Error: cannot open {doc_path}: {reason}", file=sys.stderr)
         sys.exit(2)
 
     if doc_path.suffix.lower() != ".docx":
-        print(f"Error: expected a .docx file, got {doc_path.suffix}", file=sys.stderr)
+        print(f"Error: expected a .docx file, got "
+              f"{doc_path.suffix or 'a file without extension'}: {doc_path}",
+              file=sys.stderr)
         sys.exit(2)
     
     paragraphs = read_docx_paragraphs(doc_path)
@@ -464,7 +595,46 @@ def main():
         sys.exit(2)
     
     bib_first_authors, bib_all_authors = extract_bibliography_authors(bibliography)
+    if not bib_first_authors:
+        # Comparing two empty sets would report a passed check, e.g. for a
+        # numeric bibliography ("[1] J. Smith, ...").
+        print(f"Warning: none of the {len(bibliography)} bibliography entries could be read.")
+        print('The check needs author-year entries such as "Smith, J. (2020)" or "WHO. (2019)";')
+        print("numeric styles such as IEEE are not supported.")
+        sys.exit(2)
     cited_authors = extract_in_text_authors(body, keep=frozenset(bib_first_authors))
+    # An entry led by a capitalized particle ("De Vries, R. (2018)") counts as
+    # cited when its full name appears in the text, in any citation form: the
+    # in-text patterns do not parse capitalized particles (see NAME_PREFIX).
+    # Only for names read as lead authors ("De Beers. (n.d.)" is not), and not
+    # when another entry without a particle has the same surname ("Witte, E."
+    # next to "De Witte, H."). A German genitive counts too ("Van Dijks").
+    plain_leads, _ = extract_bibliography_authors(
+        [e for e in bibliography if not re.match(r"(?:" + CAPITALIZED_PARTICLES + r")\s", e.strip())])
+    for surname, full in particle_lead_names(bibliography).items():
+        if surname not in bib_first_authors or surname in plain_leads:
+            continue
+        words = full.split()
+        # German texts abbreviate "von"/"der": "(v. Rosenstiel 2007)", "v. d. Oelsnitz".
+        abbrev = {"von": r"von|v\.", "der": r"der|d\.", "den": r"den|d\."}
+        name = (r"\s*".join("(?i:" + abbrev.get(w.lower(), re.escape(w)) + ")" for w in words[:-1])
+                + r"\s*" + re.escape(words[-1]))
+        if re.search(r"\b" + name + r"(?:s|['’]s?)?(?![\w'’-])", body):
+            cited_authors.add(surname)
+    # A German genitive without apostrophe is read as a surname with a final
+    # s: "Webers (1922) Begriff" as "Webers", "Van Dijks (2019) Ansatz" as
+    # "Dijks". Count the listed name instead when only the name without the s
+    # is listed and every mention of the name has that form (a capitalized
+    # noun after the parenthesis): "(Adams, 2019)" or "Adams (2019) argues"
+    # next to a listed "Adam" is still reported.
+    for name in [a for a in cited_authors
+                 if a.endswith("s") and a not in bib_all_authors and a[:-1] in bib_all_authors]:
+        word = r"(?<![\w'’-])" + re.escape(name)
+        mentions = len(re.findall(word + r"(?![\w'’-])", body))
+        genitives = len(re.findall(word + r"\s+\(\d{4}[a-z]?[^()]*\)\s+[A-ZÄÖÜ]", body))
+        if mentions and mentions == genitives:
+            cited_authors.discard(name)
+            cited_authors.add(name[:-1])
     
     # Asymmetry check:
     # - cited_only: cited in text but no matching lead author in bibliography

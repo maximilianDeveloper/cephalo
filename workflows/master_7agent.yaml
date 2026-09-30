@@ -82,10 +82,15 @@ phases:
         agent: style-resolver
         output: styleguide.md
         blocking: true
+        note: |
+          If the resolver leaves open ❓ [content] entries, clarify them
+          with the user before any chapter or data output is made; open
+          ❓ [format] entries may wait until the A -> B transition.
       
       - step: 0.6
         name: Methods design (only if empirical)
         agent: methods
+        condition: empirical == true
         output: workspace/methods/design.md
         blocking: true
         note: |
@@ -185,7 +190,7 @@ phases:
     criteria:
       - all_chapters_content_complete: true
       - all_chapters_source_verified: "✅"
-      - methods_data_consistent: true
+      - methods_data_consistent: true   # empirical theses only
       - open_content_warnings: 0
       - last_3_iterations_format_only: true
       - styleguide_open_questions: 0
@@ -246,7 +251,7 @@ phases:
       
       - step: B.5
         script: scripts/docx_postprocess.sh
-        action: Hyphenation, final formatting
+        action: Enable automatic hyphenation
         condition: styleguide.md document.hyphenation == automatic
   
   # ===========================================================
@@ -264,6 +269,7 @@ phases:
     
     - step: F.3
       agent: data
+      condition: empirical == true
       action: Final data audit (all numbers in text vs. raw data)
     
     - step: F.4
