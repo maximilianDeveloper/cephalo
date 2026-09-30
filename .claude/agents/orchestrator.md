@@ -117,7 +117,7 @@ At the end of every chat, regardless of what was done:
 
 ### Final check
 
-After last chapter (introduction, written last):
+After Phase B, in the workflow's closing step F.1 (the scripts read the DOCX that Phase B exports; the introduction is written last, in Phase A):
 - Execute `checklists/consistency.md`
 - Run scripts:
   - `scripts/bibliography_check.py` (minus-test)

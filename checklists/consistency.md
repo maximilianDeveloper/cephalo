@@ -50,7 +50,7 @@ To be performed by source-verifier after every second chapter.
 
 ## Part B: Full-document final check (before submission)
 
-To be performed after the last written chapter (introduction, written last).
+To be performed on the exported document, after the last written chapter (introduction, written last) and the formatting phase: in the flat workflows the closing step F.1, in the long-form workflows the submission step.
 
 ### B.1 Indexes
 
