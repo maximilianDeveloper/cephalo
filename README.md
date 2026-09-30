@@ -268,6 +268,10 @@ You can import an existing project. See `docs/QUICKSTART.md` for migration steps
 
 For small works (seminar papers), yes. For theses, you will regret not using Git by month three. The setup script initializes a repository automatically — unless the folder already is one: if you cloned cephalo instead of downloading the ZIP, set up with `--target` so your thesis gets its own fresh history instead of sitting on top of cephalo's. `docs/git_introduction.md` explains the three commands you need: `status`, `add`, `commit`.
 
+### Why do I have to unblock the launcher on Windows, and why is there none for macOS?
+
+Both systems mark every file a browser downloads. Windows then refuses to open the setup assistant's `cephalo-setup.cmd` and says it cannot be opened; macOS refuses a double-click on a downloaded script (unverified developer). The launcher cannot lift this itself: as long as the mark is set, it never runs. Only signed software from a registered developer passes this check, and cephalo ships scripts, not signed programs. So on Windows, unblock the launcher once (right-click it, choose **Properties**, tick **Unblock**, click **OK**), and on macOS the assistant offers no launcher at all. The simplest way needs no download on either system: click **Copy** in the setup assistant, paste the command into PowerShell or Terminal and press Enter.
+
 ### How much does it cost?
 
 cephalo itself is free. You pay for the Claude Code subscription (standard Anthropic pricing). Typical thesis projects use a mix of expensive and cheap models, with the phase separation feature cutting total costs by an estimated 60–70% versus naive use of the capable model throughout. That saving needs the formatting-phase chats to run on a fast model (e.g. switch with `/model`): the formatting agents inherit the chat's model.
