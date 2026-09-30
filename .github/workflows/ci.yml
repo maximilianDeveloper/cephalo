@@ -598,7 +598,7 @@ jobs:
           const Q = ["\u2018", "\u2019", "\u201A", "\u201B"];
           const sh = ["~", "~/Documents/Thesis", "~/x y", "~/it's", "~/$(touch PWNED)", "~-/x", "~+", "~1/x", "a;touch PWNED",
                       "$(touch PWNED)", "`touch PWNED`", "$HOME", "'", "\"", "a\\", "Müller [final]", "-rf", "x\u2019y"];
-          const ps = ["'", "''", "\"", "$(New-Item -ItemType File PWNED)", "`n", "$env:HOME", "a;b", "C:\\Users\\x\\",
+          const ps = ["'", "''", "\"", "$(New-Item -ItemType File PWNED)", "`n", "$env:HOME", "a;b", "C:\\Thesis\\x\\",
                       "M\u00fcller\\Arbeit", "-NonInteractive:$false", "\"C:\\Thesis\\x y\"", "x'\u2019; New-Item -ItemType File PWNED; #"]
             .concat(Q.map(q => "x" + q + "; New-Item -ItemType File PWNED; #"), Q.map(q => q + "+(New-Item PWNED)+" + q));
           let bad = 0;
