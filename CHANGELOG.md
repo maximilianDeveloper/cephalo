@@ -10,6 +10,10 @@ Dates follow ISO 8601 (`YYYY-MM-DD`).
 
 ## [1.0.1] — unreleased
 
+### Fixed
+
+- **`docs/setup-wizard.html`** — the Windows command stops when its cephalo folder is gone (moved or renamed after the page was opened): `Set-Location` has `-ErrorAction Stop`, so `setup.ps1` no longer runs in whatever folder the PowerShell window is in, which may be an older project with its own `setup.ps1`.
+
 ### Documentation
 
 - `docs/setup_guide.md` walks through the setup assistant step by step, with screenshots taken with neutral example folders, and is linked from the quick start of `README.md`, its documentation roadmap and `docs/QUICKSTART.md` (and their copies in the setup assistant).

@@ -693,6 +693,10 @@ jobs:
           fs.rmSync(wout, { force: true });
           cp.spawnSync("pwsh", ["-NoProfile", "-NonInteractive", "-Command", wcmd.replace(F.psQuote(winHere), F.psQuote(path.join(W, "ps")))], { cwd: HOME });
           check("windows located", "run", fs.existsSync(wout) ? fs.readFileSync(wout, "utf8") : null, "x y|True", wcmd);
+          // A folder that is gone stops the line: setup.ps1 must not run in the current folder.
+          fs.rmSync(wout, { force: true });
+          cp.spawnSync("pwsh", ["-NoProfile", "-NonInteractive", "-Command", wcmd.replace(F.psQuote(winHere), F.psQuote(path.join(W, "gone")))], { cwd: path.join(W, "ps") });
+          check("windows located", "missing folder", fs.existsSync(wout), false, wcmd);
           Object.assign(state, { os: "linux", target: "", here: "D:\\Thesis\\cephalo" });
           check("windows located", "not for bash", /^cd /.test(text(F.buildCmd())), false, text(F.buildCmd()));
           Object.assign(state, { os: "windows", here: "/home/a/cephalo" });

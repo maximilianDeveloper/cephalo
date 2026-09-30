@@ -611,8 +611,10 @@ List any open questions for me to resolve before we proceed.</code></pre>
       if(t) parts.push(f('-Target')+' '+str(psQuote(t)));
       parts.push(f('-NonInteractive'));
       // Opened from a cephalo folder: change there first and allow the script for this
-      // window only, so the command runs from any PowerShell window.
-      return (here?'Set-Location '+f('-LiteralPath')+' '+str(psQuote(here))+'; Set-ExecutionPolicy '+f('-Scope')+' Process '+f('-ExecutionPolicy')+' Bypass '+f('-Force')+'; ':'')
+      // window only, so the command runs from any PowerShell window. -ErrorAction Stop: if
+      // the folder is gone (moved, renamed), the rest of the line must not run where the
+      // window happens to be (an older project there has a setup.ps1 too).
+      return (here?'Set-Location '+f('-LiteralPath')+' '+str(psQuote(here))+' '+f('-ErrorAction')+' Stop; Set-ExecutionPolicy '+f('-Scope')+' Process '+f('-ExecutionPolicy')+' Bypass '+f('-Force')+'; ':'')
         +parts.join(' ');
     } else {
       // Opened from a cephalo folder: cd there first, so the command runs from any terminal
