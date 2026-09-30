@@ -2,7 +2,7 @@
 
 This is a 5-minute onboarding for a new project. It assumes you have already extracted the cephalo package.
 
-**Tip:** if you would rather not assemble the command by hand, open [`setup-wizard.html`](setup-wizard.html) in any browser. It builds the exact command for your system from a few clicks and previews the resulting folders — fully offline, and it runs nothing itself.
+**Tip:** if you would rather not assemble the command by hand, open [`setup-wizard.html`](setup-wizard.html) in any browser. It builds the exact command for your system from a few clicks and previews the resulting folders — fully offline, and it runs nothing itself. A walkthrough with screenshots: [`setup_guide.md`](setup_guide.md).
 
 For full architecture and concepts, see `README.md`.
 

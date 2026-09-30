@@ -90,7 +90,7 @@ Get cephalo from the project's GitHub page — a release archive from the Releas
 
 If you cloned instead of unzipping: use a `--target` path in step 2, so your project starts with its own fresh Git history instead of sitting on top of cephalo's.
 
-**New here? Prefer a visual start.** Open [`docs/setup-wizard.html`](docs/setup-wizard.html) in any browser — answer a few questions and it builds the exact setup command for your system and previews the folders it will create. It is fully offline and runs nothing; you copy the command and run it yourself in the next step.
+**New here? Prefer a visual start.** Open [`docs/setup-wizard.html`](docs/setup-wizard.html) in any browser — answer a few questions and it builds the exact setup command for your system and previews the folders it will create. It is fully offline and runs nothing; you copy the command and run it yourself in the next step. A walkthrough with screenshots is in [`docs/setup_guide.md`](docs/setup_guide.md).
 
 ### 2. Run the setup script
 
@@ -237,16 +237,17 @@ Read in this order if new:
 
 1. **README.md** (this file) — overview
 2. **docs/QUICKSTART.md** — 5-minute onboarding for a new project
-3. **docs/error_catalog.md** — common writing errors this system catches
-4. **docs/phase_separation.md** — how the Content / Formatting phase split works
-5. **docs/scripts.md** — the optional utility scripts (guideline extraction, bibliography and abbreviation checks, DOCX post-processing)
+3. **docs/setup_guide.md** — the setup assistant step by step, with screenshots
+4. **docs/error_catalog.md** — common writing errors this system catches
+5. **docs/phase_separation.md** — how the Content / Formatting phase split works
+6. **docs/scripts.md** — the optional utility scripts (guideline extraction, bibliography and abbreviation checks, DOCX post-processing)
 
 For thesis-scale projects:
 
-6. **docs/longform_structure.md** — long-form project organization
-7. **docs/multiproject_structure.md** — when to split into sub-projects
-8. **docs/git_introduction.md** — versioning for beginners
-9. **docs/reference_management.md** — Zotero/Citavi integration
+7. **docs/longform_structure.md** — long-form project organization
+8. **docs/multiproject_structure.md** — when to split into sub-projects
+9. **docs/git_introduction.md** — versioning for beginners
+10. **docs/reference_management.md** — Zotero/Citavi integration
 
 ---
 
