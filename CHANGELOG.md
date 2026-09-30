@@ -12,6 +12,7 @@ Dates follow ISO 8601 (`YYYY-MM-DD`).
 
 ### Fixed
 
+- **`bibliography_check.py`** — the abbreviation `v.`/`v. d.` for `von`/`von der` counts only right before a surname and after no capitalized word, and a date range after it is prose as after `von`: a court case `(Roe v. Wade, 1973)`, `(v. Mai 2020 bis Juni 2021)` and `(Cranach d. Ä., 1530)` are no longer read as citations of Wade, Mai and Ä. (a false finding each in 1.0.0).
 - **`docs/setup-wizard.html`** — the Windows command stops when its cephalo folder is gone (moved or renamed after the page was opened): `Set-Location` has `-ErrorAction Stop`, so `setup.ps1` no longer runs in whatever folder the PowerShell window is in, which may be an older project with its own `setup.ps1`.
 
 ### Documentation

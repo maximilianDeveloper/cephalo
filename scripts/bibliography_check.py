@@ -112,7 +112,7 @@ NAME_PREFIX = (r"(?:(?:van|von|de|del|della|di|la|le|du|dos|das|ter|ten|" + CAPI
 
 # Lowercase words that may precede a surname inside a parenthetical citation:
 # name particles and short fillers after a lead word ("see also", "vgl. z. B.").
-PAREN_LOWERCASE_OK = NAME_PARTICLES | {"also", "auch", "z.", "z.b.", "e.g.", "v.", "d."}
+PAREN_LOWERCASE_OK = NAME_PARTICLES | {"also", "auch", "z.", "z.b.", "e.g."}
 
 
 def heading_level(paragraph) -> Optional[int]:
@@ -317,10 +317,19 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
                 idx = next((i for i in range(len(tokens) - 1, -1, -1) if tokens[i][:1].isupper()), None)
                 if idx is None:
                     continue
+                # The German abbreviation of "von"/"von der" ("v. Rosenstiel",
+                # "v. d. Oelsnitz") counts only right before the surname and
+                # after no capitalized word: "(Roe v. Wade, 1973)" is a court
+                # case, "(Cranach d. Ä., 1530)" a painter.
+                before = tokens[:idx]
+                n = next((len(a) for a in (["v.", "d."], ["v."]) if [t.lower() for t in before[-len(a):]] == a), 0)
+                rest = before[:len(before) - n]
+                if n and any(t[:1].isupper() for t in rest):
+                    continue
                 # Lowercase words before the surname must be name particles or
                 # fillers ("see also Smith", "vgl. z. B. Smith"); otherwise the
                 # fragment is prose ("eigene Darstellung", "etwa Deutschland").
-                if any(t[:1].islower() and t.lower() not in PAREN_LOWERCASE_OK for t in tokens[:idx]):
+                if any(t[:1].islower() and t.lower() not in PAREN_LOWERCASE_OK for t in rest):
                     continue
                 surname = tokens[idx]
                 # Safety net: skip known non-author capitalized words
@@ -331,7 +340,7 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
                 # must still be reported. After the preposition "von" in a date
                 # range such a word is prose: "(von Mai 2020 bis Juni 2021)",
                 # unlike "(von Winter 2010 eingeführt)" or "(Studie von Sommer, 2019)".
-                after_von = (not comma_form and idx > 0 and tokens[idx - 1].lower() == "von"
+                after_von = (not comma_form and idx > 0 and tokens[idx - 1].lower() in ("von", "v.")
                              and re.match(DATE_RANGE_AFTER_YEAR, fragment[match.end():]) is not None)
                 if confirmed_only and surname not in keep:
                     continue
