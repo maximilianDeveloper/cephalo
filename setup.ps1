@@ -960,10 +960,11 @@ venv/
 "@
 
 if (-not [System.IO.File]::Exists((Resolve-ProjectPath ".gitignore"))) {
-    # The here-string above inherits CRLF from this CRLF-encoded .ps1 file,
-    # but the repo-root .gitignore (and most POSIX tooling) uses LF. Normalize
-    # to LF and add the trailing newline the here-string omits after its last
-    # line, so the generated file matches the repo-root .gitignore byte-for-byte.
+    # The here-string above inherits this .ps1 file's line endings (CRLF in a
+    # Windows checkout with core.autocrlf=true), but the repo-root .gitignore
+    # (and most POSIX tooling) uses LF. Normalize to LF and add the trailing
+    # newline the here-string omits after its last line, so the generated file
+    # matches the repo-root .gitignore byte-for-byte.
     $GitignoreContentLf = ($GitignoreContent -replace "`r`n", "`n") + "`n"
     Write-Utf8NoBom ".gitignore" $GitignoreContentLf
     Write-Host "  + .gitignore" -ForegroundColor Green
