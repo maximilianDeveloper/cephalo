@@ -258,7 +258,7 @@ phases:
   # ===========================================================
   phase_07_introduction:
     directory: 07_Introduction/
-    agents: [orchestrator-longform, writer, source-verifier]
+    agents: [orchestrator-longform, writer, source-verifier, format-verifier]
     content_or_form_phase: A
     important: |
       Introduction is ALWAYS written LAST.
