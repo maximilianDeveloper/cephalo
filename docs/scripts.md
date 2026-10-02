@@ -111,7 +111,7 @@ python3 scripts/verbatim_check.py workspace/output/document.docx workspace/sourc
 What it does:
 
 1. Reads the chapter (`.md`, `.txt` or `.docx`) and leaves out what is a marked direct quote: text in quotation marks („…“, “…”, "…", »…«, «…»), Markdown block quotes and Word paragraphs in a quote style. In Markdown it also skips the YAML front matter, Pandoc citations (`[@key, S. 5]`), footnote marks and HTML comments
-2. Reads the sources, files or folders searched recursively (a folder named `_guidelines` inside them is skipped: guidelines are not sources): the `**Original:**` quotes of the research-agent's extracts (`.md`), with their page and quote ID; the text layer of PDFs; plain-text files
+2. Reads the sources, files or folders searched recursively (a folder named `_guidelines` inside them is skipped: guidelines are not sources): the quotes of the research-agent's extracts (`.md`: the `**Original:**` field, quoted text in the `**Secondary citation?**` field, and `- p. 42: "…"` lines), with their page and quote ID; a Markdown table with an "Original quote" column, such as the source registry in `workspace/state.md` of a seminar paper; the text layer of PDFs; plain-text files
 3. Finds every run of five or more consecutive words the chapter shares with a source, ignoring letter case and punctuation, also across sentence boundaries, and reports the longest run at each place with its rating, the line (Markdown) or paragraph (Word), and where it occurs: `Smith_2020.md Q4 (p. 45)` for an extract quote, `smith_2020.pdf (PDF page 3)` for a PDF
 4. Looks up each marked direct quote of five or more words (the parts between `[…]` or `(…)` omissions) in the sources and lists one that is not found verbatim for a check by hand, since a changed word in a quotation is an error too
 
@@ -119,7 +119,7 @@ Exit code 0 = no run of 8 or more words, 1 = at least one run of 8 or more words
 
 Limitations:
 
-- **Only what is given is checked**: a source that is not among the arguments, or an extract quote that is missing, cannot be matched. A PDF without a text layer (a scan) is listed as not checked; it is covered only through the quotes in its extract.
+- **Only what is given is checked**: a source that is not among the arguments, or an extract quote that is missing, cannot be matched. A PDF without a text layer (a scan) and a ZIP archive named `.pdf` are listed as not checked (the script unpacks nothing); they are covered only through the quotes in their extract.
 - **Verbatim only**: a paraphrase that swaps every few words for a synonym, or a translation, is not found. That is still the source-verifier's call (step 8, and step 7 on overinterpretation).
 - **PDF pages are the viewer's page index**: the printed page number may differ; extract quotes carry the printed one.
 - **Text extraction**: words hyphenated at a line or page break in a PDF are joined (`Verdun-` + `stung`); a hyphen before a capital letter is kept as part of a compound. PDFs with unusual encodings can yield garbled text, which then matches nothing.

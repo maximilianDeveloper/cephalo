@@ -1205,6 +1205,35 @@ jobs:
           grep -qF 'scan.pdf (no text layer' "$V/out.txt"
           expect 2 python scripts/verbatim_check.py "$V/clean.md" "$V/src" "$V/locked.pdf"
           grep -qF 'locked.pdf (' "$V/out.txt"
+          # the other quote layouts: "- p. 42:" lines, the "Secondary citation?" field and the
+          # source registry table of a seminar's state.md; a ZIP named .pdf is not unpacked
+          mkdir -p "$V/other"
+          printf '%s\n' '# Author A (2020)' '' '## Page 42' '' \
+            '- p. 42: "The central challenge is the particularly pronounced' '  uncertainty inherent to this early phase."' \
+            '- **Secondary citation?** Yes — Author A cites Author B (2006):' '  "markets punish delay more than they reward caution in every downturn"' > "$V/other/author_a.md"
+          printf '%s\n' '| Source | Chapter | Page | Original quote | Rating |' '|---|---|---|---|---|' \
+            '| Weber 2019 | 2 | 15 | "Stadtbäume senken die Oberflächentemperatur von Fassaden an heißen Tagen deutlich" | ✅ |' > "$V/other/state.md"
+          printf 'PK\003\004not a pdf' > "$V/other/fake.pdf"
+          # the worked example of checklists/plagiarism_protection.md: one run of 9 words, and
+          # "The central challenge" (3 words) is not listed
+          printf '%s\n' 'The central challenge lies in the particularly pronounced uncertainty inherent to this early phase.' \
+            'As noted, markets punish delay more than they reward caution in every downturn.' \
+            'Stadtbäume senken die Oberflächentemperatur von Fassaden an heißen Tagen.' > "$V/other.md"
+          expect 1 python scripts/verbatim_check.py "$V/other.md" "$V/other"
+          grep -qF '⚠️  9 words, line 1: "the particularly pronounced uncertainty inherent to this early phase"' "$V/out.txt"
+          grep -qF 'in author_a.md (p. 42, secondary citation)' "$V/out.txt"
+          grep -qF 'in state.md: Weber 2019 (p. 15)' "$V/out.txt"
+          grep -qF 'fake.pdf (a ZIP archive named .pdf' "$V/out.txt"
+          # the script's thresholds are those of the checklist's table
+          python - <<'EOF'
+          import re, sys
+          sys.path.insert(0, "scripts")
+          import verbatim_check as v
+          table = open("checklists/plagiarism_protection.md", encoding="utf-8").read()
+          bands = re.findall(r"^\| *(?:(\d+)-\d+|≥ *(\d+)) *\|", table, re.M)
+          starts = sorted(int(a or b) for a, b in bands)
+          assert starts == [1, v.POLISH, v.RISK, v.SERIOUS], (starts, v.POLISH, v.RISK, v.SERIOUS)
+          EOF
           # bad arguments
           expect 2 python scripts/verbatim_check.py "$V/chapter.md"
           expect 2 python scripts/verbatim_check.py "$V/missing.md" "$V/src"

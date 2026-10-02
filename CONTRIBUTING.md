@@ -61,7 +61,7 @@ done
 shellcheck setup.sh scripts/docx_postprocess.sh scripts/extract_styleguide.sh
 
 # Python syntax
-python3 -m py_compile scripts/abbreviations_extract.py scripts/bibliography_check.py scripts/cross_session_audit.py
+python3 -m py_compile scripts/abbreviations_extract.py scripts/bibliography_check.py scripts/cross_session_audit.py scripts/verbatim_check.py
 ```
 
 ### Runtime checks — the part that catches real bugs

@@ -20,12 +20,15 @@ hand, without changing the exit code.
 
 Sources are files or folders, searched recursively; a folder named
 _guidelines inside them is skipped, since guidelines are not sources:
-  - extract files (.md): the "Original" quotes of the research-agent's
-    extracts, with their page and quote ID
+  - extract files (.md): the quotes of the research-agent's extracts (the
+    "Original" field, quoted text in the "Secondary citation?" field, and
+    "- p. 42: ..." lines), with their page and quote ID. A Markdown table
+    with an "Original quote" column, such as the source registry in the
+    workspace/state.md of a seminar paper, is read row by row.
   - PDFs (.pdf): the text layer, read with pypdf; a page here is the PDF
     viewer's page index, which may differ from the printed page number.
-    A PDF without a text layer (a scan) is not checked: it is covered only
-    through the quotes in its extract.
+    A PDF without a text layer (a scan) and a ZIP archive named .pdf are
+    not checked: they are covered only through the quotes in their extract.
   - plain-text files (.txt)
 
 Usage:
@@ -196,11 +199,16 @@ def read_chapter(path: Path) -> Chapter:
 # Sources
 # ---------------------------------------------------------------------------
 
+class NotChecked(Exception):
+    """A source that is skipped with a note instead of an error."""
+
+
 class Sequence(NamedTuple):
     words: list     # casefolded words of one quote, one text file or one whole PDF
     pages: list     # for each word: its page (str) or None
     label: str      # how a match is named: "Brandt_2019.md Q3", "Brandt_2019.pdf"
     kind: str       # "extract", "pdf" or "text"
+    note: str = ""  # shown with the page, e.g. "secondary citation"
 
 
 def page_of(heading: str) -> Optional[str]:
@@ -208,8 +216,19 @@ def page_of(heading: str) -> Optional[str]:
     return re.sub(r"\s+", " ", m.group(1)) if m else None
 
 
+FIELD = re.compile(r"\s*(?:[-*+]\s*)?\*\*([^*:]+?):?\*\*:?\s*(.*)")
+# The bullet layout of the research-agent's rule examples: - p. 42: "quote"
+PAGE_BULLET = re.compile(r"\s*[-*+]\s*((?:pp?\.|S\.|page|Seite)\s*[^:]{1,30}?)\s*:\s*(?=[\"„“»«])(.*)", re.I)
+
+
 def read_extract(path: Path) -> list:
-    """The "Original" quotes of an extract, each with its page and quote ID."""
+    """
+    The quotes of an extract, each with its page and quote ID: the
+    "Original" field, quoted text in the "Secondary citation?" field, and
+    "- p. 42: \"...\"" bullets. A Markdown table with an "Original quote"
+    column (the source registry of workspace/state.md in seminar projects)
+    is read row by row.
+    """
     try:
         raw = path.read_text(encoding="utf-8-sig")
     except UnicodeDecodeError:
@@ -217,6 +236,19 @@ def read_extract(path: Path) -> list:
     lines = normalize(raw).replace("\r\n", "\n").split("\n")
     seqs = []
     page, qid = None, None
+
+    def add(text: str, where: Optional[str], label: str, note: str = "") -> None:
+        words = tokens(text)
+        if words:
+            seqs.append(Sequence(words, [where] * len(words), label, "extract", note))
+
+    def continuation(i: int, first: str) -> tuple:
+        parts = [first]
+        while i < len(lines) and lines[i].strip() and not re.match(r"\s*(?:[-*+]\s+|#|\|)", lines[i]):
+            parts.append(lines[i].strip())
+            i += 1
+        return " ".join(parts), i
+
     i = 0
     while i < len(lines):
         line = lines[i]
@@ -232,23 +264,55 @@ def read_extract(path: Path) -> list:
                 page = page_of(heading) or page
             i += 1
             continue
-        f = re.match(r"\s*(?:[-*+]\s*)?\*\*ID:?\*\*:?\s*(Q\d+)", line)
+        if line.lstrip().startswith("|"):
+            i = read_table(lines, i, path, add)
+            continue
+        label = path.name + (f" {qid}" if qid else "")
+        f = FIELD.match(line)
         if f:
-            qid = f.group(1)
-        o = re.match(r"\s*(?:[-*+]\s*)?\*\*Original(?: quote)?:?\*\*:?\s*(.*)", line, re.I)
-        if o:
-            parts = [o.group(1)]
-            i += 1
-            while i < len(lines) and lines[i].strip() and not re.match(r"\s*(?:[-*+]\s+\*\*|#)", lines[i]):
-                parts.append(lines[i].strip())
-                i += 1
-            words = tokens(" ".join(parts))
-            if words:
-                label = path.name + (f" {qid}" if qid else "")
-                seqs.append(Sequence(words, [page] * len(words), label, "extract"))
+            name, rest = f.group(1).strip().lower(), f.group(2)
+            if name == "id":
+                m = re.match(r"(Q\d+)\b", rest)
+                qid = m.group(1) if m else qid
+            elif name in ("original", "original quote"):
+                text, i = continuation(i + 1, rest)
+                add(text, page, label)
+                continue
+            elif name.startswith("secondary citation"):
+                text, i = continuation(i + 1, rest)
+                for m in QUOTED.finditer(text):
+                    add(m.group(0)[1:-1], page, label, "secondary citation")
+                continue
+        b = PAGE_BULLET.match(line)
+        if b:
+            text, i = continuation(i + 1, b.group(2))
+            add(text, page_of(b.group(1)) or page, label)
             continue
         i += 1
     return seqs
+
+
+def read_table(lines: list, i: int, path: Path, add) -> int:
+    """A Markdown table; rows of one with an "Original quote" column are quotes."""
+    rows = []
+    while i < len(lines) and lines[i].lstrip().startswith("|"):
+        rows.append([c.strip() for c in lines[i].strip().strip("|").split("|")])
+        i += 1
+    if len(rows) < 2:
+        return i
+    head = [c.lower() for c in rows[0]]
+    quote = next((n for n, c in enumerate(head) if "original" in c or c in ("quote", "zitat")), None)
+    if quote is None:
+        return i
+    page = next((n for n, c in enumerate(head) if c in ("page", "seite", "p.", "s.")), None)
+    source = next((n for n, c in enumerate(head) if c in ("source", "quelle")), None)
+    for row in rows[1:]:
+        if len(row) <= quote or re.fullmatch(r"[\s:-]*", "".join(row)):
+            continue  # the separator row |---|---|
+        where = row[page] if page is not None and page < len(row) and row[page] else None
+        name = row[source] if source is not None and source < len(row) and row[source] else ""
+        add(row[quote], where, f"{path.name}: {name}" if name else path.name)
+    return i
 
 
 def read_pdf(path: Path) -> list:
@@ -258,6 +322,10 @@ def read_pdf(path: Path) -> list:
         logging.getLogger("pypdf").setLevel(logging.ERROR)
     except ImportError:
         fail("pypdf not installed. Install: pip install -r requirements.txt")
+    with open(path, "rb") as fh:
+        if fh.read(4) == b"PK\x03\x04":
+            raise NotChecked("a ZIP archive named .pdf: extract it with scripts/extract_styleguide.sh "
+                             "into a folder outside the sources")
     reader = PdfReader(str(path))
     if reader.is_encrypted and not reader.decrypt(""):
         raise ValueError("encrypted with a password")
@@ -360,12 +428,11 @@ def describe(seqs: list, hits: list, n: int) -> str:
         seq = seqs[s]
         pages = [pg for pg in seq.pages[p:p + n] if pg]
         if seq.kind == "pdf" and pages:
-            where = f"PDF page {pages[0]}" if pages[0] == pages[-1] else f"PDF pages {pages[0]}-{pages[-1]}"
-            name = f"{seq.label} ({where})"
-        elif pages:
-            name = f"{seq.label} (p. {pages[0]})"
+            where = [f"PDF page {pages[0]}" if pages[0] == pages[-1] else f"PDF pages {pages[0]}-{pages[-1]}"]
         else:
-            name = seq.label
+            where = [f"p. {pages[0]}"] if pages else []
+        where += [seq.note] if seq.note else []
+        name = f"{seq.label} ({', '.join(where)})" if where else seq.label
         if name not in names:
             names.append(name)
     shown = "; ".join(names[:3])
@@ -424,9 +491,12 @@ def main() -> None:
             else:
                 found = read_extract(f)
                 if not found:
-                    unchecked.append(f"{f} (no **Original:** quotes; not an extract?)")
+                    unchecked.append(f"{f} (no quotes found: not an extract?)")
         except SystemExit:
             raise
+        except NotChecked as note:
+            unchecked.append(f"{f} ({note})")
+            continue
         except Exception as exc:
             unreadable.append(f"{f} ({type(exc).__name__}: {exc})")
             continue
