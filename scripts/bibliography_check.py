@@ -6,8 +6,8 @@ Bibliography minus-test, by author surname:
 - Every surname cited in the text must appear among the bibliography's authors
 - The lead author of every bibliography entry must be cited in the text
 
-The original of a secondary citation ("(Moreau 2009, zitiert nach Lindqvist
-2017)", "as cited in") is not required in the bibliography: if it is
+The original of a secondary citation ("(Weber 1922, zitiert nach Keller
+2018)", "as cited in") is not required in the bibliography: if it is
 missing there, it is listed separately and does not count as a finding.
 
 The diff of both lists must be empty. Years are not compared: a citation
@@ -455,7 +455,7 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
 
 
 # A secondary citation names the original first and the source actually read
-# after the marker: "(Moreau 2009, S. 58, zitiert nach Lindqvist 2017)",
+# after the marker: "(Weber 1922, S. 31, zitiert nach Keller 2018)",
 # "(Smith, 2001, as cited in Jones, 2015)".
 SECONDARY_MARKER = r",?\s*\b(?i:zit\.\s*n(?:ach\b|\.)|zitiert\s+nach\b|(?:as\s+)?cited\s+in\b|quoted\s+in\b)\s*"
 
