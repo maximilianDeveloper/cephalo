@@ -73,7 +73,7 @@ Verify the following categories. Concrete values (font size, page-range notation
 - [ ] Table of contents: automatic generation; level formatting per styleguide (`headings.toc_emphasis`)
 - [ ] Abbreviations: only actually-used abbreviations
   (automation: scripts/abbreviations_extract.py)
-- [ ] Bibliography: conventions per styleguide
+- [ ] Bibliography: conventions per styleguide, including the entry pattern per source type, co-authors and the originals of secondary citations (`bibliography.entry_patterns`, `bibliography.multiple_authors`, `bibliography.secondary_original`)
   (automation: scripts/bibliography_check.py — minus-test)
 
 ## Tables and figures
@@ -86,10 +86,13 @@ Verify the following categories. Concrete values (font size, page-range notation
 - [ ] Page number requirement per styleguide
 - [ ] Non-breaking space before page number per styleguide
 - [ ] Page range notation per styleguide
+- [ ] Several sources, two authors, same author and year, no date, no page numbers per styleguide (`in_text.multiple_sources`, `in_text.two_authors`, `in_text.same_author_year`, `in_text.no_date`, `in_text.no_page_locator`)
+- [ ] Secondary citations per styleguide (`in_text.secondary_citation`)
 
 ## Style
 - [ ] Forbidden evaluative wording per styleguide (`style.forbidden_evaluative`)
-- [ ] Block quotes per styleguide (`style.block_quote_word_threshold`)
+- [ ] Block quotes per styleguide (`style.block_quote_word_threshold`, `style.block_quote_format`)
+- [ ] Changes inside quotes marked per styleguide (`style.quote_alterations`)
 - [ ] Footnote policy per styleguide (`style.footnotes`)
 ```
 

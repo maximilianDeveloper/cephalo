@@ -80,7 +80,7 @@ An open rule has `❓` as its value wherever it appears. Do not write one of its
 
 Tag every entry under "Open questions" (the entries, not the inline markers, are what the other agents check), because the two kinds block different phases:
 
-- `[content]` — the answer changes what the writer drafts in Phase A, so it must be resolved before any chapter is written: `style.forbidden_pronouns`, `style.forbidden_evaluative`, `style.block_quote_word_threshold`, `style.footnotes`, `in_text.page_for_indirect`, `in_text.cf_prefix`, `document.page_count`, `headings.max_depth`, `numbers.decimal_separator`, `numbers.p_values`, `document.figure_resolution` and `captions.*` (built into tables and figures the data-agent makes in Phase A; a work without them closes these entries with "does not occur in this work", see "Recording answers to open questions"), and any other rule that changes wording, content or length.
+- `[content]` — the answer changes what the writer drafts in Phase A, so it must be resolved before any chapter is written: `style.forbidden_pronouns`, `style.forbidden_evaluative`, `style.block_quote_word_threshold`, `style.quote_alterations`, `style.footnotes`, `in_text.page_for_indirect`, `in_text.cf_prefix`, `document.page_count`, `headings.max_depth`, `numbers.decimal_separator`, `numbers.p_values`, `document.figure_resolution` and `captions.*` (built into tables and figures the data-agent makes in Phase A; a work without them closes these entries with "does not occur in this work", see "Recording answers to open questions"), and any other rule that changes wording, content or length.
 - `[format]` — the answer changes only typesetting, so it can wait until the formatting phase (Phase B): all other keys (fonts, spacing, margins, pagination, headings layout, title page, bibliography layout, the notation of citations and page ranges).
 - When unsure, tag it `[content]`. An instruction-like passage (see step 1) is tagged `[format]`: it blocks no drafting, but the user should see it before Phase B.
 
@@ -128,9 +128,9 @@ At the end, give the user:
 The generated `styleguide.md` follows the template in `templates/styleguide.md`. Key sections:
 
 - Metadata (source documents, extraction date)
-- In-text citations (format, et-al. rules, "see / cf." conventions)
+- In-text citations (format, et-al. rules, "see / cf." conventions, several sources, two authors, secondary citations, sources without date or page numbers)
 - Page ranges (`in_text.page_range`; notation: "15–16" vs. "15-16" vs. "15 to 16")
-- Bibliography (alignment, hanging indent, separator conventions, DOI/URL policy)
+- Bibliography (entry pattern per source type, co-authors, alignment, hanging indent, separator conventions, DOI/URL policy)
 - Document formalia (`document.*`: page count, margins, hyphenation, page size)
 - Body text and footnotes (`body.*`, `footnotes.*`: font, size, line spacing, alignment, paragraph spacing)
 - Headings (sizes, numbering conventions, max depth)

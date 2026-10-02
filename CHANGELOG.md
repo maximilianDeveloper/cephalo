@@ -10,6 +10,10 @@ Dates follow ISO 8601 (`YYYY-MM-DD`).
 
 ## [1.0.1] — unreleased
 
+### Added
+
+- **`templates/styleguide.md`** — slots for common citation rules that had none: several sources in one citation, two authors, same author and year, sources without date or page numbers, secondary citations (`in_text.*`), the entry pattern per source type, co-authors and whether the original of a secondary citation is listed (`bibliography.*`), and the block-quote layout and how quotes may be altered (`style.*`). The format-verifier checks them, and the style-resolver tags `style.quote_alterations` `[content]`. In a Windows trial run the style-resolver had to invent 17 key names for rules of a three-page guideline, which the format-verifier's checklist did not know.
+
 ### Changed
 
 - **style-resolver** — names its ways to read real guideline PDFs: the texts in `_styleguide_rawtext/` when the user has run `scripts/extract_styleguide.sh` (as `docs/scripts.md` and the script's closing message suggest, though the definition never mentioned the folder), otherwise the Read tool, and no extraction code of its own. In a Windows trial run it wrote its own `pypdf` one-liners instead, whose console output garbled umlauts and dashes.
