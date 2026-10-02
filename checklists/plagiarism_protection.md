@@ -127,7 +127,7 @@ If the bolded words appear verbatim in the original, the citation is NOT enough.
 Original: Author A speaks of "uncertainty".
 "Paraphrase": Text writes "information asymmetry".
 
-This is not a paraphrase — it is an incorrect term mapping. Flagged as ⚠️ by source-verifier.
+This is not a paraphrase — it is an incorrect term mapping. Flagged as ❌ by source-verifier (verification step 3).
 
 ---
 
