@@ -1239,6 +1239,17 @@ jobs:
           expect 2 python scripts/verbatim_check.py "$V/missing.md" "$V/src"
           mkdir -p "$V/empty"; expect 2 python scripts/verbatim_check.py "$V/chapter.md" "$V/empty"
           expect 2 python scripts/verbatim_check.py "$V/src/pdf/smith.pdf" "$V/src"
+          # a damaged Word chapter: one error line
+          printf 'PK\003\004broken' > "$V/broken.docx"
+          expect 2 python scripts/verbatim_check.py "$V/broken.docx" "$V/src"
+          grep -q '^Error: cannot read .*broken.docx as .docx' "$V/out.txt"
+          test "$(wc -l < "$V/out.txt")" -eq 1
+          # brackets, spaces and umlauts in the paths
+          mkdir -p "$V/Quellen [alt] ä"; cp "$V/src/extracts/Keller_2018.md" "$V/Quellen [alt] ä/"
+          cp "$V/chapter.md" "$V/Kapitel [2] ü.md"
+          expect 1 python scripts/verbatim_check.py "$V/Kapitel [2] ü.md" "$V/Quellen [alt] ä"
+          grep -qF 'Verbatim check for: Kapitel [2] ü.md' "$V/out.txt"
+          grep -qF 'in Keller_2018.md Q1 (p. 44)' "$V/out.txt"
 
   windows:
     name: PowerShell 5.1 parse & setup smoke (Windows)

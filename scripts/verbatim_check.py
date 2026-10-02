@@ -86,6 +86,10 @@ def tokens(text: str) -> list:
     return [m.group(0).casefold() for m in WORD.finditer(text)]
 
 
+def one_line(exc: Exception) -> str:
+    return " ".join(str(exc).split())
+
+
 def fail(message: str) -> None:
     print(f"Error: {message}", file=sys.stderr)
     sys.exit(2)
@@ -151,7 +155,7 @@ def read_docx(path: Path) -> list:
     try:
         doc = Document(str(path))
     except Exception as exc:
-        fail(f"cannot read {path} as .docx ({type(exc).__name__}: {exc})")
+        fail(f"cannot read {path} as .docx ({type(exc).__name__}: {one_line(exc)})")
     pieces = []
     for n, p in enumerate(doc.paragraphs, 1):
         style = (p.style.name if p.style is not None else "") or ""
@@ -498,7 +502,7 @@ def main() -> None:
             unchecked.append(f"{f} ({note})")
             continue
         except Exception as exc:
-            unreadable.append(f"{f} ({type(exc).__name__}: {exc})")
+            unreadable.append(f"{f} ({type(exc).__name__}: {one_line(exc)})")
             continue
         if found:
             counts[found[0].kind] += 1
