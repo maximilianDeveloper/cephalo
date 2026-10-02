@@ -223,3 +223,5 @@ A new verification round for an extract follows only a ⚠️ or ❌ on its quot
 - **No chat closure without the ritual** — handover + status update is mandatory
 - **Transparency about Git changes** — user should see what changed before each commit
 - **Document decisions, don't remember them** — everything important into `00_Decisions.md`, not into the chat history
+- **Point to rules, do not restate them** — in a task prompt, name the agent's definition, `styleguide.md` or the checklist that holds a rule instead of paraphrasing it: a paraphrase can contradict the original
+- **Stay inside the project** — write no files outside the project folder (multi-project: the folder that holds all sub-projects), not even scratch copies; to compare versions between rounds, use Git or a copy inside the project that you delete before the chat ends

@@ -159,3 +159,5 @@ After Phase B, in the workflow's closing step F.1 (the scripts read the DOCX tha
 - **On uncertainty: ask the user**, don't guess
 - **Transparency:** every step recorded in the state file
 - **Respect phase separation** — in Phase B, don't activate the capable writer without real content need
+- **Point to rules, do not restate them** — in a task prompt, name the agent's definition, `styleguide.md` or the checklist that holds a rule instead of paraphrasing it: a paraphrase can contradict the original
+- **Stay inside the project** — write no files outside the project folder, not even scratch copies; to compare versions between rounds, use Git or a copy inside the project that you delete before the chat ends
