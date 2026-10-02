@@ -1341,13 +1341,29 @@ jobs:
             '> Ein völlig anderer Satz über die Bedeutung von Parks' 'in dicht bebauten Vierteln großer Städte.' '' \
             'Urban heat islands are the city’s most visible climate signal today.' > "$V/review.md"
           expect 1 python scripts/verbatim_check.py "$V/review.md" "$V/review"
-          grep -qF '❌ 16 words, line 1:' "$V/out.txt"
+          grep -qF '⚠️  13 words (and 3 in quotation marks), line 1:' "$V/out.txt"
           grep -qx '    in a.md Q1 (p. 92–94)' "$V/out.txt"
           grep -qF '⚠️  11 words, line 14:' "$V/out.txt"
           grep -qx '    in a.md Q2 (p. 87 ❓)' "$V/out.txt"
           grep -qF 'page.html (.html is not read' "$V/out.txt"
           grep -qF 'Sources: 1 extract(s) with 3 quotes, 0 PDF(s), 1 text file(s)' "$V/out.txt"
-          if grep -q 'line [3579]\b\|line 1[01]\b\|literature.bib\|not found verbatim' "$V/out.txt"; then cat "$V/out.txt"; echo "a marked quote, a core claim or a .bib was counted"; exit 1; fi
+          grep -qxF 'Summary: ❌ 0, ⚠️ 2, 🟡 0. Runs of 1-4 words are not listed;' "$V/out.txt"
+          if grep -q 'line [3579]\b\|line 1[0-2]\b\|literature.bib\|not found verbatim' "$V/out.txt"; then cat "$V/out.txt"; echo "a marked quote, a core claim or a .bib was counted"; exit 1; fi
+          # an apostrophe before a quotation's opening mark or a digit opens none ('90s,
+          # U.S.'s), so a plural possessive cannot close one around a copied sentence; a
+          # short quotation keeps a run going without counting; „…" with inner straight
+          # marks and a '…' quotation across a line break are direct quotes
+          printf '%s\n' "In the '90s, die Wirkung von Stadtgrün hängt vor allem von der Wasserversorgung der Bäume im Sommer ab, as the researchers' data show." '' \
+            "The U.S.'s view: die Wirkung von Stadtgrün hängt vor allem von der Wasserversorgung der Bäume im Sommer ab, the residents' say." '' \
+            'Keller schreibt, „die Wirkung von Stadtgrün“ hängt vor allem vom Wetter ab.' '' \
+            'Er schreibt: „Die Wirkung von Stadtgrün hängt vor allem von der "Wasserversorgung" der Bäume im Sommer ab.“' '' \
+            "Smith: 'Urban heat islands are the city's most visible climate signal," "and they are growing stronger every single year.'" '' \
+            'Er sagt: „Die Wirkung von Stadtgrün hängt vor allem von der Wasserversorgung der Bäume im Sommer ab."' > "$V/single.md"
+          expect 1 python scripts/verbatim_check.py "$V/single.md" "$V/review/a.md"
+          grep -qxF 'Summary: ❌ 2, ⚠️ 0, 🟡 0. Runs of 1-4 words are not listed;' "$V/out.txt"
+          grep -qF '❌ 15 words, line 1:' "$V/out.txt"
+          grep -qF '❌ 15 words, line 3:' "$V/out.txt"
+          if grep -q 'line [579]\b\|line 1[0-2]\b\|not found verbatim' "$V/out.txt"; then cat "$V/out.txt"; echo "a short or marked quotation was counted"; exit 1; fi
           # PDFs: a soft hyphen at a line end is joined when the chapter has the word, a
           # compound hyphen is kept; mostly scanned pages are listed; an extract quote
           # inside a longer PDF run is named too
@@ -1369,6 +1385,7 @@ jobs:
                   page[NameObject("/Contents")] = pw._add_object(content)
               pw.write(path)
           pdf(os.path.join(v, "pdfs", "scan.pdf"), [["Cover page of a book about cities and their climate today"], [], [], []])
+          pdf(os.path.join(v, "pdfs", "figure.pdf"), [["A first page of text about cities."], ["A second page of text."], [], ["A last page of text."]])
           pdf(os.path.join(v, "pdfs", "hyph.pdf"), [["Trees cool their surroundings through evapo\xad", "ration on hot days, a long-", "term effect that the city planners measured in detail."]])
           pdf(os.path.join(v, "pdfs", "longer.pdf"), [["Context first. Die Wirkung von Stadtgrün hängt vor allem von der Wasserversorgung der Bäume im Sommer ab und nicht vom Boden."]])
           EOF
@@ -1377,6 +1394,7 @@ jobs:
           expect 1 python scripts/verbatim_check.py "$V/pdfs.md" "$V/pdfs" "$V/review/a.md"
           grep -qF '⚠️  14 words, line 1: "Trees cool their surroundings through evaporation on hot days, a long-term effect that"' "$V/out.txt"
           grep -qF 'scan.pdf (3 of 4 pages without a text layer' "$V/out.txt"
+          if grep -v scan.pdf "$V/out.txt" | grep -q 'pages without a text layer'; then cat "$V/out.txt"; echo "a PDF with text on every page was listed"; exit 1; fi
           grep -qx '    in longer.pdf (PDF page 1); a.md Q3 (p. 92–94, 15 of these words)' "$V/out.txt"
           # Word: LibreOffice's quote style; a quote after a line break keeps its paragraph
           # number; a chapter without text is an error
@@ -1397,6 +1415,20 @@ jobs:
           grep -qx '    paragraph 2: "ein ganz und gar erfundenes Zitat aus keiner Quelle"' "$V/out.txt"
           expect 2 python scripts/verbatim_check.py "$V/empty.docx" "$V/review/a.md"
           grep -q '^Error: no text found in' "$V/out.txt"
+          # Word: a Pandoc citekey does not cut a run
+          python -c "import sys; from docx import Document; d = Document(); d.add_paragraph('Die Wirkung von Stadtgrün hängt vor allem [@keller2018, S. 5] von der Wasserversorgung der Bäume im Sommer ab.'); d.save(sys.argv[1])" "$V/citekey.docx"
+          expect 1 python scripts/verbatim_check.py "$V/citekey.docx" "$V/review/a.md"
+          grep -qF '❌ 15 words, paragraph 1:' "$V/out.txt"
+          # source folders: hidden files, macOS forks, __MACOSX/ and a saved page's _files/
+          # are passed over, a handover.md too; an odd (non-UTF-8) file name is printed
+          mkdir -p "$V/folder/__MACOSX" "$V/folder/Article_files"
+          cp "$V/review/a.md" "$V/folder/"
+          printf 'not a pdf' > "$V/folder/._a.pdf"; printf 'not a pdf' > "$V/folder/__MACOSX/a.pdf"
+          printf 'x' > "$V/folder/Article_files/logo.png"; printf '# Handover\n\nNext: chapter 3\n' > "$V/folder/handover.md"
+          printf 'x' > "$V/folder/$(printf 'K\344ller.epub')"
+          expect 1 python scripts/verbatim_check.py "$V/review.md" "$V/folder"
+          grep -qF 'ller.epub (.epub is not read' "$V/out.txt"
+          if grep -q 'a.pdf\|logo.png\|handover.md\|Could not be read' "$V/out.txt"; then cat "$V/out.txt"; echo "a hidden, archive or note file was listed"; exit 1; fi
 
   windows:
     name: PowerShell 5.1 parse & setup smoke (Windows)
