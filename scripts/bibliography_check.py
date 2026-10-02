@@ -6,6 +6,10 @@ Bibliography minus-test, by author surname:
 - Every surname cited in the text must appear among the bibliography's authors
 - The lead author of every bibliography entry must be cited in the text
 
+The original of a secondary citation ("(Moreau 2009, zitiert nach Lindqvist
+2017)", "as cited in") is not required in the bibliography: if it is
+missing there, it is listed separately and does not count as a finding.
+
 The diff of both lists must be empty. Years are not compared: a citation
 with a wrong year, or an uncited second work by an author who is cited
 elsewhere, is not reported.
@@ -450,6 +454,40 @@ def extract_in_text_authors(body: str, keep: frozenset[str] = frozenset()) -> se
     return authors
 
 
+# A secondary citation names the original first and the source actually read
+# after the marker: "(Moreau 2009, S. 58, zitiert nach Lindqvist 2017)",
+# "(Smith, 2001, as cited in Jones, 2015)".
+SECONDARY_MARKER = r",?\s*\b(?i:zit\.\s*n(?:ach\b|\.)|zitiert\s+nach\b|(?:as\s+)?cited\s+in\b|quoted\s+in\b)\s*"
+
+
+def split_secondary_originals(body: str, keep: frozenset[str] = frozenset()) -> tuple[str, set[str]]:
+    """
+    Take the originals of secondary citations out of the text.
+
+    Many guidelines list only the source actually read, not the original it
+    quotes. Returns the text with each such citation reduced to the part
+    after the marker, and the surnames cited before a marker, so that a
+    missing entry for an original can be reported apart from the findings.
+    A name that is also cited in the usual way elsewhere is checked as usual.
+    """
+    originals: set[str] = set()
+
+    def reduce(block: re.Match) -> str:
+        if not re.search(SECONDARY_MARKER, block.group(1)):
+            return block.group(0)
+        kept = []
+        for fragment in block.group(1).split(";"):
+            parts = re.split(SECONDARY_MARKER, fragment, maxsplit=1)
+            if len(parts) == 2:
+                originals.update(extract_in_text_authors("(" + parts[0] + ")", keep))
+                kept.append(parts[1])
+            else:
+                kept.append(fragment)
+        return "(" + ";".join(kept) + ")"
+
+    return re.sub(r"\(([^()]*\d{4}[^()]*)\)", reduce, body), originals
+
+
 def extract_bibliography_authors(bibliography: list[str]) -> tuple[set[str], set[str]]:
     """
     Extract author surnames from bibliography entries.
@@ -611,7 +649,8 @@ def main():
         print('The check needs author-year entries such as "Smith, J. (2020)" or "WHO. (2019)";')
         print("numeric styles such as IEEE are not supported.")
         sys.exit(2)
-    cited_authors = extract_in_text_authors(body, keep=frozenset(bib_first_authors))
+    reduced_body, originals = split_secondary_originals(body, keep=frozenset(bib_first_authors))
+    cited_authors = extract_in_text_authors(reduced_body, keep=frozenset(bib_first_authors))
     # An entry led by a capitalized particle ("De Vries, R. (2018)") counts as
     # cited when its full name appears in the text, in any citation form: the
     # in-text patterns do not parse capitalized particles (see NAME_PREFIX).
@@ -650,8 +689,11 @@ def main():
     #   (allow match against co-authors too, since citations sometimes use
     #    co-author surnames in narrative form)
     # - listed_only: lead author of a bibliography entry not cited anywhere
+    # - secondary_only: cited only as the original of a secondary citation and
+    #   not listed; many guidelines leave it out, so it is not a finding
     cited_only = cited_authors - bib_all_authors
-    listed_only = bib_first_authors - cited_authors
+    listed_only = bib_first_authors - cited_authors - originals
+    secondary_only = originals - cited_authors - bib_all_authors
     
     print(f"Bibliography minus-test for: {doc_path.name}")
     print(f"  Authors cited in text:            {len(cited_authors)}")
@@ -671,6 +713,14 @@ def main():
             print(f"    {a}")
         print()
     
+    if secondary_only:
+        print(f"ℹ️  Cited only as the original of a secondary citation, NOT in bibliography ({len(secondary_only)}):")
+        for a in sorted(secondary_only):
+            print(f"    {a}")
+        print("    Not counted as a finding: many guidelines list only the source actually read.")
+        print("    Check what styleguide.md says about secondary citations.")
+        print()
+
     if not cited_only and not listed_only:
         print("✅ Bibliography minus-test passed: no asymmetries detected.")
     else:
