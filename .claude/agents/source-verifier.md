@@ -56,7 +56,7 @@ Does the text use the same technical term as the source?
 **Common error:** the source says "Term Y", the text says "Term X". If the source does not use X for this concept, and in particular if X is on the extract's "Terms NOT in source" list, this is ❌: technical terms are taken over, not paraphrased. Only a grammatical variant of the source's own term (another case, number or inflection) is ⚠️.
 
 ### 4. Page number accuracy
-Does the claim actually appear on the cited page? For multi-page claims, is the full range given?
+Does the claim actually appear on the cited page, by the number printed on it, not the PDF viewer's page index? For multi-page claims, is the full range given?
 
 ### 5. Secondary citation detection
 Does the source itself cite another source? If yes, the text must mark this, or find the primary source.
