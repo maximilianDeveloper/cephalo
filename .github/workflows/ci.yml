@@ -34,7 +34,7 @@ jobs:
         run: python -m pip install -r requirements.txt pyyaml
 
       - name: Python syntax
-        run: python -m py_compile scripts/abbreviations_extract.py scripts/bibliography_check.py scripts/cross_session_audit.py
+        run: python -m py_compile scripts/abbreviations_extract.py scripts/bibliography_check.py scripts/cross_session_audit.py scripts/verbatim_check.py
 
       - name: Shell syntax
         # One file per call: `bash -n a b c` parses only a (b and c become its arguments).
@@ -182,6 +182,7 @@ jobs:
           python scripts/abbreviations_extract.py --help
           python scripts/bibliography_check.py --help
           python scripts/cross_session_audit.py --help
+          python scripts/verbatim_check.py --help
           bash scripts/docx_postprocess.sh --help
           bash scripts/extract_styleguide.sh --help
           bash setup.sh --help
@@ -1114,6 +1115,102 @@ jobs:
           g clone -q --bare "$W/src" "$W/bare.git" && g -C "$W/bare.git" worktree add -q main
           expect 0 python scripts/cross_session_audit.py --repo-root "$W/bare.git/main"
 
+      - name: verbatim_check.py on generated chapters and sources
+        run: |
+          V=/tmp/ci_verbatim; rm -rf "$V"; mkdir -p "$V/src/extracts" "$V/src/_guidelines" "$V/src/pdf"
+          python - "$V" <<'EOF'
+          import os, sys
+          from docx import Document
+          from pypdf import PdfWriter
+          from pypdf.generic import DictionaryObject, NameObject, StreamObject
+          v = sys.argv[1]
+          def pdf(path, pages, password=None):
+              pw = PdfWriter()
+              for lines in pages:
+                  page = pw.add_blank_page(width=400, height=300)
+                  font = DictionaryObject({NameObject("/Type"): NameObject("/Font"), NameObject("/Subtype"): NameObject("/Type1"),
+                                           NameObject("/BaseFont"): NameObject("/Helvetica")})
+                  page[NameObject("/Resources")] = DictionaryObject({NameObject("/Font"): DictionaryObject({NameObject("/F1"): pw._add_object(font)})})
+                  content = StreamObject()
+                  content.set_data(("BT /F1 10 Tf 20 280 Td 12 TL " + " ".join(f"({l}) '" for l in lines) + " ET").encode("latin-1"))
+                  page[NameObject("/Contents")] = pw._add_object(content)
+              if password:
+                  pw.encrypt(user_password=password, owner_password="owner", algorithm="AES-128")
+              pw.write(path)
+          # an extract with quote IDs and pages
+          with open(os.path.join(v, "src", "extracts", "Keller_2018.md"), "w", encoding="utf-8") as f:
+              f.write("# Keller (2018) — Stadtklima\n\n**Status:** verified\n\n## Page 44\n\n### Q1\n"
+                      "- **Original:** \"Die urbane Wärmeinsel bezeichnet den Temperaturunterschied zwischen einer Stadt "
+                      "und ihrem weniger dicht bebauten Umland, der vor allem in windstillen Nächten auftritt.\"\n"
+                      "- **Core claim:** Die Wärmeinsel ist nachts am stärksten.\n\n### Q2\n"
+                      "- **Original:** \"Bäume kühlen ihre Umgebung durch Verdunstung und Beschattung, wobei die Wirkung "
+                      "von der Wasserversorgung abhängt.\"\n\n## Page 45\n\n### Q3\n"
+                      "- **Original:** \"Wer die Wirkung von Stadtgrün allein an der Lufttemperatur misst, unterschätzt sie regelmäßig.\"\n")
+          # a guideline repeating a source sentence: guidelines are not sources
+          with open(os.path.join(v, "src", "_guidelines", "guide.txt"), "w", encoding="utf-8") as f:
+              f.write("Zitate ab 40 Wörtern werden eingerückt und bezeichnen den Temperaturunterschied zwischen einer Stadt.\n")
+          # a PDF whose sentence is hyphenated across a page break
+          pdf(os.path.join(v, "src", "pdf", "smith.pdf"),
+              [["Green roofs lower the surface temperature of a building by", "several degrees on a hot summer day, as long as the plants are well water-"],
+               ["ed and the substrate stays moist.", "Shade matters more than evaporation in narrow streets."]])
+          pdf(os.path.join(v, "scan.pdf"), [[]])
+          pdf(os.path.join(v, "locked.pdf"), [["text behind a password"]], password="secret")
+          with open(os.path.join(v, "chapter.md"), "w", encoding="utf-8") as f:
+              f.write("---\ntitle: \"2 Grundlagen\"\n---\n# 2 Grundlagen\n\n"
+                      # line 6: 15 words from Q1, across a line break
+                      "Die urbane Wärmeinsel bezeichnet den Temperaturunterschied zwischen einer Stadt und ihrem\n"
+                      "weniger dicht bebauten Umland [vgl. @Keller_2018, S. 44]. Kurz: Bäume kühlen ihre Umgebung durch Verdunstung.\n\n"
+                      # line 9: a changed direct quote, and one that is correct
+                      "Keller folgert: „Wer die Wirkung von Stadtgrün allein an der Lufttemperatur misst, unterschätzt sie häufig.“ "
+                      "Wichtig ist, dass „die Wirkung von der Wasserversorgung abhängt“ (Keller 2018, S. 44).\n\n"
+                      # line 11: a block quote is a marked direct quote
+                      "> Bäume kühlen ihre Umgebung durch Verdunstung und Beschattung, wobei die Wirkung von der Wasserversorgung abhängt.\n\n"
+                      # line 13: 8 words from the PDF, across its page break
+                      "In short, plants that are well watered and the substrate stays moist, as studies show.\n\n"
+                      # line 15: a quoted sentence in straight marks is not counted
+                      "\"Shade matters more than evaporation in narrow streets.\"\n")
+          d = Document()
+          d.add_paragraph("Die urbane Wärmeinsel bezeichnet den Temperaturunterschied zwischen einer Stadt und ihrem Umland.")
+          d.add_paragraph("Bäume kühlen ihre Umgebung durch Verdunstung und Beschattung, wobei die Wirkung von der Wasserversorgung abhängt.", style="Quote")
+          d.save(os.path.join(v, "chapter.docx"))
+          with open(os.path.join(v, "clean.md"), "w", encoding="utf-8") as f:
+              f.write("Stadtgrün senkt die Temperatur vor allem nachts, wenn die Bebauung Wärme abgibt (Keller 2018, S. 44).\n")
+          EOF
+          expect() {
+            want=$1; shift
+            set +e; "$@" >"$V/out.txt" 2>&1; code=$?; set -e
+            if [ "$code" -ne "$want" ]; then cat "$V/out.txt"; echo "expected exit $want, got $code: $*"; exit 1; fi
+          }
+          # 0 = nothing of 8 or more words, 1 = a run of 8 or more, 2 = unreadable input
+          expect 1 python scripts/verbatim_check.py "$V/chapter.md" "$V/src"
+          grep -qF '❌ 15 words, line 6:' "$V/out.txt"
+          grep -qF 'in Keller_2018.md Q1 (p. 44)' "$V/out.txt"
+          grep -qF '🟡 6 words, line 7:' "$V/out.txt"
+          grep -qF '⚠️  8 words, line 13:' "$V/out.txt"
+          grep -qF 'in smith.pdf (PDF pages 1-2)' "$V/out.txt"
+          # the changed quotation is listed, the correct one and the block quote are not
+          grep -qF 'line 9: "Wer die Wirkung von Stadtgrün allein an der Lufttemperatur misst, unterschätzt sie häufig."' "$V/out.txt"
+          if grep -q 'Wasserversorgung abhängt' "$V/out.txt"; then echo "a correct quotation was listed"; exit 1; fi
+          # quoted text is not counted; the guideline folder is not read
+          if grep -q 'line 15\|narrow streets\|guide.txt' "$V/out.txt"; then cat "$V/out.txt"; echo "quoted text or a guideline was counted"; exit 1; fi
+          grep -qF 'Sources: 1 extract(s) with 3 quotes, 1 PDF(s), 0 text file(s)' "$V/out.txt"
+          # Word: a paragraph in a quote style is a direct quote
+          expect 1 python scripts/verbatim_check.py "$V/chapter.docx" "$V/src"
+          grep -qF '⚠️  11 words, paragraph 1:' "$V/out.txt"
+          if grep -q 'paragraph 2' "$V/out.txt"; then echo "a quote-style paragraph was counted"; exit 1; fi
+          expect 0 python scripts/verbatim_check.py "$V/clean.md" "$V/src"
+          grep -qF '✅ No verbatim run of 5 or more words' "$V/out.txt"
+          # a scan is listed as not checked; a password-protected PDF is an error
+          expect 0 python scripts/verbatim_check.py "$V/clean.md" "$V/src" "$V/scan.pdf"
+          grep -qF 'scan.pdf (no text layer' "$V/out.txt"
+          expect 2 python scripts/verbatim_check.py "$V/clean.md" "$V/src" "$V/locked.pdf"
+          grep -qF 'locked.pdf (' "$V/out.txt"
+          # bad arguments
+          expect 2 python scripts/verbatim_check.py "$V/chapter.md"
+          expect 2 python scripts/verbatim_check.py "$V/missing.md" "$V/src"
+          mkdir -p "$V/empty"; expect 2 python scripts/verbatim_check.py "$V/chapter.md" "$V/empty"
+          expect 2 python scripts/verbatim_check.py "$V/src/pdf/smith.pdf" "$V/src"
+
   windows:
     name: PowerShell 5.1 parse & setup smoke (Windows)
     runs-on: windows-latest
@@ -1293,7 +1390,7 @@ jobs:
 
       - name: Python syntax (Windows)
         shell: powershell
-        run: python -m py_compile scripts/abbreviations_extract.py scripts/bibliography_check.py scripts/cross_session_audit.py
+        run: python -m py_compile scripts/abbreviations_extract.py scripts/bibliography_check.py scripts/cross_session_audit.py scripts/verbatim_check.py
 
       # Informational only: not part of the verified baseline. Remove
       # continue-on-error once a clean run is confirmed.

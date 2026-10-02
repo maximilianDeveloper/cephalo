@@ -8,6 +8,14 @@ Dates follow ISO 8601 (`YYYY-MM-DD`).
 
 ---
 
+## [1.1.0] — unreleased
+
+### Added
+
+- **`scripts/verbatim_check.py`** — counts the verbatim word runs a chapter (`.md`, `.txt` or `.docx`) shares with its sources and rates them by the thresholds of `checklists/plagiarism_protection.md` (5–7 words 🟡, 8–14 ⚠️, 15 or more ❌). Sources are the `**Original:**` quotes of the research-agent's extracts (with page and quote ID), PDFs and text files; a run counts across sentence boundaries, and text in quotation marks, block quotes and Word quote-style paragraphs is left out as a marked direct quote. Each such quote is looked up in the sources instead, and one not found verbatim is listed for a check by hand. Exit 0 = no run of 8 or more words, 1 = at least one, 2 = bad arguments or an unreadable file. In both Windows trial runs, the writer-agent and the source-verifier counted verbatim runs by eye: the writer reported none of five or more words where a count found runs of five to seven, and a seven-word run across a sentence boundary went unreported. Documented in `docs/scripts.md`; CI runs it on generated Markdown, Word and PDF files.
+
+---
+
 ## [1.0.1] — 2026-10-02
 
 **First agent trial runs.** Two trial runs on Windows with fictional material, the second through the whole bachelor workflow, tested the agents in real work for the first time; a review of the trial set-up on macOS added one more point. Their findings tightened the agent definitions: how answers to open questions are recorded, when an extract counts as verified, when citations are written as citekeys, and how the orchestrators keep state and reports. Also new: a setup guide with screenshots, fixes in `bibliography_check.py` and both setup scripts.
