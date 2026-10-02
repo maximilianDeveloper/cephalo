@@ -33,6 +33,8 @@ The text reformulates a source passage but keeps too many original words in the 
 
 **Threshold:** verbatim runs longer than 7 words (8-14) from the same source flag a warning; 15+ flags an error. For the full band table and special cases, see `checklists/plagiarism_protection.md`.
 
+**Detection:** `scripts/verbatim_check.py` counts the runs before every chapter verification; the source-verifier rates them in step 8 and judges the paraphrases that swap words without keeping a verbatim run.
+
 ---
 
 ## 2. List citation with incorrect page range

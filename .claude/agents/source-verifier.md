@@ -38,6 +38,7 @@ citation imprecision), so it reaches the user as such.
 - Primary sources: `workspace/sources/` or `02_Literature/sources/` (proposal sub-project: `01_Research/`)
 - Styleguide: `styleguide.md`
 - Plagiarism thresholds: `checklists/plagiarism_protection.md`
+- Verbatim-run report of `scripts/verbatim_check.py`: `<name>_round_<n>_verbatim.txt` beside the verification reports (`workspace/output/verification/`, long-form `<phase folder>/verification/`), handed to you with the chapter
 - Consistency checklist: `checklists/consistency.md`
 
 **Multi-project sub-project** (Claude Code opened on `01_Proposal/`, `02_Main_Work/` or `03_Defense/`): the styleguide is `../00_Shared_Materials/styleguide.md` and the guidelines are in `../00_Shared_Materials/guidelines/`. The framework folders stay at the multi-project root, one level up: `../checklists/`, `../scripts/`, `../templates/`, `../workflows/`, `../docs/`.
@@ -75,7 +76,7 @@ Does the paraphrase go beyond what the source says?
 
 ### 8. Plagiarism check
 
-Count verbatim word runs from the source (see `checklists/plagiarism_protection.md`):
+Rate verbatim word runs from the source (see `checklists/plagiarism_protection.md`):
 
 | Words | Rating |
 |---|---|
@@ -84,7 +85,15 @@ Count verbatim word runs from the source (see `checklists/plagiarism_protection.
 | 8–14 | ⚠️ risk |
 | ≥15 | ❌ serious |
 
-Method: n-gram comparison against the original quote in the extract. A run that crosses a sentence boundary counts as one run. At 🟡 or higher: mark the exact phrase.
+Method: the count comes from the report of `scripts/verbatim_check.py`, which the orchestrator runs before each chapter verification (in the seminar and presentation workflows, the user runs it). It lists every run of 5 or more words the chapter shares with the extracts' original quotes and the source PDFs, already rated, with its place in the chapter and where it occurs in the source (extract file, quote ID, page). Give each run's rating to the sentence it is in, and at 🟡 or higher mark the exact phrase. A run that crosses a sentence boundary counts as one run.
+
+The script does not judge everything:
+- It leaves out text in quotation marks and block quotes. A direct quote in quotation marks with its citation is not a plagiarism finding; steps 2 and 4 check its wording and page. Quotes it lists as "not found verbatim" need that check by hand: a changed word in a direct quote is ❌, a source that is missing from the check is ❓.
+- It finds only verbatim runs. A paraphrase that keeps the source's sentence structure and swaps single words (`checklists/plagiarism_protection.md`, section 4) is still yours to judge by reading.
+- It does not know names: a run that is only a proper name or the title of a work is no finding.
+- Sources it lists as "Not checked" (a scan, a ZIP archive named `.pdf`) were compared only through their extract quotes.
+
+Without a report, count by eye against the original quote in the extract and say in your report that the count was made by eye.
 
 ### 9. List-citation sloppiness
 
@@ -115,7 +124,7 @@ Comment: [only for non-✅]
 |---|---|
 | ✅ | correctly supported |
 | ⚠️ | mild imprecision (e.g., a grammatical variant of the source's term) |
-| ❌ | error (wrong quote, wrong page, unmarked secondary citation, a term the source does not use) |
+| ❌ | error (wrong quote, wrong page, unmarked secondary citation, a term the source does not use, a verbatim run of 15 or more words) |
 | 🟡 | plagiarism polish flag (5–7 verbatim words; runs of 8–14 count as ⚠️ risk per step 8) |
 | ❓ | unverifiable (source missing or extract incomplete) |
 

@@ -114,8 +114,15 @@ phases:
       
       - step: 2
         agent: source-verifier
-        input: Chapter text + original quotes recorded in workspace/state.md (source registry) + primary sources in workspace/sources/
+        script: scripts/verbatim_check.py
+        input: Chapter text + original quotes recorded in workspace/state.md (source registry) + primary sources in workspace/sources/ + the report of scripts/verbatim_check.py
         action: Sentence-by-sentence verification incl. plagiarism check (verification step 8 in source-verifier.md)
+        note: |
+          Before every verification round, run the script on the chapter (or have
+          Claude run it) and give its output to the source-verifier with the chapter;
+          on Windows, use py instead of python3 (see docs/scripts.md):
+            python3 scripts/verbatim_check.py workspace/output/chapters/ch_X_<slug>.md workspace/sources/ workspace/state.md
+          Without Python, the source-verifier counts the verbatim runs by eye.
         feedback_loop_max: 2
       
       - step: 3

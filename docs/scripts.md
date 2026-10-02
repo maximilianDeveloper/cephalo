@@ -102,7 +102,7 @@ Counts the verbatim word runs a chapter shares with its sources: the count behin
 python3 scripts/verbatim_check.py workspace/output/chapters/ch_2_basics.md workspace/sources/
 
 # Long-form:
-python3 scripts/verbatim_check.py 03_Theory_chapters/chapter_3_theory.md 02_Literature/
+python3 scripts/verbatim_check.py 03_Theory_chapters/chapter_3_theory.md 02_Literature/extracts/ 02_Literature/sources/
 
 # A Word document, against single files:
 python3 scripts/verbatim_check.py workspace/output/document.docx workspace/sources/extracts/ workspace/sources/smith_2020.pdf

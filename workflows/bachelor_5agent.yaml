@@ -113,7 +113,8 @@ phases:
       
       - step: A.4
         agent: source-verifier
-        input: Chapter text
+        script: scripts/verbatim_check.py
+        input: Chapter text + the report of scripts/verbatim_check.py, which the orchestrator runs on the chapter before every verification round
         action: Sentence-by-sentence verification incl. plagiarism check (verification step 8 in source-verifier.md)
         feedback_loop_max: 3
       
