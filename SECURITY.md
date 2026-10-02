@@ -5,7 +5,7 @@
 cephalo ships code that runs locally on your machine:
 
 - the setup scripts (`setup.sh`, `setup.ps1`),
-- the utility scripts in `scripts/` — including `extract_styleguide.sh`, which parses untrusted third-party PDFs and ZIP archives, and `docx_postprocess.sh`, which rewrites DOCX files in place,
+- the utility scripts in `scripts/` — including `extract_styleguide.sh`, which parses untrusted third-party PDFs and ZIP archives, `verbatim_check.py`, which reads such PDFs as well, and `docx_postprocess.sh`, which rewrites DOCX files in place,
 - the setup wizard (`docs/setup-wizard.html`), which generates commands and launcher scripts but never executes anything itself.
 
 Vulnerabilities in any of these are in scope: command or path injection, archive-extraction issues (e.g. path traversal), unsafe file handling, or anything that makes a generated command do more than it displays.

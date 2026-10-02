@@ -116,7 +116,7 @@ The `style-resolver` runs once per project during setup (or when guidelines chan
 
 Long-form works go through two distinct phases:
 
-**Phase A (Content):** Writer and source-verifier agents (capable models) iterate on substance until the chapters are stable.
+**Phase A (Content):** Writer and source-verifier agents (capable models) iterate on substance until the chapters are stable. Before each chapter verification, the orchestrator runs `scripts/verbatim_check.py`, which counts the verbatim word runs the source-verifier rates.
 
 **Phase B (Formatting):** format-verifier and utility scripts (fast models) iterate on presentation, citations, bibliography and abbreviation checks. The writer agent is dormant unless a real content issue surfaces.
 

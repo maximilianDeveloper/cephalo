@@ -145,10 +145,12 @@ d.save('test.docx')
 
 python3 scripts/abbreviations_extract.py test.docx
 python3 scripts/bibliography_check.py test.docx
+printf 'Im Jahr 2020 stieg die Zahl. Die EU (2020) reagierte darauf.\n' > test_source.txt
+python3 scripts/verbatim_check.py test.docx test_source.txt
 bash scripts/docx_postprocess.sh test.docx
 ```
 
-The `bibliography_check.py` output should not contain false positives for German prose constructs like `"Im Jahr 2020..."`, `"Die EU (2020)..."`, or `"Das Kapitel (2020)..."`. These are regression-test cases.
+The `bibliography_check.py` output should not contain false positives for German prose constructs like `"Im Jahr 2020..."`, `"Die EU (2020)..."`, or `"Das Kapitel (2020)..."`. These are regression-test cases. `verbatim_check.py` should report one ⚠️ run of 10 words in paragraph 3 and exit with code 1.
 
 ## Pull requests
 
