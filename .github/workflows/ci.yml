@@ -1250,6 +1250,72 @@ jobs:
           expect 1 python scripts/verbatim_check.py "$V/Kapitel [2] ü.md" "$V/Quellen [alt] ä"
           grep -qF 'Verbatim check for: Kapitel [2] ü.md' "$V/out.txt"
           grep -qF 'in Keller_2018.md Q1 (p. 44)' "$V/out.txt"
+          # a run continues across an author-year citation; quotes in single marks are direct quotes
+          printf '%s\n' 'Die urbane Wärmeinsel bezeichnet den Temperaturunterschied (Keller 2018, S. 44) zwischen einer Stadt und ihrem weniger dicht bebauten Umland.' \
+            'Er schreibt, ‘Bäume kühlen ihre Umgebung durch Verdunstung und Beschattung’.' > "$V/cited.md"
+          expect 1 python scripts/verbatim_check.py "$V/cited.md" "$V/src"
+          grep -qF '❌ 15 words, line 1: "Die urbane Wärmeinsel bezeichnet den Temperaturunterschied (Keller 2018, S. 44)' "$V/out.txt"
+          if grep -q 'line 2' "$V/out.txt"; then cat "$V/out.txt"; echo "a quote in single marks was counted"; exit 1; fi
+          # Pandoc exports a Markdown block quote in the style "Block Text"
+          python - "$V" <<'EOF'
+          import os, sys
+          from docx import Document
+          from docx.enum.style import WD_STYLE_TYPE
+          d = Document()
+          d.styles.add_style("Block Text", WD_STYLE_TYPE.PARAGRAPH)
+          d.add_paragraph("Bäume kühlen ihre Umgebung durch Verdunstung und Beschattung, wobei die Wirkung von der Wasserversorgung abhängt.", style="Block Text")
+          d.save(os.path.join(sys.argv[1], "blocktext.docx"))
+          EOF
+          expect 0 python scripts/verbatim_check.py "$V/blocktext.docx" "$V/src"
+          # pages: a heading without a page starts a part without one (also between the
+          # sources of one file), roman numerals count; a quote is split at an omission
+          mkdir -p "$V/pages/verification"
+          printf '%s\n' '## Smith (2020), p. xii' '' '### Q1' '' '- **Original:** "Green roofs lower the surface temperature of a building by several degrees."' '' \
+            '## Jones (2019)' '' '### Q2' '' '- **Original:** "Shade matters more than evaporation in the narrow streets of old towns."' '' \
+            '### Q3' '' '- **Original:** "Bäume spenden Schatten [...] und kühlen die Straßen an heißen Tagen merklich ab."' > "$V/pages/key_sources.md"
+          printf '%s\n' 'Green roofs lower the surface temperature of a building by several degrees.' \
+            'Shade matters more than evaporation in the narrow streets of old towns.' \
+            'Bäume spenden Schatten und kühlen die Straßen an heißen Tagen merklich ab.' > "$V/pages.md"
+          # a saved report repeats the chapter: the verification folder is not read
+          cp "$V/pages.md" "$V/pages/verification/pages_round_1_verbatim.txt"
+          printf 'x' > "$V/pages/book.docx"
+          expect 1 python scripts/verbatim_check.py "$V/pages.md" "$V/pages" "$V/no_such_folder"
+          grep -qx '    in key_sources.md Q1 (p. xii)' "$V/out.txt"
+          grep -qx '    in key_sources.md Q2' "$V/out.txt"
+          grep -qF '⚠️  9 words, line 3: "und kühlen die Straßen an heißen Tagen merklich ab"' "$V/out.txt"
+          if grep -q 'verbatim.txt\|line 3: "Bäume' "$V/out.txt"; then cat "$V/out.txt"; echo "a report was read, or a quote joined across its omission"; exit 1; fi
+          grep -qF 'book.docx (.docx is not read' "$V/out.txt"
+          grep -qF 'no_such_folder (not found)' "$V/out.txt"
+          # without pypdf the PDFs are listed as not checked; the extracts are still checked
+          expect 1 python -c "import sys, runpy; sys.modules['pypdf'] = None; sys.argv = ['verbatim_check.py'] + sys.argv[1:]; runpy.run_path('scripts/verbatim_check.py', run_name='__main__')" "$V/chapter.md" "$V/src"
+          grep -qF 'smith.pdf (pypdf not installed' "$V/out.txt"
+          grep -qF 'in Keller_2018.md Q1 (p. 44)' "$V/out.txt"
+          # an unreadable source is part of the report on stdout
+          set +e; python scripts/verbatim_check.py "$V/clean.md" "$V/src" "$V/locked.pdf" > "$V/stdout.txt" 2>/dev/null; set -e
+          grep -qF 'Could not be read:' "$V/stdout.txt"
+          # nothing to compare against is an error, not a clean result
+          mkdir -p "$V/notes"; printf '# Notes\n\nno quotes here\n' > "$V/notes/handover.md"
+          expect 2 python scripts/verbatim_check.py "$V/clean.md" "$V/notes"
+          grep -q '^Error: nothing to compare against' "$V/out.txt"
+          test "$(wc -l < "$V/out.txt")" -eq 1
+          # the research-agent's output format, filled in, is read with its quote IDs and pages
+          python - <<'EOF'
+          import re, sys
+          from pathlib import Path
+          sys.path.insert(0, "scripts")
+          import verbatim_check as v
+          agent = Path(".claude/agents/research-agent.md").read_text(encoding="utf-8")
+          block = re.search(r"## Output format\n.*?```markdown\n(.*?)\n```", agent, re.S).group(1)
+          filled = (block.replace("## Page [number]", "## Page 12").replace("## Page [next]", "## Page 13")
+                    .replace('"[verbatim quote]"', '"one two three four five six"')
+                    .replace("[a second passage on the same page, same structure]", '- **Original:** "seven eight nine ten eleven"')
+                    .replace("[same structure]", '- **Original:** "twelve thirteen fourteen fifteen sixteen"'))
+          path = Path("/tmp/ci_verbatim/template_extract.md")
+          path.write_text(filled, encoding="utf-8")
+          got = [(s.label, s.pages[0]) for s in v.read_extract(path)]
+          want = [("template_extract.md Q1", "12"), ("template_extract.md Q2", "12"), ("template_extract.md Q3", "13")]
+          assert got == want, got
+          EOF
 
   windows:
     name: PowerShell 5.1 parse & setup smoke (Windows)

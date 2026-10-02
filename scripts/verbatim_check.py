@@ -10,16 +10,19 @@ of checklists/plagiarism_protection.md:
     8-14 words   ⚠️ plagiarism risk, must be reformulated
     15+ words    ❌ serious
 
-Runs of 1-4 words are not listed. A run counts across sentence boundaries;
-letter case and punctuation are ignored. Text in quotation marks („…“, “…”,
-"…", »…«, «…»), Markdown block quotes and Word paragraphs in a quote style
-are marked direct quotes and are not counted. Each such quote of five or
-more words (its parts between […] or (…) omissions) is looked up in the
-sources instead; one that is not found verbatim is listed for a check by
-hand, without changing the exit code.
+Runs of 1-4 words are not listed. A run counts across sentence boundaries
+and across citations, as Pandoc citekeys ([@key, p. 5]) or in author-year
+form ((Keller 2018, S. 44), (ebd.)); letter case and punctuation are
+ignored. Text in quotation marks („…“, “…”, "…", ‚…‘, ‘…’, »…«, «…»),
+Markdown block quotes and Word paragraphs in a quote style (also Pandoc's
+"Block Text") are marked direct quotes and are not counted. Each such quote
+of five or more words (its parts between […] or (…) omissions) is looked
+up in the sources instead; one that is not found verbatim is listed for a
+check by hand, without changing the exit code.
 
-Sources are files or folders, searched recursively; a folder named
-_guidelines inside them is skipped, since guidelines are not sources:
+Sources are files or folders, searched recursively; folders named
+_guidelines (guidelines are not sources) and verification (the saved
+reports) inside them are skipped:
   - extract files (.md): the quotes of the research-agent's extracts (the
     "Original" field, quoted text in the "Secondary citation?" field, and
     "- p. 42: ..." lines), with their page and quote ID. A Markdown table
@@ -30,6 +33,8 @@ _guidelines inside them is skipped, since guidelines are not sources:
     A PDF without a text layer (a scan) and a ZIP archive named .pdf are
     not checked: they are covered only through the quotes in their extract.
   - plain-text files (.txt)
+What cannot be read this way (a missing path, a Word or EPUB source, PDFs
+while pypdf is not installed) is listed under "Not checked".
 
 Usage:
     python scripts/verbatim_check.py <chapter> <source> [<source> ...]
@@ -39,7 +44,8 @@ Usage:
 The chapter may be Markdown (.md), plain text (.txt) or Word (.docx).
 
 Exit codes: 0 = no run of 8 or more words, 1 = at least one run of 8 or more
-words (⚠️ or ❌), 2 = bad arguments, or a chapter or source that cannot be read.
+words (⚠️ or ❌), 2 = bad arguments, a chapter or source that cannot be read
+(the report is printed all the same), or no source text to compare against.
 """
 
 import os
@@ -63,16 +69,29 @@ POLISH, RISK, SERIOUS = 5, 8, 15
 USAGE = "Usage: python scripts/verbatim_check.py <chapter> <source> [<source> ...]"
 CHAPTER_SUFFIXES = {".md", ".markdown", ".txt", ".docx"}
 SOURCE_SUFFIXES = {".md", ".markdown", ".txt", ".pdf"}
-SKIPPED_FOLDERS = {"_guidelines"}
+# Source formats the script cannot read; listed as not checked, not skipped silently.
+UNREAD_SUFFIXES = {".doc", ".docx", ".odt", ".rtf", ".epub", ".mobi", ".djvu", ".zip"}
+# Guidelines are not sources; verification/ holds the saved reports, which quote the chapter.
+SKIPPED_FOLDERS = {"_guidelines", "verification"}
 
 WORD = re.compile(r"[^\W_]+")
-# A quotation in double marks, within one paragraph: German „…“ (also „…”),
-# English “…”, straight "…", and guillemets in both directions.
-QUOTED = re.compile(r'„[^„“”]*[“”]|“[^“”„]*”|"[^"]*"|»[^»«]*«|«[^«»]*»')
+# A quotation within one paragraph: in double marks, German „…“ (also „…”),
+# English “…”, straight "…", and guillemets in both directions; in single marks,
+# German ‚…‘, English ‘…’ and single guillemets.
+QUOTED = re.compile(r'„[^„“”]*[“”]|“[^“”„]*”|"[^"]*"|»[^»«]*«|«[^«»]*»'
+                    r"|‚[^‚‘]*‘|‘[^‘’]*’|›[^›‹]*‹|‹[^‹›]*›")
 # Omissions and insertions inside a quotation split it into parts that are
 # looked up separately: […], [...], (…), (...), …, ..., and [any insertion].
 OMISSION = re.compile(r"\[[^\]]*\]|\((?:…|\.{3})\)|…|\.{3}")
 PANDOC_CITATION = re.compile(r"\[[^\[\]]*@[^\[\]]*\]")
+# A citation in parentheses, author-year style: "(Keller 2018, S. 44)", "(vgl. Keller
+# & Weber 2018; Smith 2020, p. 5)", "(2018)", "(ebd., S. 45)". Like a citekey it is
+# skipped, in the chapter and in the sources, so that a run continues across it.
+CITATION = re.compile(
+    r"\((?:(?:vgl|cf|see|siehe)\.?\s+)?"
+    r"(?:[A-ZÄÖÜ][^()]{0,150}?(?:\b\d{4}[a-z]?\b|\bo\.\s?J\.|\bn\.\s?d\.)[^()]{0,80}"
+    r"|\d{4}[a-z]?(?:\s*[,:;][^()]{0,80})?"
+    r"|(?:[Ee]bd|[Ee]benda|[Ii]bid(?:em)?)\.?(?:[,\s][^()]{0,80})?)\)")
 HTML_COMMENT = re.compile(r"<!--.*?-->", re.S)
 FOOTNOTE_MARK = re.compile(r"\[\^[^\]]*\]")
 
@@ -159,7 +178,8 @@ def read_docx(path: Path) -> list:
     pieces = []
     for n, p in enumerate(doc.paragraphs, 1):
         style = (p.style.name if p.style is not None else "") or ""
-        is_quote = bool(re.search(r"(?i)quote|zitat", style))
+        # Pandoc writes Markdown block quotes in the style "Block Text"
+        is_quote = bool(re.search(r"(?i)quote|zitat|block ?text", style))
         if p.text.strip():
             pieces.append((normalize(p.text), n, is_quote))
     return pieces
@@ -188,9 +208,13 @@ def read_chapter(path: Path) -> Chapter:
         quoted = [(m.start(), m.end()) for m in QUOTED.finditer(piece)]
         for s, e in quoted:
             quotes.append((first + piece.count("\n", 0, s), piece[s + 1:e - 1]))
+        # an author-year citation is skipped without breaking the run
+        cited = [(m.start(), m.end()) for m in CITATION.finditer(piece)]
         pos = 0
         for s, e in quoted + [(len(piece), len(piece))]:
             for m in WORD.finditer(piece, pos, s):
+                if any(a <= m.start() < b for a, b in cited):
+                    continue
                 words.append(m.group(0).casefold())
                 places.append(first + (0 if docx else piece.count("\n", 0, m.start())))
                 spans.append((base + m.start(), base + m.end()))
@@ -213,10 +237,18 @@ class Sequence(NamedTuple):
     label: str      # how a match is named: "Brandt_2019.md Q3", "Brandt_2019.pdf"
     kind: str       # "extract", "pdf" or "text"
     note: str = ""  # shown with the page, e.g. "secondary citation"
+    first: bool = True  # False for the later parts of a quote split at an omission
+
+
+WORDS = {}  # one str object per distinct word: a book-length source stays small
+
+
+def source_tokens(text: str) -> list:
+    return [WORDS.setdefault(w, w) for w in tokens(CITATION.sub(" ", text))]
 
 
 def page_of(heading: str) -> Optional[str]:
-    m = re.search(r"(?i)(?:\bpage|\bseite|\bpp?\.|\bs\.)\s*(\d+(?:\s*(?:[-–]|to|bis)\s*\d+)?(?:\s*ff?\.)?)", heading)
+    m = re.search(r"(?i)(?:\bpage|\bseite|\bpp?\.|\bs\.)\s*((?:\d+|[ivxlc]+\b)(?:\s*(?:[-–]|to|bis)\s*(?:\d+|[ivxlc]+\b))?(?:\s*ff?\.)?)", heading)
     return re.sub(r"\s+", " ", m.group(1)) if m else None
 
 
@@ -242,9 +274,13 @@ def read_extract(path: Path) -> list:
     page, qid = None, None
 
     def add(text: str, where: Optional[str], label: str, note: str = "") -> None:
-        words = tokens(text)
-        if words:
-            seqs.append(Sequence(words, [where] * len(words), label, "extract", note))
+        # the parts of a quote between […] omissions are not one run in the source
+        first = True
+        for part in OMISSION.split(text):
+            words = source_tokens(part)
+            if words:
+                seqs.append(Sequence(words, [where] * len(words), label, "extract", note, first))
+                first = False
 
     def continuation(i: int, first: str) -> tuple:
         parts = [first]
@@ -264,8 +300,9 @@ def read_extract(path: Path) -> list:
                 qid = q.group(1)
                 page = page_of(heading[q.end():]) or page
             else:
+                # any other heading starts a new page, or a part without one
                 qid = None
-                page = page_of(heading) or page
+                page = page_of(heading)
             i += 1
             continue
         if line.lstrip().startswith("|"):
@@ -275,10 +312,7 @@ def read_extract(path: Path) -> list:
         f = FIELD.match(line)
         if f:
             name, rest = f.group(1).strip().lower(), f.group(2)
-            if name == "id":
-                m = re.match(r"(Q\d+)\b", rest)
-                qid = m.group(1) if m else qid
-            elif name in ("original", "original quote"):
+            if name in ("original", "original quote"):
                 text, i = continuation(i + 1, rest)
                 add(text, page, label)
                 continue
@@ -325,7 +359,7 @@ def read_pdf(path: Path) -> list:
         from pypdf import PdfReader
         logging.getLogger("pypdf").setLevel(logging.ERROR)
     except ImportError:
-        fail("pypdf not installed. Install: pip install -r requirements.txt")
+        raise NotChecked("pypdf not installed: pip install -r requirements.txt")
     with open(path, "rb") as fh:
         if fh.read(4) == b"PK\x03\x04":
             raise NotChecked("a ZIP archive named .pdf: extract it with scripts/extract_styleguide.sh "
@@ -342,11 +376,13 @@ def read_pdf(path: Path) -> list:
         text = re.sub(r"(\w)-[ \t]*\n[ \t]*([^\W\d_])",
                       lambda m: m.group(1) + m.group(2) if m.group(2).islower() else m.group(0),
                       text)
-        page_words = tokens(text)
+        text = CITATION.sub(" ", text)
+        page_words = source_tokens(text)
         first = WORD.search(text)
         # ... and so is one hyphenated across a page break
         if hyphen and first and first.group(0)[0].islower() and words:
-            words[-1] += page_words.pop(0)
+            joined = words[-1] + page_words.pop(0)
+            words[-1] = WORDS.setdefault(joined, joined)
         hyphen = bool(re.search(r"\w-\s*$", text))
         words += page_words
         pages += [str(n)] * len(page_words)
@@ -358,26 +394,35 @@ def read_text(path: Path) -> list:
         raw = path.read_text(encoding="utf-8-sig")
     except UnicodeDecodeError:
         raw = path.read_text(encoding="cp1252", errors="replace")
-    words = tokens(normalize(raw))
+    words = source_tokens(normalize(raw))
     return [Sequence(words, [None] * len(words), path.name, "text")] if words else []
 
 
-def source_files(arg: str) -> list:
+def source_files(arg: str, unchecked: list) -> list:
+    """The source files of one argument; what cannot be read goes to unchecked."""
     p = Path(arg)
     if p.is_dir():
         found = []
         for root, dirs, files in os.walk(p):
             dirs[:] = sorted(d for d in dirs if d not in SKIPPED_FOLDERS and not d.startswith("."))
-            found += [Path(root) / f for f in sorted(files)
-                      if Path(f).suffix.lower() in SOURCE_SUFFIXES]
+            for f in sorted(files):
+                suffix = Path(f).suffix.lower()
+                if suffix in SOURCE_SUFFIXES:
+                    found.append(Path(root) / f)
+                elif suffix in UNREAD_SUFFIXES:
+                    unchecked.append(f"{Path(root) / f} ({suffix} is not read: give a PDF or text version)")
         return found
     try:
         with open(p, "rb"):
             pass
     except OSError as exc:
-        fail(f"cannot open source {p}: {exc.strerror or exc}")
+        reason = "not found" if isinstance(exc, FileNotFoundError) else exc.strerror or str(exc)
+        unchecked.append(f"{p} ({reason})")
+        return []
     if p.suffix.lower() not in SOURCE_SUFFIXES:
-        fail(f"unsupported source type {p.suffix or '(none)'}: {p} (use .md extracts, .pdf or .txt)")
+        unchecked.append(f"{p} ({p.suffix or 'a file without extension'} is not read: "
+                         "use .md extracts, .pdf or .txt)")
+        return []
     return [p]
 
 
@@ -385,31 +430,27 @@ def source_files(arg: str) -> list:
 # Matching
 # ---------------------------------------------------------------------------
 
-def index_sources(seqs: list) -> dict:
+def find_runs(chapter: Chapter, seqs: list) -> list:
+    """Maximal runs of at least POLISH words: [(start, length, [(seq, pos)])]."""
+    ch = chapter.words
+    # The chapter's word windows are indexed, not the sources': a few thousand
+    # entries instead of one per source word, however long the sources are.
     index = {}
+    for i in range(len(ch) - POLISH + 1):
+        window = ch[i:i + POLISH]
+        if None not in window:
+            index.setdefault(tuple(window), []).append(i)
+    runs = {}
     for s, seq in enumerate(seqs):
         w = seq.words
         for p in range(len(w) - POLISH + 1):
-            index.setdefault(tuple(w[p:p + POLISH]), []).append((s, p))
-    return index
-
-
-def find_runs(chapter: Chapter, seqs: list, index: dict) -> list:
-    """Maximal runs of at least POLISH words: [(start, length, [(seq, pos)])]."""
-    ch = chapter.words
-    runs = {}
-    for i in range(len(ch) - POLISH + 1):
-        window = ch[i:i + POLISH]
-        if None in window:
-            continue
-        for s, p in index.get(tuple(window), ()):
-            w = seqs[s].words
-            if i > 0 and p > 0 and ch[i - 1] is not None and ch[i - 1] == w[p - 1]:
-                continue  # part of a run that starts earlier
-            n = POLISH
-            while i + n < len(ch) and p + n < len(w) and ch[i + n] is not None and ch[i + n] == w[p + n]:
-                n += 1
-            runs.setdefault((i, n), []).append((s, p))
+            for i in index.get(tuple(w[p:p + POLISH]), ()):
+                if i > 0 and p > 0 and ch[i - 1] is not None and ch[i - 1] == w[p - 1]:
+                    continue  # part of a run that starts earlier
+                n = POLISH
+                while i + n < len(ch) and p + n < len(w) and ch[i + n] is not None and ch[i + n] == w[p + n]:
+                    n += 1
+                runs.setdefault((i, n), []).append((s, p))
     kept = []
     for (i, n), hits in sorted(runs.items(), key=lambda r: -r[0][1]):
         if not any(j <= i and i + n <= j + m for j, m, _ in kept):
@@ -417,13 +458,19 @@ def find_runs(chapter: Chapter, seqs: list, index: dict) -> list:
     return sorted(kept)
 
 
-def contains(seqs: list, index: dict, words: list) -> bool:
-    if len(words) < POLISH:
-        return True
-    for s, p in index.get(tuple(words[:POLISH]), ()):
-        if seqs[s].words[p:p + len(words)] == words:
-            return True
-    return False
+def found_quotes(parts: list, seqs: list) -> set:
+    """The indexes of the parts (word lists of POLISH or more words) found verbatim in a source."""
+    starts = {}
+    for k, words in enumerate(parts):
+        starts.setdefault(tuple(words[:POLISH]), []).append(k)
+    found = set()
+    for seq in seqs:
+        w = seq.words
+        for p in range(len(w) - POLISH + 1):
+            for k in starts.get(tuple(w[p:p + POLISH]), ()):
+                if k not in found and w[p:p + len(parts[k])] == parts[k]:
+                    found.add(k)
+    return found
 
 
 def describe(seqs: list, hits: list, n: int) -> str:
@@ -446,6 +493,7 @@ def describe(seqs: list, hits: list, n: int) -> str:
 def shorten(text: str) -> str:
     """One line; a long text keeps its first and last words around " … "."""
     text = re.sub(r"\s+", " ", text).strip()
+    text = re.sub(r" ([.,;:!?])", r"\1", text)  # a blanked citekey leaves "word ."
     if len(text) <= 160:
         return text
     return text[:120].rsplit(" ", 1)[0] + " … " + text[-40:].split(" ", 1)[-1]
@@ -475,13 +523,13 @@ def main() -> None:
         fail(f"expected a .md, .txt or .docx chapter, got "
              f"{chapter_path.suffix or 'a file without extension'}: {chapter_path}")
 
-    files = []
-    for arg in args[1:]:
-        files += [f for f in source_files(arg) if f.resolve() != chapter_path.resolve()]
-    if not files:
-        fail("no sources found (.md extracts, .pdf or .txt) in: " + ", ".join(args[1:]))
+    chapter = read_chapter(chapter_path)
 
-    seqs, unreadable, unchecked = [], [], []
+    files, unchecked = [], []
+    for arg in args[1:]:
+        files += [f for f in source_files(arg, unchecked) if f.resolve() != chapter_path.resolve()]
+
+    seqs, unreadable = [], []
     counts = {"extract": 0, "pdf": 0, "text": 0}
     for f in files:
         suffix = f.suffix.lower()
@@ -508,13 +556,16 @@ def main() -> None:
             counts[found[0].kind] += 1
         seqs += found
 
-    chapter = read_chapter(chapter_path)
-    index = index_sources(seqs)
-    runs = find_runs(chapter, seqs, index)
+    if not seqs:
+        # A clean result would claim a check that did not happen.
+        fail("nothing to compare against: no extract quotes, PDF text or text files in "
+             + ", ".join(args[1:])
+             + "".join(f"; {u}" for u in unchecked + unreadable))
+    runs = find_runs(chapter, seqs)
 
     print(f"Verbatim check for: {chapter_path.name}")
     print(f"  Sources: {counts['extract']} extract(s) with "
-          f"{sum(1 for s in seqs if s.kind == 'extract')} quotes, "
+          f"{sum(1 for s in seqs if s.kind == 'extract' and s.first)} quotes, "
           f"{counts['pdf']} PDF(s), {counts['text']} text file(s)")
     print()
 
@@ -526,13 +577,17 @@ def main() -> None:
     if runs:
         print()
 
-    missing = []
+    checks = []  # (place, quote, words of one part between omissions)
     for place, quote in chapter.quotes:
         for part in OMISSION.split(quote):
-            words = tokens(part)
-            if len(words) >= POLISH and not contains(seqs, index, words):
-                missing.append((place, quote))
-                break
+            words = tokens(CITATION.sub(" ", part))
+            if len(words) >= POLISH:
+                checks.append((place, quote, words))
+    found = found_quotes([words for _, _, words in checks], seqs)
+    missing = []
+    for k, (place, quote, _) in enumerate(checks):
+        if k not in found and (place, quote) not in missing:
+            missing.append((place, quote))
     if missing:
         print("Direct quotes not found verbatim in the sources (check by hand; "
               "the source may be missing here):")
@@ -546,10 +601,10 @@ def main() -> None:
             print(f"    {u}")
         print()
     if unreadable:
-        print("Could not be read:", file=sys.stderr)
+        print("Could not be read:")
         for u in unreadable:
-            print(f"    {u}", file=sys.stderr)
-        print(file=sys.stderr)
+            print(f"    {u}")
+        print()
 
     serious = sum(1 for _, n, _ in runs if n >= SERIOUS)
     risk = sum(1 for _, n, _ in runs if RISK <= n < SERIOUS)
@@ -557,7 +612,8 @@ def main() -> None:
     if runs:
         print(f"Summary: ❌ {serious}, ⚠️ {risk}, 🟡 {polish}. Runs of 1-4 words are not listed;")
     else:
-        print("✅ No verbatim run of 5 or more words outside quotation marks.")
+        print("✅ No verbatim run of 5 or more words outside quotation marks"
+              + (" in the sources that were read." if unchecked or unreadable else "."))
     print("text in quotation marks and block quotes is not counted (see checklists/plagiarism_protection.md).")
 
     if unreadable:
