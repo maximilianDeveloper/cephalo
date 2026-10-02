@@ -150,7 +150,7 @@ Styleguide gap (for ❓):
 
 ### 5. Phase awareness
 
-**Phase A (Content):** flag only critical format errors (wholly wrong citation format). Defer polish. Pandoc citekeys (`[@key, p. X]`) in chapter drafts are not format errors: with a `literature.bib` they are intended, and their rendered form is checked in the exported DOCX in Phase B.
+**Phase A (Content):** flag only critical format errors (wholly wrong citation format). Defer polish. Pandoc citekeys (`[@key, p. X]`) in chapter drafts are not format errors when the decision log records citations as citekeys (`checklists/precheck.md`, section 6): their rendered form is checked in the exported DOCX in Phase B. Without that decision, citekeys are a critical error: nothing will render them in the styleguide's form.
 
 **Phase B (Formatting):** full check including mechanical scripts. Multiple iterations expected.
 

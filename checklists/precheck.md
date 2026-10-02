@@ -109,6 +109,7 @@ Step 0 runs before the style-resolver (Step 0.5), so on a new project `styleguid
   - `pandoc` — optional, for DOCX → plain-text conversion
   - `pdftotext` (poppler-utils) — optional fallback in `scripts/extract_styleguide.sh` (the script prefers Python-based extraction via `pypdf`)
   - `unzip` plus a working Python 3 — required by `scripts/docx_postprocess.sh`. Git Bash on Windows ships with `unzip` by default; re-zipping is done with Python's `zipfile` module, so `zip` itself is never invoked. See `docs/scripts.md` for details.
+- [ ] **Citation rendering decided** (only with a `literature.bib`): citekeys in the chapters (`[@key, S. 5]`) turn into citations in the styleguide's form only through Pandoc with a CSL file that matches the styleguide's citation style (`docs/reference_management.md`, "Citation processor pipeline"). If both are available, record "citations as citekeys" in the decision log (`00_Decisions.md`; flat: `workspace/state.md`); otherwise the writer writes citations in the styleguide's format directly. Ask the user when unsure.
 
 ---
 
