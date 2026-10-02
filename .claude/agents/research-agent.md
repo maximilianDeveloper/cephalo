@@ -233,7 +233,7 @@ not a pre-written argument.
 
 Every entry starts with an ID heading, `### Q1`, `### Q2`, …, numbered through the whole file, not per page. The other agents refer to an entry by file name and ID, such as `keller2018.md Q3`: the writer-agent in the **Used in:** line, the source-verifier in its reports, and `scripts/verbatim_check.py` in the runs it lists.
 
-- An ID never changes and is never reused. A new entry takes the next free number, also when its page lies between earlier ones, so the numbers need not follow the page order; the number of a deleted entry stays unused.
+- An ID never changes and is never reused. A new entry takes the number after the highest one in the file, also when its page lies between earlier ones, so the numbers need not follow the page order. When you delete an entry, keep its heading as `### Q5 (deleted)` without fields: otherwise the highest number could be given out again, and a **Used in:** line or a saved report naming it would point to another passage.
 - A file holding several sources (the proposal's `01_Research/key_sources.md`) numbers through the whole file, so that every ID is unique in it.
 - An extract written before quote IDs existed gets them the next time you edit it: number its entries Q1 upwards in their order. The extracts of a frozen main work, read from `03_Defense/`, stay as they are.
 

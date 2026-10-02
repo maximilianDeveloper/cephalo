@@ -147,7 +147,9 @@ phases:
       
       - step: A.M.2
         agent: source-verifier
-        action: Verify methodological literature
+        script: scripts/verbatim_check.py
+        input: Methods chapter + the report of scripts/verbatim_check.py, which the orchestrator runs on it before every verification round
+        action: Verify methodological literature; sentence-by-sentence verification incl. plagiarism check (verification step 8 in source-verifier.md)
       
       - step: A.M.3
         agent: format-verifier

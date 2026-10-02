@@ -88,10 +88,10 @@ Rate verbatim word runs from the source (see `checklists/plagiarism_protection.m
 Method: the count comes from the report of `scripts/verbatim_check.py`, which the orchestrator runs before each chapter verification (in the seminar and presentation workflows, the user runs it). It lists every run of 5 or more words the chapter shares with the extracts' original quotes and the source PDFs, already rated, with its place in the chapter and where it occurs in the source (extract file, quote ID, page). Give each run's rating to the sentence it is in, and at 🟡 or higher mark the exact phrase. A run that crosses a sentence boundary counts as one run.
 
 The script does not judge everything:
-- It leaves out text in quotation marks and block quotes. A direct quote in quotation marks with its citation is not a plagiarism finding; steps 2 and 4 check its wording and page. Quotes it lists as "not found verbatim" need that check by hand: a changed word in a direct quote is ❌, a source that is missing from the check is ❓.
+- It leaves out quotations of five or more words in quotation marks, and block quotes; a shorter quoted term is counted like the text around it. A direct quote in quotation marks with its citation is not a plagiarism finding; steps 2 and 4 check its wording and page. Quotes it lists as "not found verbatim" need that check by hand: a changed word in a direct quote is ❌, a source that is missing from the check is ❓.
 - It finds only verbatim runs. A paraphrase that keeps the source's sentence structure and swaps single words (`checklists/plagiarism_protection.md`, section 4) is still yours to judge by reading.
 - It does not know names: a run that is only a proper name or the title of a work is no finding.
-- Sources it lists as "Not checked" (a scan, a ZIP archive named `.pdf`) were compared only through their extract quotes.
+- What it lists under "Not checked" or "Could not be read" was not compared in full: a scan, a PDF of mostly scanned pages, a ZIP archive named `.pdf` or a Word or EPUB source only through the quotes of its extract, if that extract was read; a missing path, an extract listed with "no quotes found" or a source without an extract not at all. For the sentences citing such a source, count by eye against the original quote and say in your report that the count was made by eye.
 
 Without a report, count by eye against the original quote in the extract and say in your report that the count was made by eye.
 
@@ -149,6 +149,10 @@ When an error is found and the writer should correct:
 **Suggested fix (optional):**
 [e.g., "Add additional source Y as double-citation" or 
 "Replace term X with term Y from source"]
+
+**For a verbatim run (step 8):**
+[the run as the script's report gives it, and the paraphrasing tier to apply 
+(`checklists/plagiarism_protection.md`, sections 2 and 5)]
 ```
 
 A suggested fix names the direction: which term, which page, what to drop. Wording you suggest must itself pass steps 4 and 8, with the right page and no verbatim run of 5 or more words, or the writer takes over a new error.
