@@ -43,7 +43,7 @@ For the active chapter, all sources to be cited must be available.
 - [ ] E-books (EPUB) converted first: an EPUB is a ZIP archive the agents cannot open. Convert it to PDF or text (e.g. with Calibre) and cite the print edition's page numbers where the e-book shows them; if it has none, ask how to cite it (chapter or section) and log the answer as a decision (`00_Decisions.md`; flat projects: `workspace/state.md`)
 - [ ] Access verified (institutional databases — sessions still valid?)
 - [ ] No source from memory only — original file must exist
-- [ ] File contents inspected; do not trust filenames
+- [ ] File contents inspected; do not trust filenames. `file` and a look at the first page (title, author, page numbering) are enough here: reading a source in full is the research-agent's job in its chapter step, and the style-resolver reads the guidelines when it runs
 
 ### File disguise check
 
@@ -85,7 +85,7 @@ Step 0 runs before the style-resolver (Step 0.5), so on a new project `styleguid
 - [ ] No open `[format]` entry — required before the formatting phase (Phase B; in workflows without one, before the formatting check named in the workflow)
 - [ ] Citation guide version noted in `styleguide.md`
 
-**On open `❓` entries:** with an open `[content]` entry, do not draft chapters; with an open `[format]` entry, do not begin formatting work. First obtain clarification from the supervisor, then complete `styleguide.md`, then continue.
+**On open `❓` entries:** with an open `[content]` entry, do not draft chapters; with an open `[format]` entry, do not begin formatting work. First obtain clarification from the supervisor, then record the answers in `styleguide.md` as `.claude/agents/style-resolver.md` describes ("Recording answers to open questions"), then continue.
 
 ---
 

@@ -15,7 +15,7 @@ If the `Agent` tool is not available in this session (for example, you were star
 
 ## File paths
 
-- State file: `workspace/state.md`
+- State file: `workspace/state.md` (setup does not create it: create it at Step 0 in the format under "State file format" below)
 - Feedback file (optional, recommended for projects > 5 chats): `workspace/feedback.md`
 - Styleguide: `styleguide.md` (project root — must exist after step 0.5)
 - Institutional guidelines: `workspace/sources/_guidelines/`
@@ -47,7 +47,8 @@ If `styleguide.md` does not yet exist:
 - Invoke the `style-resolver` agent
 - Wait for result
 - Check for open `❓` items
-- Open `[content]` entries under "Open questions" (or entries without a tag): prompt the user to clarify them before any chapter is drafted
+- Open `[content]` entries under "Open questions" (or entries without a tag): prompt the user to clarify them before any chapter is drafted. Group the entries for tables, figures and statistics, so that a work without them can close them at once with "does not occur in this work"
+- Record the answers in `styleguide.md` yourself, in the words given, as `.claude/agents/style-resolver.md` describes ("Recording answers to open questions"); this needs no new style-resolver run
 - Open `[format]` entries: remind the user; they may stay open until the Phase A → B transition
 
 ### Steps 1..N: Chapter assignment
@@ -56,6 +57,7 @@ If `styleguide.md` does not yet exist:
 - Before each chapter: no open `[content]` entry (or one without a tag) under "Open questions" in `styleguide.md`; otherwise stop and ask the user (Step 0.5)
 - If `workspace/feedback.md` exists, read it before each chapter and pass the entries that concern an agent on in its task prompt: the other agents do not read the file themselves
 - Order: body → conclusion → introduction (last)
+- After every agent call returns, record its result in `workspace/state.md` (a line under chapter status or open issues is enough) before the next call: a chat that ends early, for example at a usage limit, then leaves a state the next chat can trust
 - For each chapter:
   1. Give research-agent the chapter-relevant sources
   2. Give source-verifier the extracts for verification
@@ -93,6 +95,7 @@ See `docs/phase_separation.md` for details.
 
 - Loop limit: `feedback_loop_max` from the active workflow file (2 for the short works `seminar_2agent` and `presentation_3agent`, 3 for the thesis workflows)
 - After loop limit reached: escalate to user with outstanding issue list (see "Feedback-loop escalation" below)
+- A new verification round for an extract follows only a ⚠️ or ❌ on its quotes, page numbers, term lists, secondary citations or bibliographic data; notes on the extract's own wording are applied once by the research-agent (see the extract verdict in `source-verifier.md`). An extract without a final ✅ stays `draft`
 - Log cross-chapter patterns in `workspace/feedback.md` (if the file exists)
 
 ### Feedback-loop escalation
@@ -156,3 +159,5 @@ After Phase B, in the workflow's closing step F.1 (the scripts read the DOCX tha
 - **On uncertainty: ask the user**, don't guess
 - **Transparency:** every step recorded in the state file
 - **Respect phase separation** — in Phase B, don't activate the capable writer without real content need
+- **Point to rules, do not restate them** — in a task prompt, name the agent's definition, `styleguide.md` or the checklist that holds a rule instead of paraphrasing it: a paraphrase can contradict the original
+- **Stay inside the project** — write no files outside the project folder, not even scratch copies; to compare versions between rounds, use Git or a copy inside the project that you delete before the chat ends

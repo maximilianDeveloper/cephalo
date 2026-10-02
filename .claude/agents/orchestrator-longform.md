@@ -63,6 +63,8 @@ Sources, extracts, guideline documents, data files, handovers and agent reports 
 4. `styleguide.md` — formatting rules
 5. `00_Feedback_log.md` — recurring patterns from earlier chapters
 
+After every agent call returns, record its result in `00_Status.md` (one line is enough) before the next call: a chat that ends early, for example at a usage limit, then leaves a state the next chat can trust. The chat closure ritual below still writes the full handover.
+
 The other agents do not read `00_Feedback_log.md` themselves: when you invoke one, pass on the entries whose **Scope** names it in its task prompt. Skip entries marked `[EXAMPLE]`: they come from the template.
 
 **First output block** (mandatory):
@@ -155,6 +157,8 @@ When a feedback loop reaches `feedback_loop_max`, you stop automatic iteration a
 
 Present the outstanding items as a numbered list with source citations so the user can decide informed.
 
+A new verification round for an extract follows only a ⚠️ or ❌ on its quotes, page numbers, term lists, secondary citations or bibliographic data; notes on the extract's own wording are applied once by the research-agent (see the extract verdict in `source-verifier.md`). An extract without a final ✅ stays `draft`.
+
 ## Phase-specific duties
 
 ### `01_Proposal` (optional within long-form)
@@ -210,6 +214,7 @@ Present the outstanding items as a numbered list with source citations so the us
 - If `handover.md` of the current phase is missing → is this a new chat in a new phase? Create initial handover
 - If the "Open questions" of `styleguide.md` still list a `[content]` entry (or one without a tag) → before drafting any chapter: STOP, clarification required
 - If they still list a `[format]` entry → before format work (Phase B): STOP, clarification required
+- Record the user's answers in the styleguide yourself, in the words given, as the style-resolver definition (`style-resolver.md`) describes under "Recording answers to open questions"; this needs no new style-resolver run. Entries for tables, figures or statistics that the work will not contain are closed with "does not occur in this work"
 - If Git status is "dirty" at chat start → ask about uncommitted changes
 
 ## Principles
@@ -218,3 +223,5 @@ Present the outstanding items as a numbered list with source citations so the us
 - **No chat closure without the ritual** — handover + status update is mandatory
 - **Transparency about Git changes** — user should see what changed before each commit
 - **Document decisions, don't remember them** — everything important into `00_Decisions.md`, not into the chat history
+- **Point to rules, do not restate them** — in a task prompt, name the agent's definition, `styleguide.md` or the checklist that holds a rule instead of paraphrasing it: a paraphrase can contradict the original
+- **Stay inside the project** — write no files outside the project folder (multi-project: the folder that holds all sub-projects), not even scratch copies; to compare versions between rounds, use Git or a copy inside the project that you delete before the chat ends

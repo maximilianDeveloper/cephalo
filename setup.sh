@@ -1121,11 +1121,13 @@ if [ ! -e ".git" ]; then
             if command -v git-lfs &> /dev/null; then
                 # Optional step: a failing `git lfs install` only warns
                 # (parity with setup.ps1) instead of aborting under set -e.
-                if git lfs install > /dev/null 2>&1; then
+                # --local: the LFS filters go into this repository's config,
+                # not into the user's global ~/.gitconfig.
+                if git lfs install --local > /dev/null 2>&1; then
                     echo -e "  ${GREEN}+ Git repository initialized (with LFS)${NC}"
                 else
                     echo -e "  ${GREEN}+ Git repository initialized${NC}"
-                    echo -e "  ${YELLOW}! Git LFS present but 'git lfs install' failed. Large files will not use LFS.${NC}"
+                    echo -e "  ${YELLOW}! Git LFS present but 'git lfs install --local' failed. Large files will not use LFS.${NC}"
                 fi
             else
                 echo -e "  ${GREEN}+ Git repository initialized${NC}"

@@ -26,11 +26,20 @@
 - **`cf_prefix`:** [required / optional / forbidden]
 - **`nbsp_before_page`:** [yes / no — non-breaking space before page number]
 - **`page_range`:** [`15-16` or `15–16` (en-dash) or `15 to 16` or other]
+- **`multiple_sources`:** [several sources in one citation: separator and order, e.g., `(Brandt 2019; Okafor/Weiß 2021)`]
+- **`two_authors`:** [e.g., `Okafor/Weiß`, `Okafor & Weiß` or `Okafor und Weiß`]
+- **`same_author_year`:** [e.g., `2019a`, `2019b`]
+- **`no_date`:** [e.g., `o. J.` or `n.d.`]
+- **`no_page_locator`:** [sources without page numbers, such as web pages: section, paragraph or nothing]
+- **`secondary_citation`:** [e.g., `(Moreau 2009, S. 58, zit. nach Lindqvist 2017, S. 114)`; see also `bibliography.secondary_original`]
 
 ---
 
 ## Bibliography (`bibliography.*`)
 
+- **`entry_patterns`:** [one pattern per source type: book, journal article, chapter in an edited volume, web source, ...; e.g., `Surname, I. (Year): Title. Place: Publisher.`]
+- **`multiple_authors`:** [how co-authors are joined, and how many are listed before "et al."]
+- **`secondary_original`:** [list the original of a secondary citation as well / list only the source read]
 - **`alignment`:** [left / justified]
 - **`hanging_indent`:** [e.g., 1.27 cm or 0.5 in]
 - **`line_spacing`:** [e.g., 1.0 or 1.5]
@@ -118,6 +127,8 @@
 - **`forbidden_pronouns`:** [list — e.g., "I", "we", "one", "you" or local-language equivalents]
 - **`forbidden_evaluative`:** [optional list — e.g., "remarkable", "particularly noteworthy"]
 - **`block_quote_word_threshold`:** [e.g., 40 words]
+- **`block_quote_format`:** [e.g., indented 1 cm, 10 pt, single-spaced, without quotation marks]
+- **`quote_alterations`:** [e.g., insertions in square brackets, omissions as `[...]`, added emphasis marked, a quote within a quote in single quotation marks]
 - **`emphasis`:** [italic only / bold allowed / underline forbidden / etc.]
 - **`footnotes`:** [allowed / discouraged / forbidden]
 
@@ -137,12 +148,21 @@
 ## Open questions (`❓`)
 
 [List of items the resolver could not unambiguously extract. Each item is tagged:
-`[content]` — the answer changes what is written or produced in Phase A: voice and pronouns, evaluative wording, the direct-quote threshold, what may go into footnotes, the "cf." prefix and page numbers for paraphrases, the page count, the outline depth, and the decimal separator, p-value notation, figure resolution and caption placement (built into tables and figures in Phase A). Resolve with the supervisor before any chapter is drafted.
+`[content]` — the answer changes what is written or produced in Phase A: voice and pronouns, evaluative wording, the direct-quote threshold, how quotes may be altered, what may go into footnotes, the "cf." prefix and page numbers for paraphrases, the page count, the outline depth, and the decimal separator, p-value notation, figure resolution and caption placement (built into tables and figures in Phase A). Resolve with the supervisor before any chapter is drafted.
 `[format]` — the answer changes only how the text is set: fonts, spacing, margins, pagination, title page, bibliography layout, citation punctuation. Resolve before the formatting phase (Phase B).
 An entry here without a tag counts as `[content]`. A `❓` next to a rule above only points to its entry here.]
 
 - [ ] ❓ [content] `style.forbidden_pronouns` — [description of the ambiguity and where it appears in the source documents]
 - [ ] ❓ [format] `in_text.page_range` — [...]
+
+---
+
+## Resolved questions
+
+[Former open questions, moved here when the answer was written into the rule above (see "Recording answers to open questions" in `.claude/agents/style-resolver.md`). Only entries under "Open questions" block drafting or formatting.]
+
+- [x] [content] `style.forbidden_pronouns` — [answer] [supervisor, via the user, YYYY-MM-DD]
+- [x] [content] `numbers.p_values` — n/a — does not occur in this work [user, YYYY-MM-DD]
 
 ---
 

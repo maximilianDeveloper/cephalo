@@ -202,6 +202,13 @@ jobs:
             if [ -e "/tmp/ci_multi/$sub/shared" ] || [ -L "/tmp/ci_multi/$sub/shared" ]; then echo "$sub/shared was created"; exit 1; fi
           done
           if grep -q 'No longer used' /tmp/ci_multi.out; then echo "old shared/ note in a new project"; exit 1; fi
+          # Git LFS is set up for the project only: the user's global config stays untouched.
+          if command -v git-lfs >/dev/null; then
+            H=$(mktemp -d)
+            HOME="$H" bash setup.sh "Seminar paper" "Flat" full --target /tmp/ci_lfs </dev/null >/dev/null
+            git -C /tmp/ci_lfs config --local --get filter.lfs.clean >/dev/null
+            if [ -e "$H/.gitconfig" ] && grep -qi lfs "$H/.gitconfig"; then echo "setup wrote LFS filters to the global config"; exit 1; fi
+          fi
 
       - name: --target copies leave out local artifacts; non-empty and in-place targets
         run: |
@@ -770,6 +777,10 @@ jobs:
                           "(ter Horst, 2020). (ten Brink 2017). (siehe Hahn, 2020, S. 3). (cf. Smith, 2020, p. 15). (nach Vogel 2020). "
                           "Mayer (2020, S. 15) zeigt. Krause (2021: 15) auch. Brown et al. (2021) argue. "
                           "(v. Rosenstiel 2007). (v. d. Oelsnitz, 2019).")
+          # secondary citations: the original before the marker needs no entry (Moreau,
+          # Abel), and an original that has one is not reported as uncited (Zorn)
+          f.add_paragraph("(Moreau 2009, S. 58, zitiert nach Lindqvist 2017, S. 114). (Abel, 1999, as cited in Kurz, 2016). "
+                          "(Zorn 2001, zit. n. Lindqvist 2017).")
           f.add_heading("7 Literaturverzeichnis:", 1)
           for entry in ("Müller, H./Schmidt, K. (2019). A.", "Öztürk, A. (2020). B.", "Dawson, R., Ellis, S., & Fowler, T. (2018). C.",
                         "De Vries, R. (2018). D.", "Weber, E. (2020). E.", "Fischer, Hans/Wolf, Karl (2017): G.",
@@ -781,7 +792,8 @@ jobs:
                         "von Wright, G. H. (2019). W.", "de la Rosa, E. (2018). X.", "ter Horst, F. (2020). Y.", "ten Brink, G. (2017). Z.",
                         "Hahn, H. (2020). AA.", "Smith, J. (2020). AB.", "Vogel, V. (2020). AC.", "Mayer, M. (2020). AD.",
                         "Krause, K. (2021). AE.", "Brown, B., Green, G., & White, W. (2021). AF.",
-                        "von Rosenstiel, L. (2007). AG.", "von der Oelsnitz, D. (2019). AH."):
+                        "von Rosenstiel, L. (2007). AG.", "von der Oelsnitz, D. (2019). AH.",
+                        "Lindqvist, E. (2017). AI.", "Kurz, K. (2016). AJ.", "Zorn, Z. (2001). AK."):
               f.add_paragraph(entry)
           f.save(os.path.join(w, "forms.docx"))
           # prose that looks like a citation with a capitalized particle, a filler or
@@ -796,7 +808,8 @@ jobs:
                           "However, Smith and Jones (2019) argue. Das Verfahren, das Müller und Schmidt (2019) entwickelt haben, gilt. "
                           "(Juni, Juli und August 2020). (January, February, and March 2021). "
                           "Reagan, Kohl und Thatcher (1980–1990) prägten die Dekade. (Adams, 2019). Adam (2015) stimmt zu. "
-                          "(v. Wedel 2015). (Roe v. Wade, 1973). (Cranach d. Ä., 1530).")
+                          "(v. Wedel 2015). (Roe v. Wade, 1973). (Cranach d. Ä., 1530). "
+                          "(Pohl 2005, zit. nach Adam 2015). Pohl (2005) zeigt es.")
           r.add_heading("References", 1)
           for entry in ("De Vries, R. (2018). A.", "Fischer, Hans, Titel, in Schulz, Eva/Meier, Karl (Hrsg.), Band, Berlin 2019.",
                         "Mai, Manfred (2018): Medienpolitik.", "Thatcher, M. (1993). Memoirs.", "Adam, A. (2015). B."):
@@ -901,9 +914,14 @@ jobs:
           expect 2 python scripts/bibliography_check.py "$W/notword.docx"
           test "$(wc -l < "$W/out.txt")" -eq 1
           expect 0 python scripts/bibliography_check.py "$W/forms.docx"
+          sed -n '/original of a secondary citation/,/^$/p' "$W/out.txt" > "$W/secondary.txt"
+          for a in Moreau Abel; do grep -qx "    $a" "$W/secondary.txt"; done
+          if grep -qx "    Zorn" "$W/out.txt"; then echo "listed original Zorn reported"; exit 1; fi
           expect 1 python scripts/bibliography_check.py "$W/prose.docx"
-          # (Adams: a German genitive counts as the listed name only in that form)
-          for a in Freitag Winter Meier Fischer Mai Sommer Thatcher Herbst Adams Wedel; do grep -qx "    $a" "$W/out.txt"; done
+          # (Adams: a German genitive counts as the listed name only in that form;
+          # Pohl: an original also cited the usual way still needs its entry)
+          for a in Freitag Winter Meier Fischer Mai Sommer Thatcher Herbst Adams Wedel Pohl; do grep -qx "    $a" "$W/out.txt"; done
+          if grep -q "original of a secondary citation" "$W/out.txt"; then echo "Pohl listed as a secondary original only"; exit 1; fi
           for a in Rentenreform Chirac Pen Liga Horizon Vries De Interview However Verfahren Juni Juli August January February March Wade Ä.; do
             if grep -qx "    $a" "$W/out.txt"; then echo "prose read as a citation of $a"; exit 1; fi
           done
@@ -1200,6 +1218,10 @@ jobs:
           # The template ships a .gitattributes; setup appends the six LFS rules once.
           $lfs = @(Select-String -Path (Join-Path $flat '.gitattributes') -Pattern 'filter=lfs').Count
           if ($lfs -ne 6) { Write-Host "flat: expected 6 LFS rules in .gitattributes, found $lfs"; exit 1 }
+          # Git LFS is set up in the project's own config (git lfs install --local), not globally.
+          if (Get-Command git-lfs -ErrorAction SilentlyContinue) {
+            if (-not (git -C $flat config --local --get filter.lfs.clean)) { Write-Host "flat: no LFS filter in the project's .git/config"; exit 1 }
+          }
           # A re-run in place keeps edited state files and does not duplicate the LFS rules.
           $status = Join-Path $multi '02_Main_Work/00_Status.md'
           Add-Content -Path $status -Value 'ci-marker'

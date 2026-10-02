@@ -232,7 +232,7 @@ After your extract, the source-verifier checks it against the original source. T
 - Secondary citation overlooked
 - Page number too narrow (single page instead of range)
 
-These flow back to you — update the extract and set status to `verified` when the source-verifier marks it ✅.
+These flow back to you — update the extract and set status to `verified` when the source-verifier marks it ✅. Notes on your own wording (core claims, labels) come with a ✅ as well: apply them once; they need no new verification round. Only a ✅ sets `verified`: if the loop limit is reached without one, the extract stays `draft` and the orchestrator asks the user.
 
 ### ↔ Writer-agent
 The writer-agent reads your extracts and builds prose from them. The cleaner your extracts, the fewer correction loops later.
