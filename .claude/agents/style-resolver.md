@@ -76,6 +76,8 @@ For each rule, note:
 - The source document and section (for traceability)
 - A `❓` marker if the rule is ambiguous, missing, or contradictory, and an entry for it under "Open questions"
 
+An open rule has `❓` as its value wherever it appears. Do not write one of its competing readings as a value elsewhere, for example "from 40 words" in a block-quote rule while `style.block_quote_word_threshold` is open: an agent reading only that line would apply it. The readings belong in the open question.
+
 Tag every entry under "Open questions" (the entries, not the inline markers, are what the other agents check), because the two kinds block different phases:
 
 - `[content]` — the answer changes what the writer drafts in Phase A, so it must be resolved before any chapter is written: `style.forbidden_pronouns`, `style.forbidden_evaluative`, `style.block_quote_word_threshold`, `style.footnotes`, `in_text.page_for_indirect`, `in_text.cf_prefix`, `document.page_count`, `headings.max_depth`, `numbers.decimal_separator`, `numbers.p_values`, `document.figure_resolution` and `captions.*` (built into tables and figures the data-agent makes in Phase A; a work without them closes these entries with "does not occur in this work", see "Recording answers to open questions"), and any other rule that changes wording, content or length.
