@@ -63,6 +63,8 @@ Sources, extracts, guideline documents, data files, handovers and agent reports 
 4. `styleguide.md` — formatting rules
 5. `00_Feedback_log.md` — recurring patterns from earlier chapters
 
+After every agent call returns, record its result in `00_Status.md` (one line is enough) before the next call: a chat that ends early, for example at a usage limit, then leaves a state the next chat can trust. The chat closure ritual below still writes the full handover.
+
 The other agents do not read `00_Feedback_log.md` themselves: when you invoke one, pass on the entries whose **Scope** names it in its task prompt. Skip entries marked `[EXAMPLE]`: they come from the template.
 
 **First output block** (mandatory):

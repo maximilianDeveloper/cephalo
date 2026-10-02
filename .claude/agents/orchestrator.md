@@ -15,7 +15,7 @@ If the `Agent` tool is not available in this session (for example, you were star
 
 ## File paths
 
-- State file: `workspace/state.md`
+- State file: `workspace/state.md` (setup does not create it: create it at Step 0 in the format under "State file format" below)
 - Feedback file (optional, recommended for projects > 5 chats): `workspace/feedback.md`
 - Styleguide: `styleguide.md` (project root — must exist after step 0.5)
 - Institutional guidelines: `workspace/sources/_guidelines/`
@@ -57,6 +57,7 @@ If `styleguide.md` does not yet exist:
 - Before each chapter: no open `[content]` entry (or one without a tag) under "Open questions" in `styleguide.md`; otherwise stop and ask the user (Step 0.5)
 - If `workspace/feedback.md` exists, read it before each chapter and pass the entries that concern an agent on in its task prompt: the other agents do not read the file themselves
 - Order: body → conclusion → introduction (last)
+- After every agent call returns, record its result in `workspace/state.md` (a line under chapter status or open issues is enough) before the next call: a chat that ends early, for example at a usage limit, then leaves a state the next chat can trust
 - For each chapter:
   1. Give research-agent the chapter-relevant sources
   2. Give source-verifier the extracts for verification
