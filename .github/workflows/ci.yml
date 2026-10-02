@@ -202,6 +202,13 @@ jobs:
             if [ -e "/tmp/ci_multi/$sub/shared" ] || [ -L "/tmp/ci_multi/$sub/shared" ]; then echo "$sub/shared was created"; exit 1; fi
           done
           if grep -q 'No longer used' /tmp/ci_multi.out; then echo "old shared/ note in a new project"; exit 1; fi
+          # Git LFS is set up for the project only: the user's global config stays untouched.
+          if command -v git-lfs >/dev/null; then
+            H=$(mktemp -d)
+            HOME="$H" bash setup.sh "Seminar paper" "Flat" full --target /tmp/ci_lfs </dev/null >/dev/null
+            git -C /tmp/ci_lfs config --local --get filter.lfs.clean >/dev/null
+            if [ -e "$H/.gitconfig" ] && grep -qi lfs "$H/.gitconfig"; then echo "setup wrote LFS filters to the global config"; exit 1; fi
+          fi
 
       - name: --target copies leave out local artifacts; non-empty and in-place targets
         run: |
@@ -1211,6 +1218,10 @@ jobs:
           # The template ships a .gitattributes; setup appends the six LFS rules once.
           $lfs = @(Select-String -Path (Join-Path $flat '.gitattributes') -Pattern 'filter=lfs').Count
           if ($lfs -ne 6) { Write-Host "flat: expected 6 LFS rules in .gitattributes, found $lfs"; exit 1 }
+          # Git LFS is set up in the project's own config (git lfs install --local), not globally.
+          if (Get-Command git-lfs -ErrorAction SilentlyContinue) {
+            if (-not (git -C $flat config --local --get filter.lfs.clean)) { Write-Host "flat: no LFS filter in the project's .git/config"; exit 1 }
+          }
           # A re-run in place keeps edited state files and does not duplicate the LFS rules.
           $status = Join-Path $multi '02_Main_Work/00_Status.md'
           Add-Content -Path $status -Value 'ci-marker'

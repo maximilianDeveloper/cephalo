@@ -1026,13 +1026,15 @@ if (-not ([System.IO.Directory]::Exists($GitDir) -or [System.IO.File]::Exists($G
         if ($gitInitOk -and $lfsAvailable) {
             $lfsOk = $false
             try {
-                git -C $script:ProjectRoot lfs install | Out-Null
+                # --local: the LFS filters go into this repository's config,
+                # not into the user's global .gitconfig.
+                git -C $script:ProjectRoot lfs install --local | Out-Null
                 $lfsOk = ($LASTEXITCODE -eq 0)
             } catch { }
             if ($lfsOk) {
                 Write-Host "  + Git LFS enabled" -ForegroundColor Green
             } else {
-                Write-Host "  ! Git LFS present but 'git lfs install' failed. Large files will not use LFS." -ForegroundColor Yellow
+                Write-Host "  ! Git LFS present but 'git lfs install --local' failed. Large files will not use LFS." -ForegroundColor Yellow
             }
         } elseif ($gitInitOk) {
             Write-Host "  . Git LFS not available - skipping. Install from https://git-lfs.com if you expect large files." -ForegroundColor Gray
