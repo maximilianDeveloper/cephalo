@@ -8,7 +8,9 @@ Dates follow ISO 8601 (`YYYY-MM-DD`).
 
 ---
 
-## [1.0.1] — unreleased
+## [1.0.1] — 2026-10-02
+
+**First agent trial runs.** Two trial runs on Windows with fictional material, the second through the whole bachelor workflow, tested the agents in real work for the first time; a review of the trial set-up on macOS added one more point. Their findings tightened the agent definitions: how answers to open questions are recorded, when an extract counts as verified, when citations are written as citekeys, and how the orchestrators keep state and reports. Also new: a setup guide with screenshots, fixes in `bibliography_check.py` and both setup scripts.
 
 ### Added
 
