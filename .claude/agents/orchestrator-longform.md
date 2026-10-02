@@ -155,6 +155,8 @@ When a feedback loop reaches `feedback_loop_max`, you stop automatic iteration a
 
 Present the outstanding items as a numbered list with source citations so the user can decide informed.
 
+A new verification round for an extract follows only a ⚠️ or ❌ on its quotes, page numbers, term lists, secondary citations or bibliographic data; notes on the extract's own wording are applied once by the research-agent (see the extract verdict in `source-verifier.md`). An extract without a final ✅ stays `draft`.
+
 ## Phase-specific duties
 
 ### `01_Proposal` (optional within long-form)

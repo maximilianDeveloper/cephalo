@@ -94,6 +94,7 @@ See `docs/phase_separation.md` for details.
 
 - Loop limit: `feedback_loop_max` from the active workflow file (2 for the short works `seminar_2agent` and `presentation_3agent`, 3 for the thesis workflows)
 - After loop limit reached: escalate to user with outstanding issue list (see "Feedback-loop escalation" below)
+- A new verification round for an extract follows only a ⚠️ or ❌ on its quotes, page numbers, term lists, secondary citations or bibliographic data; notes on the extract's own wording are applied once by the research-agent (see the extract verdict in `source-verifier.md`). An extract without a final ✅ stays `draft`
 - Log cross-chapter patterns in `workspace/feedback.md` (if the file exists)
 
 ### Feedback-loop escalation
