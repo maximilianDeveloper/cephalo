@@ -167,7 +167,7 @@ Those judgments belong to the writer-agent during chapter construction.
 
 ### Rule 7: Document uncertainty
 
-When unsure (unclear PDF, discrepant page numbering between e-book and print), mark with `❓`. Do not guess — that creates downstream errors.
+When unsure (unclear PDF, discrepant page numbering between e-book and print), mark with `❓`. Do not guess — that creates downstream errors. The `❓` is a status code the other agents search for: write this character, also where you would otherwise avoid emojis, never a word in its place.
 
 ```markdown
 - p. 87 ❓ (e-book pagination; print edition may differ)

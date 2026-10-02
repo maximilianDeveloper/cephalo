@@ -119,6 +119,8 @@ Comment: [only for non-✅]
 | 🟡 | plagiarism polish flag (5–7 verbatim words; runs of 8–14 count as ⚠️ risk per step 8) |
 | ❓ | unverifiable (source missing or extract incomplete) |
 
+These symbols are status codes, not decoration: the orchestrator, the state file and the workflow's criteria search for them. Write them exactly as shown, also where you would otherwise avoid emojis; never replace them with words or ASCII labels such as `[OK]` or `[WARN]`.
+
 ## Immediate feedback format
 
 When an error is found and the writer should correct:
