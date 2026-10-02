@@ -20,7 +20,7 @@ The pre-check prevents this by ensuring **before** content work starts that all 
 
 ## 1. Examination materials (citation and formatting rules MUST be present)
 
-These documents define the rules the work must follow. The citation guide and the formatting guidelines are required (if the institution has none, the published standard adopted instead, logged as a decision). The other three are recommended: if one is missing, ask the user whether the institution provides it, list it as a gap in the pre-check result (⚠️ with gaps), and continue.
+These documents define the rules the work must follow. The citation guide and the formatting guidelines are required (if the institution has none, the published standard adopted instead, logged as a decision). The other three are recommended: if one is missing, ask the user whether the institution provides it, list it as a gap in the pre-check result (⚠️ with gaps), and continue. Until the user answers, the question stays under open issues in the state file.
 
 - [ ] **Course assignment** — describes topic, scope, formal requirements (recommended)
 - [ ] **Examination guide** — assessment criteria, structure of the work (recommended)
@@ -150,7 +150,7 @@ The orchestrator (or user) documents the result in the state file:
 **Performed:** [date]
 **Result:** ✅ complete / ⚠️ with gaps / ❌ blocked
 
-**Examination materials:** ✅ / ❌ [list of missing items]
+**Examination materials:** ✅ / ⚠️ [gaps: missing recommended documents] / ❌ [missing required documents]
 **Sources:** ✅ / ❌ [list of missing items]
 **Styleguide:** ✅ / ❓ [open items: N content, M format]
 **Technical tools:** ✅ / ❌ [list of missing items]

@@ -28,6 +28,7 @@ Dates follow ISO 8601 (`YYYY-MM-DD`).
 - **source-verifier** — a term the source does not use for a concept, in particular one on the extract's "Terms NOT in source" list, is an error (❌), as the rule "technical terms are sacred" demands; only a grammatical variant of the source's own term stays ⚠️. `checklists/plagiarism_protection.md` (pattern 3) says the same. In a Windows trial run a planted synonym from that list was found but rated as mild as a stylistic "therefore".
 - **source-verifier** — a verbatim run that crosses a sentence boundary counts as one run, and wording it suggests as a fix must itself pass the page and plagiarism checks. In a Windows trial run no run reported a seven-word run across a sentence boundary, and one suggested sentence carried an eight-word verbatim run and a wrong page; the writer-agent caught both.
 - **research-agent** — at most three "Terms NOT in source" per entry, and "completeness over selection" applies to the passages, not to extra fields in an entry. In a Windows trial run the extracts were accurate (43 of 43 quotes) but listed four to nine negative terms per entry and added fields of their own: nine short pages took nine minutes.
+- **`checklists/precheck.md`** — the result line for examination materials has a ⚠️ for gaps (missing recommended documents) next to ❌ for missing required ones, and an unanswered question about such a document stays under open issues. The overall result already knew "⚠️ with gaps"; the line did not.
 
 ### Fixed
 
