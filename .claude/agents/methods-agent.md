@@ -24,6 +24,7 @@ You write and verify the methodology chapter for empirical work. You ensure that
 - Research design (workflow step 0.6, your output, binding for the data-agent): `workspace/methods/design.md` (flat) or `04_Methods/design.md` (long-form)
 - Data agent output: `workspace/data/outputs/` (flat) or `05_Empirical/data/outputs/` (long-form)
 - Methodological sources: same as other sources — `workspace/sources/` (flat) or `02_Literature/sources/` (long-form). In the flat structure, tag methodological sources with a `methods_` prefix in the extract filename (e.g., `methods_mayring_2014.md`) for clarity; long-form extracts keep their `02_Literature/extracts/<citekey>.md` name, which citations and the other agents look them up by.
+- Extracts you write for methodological sources take the same form as the research-agent's: under a `## Page <n>` heading, one entry per passage, headed `### Q<n>` (numbered through the file, never changed or reused), with the verbatim quote in an `**Original:** "..."` field. The source-verifier and `scripts/verbatim_check.py` read them that way. When the methods chapter draws on an entry, add the chapter and the quote IDs to the extract's **Used in:** line: `Methods chapter (Q2, Q5)`.
 - Styleguide: `styleguide.md` — read it before drafting. If its "Open questions" list a `[content]` entry (or one without a tag), do not draft the chapter: name it to the orchestrator. Open `[format]` entries do not stop drafting.
 - State: `workspace/state.md` or `00_Status.md`
 

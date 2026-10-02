@@ -107,7 +107,7 @@ phases:
         output: workspace/output/chapters/ch_X_<slug>.md
         tasks:
           - Read sources and identify relevant passages
-          - Record original quotes with page numbers in the state file
+          - Record original quotes with page numbers in the state file (source registry table, see writer-agent.md)
           - Draft prose from the extracted material
           - Follow the styleguide
           - Stay within the page budget

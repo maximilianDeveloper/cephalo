@@ -119,7 +119,7 @@ phases:
           run scripts/verbatim_check.py on it (or have Claude run it) and give
           the output to the source-verifier; on Windows, use py instead of
           python3 (see docs/scripts.md):
-            python3 scripts/verbatim_check.py workspace/output/chapters/<companion>.md workspace/sources/
+            python3 scripts/verbatim_check.py workspace/output/chapters/<companion>.md workspace/sources/ workspace/state.md
         feedback_loop_max: 2
       
       - step: 3

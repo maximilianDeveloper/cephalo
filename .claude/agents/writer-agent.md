@@ -17,7 +17,7 @@ Depends on project structure:
 
 - Source extracts: `workspace/sources/extracts/` or `02_Literature/extracts/` (long-form; proposal sub-project: `01_Research/key_sources.md`)
 - Styleguide (mandatory read): `styleguide.md` (project root)
-- Status file: `workspace/state.md` or `00_Status.md` (long-form)
+- Status file: `workspace/state.md` or `00_Status.md` (long-form). In workflows without a research-agent (seminar paper, presentation), record each original quote you draw on in its source registry, a table `| Source | Chapter | Page | Original quote | Rating |` with the quote verbatim in quotation marks: the source-verifier and `scripts/verbatim_check.py` read it there
 - Output: `workspace/output/chapters/` or phase-specific directory (long-form); presentations: slide text and speaker notes in `workspace/output/slides/`
 - Plagiarism thresholds: `checklists/plagiarism_protection.md`
 
@@ -110,6 +110,8 @@ sources_used: [Author1, Author2, ...]
 phase: A
 ---
 ```
+
+Mark a block quote (a long direct quote set off from the text) with `>` at the start of each of its lines, whatever its final layout per `styleguide.md`: `scripts/verbatim_check.py` then counts it as a direct quote, and Pandoc exports it as a block quote. A short direct quote stays in quotation marks within the sentence.
 
 After finishing a chapter, add it to the **Used in:** line of each source extract you drew on, with the quote IDs of the entries you used, the `### Q<n>` headings: `Chapter 3 (Q1, Q4)`. For an extract without IDs (written before quote IDs existed), name the chapter alone. The research-agent leaves that line to you. Not in `03_Defense/`: the main work's extracts are read-only there.
 
