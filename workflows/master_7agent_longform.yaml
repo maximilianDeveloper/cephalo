@@ -307,7 +307,7 @@ phases:
         - Pause Phase B
         - Set 00_Status.md -> overall phase: A (rollback from B)
         - Reactivate writer-agent (and data-agent if the issue is numerical)
-        - Re-run the affected verification steps
+        - Re-run the affected verification steps (with scripts/verbatim_check.py before a source-verifier step)
         - Document the rollback in 00_Decisions.md with rationale
         - Resume Phase B when the fix is verified
       note: |

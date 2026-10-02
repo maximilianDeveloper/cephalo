@@ -80,7 +80,7 @@ Sometimes a format pass surfaces a real content issue (e.g., a missing citation 
 
 1. Pause Phase B
 2. Re-activate the writer-agent for the specific fix
-3. Run source-verifier on the affected passage
+3. Run `scripts/verbatim_check.py` on the chapter, then source-verifier on the affected passage
 4. Document the rollback in `00_Decisions.md` (long-form) or `workspace/state.md` (flat)
 5. Resume Phase B
 
