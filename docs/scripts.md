@@ -1,10 +1,11 @@
 # Scripts
 
-cephalo ships five utility scripts in `scripts/`. They are optional — the agents can guide a project without them — but each one automates a check or transformation that would otherwise take manual effort.
+cephalo ships six utility scripts in `scripts/`. They are optional — the agents can guide a project without them — but each one automates a check or transformation that would otherwise take manual effort.
 
 | Script | Purpose | When to run |
 |--------|---------|-------------|
 | `extract_styleguide.sh` | Convert institutional guideline PDFs to plain text for the style-resolver | Once per project during setup |
+| `verbatim_check.py` | Count the verbatim word runs a chapter shares with its sources, rated by the plagiarism thresholds | Phase A, before each chapter verification (bachelor and master workflows: step A.4) |
 | `abbreviations_extract.py` | Derive the list of abbreviations from a finished DOCX | Phase B, final stages |
 | `bibliography_check.py` | Minus-test by author surname: every cited author is in the bibliography, every entry's lead author is cited | Phase B, final stages |
 | `docx_postprocess.sh` | Enable automatic hyphenation in a DOCX (python-docx doesn't set this) | Phase B, before final export |
@@ -14,7 +15,7 @@ cephalo ships five utility scripts in `scripts/`. They are optional — the agen
 
 ## Installation
 
-All scripts require Python 3.9 or newer. `abbreviations_extract.py`, `bibliography_check.py` and `extract_styleguide.sh` have dependencies listed in `requirements.txt` (`python-docx`, and `pypdf` with its `[crypto]` extra, which installs `cryptography` for AES-encrypted PDFs). `cross_session_audit.py` uses only the Python standard library.
+All scripts require Python 3.9 or newer. `abbreviations_extract.py`, `bibliography_check.py`, `verbatim_check.py` and `extract_styleguide.sh` have dependencies listed in `requirements.txt` (`python-docx`, and `pypdf` with its `[crypto]` extra, which installs `cryptography` for AES-encrypted PDFs). `cross_session_audit.py` uses only the Python standard library.
 
 ### On Linux / macOS
 
@@ -91,6 +92,45 @@ _styleguide_rawtext/ and produce styleguide.md.
 ```
 
 Multi-project: Claude Code is opened on a sub-project, one level below the folder the script wrote to, so name `../_styleguide_rawtext/` in the prompt.
+
+### `verbatim_check.py`
+
+Counts the verbatim word runs a chapter shares with its sources: the count behind verification step 8 of the source-verifier, rated by the thresholds of `checklists/plagiarism_protection.md` (5–7 words 🟡, 8–14 ⚠️, 15 or more ❌). Neither the writer-agent nor the source-verifier can count reliably by eye, and neither has a shell, so the orchestrator runs the script before each chapter verification and hands its output, saved with `> <file> 2>&1`, to the source-verifier. In the seminar and presentation workflows, which have no orchestrator, you have Claude run it or run it yourself; in Windows PowerShell, do not save its output with `>`, which writes UTF-16.
+
+```bash
+# Flat structure: the chapter against the extracts and source files
+python3 scripts/verbatim_check.py workspace/output/chapters/ch_2_basics.md workspace/sources/
+
+# Seminar paper: the quotes are in the source registry of the state file
+python3 scripts/verbatim_check.py workspace/output/chapters/ch_2_basics.md workspace/sources/ workspace/state.md
+
+# Long-form (in a multi-project sub-project: ../scripts/verbatim_check.py):
+python3 scripts/verbatim_check.py 03_Theory_chapters/chapter_3_theory.md 02_Literature/extracts/ 02_Literature/sources/
+
+# A Word document, against the extracts folder and a single PDF:
+python3 scripts/verbatim_check.py workspace/output/document.docx workspace/sources/extracts/ workspace/sources/smith_2020.pdf
+```
+
+What it does:
+
+1. Reads the chapter (`.md`, `.txt` or `.docx`) and leaves out what is a marked direct quote: a quotation of five or more words in quotation marks („…“, “…”, "…", ‚…‘, ‘…’, '…', »…«, «…»; an apostrophe as in "city’s" does not end one, and an apostrophe before a digit or after a letter, as in "'90s" or "U.S.'s", opens none), Markdown block quotes (`>`, also lines continuing one without `>`) and Word paragraphs in a quote style, including Pandoc's "Block Text" and LibreOffice's "Quotations". The words of a shorter quotation, such as a technical term in quotation marks, keep a run going, so that the term does not cut a copied sentence into pieces, but are not counted in its length: the report gives them as `(and 3 in quotation marks)`. In Markdown it also skips the YAML front matter, footnote marks and HTML comments
+2. Reads the sources, files or folders searched recursively (folders named `_guidelines` and `verification` inside them are skipped: guidelines are not sources, and the saved reports quote the chapter): the quotes of the research-agent's extracts (`.md`: the `**Original:**` field, quoted text in the `**Secondary citation?**` field, and `- p. 42: "…"` lines), with their page (also from a page bullet such as `- p. 87 ❓`, ❓ included) and quote ID, a quote with a `[…]` omission as separate parts; a Markdown table with an "Original quote" column, such as the source registry in `workspace/state.md` of a seminar paper; the text layer of PDFs; plain-text files (UTF-8, UTF-16 with byte order mark, or Windows-1252). What it cannot read is listed under "Not checked": a path that does not exist, Word, EPUB, HTML or image files among the sources (other files, such as a `.bib` or the assets folder of a saved web page, and hidden files are passed over), a scan, the pages without text of a PDF of which half or more of the pages are scans, a ZIP archive named `.pdf`, and all PDFs while `pypdf` is not installed. An `.md` file in a folder that has no extract fields (a `handover.md`, a `README.md`) is passed over
+3. Finds every run of five or more consecutive words the chapter shares with a source, ignoring letter case and punctuation, also across sentence boundaries and across citations (Pandoc citekeys such as `[@key, S. 5]`, and author-year citations in parentheses such as `(Keller 2018, S. 44)` or `(ebd.)`, are skipped in the chapter and in the sources), and reports the longest run at each place with its rating, the line (Markdown) or paragraph (Word), and where it occurs: `Smith_2020.md Q4 (p. 45)` for an extract quote, `smith_2020.pdf (PDF page 3)` for a PDF. A source that has only part of the run is named too, with the number of words it shares (`Smith_2020.md Q4 (p. 45, 9 of these words)`), so that the quote ID is not lost when the PDF has a longer run
+4. Looks up each marked direct quote of five or more words (the parts between `[…]` or `(…)` omissions) in the sources and lists one that is not found verbatim for a check by hand, since a changed word in a quotation is an error too
+
+Exit code 0 = no run of 8 or more words, 1 = at least one run of 8 or more words (⚠️ or ❌), 2 = bad arguments, a chapter that cannot be read or holds no text (one error line), a source that cannot be read (corrupt, or encrypted with a password; the report is printed all the same, with the file under "Could not be read"), or no source text at all to compare against. Exit code 1 is a finished report, not a failure. Direct quotes not found and 🟡 runs do not change the exit code.
+
+The word index is built from the chapter; the source words are held in memory once. A check against a million source words takes about 50 MB when they are spread over several files, up to about 110 MB in a single text file, and a few seconds, plus the time `pypdf` needs to read the PDFs.
+
+Limitations:
+
+- **Only what is given is checked**: a source that is not among the arguments, or an extract quote that is missing, cannot be matched. What is listed under "Not checked" (the script unpacks nothing) is covered only through the quotes in its extract.
+- **Citations it does not recognize** (a footnote-style citation written into the running text, or a parenthesis without a year) break a run like any word the source does not have, so a run around one is reported in two parts; a parenthesis with a year that is not a citation, such as `(Stand 2020)`, is skipped as if it were one.
+- **Verbatim only**: a paraphrase that swaps every few words for a synonym, or a translation, is not found. That is still the source-verifier's call (step 8, and step 7 on overinterpretation).
+- **PDF pages are the viewer's page index**: the printed page number may differ; extract quotes carry the printed one.
+- **Text extraction**: a word hyphenated at a line or page break in a PDF (also with a soft hyphen) is joined when the chapter has the joined word (`Verdun-` + `stung`); otherwise the hyphen is kept as that of a compound (`long-` + `term`, `Stadt-` + `und`). PDFs with unusual encodings can yield garbled text, which then matches nothing.
+- **Word chapters**: only the body paragraphs are read; text in tables, footnotes and text boxes is not checked. Export the chapter from Markdown, or check the Markdown file instead.
+- **A direct quote not found** may also mean that its source is missing from the arguments, or that the quotation keeps an omission without marking it; check those by hand.
 
 ### `abbreviations_extract.py`
 
@@ -195,11 +235,11 @@ A bare repository (`git clone --bare` with linked worktrees) has no main worktre
 
 ## Troubleshooting
 
-**`python3: command not found`** — the Python utility scripts (`abbreviations_extract.py`, `bibliography_check.py`, `cross_session_audit.py`) are invoked directly with `python3` or `py`; on Windows, use `py` instead if `python3` isn't on PATH. On macOS before Monterey, you may need to install Python 3 via Homebrew. The shell scripts (`docx_postprocess.sh`, `extract_styleguide.sh`) handle this themselves: they probe for a *working* interpreter under `python3`, `python` and the Windows `py` launcher (this also catches the case where `python3` resolves to the dead Microsoft Store app-execution-alias stub on Windows) and print a clear error only if none works.
+**`python3: command not found`** — the Python utility scripts (`abbreviations_extract.py`, `bibliography_check.py`, `verbatim_check.py`, `cross_session_audit.py`) are invoked directly with `python3` or `py`; on Windows, use `py` instead if `python3` isn't on PATH. On macOS before Monterey, you may need to install Python 3 via Homebrew. The shell scripts (`docx_postprocess.sh`, `extract_styleguide.sh`) handle this themselves: they probe for a *working* interpreter under `python3`, `python` and the Windows `py` launcher (this also catches the case where `python3` resolves to the dead Microsoft Store app-execution-alias stub on Windows) and print a clear error only if none works.
 
-**`Error: python-docx not installed.`** (from `abbreviations_extract.py` and `bibliography_check.py`; the underlying import error is `ModuleNotFoundError: No module named 'docx'`) — install it: `pip install python-docx` (or `pip install -r requirements.txt`). If you installed `docx` instead, that is a different package: run `pip uninstall docx`, then `pip install python-docx`.
+**`Error: python-docx not installed.`** (from `abbreviations_extract.py`, `bibliography_check.py`, and `verbatim_check.py` with a `.docx` chapter; the underlying import error is `ModuleNotFoundError: No module named 'docx'`) — install it: `pip install python-docx` (or `pip install -r requirements.txt`). If you installed `docx` instead, that is a different package: run `pip uninstall docx`, then `pip install python-docx`.
 
-**`Error: neither pypdf nor pdftotext available for PDF extraction.`** (from `extract_styleguide.sh`; the underlying import error is `ModuleNotFoundError: No module named 'pypdf'`) — install it: `pip install -r requirements.txt` (not `pypdf[crypto]` alone: requirements.txt keeps `cryptography` below 49 on Intel Macs, where newer releases have no wheels and pip would try to build them). Alternatively, install `pdftotext` (poppler) as fallback.
+**`Error: neither pypdf nor pdftotext available for PDF extraction.`** (from `extract_styleguide.sh`; the underlying import error is `ModuleNotFoundError: No module named 'pypdf'`) — install it: `pip install -r requirements.txt` (not `pypdf[crypto]` alone: requirements.txt keeps `cryptography` below 49 on Intel Macs, where newer releases have no wheels and pip would try to build them). Alternatively, install `pdftotext` (poppler) as fallback. `verbatim_check.py` lists the PDF sources under "Not checked" with `pypdf not installed` for the same reason; the same `pip install -r requirements.txt` helps.
 
 **`pypdf failed (cryptography>=3.1 is required for AES algorithm)`** (from `extract_styleguide.sh`) — the guideline PDF is AES-encrypted, typically copy protection with an empty open password, and pypdf was installed without its `[crypto]` extra. Run `pip install -r requirements.txt` again.
 

@@ -244,7 +244,7 @@ Read in this order if new:
 3. **docs/setup_guide.md** — the setup assistant step by step, with screenshots
 4. **docs/error_catalog.md** — common writing errors this system catches
 5. **docs/phase_separation.md** — how the Content / Formatting phase split works
-6. **docs/scripts.md** — the optional utility scripts (guideline extraction, bibliography and abbreviation checks, DOCX post-processing)
+6. **docs/scripts.md** — the optional utility scripts (guideline extraction, a count of verbatim word runs against the sources, bibliography and abbreviation checks, DOCX post-processing)
 
 For thesis-scale projects:
 

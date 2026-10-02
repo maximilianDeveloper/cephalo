@@ -115,7 +115,12 @@ phases:
         agent: source-verifier
         task: |
           Verify all numbers, quotes, citations on slides AND in companion.
-          Plagiarism check on the companion.
+          Plagiarism check on the companion: before every verification round,
+          have Claude run scripts/verbatim_check.py on it (or run it yourself)
+          and give the output to the source-verifier; on Windows, use py instead
+          of python3, and do not save the output with ">" in Windows PowerShell,
+          which writes UTF-16 (see docs/scripts.md):
+            python3 scripts/verbatim_check.py workspace/output/chapters/<companion>.md workspace/sources/ workspace/state.md
         feedback_loop_max: 2
       
       - step: 3

@@ -123,7 +123,9 @@ phases:
       
       - step: A.4
         agent: source-verifier
-        action: Sentence-by-sentence verification
+        script: scripts/verbatim_check.py
+        input: Chapter text + the report of scripts/verbatim_check.py, which the orchestrator runs on the chapter before every verification round
+        action: Sentence-by-sentence verification incl. plagiarism check (verification step 8 in source-verifier.md)
         feedback_loop_max: 3
       
       - step: A.5
@@ -145,7 +147,9 @@ phases:
       
       - step: A.M.2
         agent: source-verifier
-        action: Verify methodological literature
+        script: scripts/verbatim_check.py
+        input: Methods chapter + the report of scripts/verbatim_check.py, which the orchestrator runs on it before every verification round
+        action: Verify methodological literature; sentence-by-sentence verification incl. plagiarism check (verification step 8 in source-verifier.md)
       
       - step: A.M.3
         agent: format-verifier
@@ -206,7 +210,7 @@ phases:
         - Pause Phase B
         - Set workspace/state.md -> overall phase: A (rollback from B)
         - Reactivate writer-agent (and methods/data-agent if empirical) for the fix
-        - Run source-verifier on the affected passage
+        - Run scripts/verbatim_check.py on the chapter, then source-verifier on the affected passage
         - Document the rollback in workspace/state.md with rationale
         - Resume Phase B when the fix is verified
       note: |

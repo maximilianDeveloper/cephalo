@@ -43,7 +43,7 @@ Keep entries short — a few lines each. Long narratives belong in `00_Decisions
 
 - **Observed in:** source-verifier, Ch. 4
 - **Pattern:** Source A cites Source B on page 82. The chapter text cited Source A, p. 82, as if the claim originated there. It did not.
-- **Countermeasure:** When reading extracts, mark any "Source X writes in Source Y" passages as secondary. Flag them in the extract with a `secondary: true` tag.
+- **Countermeasure:** When reading extracts, mark any "Source X writes in Source Y" passages as secondary. Fill in the entry's **Secondary citation?** field with the primary source.
 - **Scope:** research-agent (at extraction), source-verifier (at verification)
 
 ### 2026-04-02: Page-range notation inconsistency [EXAMPLE]

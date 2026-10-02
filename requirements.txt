@@ -8,9 +8,11 @@
 # The upper bounds are deliberate: a new major release of either library can change
 # the APIs these scripts rely on, and an open range would pull it in silently.
 # Raise a cap only after testing against the new major.
-python-docx>=1.0.0,<2.0    # scripts/abbreviations_extract.py, bibliography_check.py
+python-docx>=1.0.0,<2.0    # scripts/abbreviations_extract.py, bibliography_check.py,
+                           # verbatim_check.py (Word chapters)
                            # (1.0+ required for stable doc.part.package.iter_parts())
-pypdf[crypto]>=6.0.0,<7.0  # scripts/extract_styleguide.sh (pure-Python PDF extraction);
+pypdf[crypto]>=6.0.0,<7.0  # scripts/extract_styleguide.sh (pure-Python PDF extraction),
+                           # verbatim_check.py (PDF sources);
                            # [crypto] adds the AES support that encrypted, copy-protected
                            # guideline PDFs need (it pulls in the `cryptography` package).
                            # 6.0+ caps decompressed stream size, so a crafted PDF cannot

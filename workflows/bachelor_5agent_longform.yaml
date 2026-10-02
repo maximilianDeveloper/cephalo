@@ -207,7 +207,8 @@ phases:
     per_chapter:
       - research-agent reads extracts from 02_Literature/extracts/
       - writer-agent drafts the text; citations as citekeys only if 00_Decisions.md records that they are rendered (pre-check, section 6)
-      - source-verifier: sentence-by-sentence verification
+      - orchestrator-longform runs scripts/verbatim_check.py on the chapter before every verification round and passes the report on
+      - source-verifier: sentence-by-sentence verification incl. plagiarism check
       - format-verifier: critical format errors only
       - Feedback loop max 3
   
@@ -279,7 +280,7 @@ phases:
         - Pause Phase B
         - Set 00_Status.md -> overall phase: A (rollback from B)
         - Reactivate writer-agent for the specific fix
-        - Run source-verifier on the affected passage
+        - Run scripts/verbatim_check.py on the chapter, then source-verifier on the affected passage
         - Document the rollback in 00_Decisions.md with rationale
         - Resume Phase B when the fix is verified
       note: |

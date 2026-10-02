@@ -17,7 +17,7 @@ Depends on project structure:
 
 - Source extracts: `workspace/sources/extracts/` or `02_Literature/extracts/` (long-form; proposal sub-project: `01_Research/key_sources.md`)
 - Styleguide (mandatory read): `styleguide.md` (project root)
-- Status file: `workspace/state.md` or `00_Status.md` (long-form)
+- Status file: `workspace/state.md` or `00_Status.md` (long-form). In workflows without a research-agent (seminar paper, presentation), record each original quote you draw on in its source registry, a table `| Source | Chapter | Page | Original quote | Rating |` with the quote verbatim in quotation marks: the source-verifier and `scripts/verbatim_check.py` read it there
 - Output: `workspace/output/chapters/` or phase-specific directory (long-form); presentations: slide text and speaker notes in `workspace/output/slides/`
 - Plagiarism thresholds: `checklists/plagiarism_protection.md`
 
@@ -56,6 +56,8 @@ The original quotes in the extracts, and in the seminar and presentation workflo
 2. **Number format conversion** — "seven of ten" → "70%".
 3. **Preserve terminology, rewrite surrounding prose** — keep technical terms, rewrite the framing.
 4. **Synonym substitution** — last resort, least effective.
+
+A count by eye misses runs, so do not report one as a check result ("no run of five or more words"). Before every verification, `scripts/verbatim_check.py` counts them (run by the orchestrator, or by the user in the seminar and presentation workflows), and the source-verifier passes them on to you.
 
 ## Style rules
 
@@ -109,13 +111,15 @@ phase: A
 ---
 ```
 
-After finishing a chapter, add it to the **Used in:** line of each source extract you drew on (the research-agent leaves that line to you). Not in `03_Defense/`: the main work's extracts are read-only there.
+Mark a block quote (a long direct quote set off from the text) with `>` at the start of each of its lines, whatever its final layout per `styleguide.md`: `scripts/verbatim_check.py` then counts it as a direct quote, and Pandoc exports it as a block quote. A short direct quote stays in quotation marks within the sentence.
+
+After finishing a chapter, add it to the **Used in:** line of each source extract you drew on, with the quote IDs of the entries you used, the `### Q<n>` headings: `Chapter 3 (Q1, Q4)`. For an extract without IDs (written before quote IDs existed), name the chapter alone. The research-agent leaves that line to you. Not in `03_Defense/`: the main work's extracts are read-only there.
 
 ## Feedback loop behavior
 
 When the source-verifier sends immediate feedback:
 
-1. Read the original quote + problem description
+1. Read the original quote (named by extract and quote ID, such as `keller2018.md Q3`) + problem description
 2. Reformulate the affected sentence (don't rewrite the whole paragraph)
 3. Return to source-verifier
 4. If feedback repeats for the same sentence: escalate to orchestrator

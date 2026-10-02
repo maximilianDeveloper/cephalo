@@ -23,6 +23,7 @@ cephalo splits the project lifecycle into two distinct phases:
 ### Phase A: Content
 
 - **Active agents:** writer-agent (capable model), source-verifier (capable model), research-agent, orchestrator
+- **Script:** `scripts/verbatim_check.py`, run by the orchestrator before each chapter verification: a content check, which counts the verbatim word runs the source-verifier rates in step 8
 - **Goal:** content-stable chapters
 - **Start condition:** no open `❓ [content]` items in `styleguide.md` (voice, evaluative wording, citation wording, length); `❓ [format]` items may stay open until the A → B transition
 - **Iterations:** typically 30-50 per project
@@ -79,7 +80,7 @@ Sometimes a format pass surfaces a real content issue (e.g., a missing citation 
 
 1. Pause Phase B
 2. Re-activate the writer-agent for the specific fix
-3. Run source-verifier on the affected passage
+3. Run `scripts/verbatim_check.py` on the chapter, then source-verifier on the affected passage
 4. Document the rollback in `00_Decisions.md` (long-form) or `workspace/state.md` (flat)
 5. Resume Phase B
 

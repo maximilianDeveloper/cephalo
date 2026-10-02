@@ -107,15 +107,23 @@ phases:
         output: workspace/output/chapters/ch_X_<slug>.md
         tasks:
           - Read sources and identify relevant passages
-          - Record original quotes with page numbers in the state file
+          - Record original quotes with page numbers in the state file (source registry table, see writer-agent.md)
           - Draft prose from the extracted material
           - Follow the styleguide
           - Stay within the page budget
       
       - step: 2
         agent: source-verifier
-        input: Chapter text + original quotes recorded in workspace/state.md (source registry) + primary sources in workspace/sources/
+        script: scripts/verbatim_check.py
+        input: Chapter text + original quotes recorded in workspace/state.md (source registry) + primary sources in workspace/sources/ + the report of scripts/verbatim_check.py
         action: Sentence-by-sentence verification incl. plagiarism check (verification step 8 in source-verifier.md)
+        note: |
+          Before every verification round, have Claude run the script on the chapter
+          (or run it yourself) and give its output to the source-verifier with the
+          chapter; on Windows, use py instead of python3, and do not save the output
+          with ">" in Windows PowerShell, which writes UTF-16 (see docs/scripts.md):
+            python3 scripts/verbatim_check.py workspace/output/chapters/ch_X_<slug>.md workspace/sources/ workspace/state.md
+          Without Python, the source-verifier counts the verbatim runs by eye.
         feedback_loop_max: 2
       
       - step: 3

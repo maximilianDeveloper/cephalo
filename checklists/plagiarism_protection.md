@@ -15,7 +15,7 @@
 
 ### Application by source-verifier
 
-Step 8 of verification. N-gram comparison against the original quote in the extract.
+Step 8 of verification. `scripts/verbatim_check.py` counts the runs against the extracts' original quotes and the source PDFs: the orchestrator runs it before every chapter verification (in the seminar and presentation workflows, the user does), and the source-verifier rates the sentences from its report. Without the script, the source-verifier counts by eye against the original quote in the extract. A run that crosses a sentence boundary counts as one run; a quotation of five or more words in quotation marks, or a block quote, is a direct quote and is not counted, while the words of a shorter quotation (a term in quotation marks) keep a run going without being counted in its length.
 
 **Example:**
 
@@ -137,7 +137,7 @@ This is not a paraphrase — it is an incorrect term mapping. Flagged as ❌ by 
 2. Then Step 8 (plagiarism check)
 3. Then Step 9 (list-citation check)
 
-If Step 8 returns ❌: writer-agent receives immediate feedback containing:
-- Original quote
+If Step 8 returns ⚠️ or ❌ (both MUST be reformulated): writer-agent receives immediate feedback containing:
+- Original quote (with its extract and quote ID, if it has one)
 - Verbatim transferred passage (with the affected word run highlighted)
 - Tier suggestion (which paraphrasing tier should be applied)

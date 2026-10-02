@@ -61,7 +61,7 @@ done
 shellcheck setup.sh scripts/docx_postprocess.sh scripts/extract_styleguide.sh
 
 # Python syntax
-python3 -m py_compile scripts/abbreviations_extract.py scripts/bibliography_check.py scripts/cross_session_audit.py
+python3 -m py_compile scripts/abbreviations_extract.py scripts/bibliography_check.py scripts/cross_session_audit.py scripts/verbatim_check.py
 ```
 
 ### Runtime checks — the part that catches real bugs
@@ -145,17 +145,19 @@ d.save('test.docx')
 
 python3 scripts/abbreviations_extract.py test.docx
 python3 scripts/bibliography_check.py test.docx
+printf 'Im Jahr 2020 stieg die Zahl. Die EU (2020) reagierte darauf.\n' > test_source.txt
+python3 scripts/verbatim_check.py test.docx test_source.txt
 bash scripts/docx_postprocess.sh test.docx
 ```
 
-The `bibliography_check.py` output should not contain false positives for German prose constructs like `"Im Jahr 2020..."`, `"Die EU (2020)..."`, or `"Das Kapitel (2020)..."`. These are regression-test cases.
+The `bibliography_check.py` output should not contain false positives for German prose constructs like `"Im Jahr 2020..."`, `"Die EU (2020)..."`, or `"Das Kapitel (2020)..."`. These are regression-test cases. `verbatim_check.py` should report one ⚠️ run of 9 words in paragraph 3 (it skips the citation "(2020)") and exit with code 1.
 
 ## Pull requests
 
 - One logical change per PR. Small, focused changes merge faster.
 - Update `CHANGELOG.md` in the same PR (add an `[Unreleased]` section at the top if none exists yet).
 - If the change touches the setup scripts, confirm in the PR description which platforms you tested on.
-- If the change touches `scripts/bibliography_check.py`, include a test case showing the new behavior.
+- If the change touches `scripts/bibliography_check.py` or `scripts/verbatim_check.py`, include a test case showing the new behavior.
 - If the change touches `README.md` or `docs/QUICKSTART.md`, re-render the embedded copy in `docs/setup-wizard.html` (between the `DOC_README_*` / `DOC_QUICKSTART_*` markers). CI fails while their wording differs; it compares words only, so check changed punctuation, options and paths (such as `--target` or `.\setup.ps1`) by eye.
 
 ## Versioning
