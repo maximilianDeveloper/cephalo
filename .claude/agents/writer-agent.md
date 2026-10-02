@@ -109,13 +109,13 @@ phase: A
 ---
 ```
 
-After finishing a chapter, add it to the **Used in:** line of each source extract you drew on (the research-agent leaves that line to you). Not in `03_Defense/`: the main work's extracts are read-only there.
+After finishing a chapter, add it to the **Used in:** line of each source extract you drew on, with the quote IDs of the entries you used, the `### Q<n>` headings: `Chapter 3 (Q1, Q4)`. For an extract without IDs (written before quote IDs existed), name the chapter alone. The research-agent leaves that line to you. Not in `03_Defense/`: the main work's extracts are read-only there.
 
 ## Feedback loop behavior
 
 When the source-verifier sends immediate feedback:
 
-1. Read the original quote + problem description
+1. Read the original quote (named by extract and quote ID, such as `keller2018.md Q3`) + problem description
 2. Reformulate the affected sentence (don't rewrite the whole paragraph)
 3. Return to source-verifier
 4. If feedback repeats for the same sentence: escalate to orchestrator

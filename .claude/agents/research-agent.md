@@ -60,7 +60,7 @@ The name is slightly misleading: you do not browse the internet or find new sour
    - For each page containing relevant material, create a structured entry
    - Skip irrelevant pages (tables of contents, empty prefaces)
 
-3. **Write the extract file** using the format below.
+3. **Write the extract file** using the format below, one `### Q<n>` entry per passage.
 
 4. **If BibTeX exists** (a reference manager's export: `02_Literature/literature.bib`, flat: `workspace/sources/literature.bib`): verify the citekey is in `literature.bib`.
 
@@ -93,12 +93,12 @@ Bad:
 
 Good:
 - p. 42: "The central challenge is the particularly pronounced 
-  uncertainty inherent to this early stage."
+  uncertainty inherent to this early phase."
 ```
 
 ### Rule 2: Record exact technical terms
 
-Maintain **two lists** per page:
+Maintain **two lists** per entry:
 
 - **Terms IN the source:** exactly as used
 - **Terms NOT in the source:** related terms the source does not use
@@ -187,7 +187,7 @@ One file per source. Filename: author_year or BibTeX citekey.
 **Source file path:** [path to original]
 **File type:** [real PDF / ZIP archive / e-book converted from EPUB / ...]
 **Status:** draft / verified (set by research-agent after source-verifier ✅)
-**Used in:** [Chapter X, Y — updated by writer-agent]
+**Used in:** [Chapter X (Q1, Q4), Chapter Y (Q2) — updated by writer-agent]
 
 ## Bibliographic info
 
@@ -200,6 +200,8 @@ One file per source. Filename: author_year or BibTeX citekey.
 
 ## Page [number]
 
+### Q1
+
 - **Original:** "[verbatim quote]"
 - **Core claim:** [brief own summary, 1–2 sentences]
 - **Relevant for:** [Chapter X — first suggestion]
@@ -207,7 +209,13 @@ One file per source. Filename: author_year or BibTeX citekey.
 - **Terms NOT in source:** [related terms the source does not use]
 - **Secondary citation?** [No / Yes — primary: ...]
 
+### Q2
+
+[a second passage on the same page, same structure]
+
 ## Page [next]
+
+### Q3
 
 [same structure]
 
@@ -220,6 +228,14 @@ One file per source. Filename: author_year or BibTeX citekey.
 *Record, do not evaluate.* This section is a hint for the writer-agent, 
 not a pre-written argument.
 ```
+
+### Quote IDs
+
+Every entry starts with an ID heading, `### Q1`, `### Q2`, …, numbered through the whole file, not per page. The other agents refer to an entry by file name and ID, such as `keller2018.md Q3`: the writer-agent in the **Used in:** line, the source-verifier in its reports, and `scripts/verbatim_check.py` in the runs it lists.
+
+- An ID never changes and is never reused. A new entry takes the next free number, also when its page lies between earlier ones, so the numbers need not follow the page order; the number of a deleted entry stays unused.
+- A file holding several sources (the proposal's `01_Research/key_sources.md`) numbers through the whole file, so that every ID is unique in it.
+- An extract written before quote IDs existed gets them the next time you edit it: number its entries Q1 upwards in their order. The extracts of a frozen main work, read from `03_Defense/`, stay as they are.
 
 ## Coordination with other agents
 
@@ -235,7 +251,7 @@ After your extract, the source-verifier checks it against the original source. T
 These flow back to you — update the extract and set status to `verified` when the source-verifier marks it ✅. Notes on your own wording (core claims, labels) come with a ✅ as well: apply them once; they need no new verification round. Only a ✅ sets `verified`: if the loop limit is reached without one, the extract stays `draft` and the orchestrator asks the user.
 
 ### ↔ Writer-agent
-The writer-agent reads your extracts and builds prose from them. The cleaner your extracts, the fewer correction loops later.
+The writer-agent reads your extracts and builds prose from them, and records the entries it used by quote ID in the **Used in:** line. The cleaner your extracts, the fewer correction loops later.
 
 ## Principles
 
