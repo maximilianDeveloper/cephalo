@@ -6,6 +6,8 @@ cephalo helps students and researchers produce high-quality academic work by orc
 
 The name is short for *cephalopod* — one orchestrator, many specialized arms (more on the name at the end of this file).
 
+**Getting started:** [`docs/setup_guide.md`](docs/setup_guide.md) shows the setup step by step, with screenshots and without command-line knowledge; the Quick start below describes the same in text.
+
 ---
 
 ## Status
@@ -84,13 +86,15 @@ No programming knowledge required for basic use. Scripts are optional.
 
 ## Quick start
 
+**Step by step with screenshots:** [`docs/setup_guide.md`](docs/setup_guide.md) walks through steps 1 and 2 with the setup assistant.
+
 ### 1. Download and extract
 
 Get cephalo from the project's GitHub page — a release archive from the Releases page, or **Code -> Download ZIP** — and unzip it anywhere; `git clone <repo-url>` works too. The setup script will ask you at launch time where your project should live.
 
 If you cloned instead of unzipping: use a `--target` path in step 2, so your project starts with its own fresh Git history instead of sitting on top of cephalo's.
 
-**New here? Prefer a visual start.** Open [`docs/setup-wizard.html`](docs/setup-wizard.html) in any browser — answer a few questions and it builds the exact setup command for your system and previews the folders it will create. It is fully offline and runs nothing; you copy the command and run it yourself in the next step. A walkthrough with screenshots is in [`docs/setup_guide.md`](docs/setup_guide.md).
+**New here? Prefer a visual start.** Open [`docs/setup-wizard.html`](docs/setup-wizard.html) in any browser — answer a few questions and it builds the exact setup command for your system and previews the folders it will create. It is fully offline and runs nothing; you copy the command and run it yourself in the next step.
 
 ### 2. Run the setup script
 
@@ -271,7 +275,7 @@ For small works (seminar papers), yes. For theses, you will regret not using Git
 
 ### Why do I have to unblock the launcher on Windows, and why is there none for macOS?
 
-Both systems mark every file a browser downloads. Windows then refuses to open the setup assistant's `cephalo-setup.cmd` and says it cannot be opened; macOS refuses a double-click on a downloaded script (unverified developer). The launcher cannot lift this itself: as long as the mark is set, it never runs. Only signed software from a registered developer passes this check, and cephalo ships scripts, not signed programs. So on Windows, unblock the launcher once (right-click it, choose **Properties**, tick **Unblock**, click **OK**), and on macOS the assistant offers no launcher at all. The simplest way needs no download on either system: click **Copy** in the setup assistant, paste the command into PowerShell or Terminal and press Enter.
+Both systems mark every file a browser downloads. Windows then refuses to open the setup assistant's `cephalo-setup.cmd` and says it cannot be opened; macOS refuses a double-click on a downloaded script (unverified developer). The launcher cannot lift this itself: as long as the mark is set, it never runs. Only signed software from a registered developer passes this check, and cephalo ships scripts, not signed programs. So on Windows, unblock the launcher once (right-click it, choose **Properties**, tick **Unblock**, click **OK**), and on macOS the assistant offers no launcher at all. The simplest way needs no download on either system: click **Copy** in the setup assistant, paste the command into PowerShell or Terminal and press Enter. [`docs/setup_guide.md`](docs/setup_guide.md) shows both ways with screenshots (steps 5 and 6).
 
 ### How much does it cost?
 

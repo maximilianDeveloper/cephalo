@@ -159,9 +159,9 @@ The agents work with what's already there. You don't need to rewrite anything th
 
 **`./setup.sh: Permission denied`** — the script needs the execute bit: `chmod +x setup.sh`.
 
-**macOS: a downloaded script cannot be opened (unverified developer)** — macOS blocks a double-click on scripts downloaded with a browser, so nothing has run. Click OK. For this reason `setup-wizard.html` offers no launcher for macOS: click **Copy** there, paste the command into Terminal and press Enter.
+**macOS: a downloaded script cannot be opened (unverified developer)** — macOS blocks a double-click on scripts downloaded with a browser, so nothing has run. Click OK. For this reason `setup-wizard.html` offers no launcher for macOS: click **Copy** there, paste the command into Terminal and press Enter, as step 5 of [`setup_guide.md`](setup_guide.md) shows.
 
-**Windows: the downloaded launcher cannot be opened (Internet security settings)** — Windows blocks a `.cmd` file downloaded with the browser, so nothing has run. Right-click `cephalo-setup.cmd`, choose **Properties**, tick **Unblock** at the bottom of the **General** tab and click **OK**, then double-click it again. In PowerShell, `Unblock-File "$HOME\Downloads\cephalo-setup.cmd"` does the same for a launcher in Downloads. The launcher cannot do this itself, since Windows does not run it while the file is blocked; clicking **Copy** in `setup-wizard.html` and pasting the command into PowerShell needs no unblocking.
+**Windows: the downloaded launcher cannot be opened (Internet security settings)** — Windows blocks a `.cmd` file downloaded with the browser, so nothing has run. Right-click `cephalo-setup.cmd`, choose **Properties**, tick **Unblock** at the bottom of the **General** tab and click **OK**, then double-click it again (step 6 of [`setup_guide.md`](setup_guide.md)). In PowerShell, `Unblock-File "$HOME\Downloads\cephalo-setup.cmd"` does the same for a launcher in Downloads. The launcher cannot do this itself, since Windows does not run it while the file is blocked; clicking **Copy** in `setup-wizard.html` and pasting the command into PowerShell needs no unblocking.
 
 **`setup.ps1 cannot be loaded because running scripts is disabled`** — PowerShell's execution policy. Allow this session only:
 ```powershell
