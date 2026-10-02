@@ -10,6 +10,10 @@ Dates follow ISO 8601 (`YYYY-MM-DD`).
 
 ## [1.0.1] — unreleased
 
+### Changed
+
+- **style-resolver** — names its ways to read real guideline PDFs: the texts in `_styleguide_rawtext/` when the user has run `scripts/extract_styleguide.sh` (as `docs/scripts.md` and the script's closing message suggest, though the definition never mentioned the folder), otherwise the Read tool, and no extraction code of its own. In a Windows trial run it wrote its own `pypdf` one-liners instead, whose console output garbled umlauts and dashes.
+
 ### Fixed
 
 - **`bibliography_check.py`** — the abbreviation `v.`/`v. d.` for `von`/`von der` counts only right before a surname and after no capitalized word, and a date range after it is prose as after `von`: a court case `(Roe v. Wade, 1973)`, `(v. Mai 2020 bis Juni 2021)` and `(Cranach d. Ä., 1530)` are no longer read as citations of Wade, Mai and Ä. (a false finding each in 1.0.0).
