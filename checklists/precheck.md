@@ -85,7 +85,7 @@ Step 0 runs before the style-resolver (Step 0.5), so on a new project `styleguid
 - [ ] No open `[format]` entry — required before the formatting phase (Phase B; in workflows without one, before the formatting check named in the workflow)
 - [ ] Citation guide version noted in `styleguide.md`
 
-**On open `❓` entries:** with an open `[content]` entry, do not draft chapters; with an open `[format]` entry, do not begin formatting work. First obtain clarification from the supervisor, then complete `styleguide.md`, then continue.
+**On open `❓` entries:** with an open `[content]` entry, do not draft chapters; with an open `[format]` entry, do not begin formatting work. First obtain clarification from the supervisor, then record the answers in `styleguide.md` as `.claude/agents/style-resolver.md` describes ("Recording answers to open questions"), then continue.
 
 ---
 

@@ -13,6 +13,7 @@ Dates follow ISO 8601 (`YYYY-MM-DD`).
 ### Changed
 
 - **style-resolver** — names its ways to read real guideline PDFs: the texts in `_styleguide_rawtext/` when the user has run `scripts/extract_styleguide.sh` (as `docs/scripts.md` and the script's closing message suggest, though the definition never mentioned the folder), otherwise the Read tool, and no extraction code of its own. In a Windows trial run it wrote its own `pypdf` one-liners instead, whose console output garbled umlauts and dashes.
+- **Open questions in `styleguide.md`** — a defined way to record the user's answers (`style-resolver.md`, "Recording answers to open questions", referenced from all three orchestrators and `checklists/precheck.md`): the answer becomes the rule's value with its provenance, the entry moves to a new "Resolved questions" section of `templates/styleguide.md`, a partial answer leaves a narrower entry open, and "does not occur in this work" closes the entries for tables, figures or statistics a work will not contain. The orchestrators record answers themselves instead of running the style-resolver again. Before, no definition said how; in a Windows trial run each round of answers cost a new style-resolver run, and ten blocking questions, eight of them on rules a literature review without figures never needs, took two rounds before the first extract.
 
 ### Fixed
 

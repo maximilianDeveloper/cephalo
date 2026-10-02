@@ -78,7 +78,7 @@ For each rule, note:
 
 Tag every entry under "Open questions" (the entries, not the inline markers, are what the other agents check), because the two kinds block different phases:
 
-- `[content]` — the answer changes what the writer drafts in Phase A, so it must be resolved before any chapter is written: `style.forbidden_pronouns`, `style.forbidden_evaluative`, `style.block_quote_word_threshold`, `style.footnotes`, `in_text.page_for_indirect`, `in_text.cf_prefix`, `document.page_count`, `headings.max_depth`, `numbers.decimal_separator`, `numbers.p_values`, `document.figure_resolution` and `captions.*` (built into tables and figures the data-agent makes in Phase A), and any other rule that changes wording, content or length.
+- `[content]` — the answer changes what the writer drafts in Phase A, so it must be resolved before any chapter is written: `style.forbidden_pronouns`, `style.forbidden_evaluative`, `style.block_quote_word_threshold`, `style.footnotes`, `in_text.page_for_indirect`, `in_text.cf_prefix`, `document.page_count`, `headings.max_depth`, `numbers.decimal_separator`, `numbers.p_values`, `document.figure_resolution` and `captions.*` (built into tables and figures the data-agent makes in Phase A; a work without them closes these entries with "does not occur in this work", see "Recording answers to open questions"), and any other rule that changes wording, content or length.
 - `[format]` — the answer changes only typesetting, so it can wait until the formatting phase (Phase B): all other keys (fonts, spacing, margins, pagination, headings layout, title page, bibliography layout, the notation of citations and page ranges).
 - When unsure, tag it `[content]`. An instruction-like passage (see step 1) is tagged `[format]`: it blocks no drafting, but the user should see it before Phase B.
 
@@ -135,6 +135,7 @@ The generated `styleguide.md` follows the template in `templates/styleguide.md`.
 - Pagination, title page, tables and figures (`pagination.*`, `title_page.*`, `captions.*`, `numbers.*`)
 - Style rules (forbidden pronouns, forbidden evaluative wording, block quote threshold, footnote policy)
 - **Open questions (`❓` items, each tagged `[content]` or `[format]`)** — always include this section even if empty
+- Resolved questions (answers recorded later, see "Recording answers to open questions")
 
 ## Common ambiguities to watch for
 
@@ -153,6 +154,16 @@ APA 7 discourages `see` or `cf.` before paraphrased citations. Some institutiona
 ### Page numbers for paraphrased citations
 
 APA 7 does not require page numbers for paraphrases. Many European institutions do. Extract from examples; note as `❓` if unclear.
+
+## Recording answers to open questions
+
+The user's answers to open questions do not need a new style-resolver run. Whoever receives them records them in `styleguide.md`: the orchestrator, or the user in workflows without one.
+
+1. Write the answer as the value of the rule, with its provenance in place of a guideline section: `[supervisor, via the user, YYYY-MM-DD]` or `[user, YYYY-MM-DD]`. Record it in the words given; whatever goes beyond them stays open.
+2. Move the entry from "Open questions" to "Resolved questions", with the answer and its provenance. An entry left under "Open questions" counts as open, ticked or not.
+3. An entry answered in part: record the answered part, and keep the rest under "Open questions" as a narrower entry with the same tag.
+4. "Does not occur in this work" (no tables, figures or statistics, for example) is an answer: record `n/a — does not occur in this work` as the value. If such an element is added later, open the entry again.
+5. Add a row to the version history.
 
 ## When to re-run
 

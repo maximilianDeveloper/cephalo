@@ -146,6 +146,15 @@ An entry here without a tag counts as `[content]`. A `❓` next to a rule above 
 
 ---
 
+## Resolved questions
+
+[Former open questions, moved here when the answer was written into the rule above (see "Recording answers to open questions" in `.claude/agents/style-resolver.md`). Only entries under "Open questions" block drafting or formatting.]
+
+- [x] [content] `style.forbidden_pronouns` — [answer] [supervisor, via the user, YYYY-MM-DD]
+- [x] [content] `numbers.p_values` — n/a — does not occur in this work [user, YYYY-MM-DD]
+
+---
+
 ## Version history
 
 | Date | Version | Change | By |
