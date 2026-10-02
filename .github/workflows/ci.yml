@@ -1180,6 +1180,8 @@ jobs:
             want=$1; shift
             set +e; "$@" >"$V/out.txt" 2>&1; code=$?; set -e
             if [ "$code" -ne "$want" ]; then cat "$V/out.txt"; echo "expected exit $want, got $code: $*"; exit 1; fi
+            # a crash also exits 1, the code for findings
+            if grep -q '^Traceback' "$V/out.txt"; then cat "$V/out.txt"; echo "traceback: $*"; exit 1; fi
           }
           # 0 = nothing of 8 or more words, 1 = a run of 8 or more, 2 = unreadable input
           expect 1 python scripts/verbatim_check.py "$V/chapter.md" "$V/src"
@@ -1194,6 +1196,7 @@ jobs:
           # quoted text is not counted; the guideline folder is not read
           if grep -q 'line 15\|narrow streets\|guide.txt' "$V/out.txt"; then cat "$V/out.txt"; echo "quoted text or a guideline was counted"; exit 1; fi
           grep -qF 'Sources: 1 extract(s) with 3 quotes, 1 PDF(s), 0 text file(s)' "$V/out.txt"
+          grep -qxF 'Summary: ❌ 1, ⚠️ 1, 🟡 1. Runs of 1-4 words are not listed;' "$V/out.txt"
           # Word: a paragraph in a quote style is a direct quote
           expect 1 python scripts/verbatim_check.py "$V/chapter.docx" "$V/src"
           grep -qF '⚠️  11 words, paragraph 1:' "$V/out.txt"
@@ -1316,6 +1319,84 @@ jobs:
           want = [("template_extract.md Q1", "12"), ("template_extract.md Q2", "12"), ("template_extract.md Q3", "13")]
           assert got == want, got
           EOF
+          # review cases: a quoted term inside a copied sentence does not cut the run; an
+          # apostrophe does not end a quotation in single marks; a field without a bullet
+          # ends the quote above it; a page bullet (Rule 7) and "Pages" headings; a
+          # bracketed letter in a quote; lazy continuation of a block quote; a UTF-16
+          # text source; other files in a source folder are listed, a .bib is not
+          mkdir -p "$V/review"
+          printf '%s\n' '# A (2020)' '' '## Pages 92–94' '' '### Q1' '' \
+            '**Original:** "Die sogenannte urbane Wärmeinsel bezeichnet den Temperaturunterschied zwischen einer Stadt und ihrem weniger dicht bebauten Umland."' \
+            '**Core claim:** Städte sind wärmer als ihr Umland, besonders nachts und im Sommer.' '' '### Q2' '' \
+            '- p. 87 ❓ (e-book pagination; print edition may differ)' \
+            '- **Original:** "Urban heat islands are the city’s most visible climate signal, and they are growing stronger every single year."' '' \
+            '### Q3' '' '- **Original:** "Die Wirkung von Stadtgrün hängt vor allem von der Wasserversorgung der Bäume im Sommer ab."' > "$V/review/a.md"
+          python -c "import sys; open(sys.argv[1], 'w', encoding='utf-16').write('Ein völlig anderer Satz über die Bedeutung von Parks in dicht bebauten Vierteln großer Städte.\n')" "$V/review/u16.txt"
+          printf '<html></html>' > "$V/review/page.html"; printf '@book{x}' > "$V/review/literature.bib"
+          printf '%s\n' 'Die „sogenannte“ urbane Wärmeinsel bezeichnet den „Temperaturunterschied“ zwischen einer Stadt und ihrem weniger dicht „bebauten“ Umland.' '' \
+            'Smith: ‘Urban heat islands are the city’s most visible climate signal, and they are growing stronger every single year.’' '' \
+            "Also: 'Urban heat islands are the city's most visible climate signal, and they are growing stronger every single year.'" '' \
+            'Städte sind wärmer als ihr Umland, besonders nachts und im Sommer.' '' \
+            'Keller betont, „[d]ie Wirkung von Stadtgrün hängt vor allem von der Wasserversorgung der Bäume im Sommer ab“.' '' \
+            '> Ein völlig anderer Satz über die Bedeutung von Parks' 'in dicht bebauten Vierteln großer Städte.' '' \
+            'Urban heat islands are the city’s most visible climate signal today.' > "$V/review.md"
+          expect 1 python scripts/verbatim_check.py "$V/review.md" "$V/review"
+          grep -qF '❌ 16 words, line 1:' "$V/out.txt"
+          grep -qx '    in a.md Q1 (p. 92–94)' "$V/out.txt"
+          grep -qF '⚠️  11 words, line 14:' "$V/out.txt"
+          grep -qx '    in a.md Q2 (p. 87 ❓)' "$V/out.txt"
+          grep -qF 'page.html (.html is not read' "$V/out.txt"
+          grep -qF 'Sources: 1 extract(s) with 3 quotes, 0 PDF(s), 1 text file(s)' "$V/out.txt"
+          if grep -q 'line [3579]\b\|line 1[01]\b\|literature.bib\|not found verbatim' "$V/out.txt"; then cat "$V/out.txt"; echo "a marked quote, a core claim or a .bib was counted"; exit 1; fi
+          # PDFs: a soft hyphen at a line end is joined when the chapter has the word, a
+          # compound hyphen is kept; mostly scanned pages are listed; an extract quote
+          # inside a longer PDF run is named too
+          mkdir -p "$V/pdfs"
+          python - "$V" <<'EOF'
+          import os, sys
+          from pypdf import PdfWriter
+          from pypdf.generic import DictionaryObject, NameObject, StreamObject
+          v = sys.argv[1]
+          def pdf(path, pages):
+              pw = PdfWriter()
+              for lines in pages:
+                  page = pw.add_blank_page(width=400, height=300)
+                  font = DictionaryObject({NameObject("/Type"): NameObject("/Font"), NameObject("/Subtype"): NameObject("/Type1"),
+                                           NameObject("/BaseFont"): NameObject("/Helvetica"), NameObject("/Encoding"): NameObject("/WinAnsiEncoding")})
+                  page[NameObject("/Resources")] = DictionaryObject({NameObject("/Font"): DictionaryObject({NameObject("/F1"): pw._add_object(font)})})
+                  content = StreamObject()
+                  content.set_data(("BT /F1 10 Tf 20 280 Td 12 TL " + " ".join(f"({l}) '" for l in lines) + " ET").encode("latin-1"))
+                  page[NameObject("/Contents")] = pw._add_object(content)
+              pw.write(path)
+          pdf(os.path.join(v, "pdfs", "scan.pdf"), [["Cover page of a book about cities and their climate today"], [], [], []])
+          pdf(os.path.join(v, "pdfs", "hyph.pdf"), [["Trees cool their surroundings through evapo\xad", "ration on hot days, a long-", "term effect that the city planners measured in detail."]])
+          pdf(os.path.join(v, "pdfs", "longer.pdf"), [["Context first. Die Wirkung von Stadtgrün hängt vor allem von der Wasserversorgung der Bäume im Sommer ab und nicht vom Boden."]])
+          EOF
+          printf '%s\n' 'Trees cool their surroundings through evaporation on hot days, a long-term effect that planners measured.' '' \
+            'Die Wirkung von Stadtgrün hängt vor allem von der Wasserversorgung der Bäume im Sommer ab und nicht vom Boden.' > "$V/pdfs.md"
+          expect 1 python scripts/verbatim_check.py "$V/pdfs.md" "$V/pdfs" "$V/review/a.md"
+          grep -qF '⚠️  14 words, line 1: "Trees cool their surroundings through evaporation on hot days, a long-term effect that"' "$V/out.txt"
+          grep -qF 'scan.pdf (3 of 4 pages without a text layer' "$V/out.txt"
+          grep -qx '    in longer.pdf (PDF page 1); a.md Q3 (p. 92–94, 15 of these words)' "$V/out.txt"
+          # Word: LibreOffice's quote style; a quote after a line break keeps its paragraph
+          # number; a chapter without text is an error
+          python - "$V" <<'EOF'
+          import os, sys
+          from docx import Document
+          from docx.enum.style import WD_STYLE_TYPE
+          d = Document()
+          d.styles.add_style("Quotations", WD_STYLE_TYPE.PARAGRAPH)
+          d.add_paragraph("Die Wirkung von Stadtgrün hängt vor allem von der Wasserversorgung der Bäume im Sommer ab.", style="Quotations")
+          p = d.add_paragraph("Erste Zeile")
+          p.add_run().add_break()
+          p.add_run("und dann „ein ganz und gar erfundenes Zitat aus keiner Quelle“.")
+          d.save(os.path.join(sys.argv[1], "lo.docx"))
+          Document().save(os.path.join(sys.argv[1], "empty.docx"))
+          EOF
+          expect 0 python scripts/verbatim_check.py "$V/lo.docx" "$V/review/a.md"
+          grep -qx '    paragraph 2: "ein ganz und gar erfundenes Zitat aus keiner Quelle"' "$V/out.txt"
+          expect 2 python scripts/verbatim_check.py "$V/empty.docx" "$V/review/a.md"
+          grep -q '^Error: no text found in' "$V/out.txt"
 
   windows:
     name: PowerShell 5.1 parse & setup smoke (Windows)

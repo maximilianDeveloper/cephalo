@@ -13,12 +13,13 @@ of checklists/plagiarism_protection.md:
 Runs of 1-4 words are not listed. A run counts across sentence boundaries
 and across citations, as Pandoc citekeys ([@key, p. 5]) or in author-year
 form ((Keller 2018, S. 44), (ebd.)); letter case and punctuation are
-ignored. Text in quotation marks („…“, “…”, "…", ‚…‘, ‘…’, »…«, «…»),
-Markdown block quotes and Word paragraphs in a quote style (also Pandoc's
-"Block Text") are marked direct quotes and are not counted. Each such quote
-of five or more words (its parts between […] or (…) omissions) is looked
-up in the sources instead; one that is not found verbatim is listed for a
-check by hand, without changing the exit code.
+ignored. A quotation of five or more words in quotation marks („…“, “…”,
+"…", ‚…‘, ‘…’, '…', »…«, «…»), Markdown block quotes and Word paragraphs in
+a quote style (also Pandoc's "Block Text") are marked direct quotes and are
+not counted; a shorter quoted term counts as ordinary text. Each direct
+quote (its parts between […] or (…) omissions) is looked up in the sources
+instead; one that is not found verbatim is listed for a check by hand,
+without changing the exit code.
 
 Sources are files or folders, searched recursively; folders named
 _guidelines (guidelines are not sources) and verification (the saved
@@ -33,8 +34,10 @@ reports) inside them are skipped:
     A PDF without a text layer (a scan) and a ZIP archive named .pdf are
     not checked: they are covered only through the quotes in their extract.
   - plain-text files (.txt)
-What cannot be read this way (a missing path, a Word or EPUB source, PDFs
-while pypdf is not installed) is listed under "Not checked".
+What cannot be read this way (a missing path, a file of another type, a
+PDF whose pages are mostly scans, PDFs while pypdf is not installed) is
+listed under "Not checked"; an .md file in a folder that is no extract (a
+handover or README) is passed over.
 
 Usage:
     python scripts/verbatim_check.py <chapter> <source> [<source> ...]
@@ -44,8 +47,9 @@ Usage:
 The chapter may be Markdown (.md), plain text (.txt) or Word (.docx).
 
 Exit codes: 0 = no run of 8 or more words, 1 = at least one run of 8 or more
-words (⚠️ or ❌), 2 = bad arguments, a chapter or source that cannot be read
-(the report is printed all the same), or no source text to compare against.
+words (⚠️ or ❌), 2 = bad arguments, a chapter that cannot be read or holds no
+text, a source that cannot be read (the report is printed all the same, with
+the file under "Could not be read"), or no source text to compare against.
 """
 
 import os
@@ -55,13 +59,16 @@ import unicodedata
 from pathlib import Path
 from typing import NamedTuple, Optional
 
-# Encoding guard for Windows consoles (CP1252 by default).
+# Encoding guard for Windows consoles (CP1252 by default); a file name that is
+# not valid UTF-8 is printed with escapes instead of ending in a traceback.
 for stream in (sys.stdout, sys.stderr):
-    if stream.encoding and stream.encoding.lower() != "utf-8":
-        try:
-            stream.reconfigure(encoding="utf-8")
-        except Exception:
-            pass
+    try:
+        if stream.encoding and stream.encoding.lower() != "utf-8":
+            stream.reconfigure(encoding="utf-8", errors="backslashreplace")
+        else:
+            stream.reconfigure(errors="backslashreplace")
+    except Exception:
+        pass
 
 # Thresholds of checklists/plagiarism_protection.md, section 1.
 POLISH, RISK, SERIOUS = 5, 8, 15
@@ -69,20 +76,28 @@ POLISH, RISK, SERIOUS = 5, 8, 15
 USAGE = "Usage: python scripts/verbatim_check.py <chapter> <source> [<source> ...]"
 CHAPTER_SUFFIXES = {".md", ".markdown", ".txt", ".docx"}
 SOURCE_SUFFIXES = {".md", ".markdown", ".txt", ".pdf"}
-# Source formats the script cannot read; listed as not checked, not skipped silently.
-UNREAD_SUFFIXES = {".doc", ".docx", ".odt", ".rtf", ".epub", ".mobi", ".djvu", ".zip"}
+# Files in a source folder that are not sources and go unmentioned; every other
+# file the script cannot read is listed as not checked.
+IGNORED_SUFFIXES = {".bib", ".csl", ".ris", ".enw", ".json", ".yaml", ".yml", ".log",
+                    ".ini", ".db", ".tmp", ".bak", ".py", ".r", ".sh", ".ps1"}
 # Guidelines are not sources; verification/ holds the saved reports, which quote the chapter.
 SKIPPED_FOLDERS = {"_guidelines", "verification"}
 
 WORD = re.compile(r"[^\W_]+")
-# A quotation within one paragraph: in double marks, German „…“ (also „…”),
+# A quotation within one paragraph: in double marks, German „…“ (also „…” and „…"),
 # English “…”, straight "…", and guillemets in both directions; in single marks,
-# German ‚…‘, English ‘…’ and single guillemets.
-QUOTED = re.compile(r'„[^„“”]*[“”]|“[^“”„]*”|"[^"]*"|»[^»«]*«|«[^«»]*»'
-                    r"|‚[^‚‘]*‘|‘[^‘’]*’|›[^›‹]*‹|‹[^‹›]*›")
+# German ‚…‘ (also ‚…’), English ‘…’, straight '…' and single guillemets. A ’ or '
+# followed by a letter is an apostrophe (city’s, don't), not a closing mark, and a
+# straight ' after a letter (students' work) does not open a quotation.
+QUOTED = re.compile(r'„[^„“”"]*[“”"]|“[^“”„]*”|"[^"]*"|»[^»«]*«|«[^«»]*»'
+                    r"|‚(?:[^‚‘’]|’(?=[^\W_]))*[‘’]|‘(?:[^‘’]|’(?=[^\W_]))*’"
+                    r"|(?<![^\W_])'(?:[^'\n]|'(?=[^\W_]))*'(?![^\W_])|›[^›‹]*‹|‹[^‹›]*›")
 # Omissions and insertions inside a quotation split it into parts that are
 # looked up separately: […], [...], (…), (...), …, ..., and [any insertion].
 OMISSION = re.compile(r"\[[^\]]*\]|\((?:…|\.{3})\)|…|\.{3}")
+# A bracketed letter that adapts a quotation to the sentence ("[d]ie Wirkung") is
+# part of its word, not an omission.
+ADAPTED_LETTER = re.compile(r"(?<![^\W_])\[([^\W\d_])\](?=[^\W_])")
 PANDOC_CITATION = re.compile(r"\[[^\[\]]*@[^\[\]]*\]")
 # A citation in parentheses, author-year style: "(Keller 2018, S. 44)", "(vgl. Keller
 # & Weber 2018; Smith 2020, p. 5)", "(2018)", "(ebd., S. 45)". Like a citekey it is
@@ -103,6 +118,22 @@ def normalize(text: str) -> str:
 
 def tokens(text: str) -> list:
     return [m.group(0).casefold() for m in WORD.finditer(text)]
+
+
+def quote_parts(quote: str) -> list:
+    """The parts of a quotation between omissions, as text."""
+    return OMISSION.split(ADAPTED_LETTER.sub(r"\1", quote))
+
+
+def read_file_text(path: Path) -> str:
+    """UTF-8 (with or without BOM), UTF-16 with BOM, otherwise Windows-1252."""
+    data = path.read_bytes()
+    if data.startswith((b"\xff\xfe", b"\xfe\xff")):
+        return data.decode("utf-16", errors="replace")
+    try:
+        return data.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        return data.decode("cp1252", errors="replace")
 
 
 def one_line(exc: Exception) -> str:
@@ -134,11 +165,7 @@ def blank(text: str, start: int, end: int) -> str:
 
 def read_markdown(path: Path) -> list:
     """Paragraph-sized pieces of a Markdown or text chapter: (text, first line, is_quote)."""
-    try:
-        raw = path.read_text(encoding="utf-8-sig")
-    except UnicodeDecodeError:
-        raw = path.read_text(encoding="cp1252", errors="replace")
-    text = normalize(raw).replace("\r\n", "\n").replace("\r", "\n")
+    text = normalize(read_file_text(path)).replace("\r\n", "\n").replace("\r", "\n")
     # YAML front matter at the top
     m = re.match(r"---\n.*?\n(?:---|\.\.\.)\n", text, re.S)
     if m:
@@ -150,7 +177,11 @@ def read_markdown(path: Path) -> list:
     lines = text.split("\n")
     buf, first, quote = [], 0, False
     for n, line in enumerate(lines, 1):
-        is_quote = bool(re.match(r"\s{0,3}>", line))
+        # a line without ">" right after a block-quote line continues the quote
+        # (lazy continuation), unless it starts a heading, list item or fence
+        is_quote = bool(re.match(r"\s{0,3}>", line)) or (
+            quote and bool(buf) and bool(line.strip())
+            and not re.match(r"\s{0,3}(?:#|[-*+]\s|\d+[.)]\s|```|~~~)", line))
         if not line.strip() or (buf and is_quote != quote):
             if buf:
                 pieces.append(("\n".join(buf), first, quote))
@@ -176,12 +207,16 @@ def read_docx(path: Path) -> list:
     except Exception as exc:
         fail(f"cannot read {path} as .docx ({type(exc).__name__}: {one_line(exc)})")
     pieces = []
-    for n, p in enumerate(doc.paragraphs, 1):
-        style = (p.style.name if p.style is not None else "") or ""
-        # Pandoc writes Markdown block quotes in the style "Block Text"
-        is_quote = bool(re.search(r"(?i)quote|zitat|block ?text", style))
-        if p.text.strip():
-            pieces.append((normalize(p.text), n, is_quote))
+    try:
+        for n, p in enumerate(doc.paragraphs, 1):
+            style = (p.style.name if p.style is not None else "") or ""
+            # Quote, Intense Quote, Zitat; Pandoc's "Block Text"; LibreOffice's
+            # "Quotations" / "Block Quotation"
+            is_quote = bool(re.search(r"(?i)quot|zitat|block ?text", style))
+            if p.text.strip():
+                pieces.append((normalize(p.text), n, is_quote))
+    except Exception as exc:
+        fail(f"cannot read {path} as .docx ({type(exc).__name__}: {one_line(exc)})")
     return pieces
 
 
@@ -205,11 +240,16 @@ def read_chapter(path: Path) -> Chapter:
             quotes.append((first, piece))
             brk()
             continue
-        quoted = [(m.start(), m.end()) for m in QUOTED.finditer(piece)]
+        # A quoted term of fewer than POLISH words (a technical term, scare quotes)
+        # is read as ordinary text: it cannot make a run by itself, and treating
+        # it as a quotation would cut a copied sentence around it into pieces.
+        quoted = [(m.start(), m.end()) for m in QUOTED.finditer(piece)
+                  if len(tokens(m.group(0))) >= POLISH]
         for s, e in quoted:
-            quotes.append((first + piece.count("\n", 0, s), piece[s + 1:e - 1]))
-        # an author-year citation is skipped without breaking the run
-        cited = [(m.start(), m.end()) for m in CITATION.finditer(piece)]
+            quotes.append((first + (0 if docx else piece.count("\n", 0, s)), piece[s + 1:e - 1]))
+        # a citation is skipped without breaking the run
+        cited = [(m.start(), m.end()) for pattern in (CITATION, PANDOC_CITATION)
+                 for m in pattern.finditer(piece)]
         pos = 0
         for s, e in quoted + [(len(piece), len(piece))]:
             for m in WORD.finditer(piece, pos, s):
@@ -244,17 +284,34 @@ WORDS = {}  # one str object per distinct word: a book-length source stays small
 
 
 def source_tokens(text: str) -> list:
-    return [WORDS.setdefault(w, w) for w in tokens(CITATION.sub(" ", text))]
+    text = PANDOC_CITATION.sub(" ", CITATION.sub(" ", text))
+    return [WORDS.setdefault(w, w) for w in tokens(text)]
 
 
-def page_of(heading: str) -> Optional[str]:
-    m = re.search(r"(?i)(?:\bpage|\bseite|\bpp?\.|\bs\.)\s*((?:\d+|[ivxlc]+\b)(?:\s*(?:[-–]|to|bis)\s*(?:\d+|[ivxlc]+\b))?(?:\s*ff?\.)?)", heading)
-    return re.sub(r"\s+", " ", m.group(1)) if m else None
+PAGE = re.compile(r"(?i)(?:\bpages?|\bseiten?|\bpp?\.|\bs\.)\s*((?:\d+|[ivxlc]+\b)"
+                  r"(?:\s*(?:[-–]|to|bis)\s*(?:\d+|[ivxlc]+\b))?(?:\s*ff?\.)?)")
+
+
+def page_of(text: str) -> Optional[str]:
+    """The page named in a heading or bullet, with a ❓ the extract put there."""
+    m = PAGE.search(text)
+    if not m:
+        return None
+    page = re.sub(r"\s+", " ", m.group(1))
+    return page + " ❓" if "❓" in text else page
 
 
 FIELD = re.compile(r"\s*(?:[-*+]\s*)?\*\*([^*:]+?):?\*\*:?\s*(.*)")
+# A line that starts a field ends the quote above it, with or without a bullet;
+# the colon or "?" keeps a quote line in bold emphasis from counting as one.
+LABEL = re.compile(r"\s*(?:[-*+]\s*)?\*\*[^*\n]+?(?::\*\*|\*\*\s*:|\?\*\*)")
 # The bullet layout of the research-agent's rule examples: - p. 42: "quote"
-PAGE_BULLET = re.compile(r"\s*[-*+]\s*((?:pp?\.|S\.|page|Seite)\s*[^:]{1,30}?)\s*:\s*(?=[\"„“»«])(.*)", re.I)
+PAGE_BULLET = re.compile(r"\s*[-*+]\s*((?:pp?\.|S\.|pages?|Seiten?)\s*[^:]{1,30}?)\s*:\s*(?=[\"„“»«'‘‚])(.*)", re.I)
+# A page bullet without a quote, as in Rule 7: - p. 87 ❓ (e-book pagination)
+PAGE_LINE = re.compile(r"\s*[-*+]\s*(?:pp?\.|S\.|pages?|Seiten?)\s*(?:\d|[ivxlc]+\b)", re.I)
+# What makes an .md file an extract (or a quote registry) rather than a note
+EXTRACT_MARK = re.compile(r"\*\*Original|^\s{0,3}#{1,6}\s+(?:Q\d+|Pages?\b|Seiten?\b)"
+                          r"|^\s*\|.*(?:original|zitat|quote)", re.I | re.M)
 
 
 def read_extract(path: Path) -> list:
@@ -265,18 +322,15 @@ def read_extract(path: Path) -> list:
     column (the source registry of workspace/state.md in seminar projects)
     is read row by row.
     """
-    try:
-        raw = path.read_text(encoding="utf-8-sig")
-    except UnicodeDecodeError:
-        raw = path.read_text(encoding="cp1252", errors="replace")
-    lines = normalize(raw).replace("\r\n", "\n").split("\n")
+    lines = normalize(read_file_text(path)).replace("\r\n", "\n").split("\n")
     seqs = []
     page, qid = None, None
+    section_page = None  # the page of the last heading that is not a quote ID
 
     def add(text: str, where: Optional[str], label: str, note: str = "") -> None:
         # the parts of a quote between […] omissions are not one run in the source
         first = True
-        for part in OMISSION.split(text):
+        for part in quote_parts(text):
             words = source_tokens(part)
             if words:
                 seqs.append(Sequence(words, [where] * len(words), label, "extract", note, first))
@@ -284,7 +338,8 @@ def read_extract(path: Path) -> list:
 
     def continuation(i: int, first: str) -> tuple:
         parts = [first]
-        while i < len(lines) and lines[i].strip() and not re.match(r"\s*(?:[-*+]\s+|#|\|)", lines[i]):
+        while (i < len(lines) and lines[i].strip() and not re.match(r"\s*(?:[-*+]\s+|#|\|)", lines[i])
+               and not LABEL.match(lines[i])):
             parts.append(lines[i].strip())
             i += 1
         return " ".join(parts), i
@@ -297,12 +352,13 @@ def read_extract(path: Path) -> list:
             heading = h.group(1).strip()
             q = re.match(r"(Q\d+)\b", heading)
             if q:
+                # a page bullet inside the previous entry ends with it
                 qid = q.group(1)
-                page = page_of(heading[q.end():]) or page
+                page = page_of(heading[q.end():]) or section_page
             else:
                 # any other heading starts a new page, or a part without one
                 qid = None
-                page = page_of(heading)
+                page = section_page = page_of(heading)
             i += 1
             continue
         if line.lstrip().startswith("|"):
@@ -312,7 +368,7 @@ def read_extract(path: Path) -> list:
         f = FIELD.match(line)
         if f:
             name, rest = f.group(1).strip().lower(), f.group(2)
-            if name in ("original", "original quote"):
+            if name == "original" or name.startswith(("original ", "original(")):
                 text, i = continuation(i + 1, rest)
                 add(text, page, label)
                 continue
@@ -326,8 +382,14 @@ def read_extract(path: Path) -> list:
             text, i = continuation(i + 1, b.group(2))
             add(text, page_of(b.group(1)) or page, label)
             continue
+        if PAGE_LINE.match(line):
+            page = page_of(line) or page
         i += 1
     return seqs
+
+
+def looks_like_extract(path: Path) -> bool:
+    return bool(EXTRACT_MARK.search(read_file_text(path)))
 
 
 def read_table(lines: list, i: int, path: Path, add) -> int:
@@ -353,7 +415,7 @@ def read_table(lines: list, i: int, path: Path, add) -> int:
     return i
 
 
-def read_pdf(path: Path) -> list:
+def read_pdf(path: Path, vocabulary: set, unchecked: list) -> list:
     try:
         import logging
         from pypdf import PdfReader
@@ -367,34 +429,40 @@ def read_pdf(path: Path) -> list:
     reader = PdfReader(str(path))
     if reader.is_encrypted and not reader.decrypt(""):
         raise ValueError("encrypted with a password")
+    def joins(a: str, b: str) -> bool:
+        # A word hyphenated at a line end ("Verdun-" + "stung") is joined when the
+        # chapter has the joined word; otherwise the hyphen is that of a compound
+        # ("long-" + "term", "Stadt-" + "und") and the parts stay apart.
+        return b[:1].islower() and (a + b).casefold() in vocabulary
+
     words, pages = [], []
     hyphen = False  # the previous page ended in a hyphenated word
+    sparse = 0      # pages with (almost) no text: scanned pages
     for n, pg in enumerate(reader.pages, 1):
-        text = normalize(pg.extract_text() or "")
-        # A word hyphenated at the end of a line ("Verdun-\nstung") is joined;
-        # before a capital letter the hyphen belongs to a compound ("Stadt-\nGrün").
-        text = re.sub(r"(\w)-[ \t]*\n[ \t]*([^\W\d_])",
-                      lambda m: m.group(1) + m.group(2) if m.group(2).islower() else m.group(0),
-                      text)
-        text = CITATION.sub(" ", text)
+        # before normalize(), which drops soft hyphens (U+00AD)
+        text = re.sub(r"([^\W\d_]+)[-\u00ad\u2010][ \t]*\r?\n[ \t]*([^\W\d_]+)",
+                      lambda m: m.group(1) + m.group(2) if joins(m.group(1), m.group(2)) else m.group(0),
+                      pg.extract_text() or "")
+        end = re.search(r"([^\W\d_]+)[-\u00ad\u2010]\s*$", text)
+        text = normalize(text)
         page_words = source_tokens(text)
-        first = WORD.search(text)
+        sparse += len(page_words) < POLISH
         # ... and so is one hyphenated across a page break
-        if hyphen and first and first.group(0)[0].islower() and words:
+        if hyphen and page_words and words and joins(words[-1], page_words[0]):
             joined = words[-1] + page_words.pop(0)
             words[-1] = WORDS.setdefault(joined, joined)
-        hyphen = bool(re.search(r"\w-\s*$", text))
+        hyphen = bool(end)
         words += page_words
         pages += [str(n)] * len(page_words)
+    total = len(reader.pages)
+    if words and total > 1 and sparse * 5 >= total:
+        unchecked.append(f"{path} ({sparse} of {total} pages without a text layer, scanned pages? "
+                         "Those were not compared)")
     return [Sequence(words, pages, path.name, "pdf")] if words else []
 
 
 def read_text(path: Path) -> list:
-    try:
-        raw = path.read_text(encoding="utf-8-sig")
-    except UnicodeDecodeError:
-        raw = path.read_text(encoding="cp1252", errors="replace")
-    words = source_tokens(normalize(raw))
+    words = source_tokens(normalize(read_file_text(path)))
     return [Sequence(words, [None] * len(words), path.name, "text")] if words else []
 
 
@@ -409,8 +477,9 @@ def source_files(arg: str, unchecked: list) -> list:
                 suffix = Path(f).suffix.lower()
                 if suffix in SOURCE_SUFFIXES:
                     found.append(Path(root) / f)
-                elif suffix in UNREAD_SUFFIXES:
-                    unchecked.append(f"{Path(root) / f} ({suffix} is not read: give a PDF or text version)")
+                elif not (f.startswith((".", "~$")) or suffix in IGNORED_SUFFIXES):
+                    unchecked.append(f"{Path(root) / f} ({suffix or 'no extension'} is not read: "
+                                     "give a PDF or text version)")
         return found
     try:
         with open(p, "rb"):
@@ -431,7 +500,7 @@ def source_files(arg: str, unchecked: list) -> list:
 # ---------------------------------------------------------------------------
 
 def find_runs(chapter: Chapter, seqs: list) -> list:
-    """Maximal runs of at least POLISH words: [(start, length, [(seq, pos)])]."""
+    """Maximal runs of at least POLISH words: [(start, length, [(seq, pos, length)])]."""
     ch = chapter.words
     # The chapter's word windows are indexed, not the sources': a few thousand
     # entries instead of one per source word, however long the sources are.
@@ -453,8 +522,13 @@ def find_runs(chapter: Chapter, seqs: list) -> list:
                 runs.setdefault((i, n), []).append((s, p))
     kept = []
     for (i, n), hits in sorted(runs.items(), key=lambda r: -r[0][1]):
-        if not any(j <= i and i + n <= j + m for j, m, _ in kept):
-            kept.append((i, n, hits))
+        outer = next((k for k in kept if k[0] <= i and i + n <= k[0] + k[1]), None)
+        if outer is None:
+            kept.append((i, n, [(s, p, n) for s, p in hits]))
+        else:
+            # a shorter run inside a longer one: its source is named too, since
+            # an extract quote carries the quote ID and printed page a PDF lacks
+            outer[2].extend((s, p, n) for s, p in hits)
     return sorted(kept)
 
 
@@ -475,14 +549,15 @@ def found_quotes(parts: list, seqs: list) -> set:
 
 def describe(seqs: list, hits: list, n: int) -> str:
     names = []
-    for s, p in hits:
+    for s, p, m in hits:
         seq = seqs[s]
-        pages = [pg for pg in seq.pages[p:p + n] if pg]
+        pages = [pg for pg in seq.pages[p:p + m] if pg]
         if seq.kind == "pdf" and pages:
             where = [f"PDF page {pages[0]}" if pages[0] == pages[-1] else f"PDF pages {pages[0]}-{pages[-1]}"]
         else:
             where = [f"p. {pages[0]}"] if pages else []
         where += [seq.note] if seq.note else []
+        where += [f"{m} of these words"] if m < n else []
         name = f"{seq.label} ({', '.join(where)})" if where else seq.label
         if name not in names:
             names.append(name)
@@ -524,10 +599,17 @@ def main() -> None:
              f"{chapter_path.suffix or 'a file without extension'}: {chapter_path}")
 
     chapter = read_chapter(chapter_path)
+    if not any(w is not None for w in chapter.words) and not chapter.quotes:
+        fail(f"no text found in {chapter_path}")
+    vocabulary = {w for w in chapter.words if w is not None}
 
     files, unchecked = [], []
+    named = set()  # files given as arguments, not found in a folder
     for arg in args[1:]:
-        files += [f for f in source_files(arg, unchecked) if f.resolve() != chapter_path.resolve()]
+        found = [f for f in source_files(arg, unchecked) if f.resolve() != chapter_path.resolve()]
+        if not Path(arg).is_dir():
+            named.update(f.resolve() for f in found)
+        files += found
 
     seqs, unreadable = [], []
     counts = {"extract": 0, "pdf": 0, "text": 0}
@@ -535,14 +617,15 @@ def main() -> None:
         suffix = f.suffix.lower()
         try:
             if suffix == ".pdf":
-                found = read_pdf(f)
+                found = read_pdf(f, vocabulary, unchecked)
                 if not found:
                     unchecked.append(f"{f} (no text layer, a scan?)")
             elif suffix == ".txt":
                 found = read_text(f)
             else:
                 found = read_extract(f)
-                if not found:
+                # a note found in a folder (handover.md, README.md) is not a source
+                if not found and (f.resolve() in named or looks_like_extract(f)):
                     unchecked.append(f"{f} (no quotes found: not an extract?)")
         except SystemExit:
             raise
@@ -579,8 +662,8 @@ def main() -> None:
 
     checks = []  # (place, quote, words of one part between omissions)
     for place, quote in chapter.quotes:
-        for part in OMISSION.split(quote):
-            words = tokens(CITATION.sub(" ", part))
+        for part in quote_parts(quote):
+            words = tokens(PANDOC_CITATION.sub(" ", CITATION.sub(" ", part)))
             if len(words) >= POLISH:
                 checks.append((place, quote, words))
     found = found_quotes([words for _, _, words in checks], seqs)
@@ -614,7 +697,7 @@ def main() -> None:
     else:
         print("✅ No verbatim run of 5 or more words outside quotation marks"
               + (" in the sources that were read." if unchecked or unreadable else "."))
-    print("text in quotation marks and block quotes is not counted (see checklists/plagiarism_protection.md).")
+    print("quotations of 5 or more words and block quotes are not counted (see checklists/plagiarism_protection.md).")
 
     if unreadable:
         sys.exit(2)
