@@ -84,7 +84,7 @@ Count verbatim word runs from the source (see `checklists/plagiarism_protection.
 | 8–14 | ⚠️ risk |
 | ≥15 | ❌ serious |
 
-Method: n-gram comparison against the original quote in the extract. At 🟡 or higher: mark the exact phrase.
+Method: n-gram comparison against the original quote in the extract. A run that crosses a sentence boundary counts as one run. At 🟡 or higher: mark the exact phrase.
 
 ### 9. List-citation sloppiness
 
@@ -141,6 +141,8 @@ When an error is found and the writer should correct:
 [e.g., "Add additional source Y as double-citation" or 
 "Replace term X with term Y from source"]
 ```
+
+A suggested fix names the direction: which term, which page, what to drop. Wording you suggest must itself pass steps 4 and 8, with the right page and no verbatim run of 5 or more words, or the writer takes over a new error.
 
 ## Cross-chapter consistency
 
