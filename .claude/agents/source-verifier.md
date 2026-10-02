@@ -53,7 +53,7 @@ Does the original passage actually say what the text claims? Compare paraphrase 
 ### 3. Terminology consistency
 Does the text use the same technical term as the source?
 
-**Common error:** Text says "Term X" while source says "Term Y" — if Y is a related but distinct term the source does not use, this is ⚠️.
+**Common error:** the source says "Term Y", the text says "Term X". If the source does not use X for this concept, and in particular if X is on the extract's "Terms NOT in source" list, this is ❌: technical terms are taken over, not paraphrased. Only a grammatical variant of the source's own term (another case, number or inflection) is ⚠️.
 
 ### 4. Page number accuracy
 Does the claim actually appear on the cited page? For multi-page claims, is the full range given?
@@ -84,7 +84,7 @@ Count verbatim word runs from the source (see `checklists/plagiarism_protection.
 | 8–14 | ⚠️ risk |
 | ≥15 | ❌ serious |
 
-Method: n-gram comparison against the original quote in the extract. At 🟡 or higher: mark the exact phrase.
+Method: n-gram comparison against the original quote in the extract. A run that crosses a sentence boundary counts as one run. At 🟡 or higher: mark the exact phrase.
 
 ### 9. List-citation sloppiness
 
@@ -114,10 +114,12 @@ Comment: [only for non-✅]
 | Symbol | Meaning |
 |---|---|
 | ✅ | correctly supported |
-| ⚠️ | mild imprecision (e.g., minor term-shift) |
-| ❌ | error (wrong quote, wrong page, unmarked secondary citation) |
+| ⚠️ | mild imprecision (e.g., a grammatical variant of the source's term) |
+| ❌ | error (wrong quote, wrong page, unmarked secondary citation, a term the source does not use) |
 | 🟡 | plagiarism polish flag (5–7 verbatim words; runs of 8–14 count as ⚠️ risk per step 8) |
 | ❓ | unverifiable (source missing or extract incomplete) |
+
+These symbols are status codes, not decoration: the orchestrator, the state file and the workflow's criteria search for them. Write them exactly as shown, also where you would otherwise avoid emojis; never replace them with words or ASCII labels such as `[OK]` or `[WARN]`.
 
 ## Immediate feedback format
 
@@ -139,6 +141,8 @@ When an error is found and the writer should correct:
 [e.g., "Add additional source Y as double-citation" or 
 "Replace term X with term Y from source"]
 ```
+
+A suggested fix names the direction: which term, which page, what to drop. Wording you suggest must itself pass steps 4 and 8, with the right page and no verbatim run of 5 or more words, or the writer takes over a new error.
 
 ## Cross-chapter consistency
 

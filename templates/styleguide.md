@@ -26,12 +26,12 @@
 - **`cf_prefix`:** [required / optional / forbidden]
 - **`nbsp_before_page`:** [yes / no — non-breaking space before page number]
 - **`page_range`:** [`15-16` or `15–16` (en-dash) or `15 to 16` or other]
-- **`multiple_sources`:** [several sources in one citation: separator and order, e.g., `(Brandt 2019; Okafor/Weiß 2021)`]
-- **`two_authors`:** [e.g., `Okafor/Weiß`, `Okafor & Weiß` or `Okafor und Weiß`]
+- **`multiple_sources`:** [several sources in one citation: separator and order, e.g., `(Müller 2019; Schmidt/Weber 2021)`]
+- **`two_authors`:** [e.g., `Schmidt/Weber`, `Schmidt & Weber` or `Schmidt und Weber`]
 - **`same_author_year`:** [e.g., `2019a`, `2019b`]
 - **`no_date`:** [e.g., `o. J.` or `n.d.`]
 - **`no_page_locator`:** [sources without page numbers, such as web pages: section, paragraph or nothing]
-- **`secondary_citation`:** [e.g., `(Moreau 2009, S. 58, zit. nach Lindqvist 2017, S. 114)`; see also `bibliography.secondary_original`]
+- **`secondary_citation`:** [e.g., `(Weber 1922, S. 31, zit. nach Keller 2018, S. 5)`; see also `bibliography.secondary_original`]
 
 ---
 

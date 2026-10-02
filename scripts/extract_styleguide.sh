@@ -26,7 +26,8 @@
 #   - pdftotext (poppler) as fallback if python / pypdf is not available
 #
 # Why not pdftotext directly?
-# pdftotext is not available by default on Windows (Git Bash). The script
+# pdftotext is not installed everywhere: Git for Windows ships one, but
+# many macOS and Linux systems have none. The script
 # prefers a pure-python path for portability and falls back to pdftotext
 # only when python / pypdf is unavailable. If no Python interpreter exists
 # at all, a limited pdftotext-only shell mode runs; in that mode disguised
@@ -206,7 +207,7 @@ py_path() {
 
 # Delegate to Python for all heavy lifting — handles file-type detection,
 # recursive search, safe ZIP extraction (ZipSlip-hardened), and pypdf.
-"$PYTHON_BIN" - "$(py_path "$GUIDELINES_DIR")" "$(py_path "$OUT_DIR")" "$HAVE_PDFTOTEXT" << 'PYEOF'
+"$PYTHON_BIN" - "$(py_path "$GUIDELINES_DIR")" "$(py_path "$OUT_DIR")" "$HAVE_PDFTOTEXT" "$GUIDELINES_DIR" "$OUT_DIR" << 'PYEOF'
 import os
 import sys
 import subprocess
@@ -235,6 +236,9 @@ for stream in (sys.stdout, sys.stderr):
 guidelines_dir = Path(sys.argv[1])
 out_dir = Path(sys.argv[2])
 have_pdftotext = sys.argv[3] == "1"
+# The folders as the user wrote them, for messages: on Windows the paths
+# above are converted to backslashes, while the header shows them as given.
+guidelines_label, out_label = sys.argv[4], sys.argv[5]
 
 try:
     from pypdf import PdfReader
@@ -357,7 +361,7 @@ pdf_files = sorted(
 )
 
 if not pdf_files:
-    print(f"Warning: no PDF files found in {guidelines_dir}", file=sys.stderr)
+    print(f"Warning: no PDF files found in {guidelines_label}", file=sys.stderr)
 
 used_names = set()
 written = set()
@@ -469,15 +473,15 @@ stale = sorted(p.name for p in out_dir.glob('*.txt') if p.name not in written)
 if stale:
     print("Note: not written by this run (left over from an earlier run?): "
           + ", ".join(stale[:10]) + (" ..." if len(stale) > 10 else ""), file=sys.stderr)
-    print(f"      Delete them from {out_dir} before invoking the style-resolver, or it reads them too.",
+    print(f"      Delete them from {out_label} before invoking the style-resolver, or it reads them too.",
           file=sys.stderr)
 if count == 0:
     print()
-    print(f"Warning: no documents were successfully processed from {guidelines_dir}", file=sys.stderr)
+    print(f"Warning: no documents were successfully processed from {guidelines_label}", file=sys.stderr)
     sys.exit(1)
 print()
 print("Next step: invoke the style-resolver agent in Claude Code.")
-print(f"It will read the extracted texts in {out_dir} and produce styleguide.md.")
+print(f"It will read the extracted texts in {out_label} and produce styleguide.md.")
 if errors > 0:
     sys.exit(1)
 PYEOF

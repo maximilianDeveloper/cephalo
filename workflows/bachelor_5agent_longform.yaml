@@ -206,7 +206,7 @@ phases:
     
     per_chapter:
       - research-agent reads extracts from 02_Literature/extracts/
-      - writer-agent drafts text with citekey-based citations
+      - writer-agent drafts the text; citations as citekeys only if 00_Decisions.md records that they are rendered (pre-check, section 6)
       - source-verifier: sentence-by-sentence verification
       - format-verifier: critical format errors only
       - Feedback loop max 3

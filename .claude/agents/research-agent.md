@@ -105,7 +105,7 @@ Maintain **two lists** per page:
 
 The second list is the more important one. It prevents the most common error: a writer-agent substituting a "related" term that the source does not actually use.
 
-How to find the "NOT in source" list: think of 2–3 related terms from the topic area that a reader might expect. Check whether the source actually uses them. What it doesn't use goes on the negative list.
+How to find the "NOT in source" list: think of 2–3 related terms from the topic area that a reader might expect. Check whether the source actually uses them. What it doesn't use goes on the negative list. List at most three per entry, the ones a writer is most likely to reach for; a longer list costs time without making the extract safer.
 
 ### Rule 3: Multi-page claims use full ranges
 
@@ -167,7 +167,7 @@ Those judgments belong to the writer-agent during chapter construction.
 
 ### Rule 7: Document uncertainty
 
-When unsure (unclear PDF, discrepant page numbering between e-book and print), mark with `❓`. Do not guess — that creates downstream errors.
+When unsure (unclear PDF, discrepant page numbering between e-book and print), mark with `❓`. Do not guess — that creates downstream errors. The `❓` is a status code the other agents search for: write this character, also where you would otherwise avoid emojis, never a word in its place.
 
 ```markdown
 - p. 87 ❓ (e-book pagination; print edition may differ)
@@ -240,7 +240,7 @@ The writer-agent reads your extracts and builds prose from them. The cleaner you
 ## Principles
 
 - **Extract > summary** — preserve original wording, don't smooth it
-- **Completeness > selection** — better to extract too many passages than too few
+- **Completeness > selection** — better to extract too many passages than too few. This applies to passages, not to the fields of an entry: keep each entry to the fields of the output format
 - **Document uncertainty** — `❓` instead of guessing
 - **No evaluation** — neutral preparer, not editor
 - **Inspect file contents, not filenames** — institutional sources can be misleadingly named

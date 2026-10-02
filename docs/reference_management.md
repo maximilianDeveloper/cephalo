@@ -167,6 +167,8 @@ Use your structure's `literature.bib` path from "Set up auto-export" (flat: `--b
 
 **Prerequisite:** a CSL file matching your institution's citation style. APA 7 is the closest standard for many institutions; download from [zotero.org/styles](https://www.zotero.org/styles). For institution-specific deviations, you may need to edit the CSL.
 
+Without Pandoc or such a CSL file, citekeys never become citations in your styleguide's form. The pre-check therefore records whether the chapters cite by citekey (`checklists/precheck.md`, section 6); if not, the writer-agent writes citations in the styleguide's format directly, and `literature.bib` still serves the research-agent's citekey check. In citekey form, a German prefix and locator work as usual (`[vgl. @mueller2019, S. 44]`), and a secondary citation whose original stays out of the bibliography carries the original as plain text: `[Weber 1922, S. 31, zit. nach @keller2018, S. 5]`.
+
 For LaTeX users: biblatex with biber works similarly. cephalo does not prescribe a tool — use what you're comfortable with.
 
 ---

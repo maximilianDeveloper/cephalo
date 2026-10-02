@@ -777,10 +777,10 @@ jobs:
                           "(ter Horst, 2020). (ten Brink 2017). (siehe Hahn, 2020, S. 3). (cf. Smith, 2020, p. 15). (nach Vogel 2020). "
                           "Mayer (2020, S. 15) zeigt. Krause (2021: 15) auch. Brown et al. (2021) argue. "
                           "(v. Rosenstiel 2007). (v. d. Oelsnitz, 2019).")
-          # secondary citations: the original before the marker needs no entry (Moreau,
+          # secondary citations: the original before the marker needs no entry (Ortlieb,
           # Abel), and an original that has one is not reported as uncited (Zorn)
-          f.add_paragraph("(Moreau 2009, S. 58, zitiert nach Lindqvist 2017, S. 114). (Abel, 1999, as cited in Kurz, 2016). "
-                          "(Zorn 2001, zit. n. Lindqvist 2017).")
+          f.add_paragraph("(Ortlieb 2009, S. 58, zitiert nach Sander 2017, S. 114). (Abel, 1999, as cited in Kurz, 2016). "
+                          "(Zorn 2001, zit. n. Sander 2017).")
           f.add_heading("7 Literaturverzeichnis:", 1)
           for entry in ("Müller, H./Schmidt, K. (2019). A.", "Öztürk, A. (2020). B.", "Dawson, R., Ellis, S., & Fowler, T. (2018). C.",
                         "De Vries, R. (2018). D.", "Weber, E. (2020). E.", "Fischer, Hans/Wolf, Karl (2017): G.",
@@ -793,7 +793,7 @@ jobs:
                         "Hahn, H. (2020). AA.", "Smith, J. (2020). AB.", "Vogel, V. (2020). AC.", "Mayer, M. (2020). AD.",
                         "Krause, K. (2021). AE.", "Brown, B., Green, G., & White, W. (2021). AF.",
                         "von Rosenstiel, L. (2007). AG.", "von der Oelsnitz, D. (2019). AH.",
-                        "Lindqvist, E. (2017). AI.", "Kurz, K. (2016). AJ.", "Zorn, Z. (2001). AK."):
+                        "Sander, E. (2017). AI.", "Kurz, K. (2016). AJ.", "Zorn, Z. (2001). AK."):
               f.add_paragraph(entry)
           f.save(os.path.join(w, "forms.docx"))
           # prose that looks like a citation with a capitalized particle, a filler or
@@ -915,7 +915,7 @@ jobs:
           test "$(wc -l < "$W/out.txt")" -eq 1
           expect 0 python scripts/bibliography_check.py "$W/forms.docx"
           sed -n '/original of a secondary citation/,/^$/p' "$W/out.txt" > "$W/secondary.txt"
-          for a in Moreau Abel; do grep -qx "    $a" "$W/secondary.txt"; done
+          for a in Ortlieb Abel; do grep -qx "    $a" "$W/secondary.txt"; done
           if grep -qx "    Zorn" "$W/out.txt"; then echo "listed original Zorn reported"; exit 1; fi
           expect 1 python scripts/bibliography_check.py "$W/prose.docx"
           # (Adams: a German genitive counts as the listed name only in that form;

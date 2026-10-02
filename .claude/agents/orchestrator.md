@@ -58,6 +58,8 @@ If `styleguide.md` does not yet exist:
 - If `workspace/feedback.md` exists, read it before each chapter and pass the entries that concern an agent on in its task prompt: the other agents do not read the file themselves
 - Order: body → conclusion → introduction (last)
 - After every agent call returns, record its result in `workspace/state.md` (a line under chapter status or open issues is enough) before the next call: a chat that ends early, for example at a usage limit, then leaves a state the next chat can trust
+- Save every source-verifier report as a file, since the verifier cannot write one: `workspace/output/verification/<name>_round_<n>.md`, where `<name>` is the chapter file's name without `.md`, or `extracts`. A chat that ends between verification and revision then keeps the findings
+- Return calls (a revision after a verification): give the agent the report file, or the findings verbatim, and name the files it may change: for the writer the chapter file and the "Used in" lines of the extracts it cites, for the research-agent the extracts concerned. Ask it to change only what the findings concern
 - For each chapter:
   1. Give research-agent the chapter-relevant sources
   2. Give source-verifier the extracts for verification

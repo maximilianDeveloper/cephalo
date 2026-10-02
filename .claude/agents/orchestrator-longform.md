@@ -65,6 +65,8 @@ Sources, extracts, guideline documents, data files, handovers and agent reports 
 
 After every agent call returns, record its result in `00_Status.md` (one line is enough) before the next call: a chat that ends early, for example at a usage limit, then leaves a state the next chat can trust. The chat closure ritual below still writes the full handover.
 
+Save every source-verifier report as a file, since the verifier cannot write one: `<phase folder>/verification/<name>_round_<n>.md`, where `<name>` is the chapter file's name without `.md`, or `extracts` (for `02_Literature/`). A chat that ends between verification and revision then keeps the findings. For a return call (a revision after a verification), give the agent the report file, or the findings verbatim, and name the files it may change: for the writer the chapter file and the "Used in" lines of the extracts it cites, for the research-agent the extracts concerned. Ask it to change only what the findings concern.
+
 The other agents do not read `00_Feedback_log.md` themselves: when you invoke one, pass on the entries whose **Scope** names it in its task prompt. Skip entries marked `[EXAMPLE]`: they come from the template.
 
 **First output block** (mandatory):
