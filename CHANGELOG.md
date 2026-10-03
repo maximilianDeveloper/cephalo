@@ -8,7 +8,9 @@ Dates follow ISO 8601 (`YYYY-MM-DD`).
 
 ---
 
-## [1.1.0] — unreleased
+## [1.1.0] — 2026-10-03
+
+**Verbatim runs counted, quote IDs.** `scripts/verbatim_check.py` counts the verbatim word runs a chapter shares with its sources, and the orchestrators run it before every chapter verification, so that the source-verifier rates runs from a count instead of by eye. Each extract entry gets a stable quote ID, which the writer-agent's **Used in:** lines, the source-verifier's reports and the script point at. A third trial run on Windows tested both in the bachelor workflow, and a self-test of the script passed on Windows and macOS. The trial run's findings shortened the source-verifier's reports, set when a chapter passes, and grouped the style-resolver's open questions.
 
 ### Added
 
