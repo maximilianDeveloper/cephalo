@@ -84,6 +84,11 @@ Tag every entry under "Open questions" (the entries, not the inline markers, are
 - `[format]` — the answer changes only typesetting, so it can wait until the formatting phase (Phase B): all other keys (fonts, spacing, margins, pagination, headings layout, title page, bibliography layout, the notation of citations and page ranges).
 - When unsure, tag it `[content]`. An instruction-like passage (see step 1) is tagged `[format]`: it blocks no drafting, but the user should see it before Phase B.
 
+Keep two kinds of open questions apart, so that the list stays short enough to answer:
+
+- **Contradictory or unclear:** the guidelines say something about the rule, but in two ways or unclearly. One entry per rule, with the passages and the competing readings.
+- **Not covered:** the guidelines say nothing about the rule. Group these: one entry per section of the template and tag, listing its keys, for example `- [ ] ❓ [format] Footnotes — not covered by the guidelines: footnotes.font, footnotes.size, footnotes.line_spacing`. One answer can then close the group ("as the body text, but 10 pt and single-spaced"). A short guideline leaves most keys uncovered: one entry per key turns a three-page guideline into thirty and more questions, most of them typesetting details a supervisor answers in one sentence. Each key of a group still has `❓` as its value.
+
 ### 4. Propose directory structure (minimal scaffolding only)
 
 When the project was set up with minimal scaffolding, the user expects you to propose the remaining directory structure based on what the guidelines require.
@@ -119,7 +124,7 @@ If you want changes, describe them and I'll adjust.
 At the end, give the user:
 
 - How many rules were extracted, with brief categorization
-- List of `❓` items requiring clarification, `[content]` items first (they block drafting; `[format]` items block only the formatting phase). If the course assignment rules out tables, figures or statistics (a literature review without own data, for example), say so next to those entries, so that the user can close them in one answer
+- List of `❓` items requiring clarification, `[content]` items first (they block drafting; `[format]` items block only the formatting phase), and within each the contradictory or unclear rules before the uncovered sections. If the course assignment rules out tables, figures or statistics (a literature review without own data, for example), say so next to those entries, so that the user can close them in one answer
 - If applicable: the directory proposal
 - A git commit suggestion (in a multi-project sub-project with `git add -A`: run there, `git add .` leaves `../00_Shared_Materials/styleguide.md` out)
 
@@ -165,9 +170,9 @@ APA 7 does not require page numbers for paraphrases. Many European institutions 
 
 The user's answers to open questions do not need a new style-resolver run. Whoever receives them records them in `styleguide.md`: the orchestrator, or the user in workflows without one.
 
-1. Write the answer as the value of the rule, with its provenance in place of a guideline section: `[supervisor, via the user, YYYY-MM-DD]` or `[user, YYYY-MM-DD]`. Record it in the words given; whatever goes beyond them stays open.
+1. Write the answer as the value of the rule, with its provenance in place of a guideline section: `[supervisor, via the user, YYYY-MM-DD]` or `[user, YYYY-MM-DD]`. Record it in the words given; whatever goes beyond them stays open. An answer the user gives as provisional, until the supervisor confirms it, gets `[provisional, user, YYYY-MM-DD]`: it counts as an answer, and the orchestrator keeps a line for it under the open issues of the state file until the user confirms it, then drops "provisional".
 2. Move the entry from "Open questions" to "Resolved questions", with the answer and its provenance. An entry left under "Open questions" counts as open, ticked or not.
-3. An entry answered in part: record the answered part, and keep the rest under "Open questions" as a narrower entry with the same tag.
+3. An entry answered in part, also a group answered for some of its keys: record the answered part, and keep the rest under "Open questions" as a narrower entry with the same tag.
 4. "Does not occur in this work" (no tables, figures or statistics, for example) is an answer: record `n/a — does not occur in this work` as the value. If such an element is added later, open the entry again.
 5. Add a row to the version history.
 
