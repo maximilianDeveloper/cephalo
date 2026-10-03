@@ -20,9 +20,10 @@ not counted; the words of a shorter quotation (a term in quotation marks)
 keep a run going but are not counted in its length. Each direct
 quote (its parts between […] or (…) omissions) is looked up in the sources
 instead; one that is not found verbatim is listed for a check by hand,
-without changing the exit code. A bibliography at the end of the chapter
-(from a heading such as "Literaturverzeichnis" or "References" on) is not
-counted.
+without changing the exit code. The chapter's bibliography (from a heading
+such as "Literaturverzeichnis" or "References" to the next heading of its
+level) is not counted if every entry in it has a year, as in a reference
+list; a body section of that name, an appendix and footnotes count.
 
 Sources are files or folders, searched recursively; folders named
 _guidelines (guidelines are not sources) and verification (the saved
@@ -33,8 +34,8 @@ reports) inside them are skipped:
     with an "Original quote" column, such as the source registry in the
     workspace/state.md of a seminar paper, is read row by row.
   - PDFs (.pdf): the text layer, read with pypdf, without the running
-    headers, footers and page numbers, so that a run goes on across a page
-    break; a page here is the PDF viewer's page index, which may differ
+    headers and footers (also those alternating between left and right
+    pages) and page numbers, so that a run goes on across a page break; a page here is the PDF viewer's page index, which may differ
     from the printed page number.
     A PDF without a text layer (a scan) and a ZIP archive named .pdf are
     not checked: they are covered only through the quotes in their extract.
@@ -117,12 +118,17 @@ CITATION = re.compile(
     r"|\d{4}[a-z]?(?:\s*[,:;][^()]{0,80})?"
     r"|(?:[Ee]bd|[Ee]benda|[Ii]bid(?:em)?)\.?(?:[,\s][^()]{0,80})?)\)")
 HTML_COMMENT = re.compile(r"<!--.*?-->", re.S)
-# The heading of a chapter's bibliography: the titles listed under it are no runs.
+# The heading of a chapter's bibliography (as in bibliography_check.py, and more):
+# the titles listed under it are no runs.
 BIBLIOGRAPHY_HEADINGS = {"bibliography", "references", "reference list", "works cited", "literature",
-                         "literaturverzeichnis", "literatur", "quellenverzeichnis",
-                         "quellen- und literaturverzeichnis"}
+                         "sources", "literaturverzeichnis", "literatur", "verwendete literatur",
+                         "bibliographie", "quellenverzeichnis", "quellen", "quellen- und literaturverzeichnis",
+                         "literatur- und quellenverzeichnis"}
+# A year (or "no date") in a paragraph: every entry of a reference list has one.
+YEAR = re.compile(r"\b(?:1[5-9]|20)\d{2}[a-z]?\b|\bo\.\s?J\.|\bn\.\s?d\.", re.I)
+ROMAN = r"(?:m{0,3}(?:cm|cd|d?c{0,3})(?:xc|xl|l?x{0,3})(?:ix|iv|v?i{0,3}))"
 # A line of a PDF page that is only its number: "117", "- 12 -", "Seite 3", "iv", "3 / 10"
-PAGE_NUMBER_LINE = re.compile(r"(?i)\s*[-–—]?\s*(?:(?:seite|page|s\.|p\.)\s*)?(?:\d{1,4}|[ivxlc]{1,7})"
+PAGE_NUMBER_LINE = re.compile(r"(?i)\s*[-–—]?\s*(?:(?:seite|page|s\.|p\.)\s*)?(?:\d{1,4}|(?=[ivxlcdm])" + ROMAN + r")"
                               r"(?:\s*(?:/|of|von)\s*\d{1,4})?\s*[-–—]?\s*")
 FOOTNOTE_MARK = re.compile(r"\[\^[^\]]*\]")
 
@@ -173,7 +179,7 @@ class Chapter(NamedTuple):
     unit: str              # "line" or "paragraph"
     quotes: list           # (place, quotation text) of the marked direct quotes
     quoted: list           # for each entry of words: True inside a short quotation
-    bibliography: Optional[int] = None  # line or paragraph where the bibliography starts
+    bibliography: Optional[tuple] = None  # its first and last line or paragraph (None: to the end)
 
 
 def blank(text: str, start: int, end: int) -> str:
@@ -182,34 +188,80 @@ def blank(text: str, start: int, end: int) -> str:
 
 
 def bibliography_heading(text: str) -> bool:
-    """A heading such as "Literaturverzeichnis", "7 References" or "Bibliography:"."""
-    key = re.sub(r"^\d+(?:\.\d+)*\.?\s+", "", text.strip().lower())
-    return key.rstrip(".:").strip() in BIBLIOGRAPHY_HEADINGS
+    """
+    A heading such as "Literaturverzeichnis", "7 References", "VII. Literatur"
+    or "**Bibliography:**". One numbered as a subsection ("2.1 Literature")
+    belongs to the body.
+    """
+    key = text.strip().strip("*_ ").strip()
+    if re.match(r"\d+\.\d", key):
+        return False
+    key = re.sub(r"^(?:\d+|" + ROMAN + r"|[a-z])\.?\s+", "", key, count=1, flags=re.I)
+    return key.lower().rstrip(".:").strip() in BIBLIOGRAPHY_HEADINGS
+
+
+def reference_list(paragraphs: list) -> bool:
+    """Every paragraph of the section has a year, apart from short sub-headings."""
+    paragraphs = [p for p in paragraphs if p.strip()]
+    return any(YEAR.search(p) for p in paragraphs) and all(
+        YEAR.search(p) or len(p.split()) <= 6 for p in paragraphs)
+
+
+def bibliography_section(headings: list, count: int) -> Optional[tuple]:
+    """
+    The (start, end) of a chapter's bibliography among its items 0..count-1,
+    end exclusive. headings: (index, level, rank, text) of its headings, level
+    1 the highest. As in bibliography_check.py, the highest-level bibliography
+    heading wins (rank breaks a tie, then the order), and the section ends at
+    the next heading of the same or a higher level that is not a bibliography
+    heading, so that an appendix after it still counts.
+    """
+    found = [h for h in headings if bibliography_heading(h[3])]
+    if not found:
+        return None
+    start, level, _, _ = min(found, key=lambda h: (h[1], h[2], h[0]))
+    end = next((i for i, lv, _, text in headings
+                if i > start and lv <= level and not bibliography_heading(text)), count)
+    return start, end
 
 
 def read_markdown(path: Path) -> tuple:
     """
     Paragraph-sized pieces of a Markdown or text chapter, (text, first line,
-    is_quote), and the line where its bibliography starts, if it has one.
+    is_quote), and the first and last line of its bibliography, if it has one.
     """
     text = normalize(read_file_text(path)).replace("\r\n", "\n").replace("\r", "\n")
     # YAML front matter at the top
     m = re.match(r"---\n.*?\n(?:---|\.\.\.)\n", text, re.S)
     if m:
         text = blank(text, 0, m.end())
+    # footnote definitions ("[^1]: ..." and their indented lines) are body text
+    footnotes, inside = set(), False
+    for n, line in enumerate(text.split("\n")):
+        inside = bool(re.match(r"\[\^[^\]]+\]:", line)) or (inside and bool(re.match(r"\s{2,}\S|\t", line)))
+        if inside:
+            footnotes.add(n)
     for pattern in (HTML_COMMENT, PANDOC_CITATION, FOOTNOTE_MARK):
         for m in reversed(list(pattern.finditer(text))):
             text = blank(text, m.start(), m.end())
     pieces = []
     lines = text.split("\n")
-    # everything from the last bibliography heading on is a list of titles
-    cut = None
+    # The bibliography is a list of titles: its lines are left out (blanked, so
+    # that the line numbers stay) if it looks like one.
+    headings = []
     for n, line in enumerate(lines):
-        h = re.match(r"\s{0,3}#{1,6}\s+(.*?)\s*(?:\{[^}]*\})?\s*#*\s*$", line)
-        if h and bibliography_heading(h.group(1)):
-            cut = n
-    if cut is not None:
-        lines = lines[:cut]
+        h = re.match(r"\s{0,3}(#{1,6})\s+(.*?)\s*(?:\{[^}]*\})?\s*#*\s*$", line)
+        if h:
+            headings.append((n, len(h.group(1)), 0, h.group(2)))
+    cut = bibliography_section(headings, len(lines))
+    if cut:
+        body = [n for n in range(cut[0] + 1, cut[1]) if n not in footnotes]
+        paragraphs = "\n".join(lines[n] if n in body else "" for n in range(cut[0] + 1, cut[1])).split("\n\n")
+        if reference_list(paragraphs):
+            for n in [cut[0]] + body:
+                lines[n] = ""
+        else:
+            cut = None
     buf, first, quote = [], 0, False
     for n, line in enumerate(lines, 1):
         # a line without ">" right after a block-quote line continues the quote
@@ -228,13 +280,14 @@ def read_markdown(path: Path) -> tuple:
         buf.append(re.sub(r"^\s{0,3}>\s?", "", line) if is_quote else line)
     if buf:
         pieces.append(("\n".join(buf), first, quote))
-    return pieces, (cut + 1 if cut is not None else None)
+    # 1-based first and last line, the last None when it runs to the end
+    return pieces, (cut and (cut[0] + 1, cut[1] if cut[1] < len(lines) else None))
 
 
 def read_docx(path: Path) -> tuple:
     """
     Paragraphs of a Word chapter, (text, paragraph number, is_quote), and the
-    paragraph where its bibliography starts, if it has one.
+    first and last paragraph of its bibliography, if it has one.
     """
     try:
         from docx import Document
@@ -244,7 +297,7 @@ def read_docx(path: Path) -> tuple:
         doc = Document(str(path))
     except Exception as exc:
         fail(f"cannot read {path} as .docx ({type(exc).__name__}: {one_line(exc)})")
-    pieces = []
+    pieces, headings = [], []
     try:
         for n, p in enumerate(doc.paragraphs, 1):
             style = (p.style.name if p.style is not None else "") or ""
@@ -253,13 +306,22 @@ def read_docx(path: Path) -> tuple:
             is_quote = bool(re.search(r"(?i)quot|zitat|block ?text", style))
             if p.text.strip():
                 pieces.append((normalize(p.text), n, is_quote))
+                # heading level from the style ("Heading 2", "Überschrift 2", "Title");
+                # a plain paragraph "Literatur" counts as level 1 but yields to a styled one
+                h = re.match(r"(?i)(?:heading|überschrift)\s*(\d)", style)
+                if h or re.match(r"(?i)title|titel", style):
+                    headings.append((n, int(h.group(1)) if h else 0, 0, normalize(p.text)))
+                elif bibliography_heading(p.text):
+                    headings.append((n, 1, 1, normalize(p.text)))
     except Exception as exc:
         fail(f"cannot read {path} as .docx ({type(exc).__name__}: {one_line(exc)})")
-    # everything from the last bibliography heading on is a list of titles
-    cut = next((n for text, n, _ in reversed(pieces) if bibliography_heading(text)), None)
-    if cut is not None:
-        pieces = [piece for piece in pieces if piece[1] < cut]
-    return pieces, cut
+    # The bibliography is a list of titles: left out if it looks like one.
+    last = len(doc.paragraphs) + 1
+    cut = bibliography_section(headings, last)
+    if cut and reference_list([text for text, n, _ in pieces if cut[0] < n < cut[1]]):
+        pieces = [piece for piece in pieces if not cut[0] <= piece[1] < cut[1]]
+        return pieces, (cut[0], cut[1] - 1 if cut[1] < last else None)
+    return pieces, None
 
 
 def read_chapter(path: Path) -> Chapter:
@@ -468,15 +530,24 @@ def line_key(line: str) -> str:
 
 def running_lines(texts: list) -> set:
     """
-    The running headers and footers of a PDF: lines (numbers masked) that open
-    or close at least two pages and half of all pages.
+    The running headers and footers of a PDF: short lines (numbers masked)
+    that open or close at least two pages and half of the left or of the right
+    pages, since a book alternates two heads.
     """
     counts = {}
-    for text in texts:
+    for n, text in enumerate(texts):
         lines = [line for line in text.split("\n") if line.strip()]
-        for key in {line_key(line) for line in lines[:2] + lines[-2:]}:
-            counts[key] = counts.get(key, 0) + 1
-    return {key for key, c in counts.items() if c >= 2 and c * 2 >= len(texts)}
+        for key in {line_key(line) for line in lines[:2] + lines[-2:] if len(line.split()) <= 12}:
+            counts.setdefault(key, [0, 0])[n % 2] += 1
+    sides = [(len(texts) + 1) // 2, len(texts) // 2]
+    return {key for key, c in counts.items()
+            if sum(c) >= 2 and any(c[i] and c[i] * 2 >= sides[i] for i in (0, 1))}
+
+
+def folio_head(line: str) -> bool:
+    """A short line that starts or ends with a bare page number: "118  Kühle Höfe"."""
+    words = line.split()
+    return 2 <= len(words) <= 10 and bool(re.fullmatch(r"\d{1,4}", words[0]) or re.fullmatch(r"\d{1,4}", words[-1]))
 
 
 def read_pdf(path: Path, vocabulary: set, unchecked: list) -> list:
@@ -514,6 +585,12 @@ def read_pdf(path: Path, vocabulary: set, unchecked: list) -> list:
                 lines.pop(0)
             if lines and (PAGE_NUMBER_LINE.fullmatch(lines[-1]) or line_key(lines[-1]) in running):
                 lines.pop()
+        # in a short excerpt a head appears too seldom to repeat; its page number gives it away
+        if len(texts) <= 4:
+            if len(lines) > 1 and folio_head(lines[0]):
+                lines.pop(0)
+            if len(lines) > 1 and folio_head(lines[-1]):
+                lines.pop()
         # before normalize(), which drops soft hyphens (U+00AD)
         text = re.sub(r"([^\W\d_]+)[-\u00ad\u2010][ \t]*\n[ \t]*([^\W\d_]+)",
                       lambda m: m.group(1) + m.group(2) if joins(m.group(1), m.group(2)) else m.group(0),
@@ -521,7 +598,7 @@ def read_pdf(path: Path, vocabulary: set, unchecked: list) -> list:
         end = re.search(r"([^\W\d_]+)[-\u00ad\u2010]\s*$", text)
         text = normalize(text)
         page_words = source_tokens(text)
-        empty += not page_words
+        empty += not WORD.search(raw)  # no text layer at all, not a page of only a head
         # ... and so is one hyphenated across a page break
         if hyphen and page_words and words and joins(words[-1], page_words[0]):
             joined = words[-1] + page_words.pop(0)
@@ -738,7 +815,9 @@ def main() -> None:
           f"{sum(1 for s in seqs if s.kind == 'extract' and s.first)} quotes, "
           f"{counts['pdf']} PDF(s), {counts['text']} text file(s)")
     if chapter.bibliography:
-        print(f"  Not counted: the bibliography, from {chapter.unit} {chapter.bibliography} on")
+        first, last = chapter.bibliography
+        print(f"  Not counted: the bibliography, " + (f"{chapter.unit}s {first}-{last}" if last
+                                                      else f"from {chapter.unit} {first} on"))
     print()
 
     for i, n, c, q, hits in runs:
