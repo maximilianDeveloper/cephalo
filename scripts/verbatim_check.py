@@ -20,7 +20,9 @@ not counted; the words of a shorter quotation (a term in quotation marks)
 keep a run going but are not counted in its length. Each direct
 quote (its parts between […] or (…) omissions) is looked up in the sources
 instead; one that is not found verbatim is listed for a check by hand,
-without changing the exit code.
+without changing the exit code. A bibliography at the end of the chapter
+(from a heading such as "Literaturverzeichnis" or "References" on) is not
+counted.
 
 Sources are files or folders, searched recursively; folders named
 _guidelines (guidelines are not sources) and verification (the saved
@@ -30,8 +32,10 @@ reports) inside them are skipped:
     "- p. 42: ..." lines), with their page and quote ID. A Markdown table
     with an "Original quote" column, such as the source registry in the
     workspace/state.md of a seminar paper, is read row by row.
-  - PDFs (.pdf): the text layer, read with pypdf; a page here is the PDF
-    viewer's page index, which may differ from the printed page number.
+  - PDFs (.pdf): the text layer, read with pypdf, without the running
+    headers, footers and page numbers, so that a run goes on across a page
+    break; a page here is the PDF viewer's page index, which may differ
+    from the printed page number.
     A PDF without a text layer (a scan) and a ZIP archive named .pdf are
     not checked: they are covered only through the quotes in their extract.
   - plain-text files (.txt)
@@ -113,6 +117,13 @@ CITATION = re.compile(
     r"|\d{4}[a-z]?(?:\s*[,:;][^()]{0,80})?"
     r"|(?:[Ee]bd|[Ee]benda|[Ii]bid(?:em)?)\.?(?:[,\s][^()]{0,80})?)\)")
 HTML_COMMENT = re.compile(r"<!--.*?-->", re.S)
+# The heading of a chapter's bibliography: the titles listed under it are no runs.
+BIBLIOGRAPHY_HEADINGS = {"bibliography", "references", "reference list", "works cited", "literature",
+                         "literaturverzeichnis", "literatur", "quellenverzeichnis",
+                         "quellen- und literaturverzeichnis"}
+# A line of a PDF page that is only its number: "117", "- 12 -", "Seite 3", "iv", "3 / 10"
+PAGE_NUMBER_LINE = re.compile(r"(?i)\s*[-–—]?\s*(?:(?:seite|page|s\.|p\.)\s*)?(?:\d{1,4}|[ivxlc]{1,7})"
+                              r"(?:\s*(?:/|of|von)\s*\d{1,4})?\s*[-–—]?\s*")
 FOOTNOTE_MARK = re.compile(r"\[\^[^\]]*\]")
 
 
@@ -162,6 +173,7 @@ class Chapter(NamedTuple):
     unit: str              # "line" or "paragraph"
     quotes: list           # (place, quotation text) of the marked direct quotes
     quoted: list           # for each entry of words: True inside a short quotation
+    bibliography: Optional[int] = None  # line or paragraph where the bibliography starts
 
 
 def blank(text: str, start: int, end: int) -> str:
@@ -169,8 +181,17 @@ def blank(text: str, start: int, end: int) -> str:
     return text[:start] + re.sub(r"[^\n]", " ", text[start:end]) + text[end:]
 
 
-def read_markdown(path: Path) -> list:
-    """Paragraph-sized pieces of a Markdown or text chapter: (text, first line, is_quote)."""
+def bibliography_heading(text: str) -> bool:
+    """A heading such as "Literaturverzeichnis", "7 References" or "Bibliography:"."""
+    key = re.sub(r"^\d+(?:\.\d+)*\.?\s+", "", text.strip().lower())
+    return key.rstrip(".:").strip() in BIBLIOGRAPHY_HEADINGS
+
+
+def read_markdown(path: Path) -> tuple:
+    """
+    Paragraph-sized pieces of a Markdown or text chapter, (text, first line,
+    is_quote), and the line where its bibliography starts, if it has one.
+    """
     text = normalize(read_file_text(path)).replace("\r\n", "\n").replace("\r", "\n")
     # YAML front matter at the top
     m = re.match(r"---\n.*?\n(?:---|\.\.\.)\n", text, re.S)
@@ -181,6 +202,14 @@ def read_markdown(path: Path) -> list:
             text = blank(text, m.start(), m.end())
     pieces = []
     lines = text.split("\n")
+    # everything from the last bibliography heading on is a list of titles
+    cut = None
+    for n, line in enumerate(lines):
+        h = re.match(r"\s{0,3}#{1,6}\s+(.*?)\s*(?:\{[^}]*\})?\s*#*\s*$", line)
+        if h and bibliography_heading(h.group(1)):
+            cut = n
+    if cut is not None:
+        lines = lines[:cut]
     buf, first, quote = [], 0, False
     for n, line in enumerate(lines, 1):
         # a line without ">" right after a block-quote line continues the quote
@@ -199,11 +228,14 @@ def read_markdown(path: Path) -> list:
         buf.append(re.sub(r"^\s{0,3}>\s?", "", line) if is_quote else line)
     if buf:
         pieces.append(("\n".join(buf), first, quote))
-    return pieces
+    return pieces, (cut + 1 if cut is not None else None)
 
 
-def read_docx(path: Path) -> list:
-    """Paragraphs of a Word chapter: (text, paragraph number, is_quote)."""
+def read_docx(path: Path) -> tuple:
+    """
+    Paragraphs of a Word chapter, (text, paragraph number, is_quote), and the
+    paragraph where its bibliography starts, if it has one.
+    """
     try:
         from docx import Document
     except ImportError:
@@ -223,12 +255,16 @@ def read_docx(path: Path) -> list:
                 pieces.append((normalize(p.text), n, is_quote))
     except Exception as exc:
         fail(f"cannot read {path} as .docx ({type(exc).__name__}: {one_line(exc)})")
-    return pieces
+    # everything from the last bibliography heading on is a list of titles
+    cut = next((n for text, n, _ in reversed(pieces) if bibliography_heading(text)), None)
+    if cut is not None:
+        pieces = [piece for piece in pieces if piece[1] < cut]
+    return pieces, cut
 
 
 def read_chapter(path: Path) -> Chapter:
     docx = path.suffix.lower() == ".docx"
-    pieces = read_docx(path) if docx else read_markdown(path)
+    pieces, cut = read_docx(path) if docx else read_markdown(path)
     words, places, spans, quotes, inside = [], [], [], [], []
     text_parts, offset = [], 0
 
@@ -270,7 +306,7 @@ def read_chapter(path: Path) -> Chapter:
             brk()
             pos = e
     return Chapter(words, places, spans, "".join(text_parts), "paragraph" if docx else "line",
-                   quotes, inside)
+                   quotes, inside, cut)
 
 
 # ---------------------------------------------------------------------------
@@ -425,6 +461,24 @@ def read_table(lines: list, i: int, path: Path, add) -> int:
     return i
 
 
+def line_key(line: str) -> str:
+    """A line with its numbers masked: "Okafor 2021 · 117" and "... · 118" match."""
+    return re.sub(r"\d+", "#", " ".join(line.split()).casefold())
+
+
+def running_lines(texts: list) -> set:
+    """
+    The running headers and footers of a PDF: lines (numbers masked) that open
+    or close at least two pages and half of all pages.
+    """
+    counts = {}
+    for text in texts:
+        lines = [line for line in text.split("\n") if line.strip()]
+        for key in {line_key(line) for line in lines[:2] + lines[-2:]}:
+            counts[key] = counts.get(key, 0) + 1
+    return {key for key, c in counts.items() if c >= 2 and c * 2 >= len(texts)}
+
+
 def read_pdf(path: Path, vocabulary: set, unchecked: list) -> list:
     try:
         import logging
@@ -446,14 +500,24 @@ def read_pdf(path: Path, vocabulary: set, unchecked: list) -> list:
         # ("long-" + "term", "Stadt-" + "und") and the parts stay apart.
         return b[:1].islower() and (a + b).casefold() in vocabulary
 
+    texts = [pg.extract_text() or "" for pg in reader.pages]
+    running = running_lines(texts)
     words, pages = [], []
     hyphen = False  # the previous page ended in a hyphenated word
     empty = 0       # pages without any text: scanned (or blank) pages
-    for n, pg in enumerate(reader.pages, 1):
+    for n, raw in enumerate(texts, 1):
+        # Running headers, footers and page numbers are dropped, so that a run
+        # (and a word hyphenated at the page end) goes on across the page break.
+        lines = [line for line in raw.replace("\r\n", "\n").split("\n") if line.strip()]
+        for _ in range(3):
+            if lines and (PAGE_NUMBER_LINE.fullmatch(lines[0]) or line_key(lines[0]) in running):
+                lines.pop(0)
+            if lines and (PAGE_NUMBER_LINE.fullmatch(lines[-1]) or line_key(lines[-1]) in running):
+                lines.pop()
         # before normalize(), which drops soft hyphens (U+00AD)
-        text = re.sub(r"([^\W\d_]+)[-\u00ad\u2010][ \t]*\r?\n[ \t]*([^\W\d_]+)",
+        text = re.sub(r"([^\W\d_]+)[-\u00ad\u2010][ \t]*\n[ \t]*([^\W\d_]+)",
                       lambda m: m.group(1) + m.group(2) if joins(m.group(1), m.group(2)) else m.group(0),
-                      pg.extract_text() or "")
+                      "\n".join(lines))
         end = re.search(r"([^\W\d_]+)[-\u00ad\u2010]\s*$", text)
         text = normalize(text)
         page_words = source_tokens(text)
@@ -465,7 +529,7 @@ def read_pdf(path: Path, vocabulary: set, unchecked: list) -> list:
         hyphen = bool(end)
         words += page_words
         pages += [str(n)] * len(page_words)
-    total = len(reader.pages)
+    total = len(texts)
     if words and empty >= 2 and empty * 2 >= total:
         unchecked.append(f"{path} ({empty} of {total} pages without a text layer, scanned pages? "
                          "Those pages were not compared)")
@@ -673,6 +737,8 @@ def main() -> None:
     print(f"  Sources: {counts['extract']} extract(s) with "
           f"{sum(1 for s in seqs if s.kind == 'extract' and s.first)} quotes, "
           f"{counts['pdf']} PDF(s), {counts['text']} text file(s)")
+    if chapter.bibliography:
+        print(f"  Not counted: the bibliography, from {chapter.unit} {chapter.bibliography} on")
     print()
 
     for i, n, c, q, hits in runs:

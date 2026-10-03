@@ -1367,7 +1367,7 @@ jobs:
           # PDFs: a soft hyphen at a line end is joined when the chapter has the word, a
           # compound hyphen is kept; mostly scanned pages are listed; an extract quote
           # inside a longer PDF run is named too
-          mkdir -p "$V/pdfs"
+          mkdir -p "$V/pdfs" "$V/book"
           python - "$V" <<'EOF'
           import os, sys
           from pypdf import PdfWriter
@@ -1386,6 +1386,12 @@ jobs:
               pw.write(path)
           pdf(os.path.join(v, "pdfs", "scan.pdf"), [["Cover page of a book about cities and their climate today"], [], [], []])
           pdf(os.path.join(v, "pdfs", "figure.pdf"), [["A first page of text about cities."], ["A second page of text."], [], ["A last page of text."]])
+          # a running header and a page number between the two halves of a hyphenated word
+          head = "Okafor und Weiss - Kuehle Hoefe, heisse Strassen"
+          pdf(os.path.join(v, "book", "okafor.pdf"),
+              [[head, "Die Hoefe der Altstadt bleiben kuehl, weil sie in ihrem Baum-", "117"],
+               [head, "bestand dichten Waeldern im Kleinen aehneln und Wind abhalten.", "118"],
+               [head, "Ein drittes Blatt mit anderem Text.", "119"]])
           pdf(os.path.join(v, "pdfs", "hyph.pdf"), [["Trees cool their surroundings through evapo\xad", "ration on hot days, a long-", "term effect that the city planners measured in detail."]])
           pdf(os.path.join(v, "pdfs", "longer.pdf"), [["Context first. Die Wirkung von Stadtgrün hängt vor allem von der Wasserversorgung der Bäume im Sommer ab und nicht vom Boden."]])
           EOF
@@ -1396,6 +1402,17 @@ jobs:
           grep -qF 'scan.pdf (3 of 4 pages without a text layer' "$V/out.txt"
           if grep -v scan.pdf "$V/out.txt" | grep -q 'pages without a text layer'; then cat "$V/out.txt"; echo "a PDF with text on every page was listed"; exit 1; fi
           grep -qx '    in longer.pdf (PDF page 1); a.md Q3 (p. 92–94, 15 of these words)' "$V/out.txt"
+          # running headers, footers and page numbers do not cut a run; the bibliography of
+          # a chapter (Markdown or Word) is not counted, though its titles match the source
+          printf '%s\n' 'Die Hoefe der Altstadt bleiben kuehl, weil sie in ihrem Baumbestand dichten Waeldern im Kleinen aehneln und Wind abhalten.' '' \
+            '## 7 Literaturverzeichnis' '' 'Okafor, A.; Weiss, B. (2021): Okafor und Weiss - Kuehle Hoefe, heisse Strassen. Stadt und Klima 12.' > "$V/book.md"
+          expect 1 python scripts/verbatim_check.py "$V/book.md" "$V/book"
+          grep -qF '❌ 19 words, line 1:' "$V/out.txt"
+          grep -qF 'Not counted: the bibliography, from line 3 on' "$V/out.txt"
+          grep -qxF 'Summary: ❌ 1, ⚠️ 0, 🟡 0. Runs of 1-4 words are not listed;' "$V/out.txt"
+          python -c "import sys; from docx import Document; d = Document(); d.add_paragraph('Ein eigener Satz ohne Vorlage.'); d.add_heading('Literaturverzeichnis', 1); d.add_paragraph('Okafor, A.; Weiss, B. (2021): Okafor und Weiss - Kuehle Hoefe, heisse Strassen. Stadt und Klima 12.'); d.save(sys.argv[1])" "$V/book.docx"
+          expect 0 python scripts/verbatim_check.py "$V/book.docx" "$V/book"
+          grep -qF 'Not counted: the bibliography, from paragraph 2 on' "$V/out.txt"
           # Word: LibreOffice's quote style; a quote after a line break keeps its paragraph
           # number; a chapter without text is an error
           python - "$V" <<'EOF'
