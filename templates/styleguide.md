@@ -150,10 +150,13 @@
 [List of items the resolver could not unambiguously extract. Each item is tagged:
 `[content]` — the answer changes what is written or produced in Phase A: voice and pronouns, evaluative wording, the direct-quote threshold, how quotes may be altered, what may go into footnotes, the "cf." prefix and page numbers for paraphrases, the page count, the outline depth, and the decimal separator, p-value notation, figure resolution and caption placement (built into tables and figures in Phase A). Resolve with the supervisor before any chapter is drafted.
 `[format]` — the answer changes only how the text is set: fonts, spacing, margins, pagination, title page, bibliography layout, citation punctuation. Resolve before the formatting phase (Phase B).
-An entry here without a tag counts as `[content]`. A `❓` next to a rule above only points to its entry here.]
+An entry here without a tag counts as `[content]`. A `❓` next to a rule above only points to its entry here.
+Two kinds: a rule the guidelines state in two ways or unclearly gets an entry of its own, with the passages and readings; rules the guidelines do not cover at all are grouped, one entry per section and tag, listing their keys.]
 
-- [ ] ❓ [content] `style.forbidden_pronouns` — [description of the ambiguity and where it appears in the source documents]
+- [ ] ❓ [content] `style.block_quote_word_threshold` — [contradictory or unclear: the passages and the competing readings, with their places in the source documents]
 - [ ] ❓ [format] `in_text.page_range` — [...]
+- [ ] ❓ [content] Style rules — not covered by the guidelines: `style.forbidden_pronouns`, `style.forbidden_evaluative`
+- [ ] ❓ [format] Footnotes — not covered by the guidelines: `footnotes.font`, `footnotes.size`, `footnotes.line_spacing`
 
 ---
 
@@ -163,6 +166,7 @@ An entry here without a tag counts as `[content]`. A `❓` next to a rule above 
 
 - [x] [content] `style.forbidden_pronouns` — [answer] [supervisor, via the user, YYYY-MM-DD]
 - [x] [content] `numbers.p_values` — n/a — does not occur in this work [user, YYYY-MM-DD]
+- [x] [format] Footnotes — as the body text, but 10 pt and single-spaced [provisional, user, YYYY-MM-DD]
 
 ---
 

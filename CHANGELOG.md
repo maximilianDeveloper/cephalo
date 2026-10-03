@@ -8,7 +8,9 @@ Dates follow ISO 8601 (`YYYY-MM-DD`).
 
 ---
 
-## [1.1.0] — unreleased
+## [1.1.0] — 2026-10-03
+
+**Verbatim runs counted, quote IDs.** `scripts/verbatim_check.py` counts the verbatim word runs a chapter shares with its sources, and the orchestrators run it before every chapter verification, so that the source-verifier rates runs from a count instead of by eye. Each extract entry gets a stable quote ID, which the writer-agent's **Used in:** lines, the source-verifier's reports and the script point at. A third trial run on Windows tested both in the bachelor workflow, and a self-test of the script passed on Windows and macOS. The trial run's findings shortened the source-verifier's reports, set when a chapter passes, and grouped the style-resolver's open questions.
 
 ### Added
 
@@ -22,6 +24,7 @@ Dates follow ISO 8601 (`YYYY-MM-DD`).
   - **source-verifier** — compact reports: one table row per ✅ sentence, full entries for the others, totals counted from them, and one format for extract checks. A chapter report had run to about 4,500 words, which the orchestrator had to retype to save it. Files are named by project-relative path (absolute paths carried the user's name into saved reports); quote IDs missing from the extracts' **Used in:** lines are listed as notes; a cited source the project does not have at all is ❌, not ❓.
   - **Orchestrators** — reports are saved as they come, status counts taken from their entries. A chapter passes when no ⚠️, ❌ or ❓ is left; 🟡 does not start a revision of its own, and the verifier's Used-in notes go to the writer as an edit of those lines only. The flat A → B criteria count ❌ and ❓ and compare the number of sources with the workflow's range. Chapter length is counted with `wc -w` instead of the writer's estimate (630 estimated, 752 counted). The flat state file gets the pre-check result section.
   - **research-agent** — names the range heading for a passage across pages, the two extra fields its rules use, and the language of its own text; **writer-agent** reports a length as an estimate; **pre-check** names `py` for Windows.
+- **Shorter list of open style questions** — the style-resolver keeps contradictory or unclear rules (one entry each, with the readings) apart from rules the guidelines do not cover at all, which it groups into one entry per section and tag. In the trial run on Windows, a three-page guideline had produced 32 open questions, one per template key without a rule. An answer the user gives as provisional is recorded as `[provisional, user, date]` and stays on the open issues until confirmed.
 - **Quotes the script can find** — the writer-agent marks block quotes with `>` (the script counts them as direct quotes, and Pandoc exports them as block quotes) and, in the seminar and presentation workflows, records its original quotes in the state file's source registry table, whose format only the orchestrator's definition gave. The methods-agent writes its extracts of methodological sources in the research-agent's form, with quote IDs, and fills their **Used in:** line.
 
 ---
