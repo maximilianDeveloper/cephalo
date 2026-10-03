@@ -95,7 +95,7 @@ Multi-project: Claude Code is opened on a sub-project, one level below the folde
 
 ### `verbatim_check.py`
 
-Counts the verbatim word runs a chapter shares with its sources: the count behind verification step 8 of the source-verifier, rated by the thresholds of `checklists/plagiarism_protection.md` (5–7 words 🟡, 8–14 ⚠️, 15 or more ❌). Neither the writer-agent nor the source-verifier can count reliably by eye, and neither has a shell, so the orchestrator runs the script before each chapter verification and hands its output, saved with `> <file> 2>&1`, to the source-verifier. In the seminar and presentation workflows, which have no orchestrator, you have Claude run it or run it yourself; in Windows PowerShell, do not save its output with `>`, which writes UTF-16.
+Counts the verbatim word runs a chapter shares with its sources: the count behind verification step 8 of the source-verifier, rated by the thresholds of `checklists/plagiarism_protection.md` (5–7 words 🟡, 8–14 ⚠️, 15 or more ❌). Neither the writer-agent nor the source-verifier can count reliably by eye, and neither has a shell, so the orchestrator runs the script before each chapter verification and hands its output, saved with `> <file> 2>&1`, to the source-verifier. In the seminar and presentation workflows, which have no orchestrator, you have Claude run it or run it yourself; in Windows PowerShell, do not save its output with `>`, which writes UTF-16 (or, with some settings, UTF-8 with a byte order mark).
 
 ```bash
 # Flat structure: the chapter against the extracts and source files
