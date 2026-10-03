@@ -104,7 +104,7 @@ Step 0 runs before the style-resolver (Step 0.5), so on a new project `styleguid
 - [ ] **Git repo exists** (long-form / multi-project): `git status` works
 - [ ] **Git LFS active** (long-form / multi-project): `git lfs install` was run
 - [ ] **Build tools available** (if using scripts):
-  - `python3` (≥ 3.9) — required for all utility scripts, including the verbatim check before each chapter verification (`scripts/verbatim_check.py`; without it, the source-verifier counts verbatim runs by eye)
+  - `python3` (≥ 3.9; on Windows `py`) — required for all utility scripts, including the verbatim check before each chapter verification (`scripts/verbatim_check.py`; without it, the source-verifier counts verbatim runs by eye)
   - `pip install -r requirements.txt` — installs `python-docx` and `pypdf` (with `cryptography` for AES-encrypted PDFs)
   - `pandoc` — optional, for DOCX → plain-text conversion
   - `pdftotext` (poppler-utils) — optional fallback in `scripts/extract_styleguide.sh` (the script prefers Python-based extraction via `pypdf`)

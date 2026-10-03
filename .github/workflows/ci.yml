@@ -1367,7 +1367,7 @@ jobs:
           # PDFs: a soft hyphen at a line end is joined when the chapter has the word, a
           # compound hyphen is kept; mostly scanned pages are listed; an extract quote
           # inside a longer PDF run is named too
-          mkdir -p "$V/pdfs"
+          mkdir -p "$V/pdfs" "$V/book"
           python - "$V" <<'EOF'
           import os, sys
           from pypdf import PdfWriter
@@ -1386,6 +1386,12 @@ jobs:
               pw.write(path)
           pdf(os.path.join(v, "pdfs", "scan.pdf"), [["Cover page of a book about cities and their climate today"], [], [], []])
           pdf(os.path.join(v, "pdfs", "figure.pdf"), [["A first page of text about cities."], ["A second page of text."], [], ["A last page of text."]])
+          # a running header and a page number between the two halves of a hyphenated word
+          head = "Okafor und Weiss - Kuehle Hoefe, heisse Strassen"
+          pdf(os.path.join(v, "book", "okafor.pdf"),
+              [[head, "Die Hoefe der Altstadt bleiben kuehl, weil sie in ihrem Baum-", "117"],
+               [head, "bestand dichten Waeldern im Kleinen aehneln und Wind abhalten.", "118"],
+               [head, "Ein drittes Blatt mit anderem Text.", "119"]])
           pdf(os.path.join(v, "pdfs", "hyph.pdf"), [["Trees cool their surroundings through evapo\xad", "ration on hot days, a long-", "term effect that the city planners measured in detail."]])
           pdf(os.path.join(v, "pdfs", "longer.pdf"), [["Context first. Die Wirkung von Stadtgrün hängt vor allem von der Wasserversorgung der Bäume im Sommer ab und nicht vom Boden."]])
           EOF
@@ -1396,6 +1402,90 @@ jobs:
           grep -qF 'scan.pdf (3 of 4 pages without a text layer' "$V/out.txt"
           if grep -v scan.pdf "$V/out.txt" | grep -q 'pages without a text layer'; then cat "$V/out.txt"; echo "a PDF with text on every page was listed"; exit 1; fi
           grep -qx '    in longer.pdf (PDF page 1); a.md Q3 (p. 92–94, 15 of these words)' "$V/out.txt"
+          # running headers, footers and page numbers do not cut a run; the bibliography of
+          # a chapter (Markdown or Word) is not counted, though its titles match the source
+          printf '%s\n' 'Die Hoefe der Altstadt bleiben kuehl, weil sie in ihrem Baumbestand dichten Waeldern im Kleinen aehneln und Wind abhalten.' '' \
+            '## 7 Literaturverzeichnis' '' 'Okafor, A.; Weiss, B. (2021): Die Hoefe der Altstadt bleiben kuehl, weil sie in ihrem Baumbestand. Stadt und Klima 12.' > "$V/book.md"
+          expect 1 python scripts/verbatim_check.py "$V/book.md" "$V/book"
+          grep -qF '❌ 19 words, line 1:' "$V/out.txt"
+          grep -qF 'Not counted: the bibliography, from line 3 on' "$V/out.txt"
+          grep -qxF 'Summary: ❌ 1, ⚠️ 0, 🟡 0. Runs of 1-4 words are not listed;' "$V/out.txt"
+          python -c "import sys; from docx import Document; d = Document(); d.add_paragraph('Ein eigener Satz ohne Vorlage.'); d.add_heading('Literaturverzeichnis', 1); d.add_paragraph('Okafor, A.; Weiss, B. (2021): Die Hoefe der Altstadt bleiben kuehl, weil sie in ihrem Baumbestand. Stadt und Klima 12.'); d.save(sys.argv[1])" "$V/book.docx"
+          expect 0 python scripts/verbatim_check.py "$V/book.docx" "$V/book"
+          grep -qF 'Not counted: the bibliography, from paragraph 2 on' "$V/out.txt"
+          # ... but a body section named "Literatur", a chapter titled "Literature", an appendix
+          # or a footnote after the bibliography, and prose under a plain "Literatur" line count
+          S1='Die Hoefe der Altstadt bleiben kuehl, weil sie in ihrem Baumbestand dichten Waeldern im Kleinen aehneln.'
+          printf '%s\n' '# 2 Forschungsstand' '' 'Ein eigener Satz.' '' '## 2.1 Literatur' '' "$S1" '' '## 2.2 Forschungsluecke' '' 'Noch ein Satz.' > "$V/lit1.md"
+          printf '%s\n' '# 2 Literature' '' "$S1" > "$V/lit2.md"
+          printf '%s\n' 'Ein eigener Satz[^1].' '' '## References' '' 'Okafor, A. (2021): Kuehle Hoefe. Stadt und Klima 12.' '' '## Appendix A' '' "$S1" '' "[^1]: $S1" > "$V/lit3.md"
+          for f in lit1 lit2; do
+            expect 1 python scripts/verbatim_check.py "$V/$f.md" "$V/book"
+            grep -qF '❌ 16 words' "$V/out.txt"
+            if grep -q 'Not counted' "$V/out.txt"; then cat "$V/out.txt"; echo "a body section was taken for the bibliography"; exit 1; fi
+          done
+          expect 1 python scripts/verbatim_check.py "$V/lit3.md" "$V/book"
+          grep -qF 'Not counted: the bibliography, lines 3-6' "$V/out.txt"
+          grep -qxF 'Summary: ❌ 2, ⚠️ 0, 🟡 0. Runs of 1-4 words are not listed;' "$V/out.txt"
+          python - "$V" "$S1" <<'EOF'
+          import os, sys
+          from docx import Document
+          v, s1 = sys.argv[1], sys.argv[2]
+          d = Document(); d.add_heading("2 Forschungsstand", 1); d.add_heading("2.1 Literatur", 2); d.add_paragraph(s1)
+          d.add_heading("2.2 Luecke", 2); d.add_paragraph("Eigener Satz."); d.save(os.path.join(v, "lit4.docx"))
+          d = Document(); d.add_paragraph("Eigener Satz."); d.add_heading("Literaturverzeichnis", 1)
+          d.add_paragraph("Okafor, A. (2021): Kuehle Hoefe."); d.add_heading("Anhang A: Interviewleitfaden", 1); d.add_paragraph(s1)
+          d.save(os.path.join(v, "lit5.docx"))
+          d = Document(); d.add_paragraph("Literatur"); d.add_paragraph(s1); d.save(os.path.join(v, "lit6.docx"))
+          EOF
+          for f in lit4 lit6; do
+            expect 1 python scripts/verbatim_check.py "$V/$f.docx" "$V/book"
+            grep -qF '❌ 16 words' "$V/out.txt"
+            if grep -q 'Not counted' "$V/out.txt"; then cat "$V/out.txt"; echo "a body section was taken for the bibliography"; exit 1; fi
+          done
+          expect 1 python scripts/verbatim_check.py "$V/lit5.docx" "$V/book"
+          grep -qF '❌ 16 words, paragraph 5:' "$V/out.txt"
+          grep -qF 'Not counted: the bibliography, paragraphs 2-3' "$V/out.txt"
+          # PDFs: a book alternating two running heads, a two-page excerpt whose heads carry
+          # the page number, a bare "- 12 -" folio; a body line "civil" is no page number
+          mkdir -p "$V/heads/book" "$V/heads/excerpt" "$V/heads/folio"
+          python - "$V/heads" <<'EOF'
+          import os, sys
+          from pypdf import PdfWriter
+          from pypdf.generic import DictionaryObject, NameObject, StreamObject
+          h = sys.argv[1]
+          def pdf(path, pages):
+              pw = PdfWriter()
+              for lines in pages:
+                  page = pw.add_blank_page(width=400, height=300)
+                  font = DictionaryObject({NameObject("/Type"): NameObject("/Font"), NameObject("/Subtype"): NameObject("/Type1"),
+                                           NameObject("/BaseFont"): NameObject("/Helvetica"), NameObject("/Encoding"): NameObject("/WinAnsiEncoding")})
+                  page[NameObject("/Resources")] = DictionaryObject({NameObject("/Font"): DictionaryObject({NameObject("/F1"): pw._add_object(font)})})
+                  content = StreamObject()
+                  content.set_data(("BT /F1 10 Tf 20 280 Td 12 TL " + " ".join(f"({l}) '" for l in lines) + " ET").encode("latin-1"))
+                  page[NameObject("/Contents")] = pw._add_object(content)
+              pw.write(path)
+          a, b = "Brandt - Stadtklima und Gruen", "Kapitel 3: Baeume in der Stadt"
+          fill = "Ein Absatz mit allgemeinem Text ueber Parks und Plaetze in der Stadt."
+          pdf(os.path.join(h, "book", "book.pdf"), [["40 " + a, fill, fill], [b + " 41", fill, fill],
+              ["42 " + a, fill, "Die Baeume der Altstadt kuehlen ihre Umgebung, weil ihr dichter Baum-"],
+              [b + " 43", "bestand Schatten spendet und Wasser verdunstet, wie Messungen zeigen.", fill], ["44 " + a, fill, fill]])
+          pdf(os.path.join(h, "excerpt", "excerpt.pdf"), [["118 Okafor und Weiss", "Die Hoefe bleiben kuehl, weil sie mit ihrem Baum-"],
+              ["Kuehle Hoefe, heisse Strassen 119", "bestand den Waeldern im Kleinen aehneln und Wind abhalten."]])
+          pdf(os.path.join(h, "folio", "folio.pdf"), [["Der Garten bleibt im Sommer kuehl, weil die Rasen-", "- 12 -"],
+              ["flaeche viel Wasser verdunstet und den Boden beschattet.", "- 13 -"],
+              ["civil", "society groups planted the trees along the river front."]])
+          EOF
+          printf '%s\n' 'Die Baeume der Altstadt kuehlen ihre Umgebung, weil ihr dichter Baumbestand Schatten spendet und Wasser verdunstet, wie Messungen zeigen.' > "$V/heads/book.md"
+          printf '%s\n' 'Die Hoefe bleiben kuehl, weil sie mit ihrem Baumbestand den Waeldern im Kleinen aehneln und Wind abhalten.' > "$V/heads/excerpt.md"
+          printf '%s\n' 'Der Garten bleibt im Sommer kuehl, weil die Rasenflaeche viel Wasser verdunstet und den Boden beschattet.' '' 'Civil society groups planted the trees along the river front.' > "$V/heads/folio.md"
+          expect 1 python scripts/verbatim_check.py "$V/heads/book.md" "$V/heads/book"
+          grep -qF '❌ 19 words, line 1:' "$V/out.txt"
+          expect 1 python scripts/verbatim_check.py "$V/heads/excerpt.md" "$V/heads/excerpt"
+          grep -qF '❌ 17 words, line 1:' "$V/out.txt"
+          expect 1 python scripts/verbatim_check.py "$V/heads/folio.md" "$V/heads/folio"
+          grep -qF '❌ 16 words, line 1:' "$V/out.txt"
+          grep -qF '⚠️  10 words, line 3:' "$V/out.txt"
           # Word: LibreOffice's quote style; a quote after a line break keeps its paragraph
           # number; a chapter without text is an error
           python - "$V" <<'EOF'

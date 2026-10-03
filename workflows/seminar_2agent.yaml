@@ -128,7 +128,7 @@ phases:
       
       - step: 3
         manual: true
-        task: Update state file (manually or via writer-agent)
+        task: Update state file (manually or via writer-agent), with the chapter's word count (wc -w; the writer's figure is an estimate)
   
   # ===========================================================
   # Closing

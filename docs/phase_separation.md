@@ -62,7 +62,7 @@ The orchestrator transitions the project from A to B when:
 
 1. **All chapters complete** — body, conclusion, AND introduction (introduction is always last)
 2. **Source verification ✅** — every chapter passed sentence-by-sentence verification
-3. **No outstanding ⚠️ or ❓ content items** — all flagged content issues resolved
+3. **No outstanding ⚠️, ❌ or ❓ content items** — all flagged content issues resolved (a 🟡 polish flag does not block)
 4. **Last 3 iterations were format-only** — empirical signal that content has stabilized
 5. **All `❓` items in `styleguide.md` resolved** — no open formatting questions
 

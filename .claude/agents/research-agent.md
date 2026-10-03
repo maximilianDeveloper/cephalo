@@ -229,6 +229,12 @@ One file per source. Filename: author_year or BibTeX citekey.
 not a pre-written argument.
 ```
 
+### Entries: pages, extra fields, language
+
+- A passage running across a page break gets a heading with the range, `## Page 42–43` (notation per `styleguide.md`), and its entry goes under it.
+- Two fields join an entry only where a rule asks for them: `**Primary accessible?**` with a secondary citation (Rule 5), and `**Uncertainty:**` with a ❓ (Rule 7). No other fields.
+- Quotes stay in the language of the source; write your own text (core claims, notes) in the language the work is written in (from `styleguide.md` or your task), but keep the source's technical terms in its own words there, in quotation marks where needed: a translated term invites the term-slip the extract exists to prevent.
+
 ### Quote IDs
 
 Every entry starts with an ID heading, `### Q1`, `### Q2`, …, numbered through the whole file, not per page. The other agents refer to an entry by file name and ID, such as `keller2018.md Q3`: the writer-agent in the **Used in:** line, the source-verifier in its reports, and `scripts/verbatim_check.py` in the runs it lists.
