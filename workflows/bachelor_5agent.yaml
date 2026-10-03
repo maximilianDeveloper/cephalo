@@ -149,8 +149,10 @@ phases:
         - all_chapters_content_complete: read workspace/state.md; every row of the
           Chapter status table has ✅ in the Written and Source-verified columns
         - all_chapters_source_verified: grep chapter files for any ⚠️ or ❓ markers
-        - open_content_warnings: count ⚠️, ❌ and ❓ entries in workspace/state.md and
-          in each chapter's handover.md (if present); must be 0
+        - open_content_warnings: count open ⚠️, ❌ and ❓ items in workspace/state.md
+          (Chapter status table, unchecked "- [ ]" lines under Open issues; not the
+          Pre-check result or recorded round counts) and in each chapter's
+          handover.md (if present); must be 0
         - last_3_iterations_format_only: inspect the last 3 commits (git log); 
           if all touched only styleguide-governed items (citations, typography, 
           spacing), criterion is met

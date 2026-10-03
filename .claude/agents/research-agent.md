@@ -233,7 +233,7 @@ not a pre-written argument.
 
 - A passage running across a page break gets a heading with the range, `## Page 42–43` (notation per `styleguide.md`), and its entry goes under it.
 - Two fields join an entry only where a rule asks for them: `**Primary accessible?**` with a secondary citation (Rule 5), and `**Uncertainty:**` with a ❓ (Rule 7). No other fields.
-- Quotes stay in the language of the source; write your own text (core claims, notes) in the language the work is written in.
+- Quotes stay in the language of the source; write your own text (core claims, notes) in the language the work is written in (from `styleguide.md` or your task), but keep the source's technical terms in its own words there, in quotation marks where needed: a translated term invites the term-slip the extract exists to prevent.
 
 ### Quote IDs
 

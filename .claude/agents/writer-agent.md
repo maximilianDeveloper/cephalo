@@ -96,7 +96,7 @@ The orchestrator provides a per-chapter budget. On approaching overflow:
 - Consolidate repeated citations
 - Over 20% overflow: escalate to orchestrator rather than silently cutting
 
-You cannot count words reliably: give a length you report as an estimate. The orchestrator counts the words with a command.
+You cannot count words reliably: give a length you report as an estimate. The orchestrator counts the words with a command (without an orchestrator, the user does, for example with `wc -w`).
 
 ## Output format
 
