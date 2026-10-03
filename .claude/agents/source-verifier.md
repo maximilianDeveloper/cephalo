@@ -106,16 +106,48 @@ For enumerations with a single range citation, verify that each item actually ap
 
 ## Output format
 
-Per verified sentence. Name the extract entry by its file name and quote ID, the `### Q<n>` heading above the entry (`keller2018.md Q3`); where there is none (no extracts, as in the seminar workflow, or an extract from before quote IDs), give author and page alone:
+Your report is your final message, and the orchestrator saves it as a file as it is, so keep it compact. Name files by their path relative to the project, never by an absolute path: that would carry the user's name into the project files.
+
+Name an extract entry by its file name and quote ID, the `### Q<n>` heading above the entry (`keller2018.md Q3`); where there is none (no extracts, as in the seminar workflow, or an extract from before quote IDs), give author and page alone.
+
+### Chapter verification
+
+1. One table row per ✅ sentence:
+
+   ```markdown
+   | Sentence | Source | Status |
+   |---|---|---|
+   | 3 | [Author, p. X; <extract file> Q<n>] | ✅ |
+   ```
+
+2. A full entry per sentence with ⚠️, ❌, 🟡 or ❓:
+
+   ```markdown
+   **Sentence [n]:** "[sentence text]"
+
+   Original passage [Author, p. X; <extract file> Q<n>]: "[verbatim quote]"
+
+   Status: ⚠️ / ❌ / 🟡 / ❓
+
+   Comment: [what is wrong, and for step 8 whether the run comes from the script's report or from your reading]
+   ```
+
+3. The totals, counted from the rows and entries above: `✅ n, ⚠️ n, ❌ n, 🟡 n, ❓ n`.
+
+4. Notes (no status): quote IDs the chapter draws on that the **Used in:** line of their extract does not list for this chapter, and IDs listed there that the chapter no longer uses, as `<extract file> Q<n>`. The writer keeps those lines.
+
+### Extract verification
+
+Per extract: its verdict (see "Verdict on an extract" above), then one row per entry with a finding, and the notes below them. Entries without a finding need no row.
 
 ```markdown
-**Sentence [n]:** "[sentence text]"
+**Lindqvist_2017.md: ⚠️**
 
-Original passage [Author, p. X; <extract file> Q<n>]: "[verbatim quote]"
+| Entry | Status | Finding |
+|---|---|---|
+| Lindqvist_2017.md Q12 | ⚠️ | [what is wrong, with the page] |
 
-Status: ✅ / ⚠️ / ❌ / 🟡 / ❓
-
-Comment: [only for non-✅]
+Notes: [remarks on the extract's own wording, quote IDs, labels]
 ```
 
 ## Status symbols
@@ -124,9 +156,9 @@ Comment: [only for non-✅]
 |---|---|
 | ✅ | correctly supported |
 | ⚠️ | mild imprecision (e.g., a grammatical variant of the source's term) |
-| ❌ | error (wrong quote, wrong page, unmarked secondary citation, a term the source does not use, a verbatim run of 15 or more words) |
+| ❌ | error (wrong quote, wrong page, unmarked secondary citation, a term the source does not use, a verbatim run of 15 or more words, a cited source the project does not have at all: not among the sources, without an extract and not in `literature.bib`) |
 | 🟡 | plagiarism polish flag (5–7 verbatim words; runs of 8–14 count as ⚠️ risk per step 8) |
-| ❓ | unverifiable (source missing or extract incomplete) |
+| ❓ | unverifiable (the source is known to the project, for example in `literature.bib`, but its file or the cited passage is missing, or the extract is incomplete): the orchestrator asks the user for it |
 
 These symbols are status codes, not decoration: the orchestrator, the state file and the workflow's criteria search for them. Write them exactly as shown, also where you would otherwise avoid emojis; never replace them with words or ASCII labels such as `[OK]` or `[WARN]`.
 
