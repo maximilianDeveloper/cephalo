@@ -8,6 +8,15 @@ Dates follow ISO 8601 (`YYYY-MM-DD`).
 
 ---
 
+## [1.1.1] — unreleased
+
+### Changed
+
+- **After a long-form trial run on Windows** — a fourth trial run (Windows 11, Claude Code 2.1.283) went through the long-form bachelor workflow in four separate chats with `claude --agent orchestrator-longform`, the student played by a second model: Phase 0 and the literature, chapter 2 with its first verification, revision and the transition to Phase B, then a Phase B chat on Sonnet. Each new chat found its state, the open findings and its task through `00_Status.md`, `handover.md` and the saved reports alone; the extracts had 14 of 14 quotes and pages right, the style-resolver found all three planted gaps in the guideline, and Phase B on the fast model cost 12 % of the run. Its findings changed:
+  - **Chat start waits for the user** — the start prompt in `templates/handover.md` ended with "Confirm understanding, then proceed.", and the third chat read the handover and worked for 14 minutes (revision, verification, format check) without showing its status check. The prompt now asks for the status check and a wait, and `orchestrator-longform.md` and `orchestrator-defense.md` say that a "proceed" in the start prompt does not replace the user's answer. The prompt lists the files in the order of the chat start ritual, the line about invoking the orchestrator is a condition (it had no effect in a chat started with `claude --agent orchestrator-longform`), and for a Phase B chat it says that the chat should run on a fast model, which the status check now names.
+
+---
+
 ## [1.1.0] — 2026-10-03
 
 **Verbatim runs counted, quote IDs.** `scripts/verbatim_check.py` counts the verbatim word runs a chapter shares with its sources, and the orchestrators run it before every chapter verification, so that the source-verifier rates runs from a count instead of by eye. Each extract entry gets a stable quote ID, which the writer-agent's **Used in:** lines, the source-verifier's reports and the script point at. A third trial run on Windows tested both in the bachelor workflow, and a self-test of the script passed on Windows and macOS. The trial run's findings shortened the source-verifier's reports, set when a chapter passes, and grouped the style-resolver's open questions.

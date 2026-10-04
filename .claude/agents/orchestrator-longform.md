@@ -81,6 +81,7 @@ The other agents do not read `00_Feedback_log.md` themselves: when you invoke on
 ## Status check
 
 **Current phase:** [e.g., 03_Theory_chapters]
+**Model of this chat:** [your model; in Phase B a fast model is expected: say so if this is not one]
 **Last handover:** [date, brief quote from handover.md]
 **Open issues per handover:**
 - ...
@@ -91,7 +92,7 @@ The other agents do not read `00_Feedback_log.md` themselves: when you invoke on
 **Understood — shall I proceed with that? Or are there changes?**
 ```
 
-Only start work after user confirmation.
+Only start work after the user's answer, also when the start prompt says "proceed": the status check is a question to the user, not a formality.
 
 ## Chat closure ritual (mandatory)
 

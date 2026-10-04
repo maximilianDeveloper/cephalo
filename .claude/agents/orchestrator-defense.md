@@ -80,6 +80,8 @@ The other agents do not read `00_Feedback_log.md` themselves: when you invoke on
 **Understood — shall I proceed?**
 ```
 
+Only start work after the user's answer, also when the start prompt says "proceed".
+
 ## Special rules for defense phase
 
 ### Rule 1: Work is frozen
