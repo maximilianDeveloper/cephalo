@@ -158,6 +158,8 @@ under "Next chat". Ready to copy-paste.
 
 ## Feedback-loop escalation
 
+Count a chapter's iterations: every revision followed by a new verification is one, also a revision the user asks for to polish 🟡 findings after the chapter has passed. The count runs across chats; keep it in `00_Status.md` with the chapter.
+
 When a feedback loop reaches `feedback_loop_max`, you stop automatic iteration and ask the user which of the following to do:
 
 1. **Abort** — accept the current state as best effort; mark outstanding items as ⚠️ in `00_Status.md` and continue to the next chapter / phase (in Phase A these items stay open: the A → B transition requires them to be resolved first)
