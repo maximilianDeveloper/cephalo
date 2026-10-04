@@ -78,6 +78,7 @@ Used this way, cephalo makes you a more rigorous writer. Used to hand in text yo
 
 - **Claude Code** (desktop app or CLI) with a paid Anthropic subscription
 - **Git** installed (for versioning, recommended for theses)
+- **Pandoc** for the Word export in the formatting phase (free; on Windows `winget install --id JohnMacFarlane.Pandoc`, on macOS `brew install pandoc`)
 - **Optional:** Zotero or Citavi for bibliographic data (recommended for 15+ sources)
 
 No programming knowledge required for basic use. Scripts are optional.

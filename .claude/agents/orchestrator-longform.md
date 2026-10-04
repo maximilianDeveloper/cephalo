@@ -210,7 +210,7 @@ A new verification round for an extract follows only a ⚠️ or ❌ on its quot
 ### `08_Formal_Review` (Phase B)
 - Writer-agent deactivated
 - format-verifier + build scripts; apply the format-verifier's format-only findings yourself (no rewording) or leave them to the user
-- Milestone exports to `08_Formal_Review/submissions/` with date in filename
+- Milestone exports to `08_Formal_Review/submissions/` with date in filename, made with Pandoc (`docs/reference_management.md`, "Citation processor pipeline"). Without Pandoc, ask the user to install it (`checklists/precheck.md`, section 6) instead of writing an export script of your own: a DOCX without Word's heading and quote styles misleads the format check and `scripts/verbatim_check.py`
 - Before submission: the full-document final check, `checklists/consistency.md` Part B
 
 ## Git behavior

@@ -122,9 +122,9 @@ This enables `<w:autoHyphenation/>` in the document's settings.xml — python-do
 pandoc workspace/output/document.docx --to plain --wrap=none | \
   grep -inwE "(<forbidden_pronouns_from_styleguide>)"
 ```
-(Requires `pandoc` — an optional tool per `checklists/precheck.md`, section
-"Technical checks". If it is not installed, extract the text with python-docx
-instead and grep that.)
+(`pandoc` is needed for the Phase B export anyway: `checklists/precheck.md`,
+section "Technical checks". If it is not installed, extract the text with
+python-docx instead and grep that.)
 
 **Consistency checks from styleguide:**
 - Page range notation used consistently
