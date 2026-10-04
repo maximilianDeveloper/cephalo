@@ -8,7 +8,9 @@ Dates follow ISO 8601 (`YYYY-MM-DD`).
 
 ---
 
-## [1.1.1] — unreleased
+## [1.1.1] — 2026-10-04
+
+**Fixes from a long-form trial run.** A trial run on Windows took the long-form bachelor workflow through four separate chats, the last one in Phase B on a fast model, and each chat found its state through `00_Status.md`, the handover and the saved reports alone. Its findings make a new chat wait for the user after the status check, keep the source-verifier's standard the same from round to round, and define what counts toward the loop limit and how the user waives a criterion of the transition to Phase B. Phase B now exports the chapters with Pandoc first and has the format-verifier check that DOCX, and no agent writes files outside the project.
 
 ### Changed
 
