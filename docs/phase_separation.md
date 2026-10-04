@@ -63,7 +63,7 @@ The orchestrator transitions the project from A to B when:
 1. **All chapters complete** — body, conclusion, AND introduction (introduction is always last)
 2. **Source verification ✅** — every chapter passed sentence-by-sentence verification
 3. **No outstanding ⚠️, ❌ or ❓ content items** — all flagged content issues resolved (a 🟡 polish flag does not block)
-4. **Last 3 iterations were format-only** — empirical signal that content has stabilized
+4. **Last 3 iterations were format-only** — empirical signal that content has stabilized: in the last three commits, the changes to the chapter files touched only styleguide-governed items (citations, typography, spacing); state, handover and report files aside. This is not the loop count of the orchestrators, which counts revisions with a new verification
 5. **All `❓` items in `styleguide.md` resolved** — no open formatting questions
 
 When all criteria are met, the orchestrator:
@@ -71,6 +71,10 @@ When all criteria are met, the orchestrator:
 - Deactivates the writer-agent
 - Activates the format-verifier as the lead agent
 - Begins phase 08_Formal_Review (long-form) or the flat workflow's Phase B steps (`phase_B_form`, then its closing checklist)
+
+### Waiving a criterion
+
+The user may waive criterion 1 (all chapters complete) for chapters the work will not contain, for example the introduction of a practice work, but not for chapters still to be written; and criteria 4 (format-only iterations) and 5 (styleguide questions) for a reason of their own. The orchestrator then records in the decision log (`00_Decisions.md`; flat: `workspace/state.md`) which criteria are waived and why, and transitions. Open `❓ [format]` items in `styleguide.md` are answered at the start of Phase B, before any format work. Criteria 2 (source verification) and 3 (open content items) cannot be waived, nor, in empirical works, the consistency of the methods and data chapters that the master workflows add: while any chapter has an open ⚠️, ❌ or ❓, the project stays in Phase A.
 
 ---
 

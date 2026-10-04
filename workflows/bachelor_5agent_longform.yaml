@@ -260,10 +260,16 @@ phases:
     documentation: docs/phase_separation.md
     
     triggers:
-      - All content chapters (incl. introduction) complete with ✅ source verification
+      - All content chapters (incl. introduction) complete
+      - Every chapter passed source verification with ✅
       - No outstanding content ⚠️, ❌ or ❓ items
-      - Last 3 iterations were format-only (content has stabilized)
+      - Last 3 iterations were format-only (content has stabilized; in the last 3 commits the chapter files changed only in styleguide-governed items)
       - All ❓ items in styleguide.md clarified
+    waiver: |
+      The user may waive the criteria docs/phase_separation.md names under
+      "Waiving a criterion" (chapters complete, for chapters the work will not
+      contain; format-only iterations; styleguide questions), not the source
+      verification or open content items; record which and why in 00_Decisions.md.
     
     actions:
       - 00_Status.md  ->  overall phase: B
@@ -300,8 +306,8 @@ phases:
       - Closing handover.md lists found and resolved issues
     
     steps:
-      - Full styleguide check
-      - Milestone export as DOCX into submissions/v_<tag>_<date>.docx (the scripts below read this file)
+      - Milestone export as DOCX into submissions/v_<tag>_<date>.docx with Pandoc (docs/reference_management.md; the steps below read this file)
+      - Full styleguide check of that DOCX (format-verifier; report in format_reports/round_<n>.md)
       - scripts/bibliography_check.py (minus-test)
       - scripts/abbreviations_extract.py (derive list of abbreviations)
       - Consistency checks (page ranges, et-al., editions, pronouns)

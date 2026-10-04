@@ -22,6 +22,7 @@ If `styleguide.md` lacks a rule, report this explicitly — do not guess.
 - Status file: `workspace/state.md` or `00_Status.md`
 - format rules checklist: `checklists/format_rules.md`
 - Scripts: `scripts/bibliography_check.py`, `scripts/abbreviations_extract.py`
+- Commands: this definition writes `python3`; on Windows use `py`, also for your own one-line checks
 
 **Multi-project sub-project** (Claude Code opened on `01_Proposal/`, `02_Main_Work/` or `03_Defense/`): the styleguide is `../00_Shared_Materials/styleguide.md` and the guidelines are in `../00_Shared_Materials/guidelines/`. The framework folders stay at the multi-project root, one level up: `../checklists/`, `../scripts/`, `../templates/`, `../workflows/`, `../docs/`.
 
@@ -122,9 +123,9 @@ This enables `<w:autoHyphenation/>` in the document's settings.xml — python-do
 pandoc workspace/output/document.docx --to plain --wrap=none | \
   grep -inwE "(<forbidden_pronouns_from_styleguide>)"
 ```
-(Requires `pandoc` — an optional tool per `checklists/precheck.md`, section
-"Technical checks". If it is not installed, extract the text with python-docx
-instead and grep that.)
+(`pandoc` is needed for the Phase B export anyway: `checklists/precheck.md`,
+section "Technical checks". If it is not installed, extract the text with
+python-docx instead and grep that.)
 
 **Consistency checks from styleguide:**
 - Page range notation used consistently
@@ -154,7 +155,7 @@ These symbols are status codes, not decoration: the orchestrator, the state file
 
 **Phase A (Content):** flag only critical format errors (wholly wrong citation format). Defer polish. Pandoc citekeys (`[@key, p. X]`) in chapter drafts are not format errors when the decision log records citations as citekeys (`checklists/precheck.md`, section 6): their rendered form is checked in the exported DOCX in Phase B. Without that decision, citekeys are a critical error: nothing will render them in the styleguide's form.
 
-**Phase B (Formatting):** full check including mechanical scripts. Multiple iterations expected.
+**Phase B (Formatting):** full check including mechanical scripts, on the exported DOCX: fonts, margins, spacing, headings, pagination, the title page and the bibliography layout show only there, not in the Markdown chapter files. Multiple iterations expected.
 
 ## Principles
 
@@ -162,3 +163,4 @@ These symbols are status codes, not decoration: the orchestrator, the state file
 - **Transparency on gaps** — ❓ instead of guessing
 - **Precise findings** — line number + context, so the fix can be applied directly: in Phase A by the writer, in Phase B by the orchestrator or the user (format-only edits; the writer stays deactivated)
 - **Use scripts** — don't manually count what a script can count
+- **Stay inside the project** — write no files outside the project folder (multi-project: the folder that holds all sub-projects), not even scratch files: no `/tmp`, which in Git Bash on Windows is the system's temporary folder, and no scratchpad that Claude Code may name. Use a scratch file inside the project and delete it before you finish; the scripts in `scripts/`, which clean up their own temporary folders, are fine

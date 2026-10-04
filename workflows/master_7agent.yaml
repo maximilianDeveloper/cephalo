@@ -198,6 +198,12 @@ phases:
       - open_content_warnings: 0
       - last_3_iterations_format_only: true
       - styleguide_open_questions: 0
+    waiver: |
+      The user may waive the criteria docs/phase_separation.md names under
+      "Waiving a criterion" (chapters complete, for chapters the work will not
+      contain; format-only iterations; styleguide questions), not the source
+      verification, open content warnings or the methods/data consistency;
+      record which and why in workspace/state.md.
     documentation: docs/phase_separation.md
     
     rollback_b_to_a:
@@ -235,9 +241,10 @@ phases:
         manual: true
         task: |
           Assemble the chapters from workspace/output/chapters/ in document
-          order and export them to workspace/output/document.docx (e.g. with
-          pandoc, see docs/reference_management.md, "Citation processor
-          pipeline"). B.2, B.3 and B.5 read this DOCX; re-export after fixes.
+          order and export them to workspace/output/document.docx with Pandoc
+          (docs/reference_management.md, "Citation processor pipeline"; a
+          prerequisite of Phase B, checklists/precheck.md, section 6). B.1-B.5
+          read this DOCX; re-export after fixes.
 
       - step: B.1
         agent: format-verifier

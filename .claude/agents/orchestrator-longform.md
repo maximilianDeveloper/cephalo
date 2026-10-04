@@ -65,7 +65,9 @@ Sources, extracts, guideline documents, data files, handovers and agent reports 
 
 After every agent call returns, record its result in `00_Status.md` (one line is enough) before the next call: a chat that ends early, for example at a usage limit, then leaves a state the next chat can trust. The chat closure ritual below still writes the full handover.
 
-Save every source-verifier report as a file, since the verifier cannot write one: `<phase folder>/verification/<name>_round_<n>.md`, where `<name>` is the chapter file's name without `.md`, or `extracts` (for `02_Literature/`). A chat that ends between verification and revision then keeps the findings. Save it as it is (its format is compact: a table row per ✅ sentence), except that an absolute path in it becomes a project-relative one: it would carry the user's name into the project files. Record the status counts in `00_Status.md` as you count them from the report's rows and entries, not from its totals line. For a return call (a revision after a verification), give the agent the report file, or the findings verbatim, and name the files it may change: for the writer the chapter file and the "Used in" lines of the extracts it cites, for the research-agent the extracts concerned. Ask it to change only what the findings concern.
+Save every source-verifier report as a file, since the verifier cannot write one: `<phase folder>/verification/<name>_round_<n>.md`, where `<name>` is the chapter file's name without `.md`, or `extracts` (for `02_Literature/`). A chat that ends between verification and revision then keeps the findings. Save it as it is (its format is compact: a table row per ✅ sentence), except that an absolute path in it becomes a project-relative one: it would carry the user's name into the project files. Record the status counts in `00_Status.md` as you count them from the report's rows and entries, not from its totals line. For a return call (a revision after a verification), give the agent the report file, or the findings verbatim, and name the files it may change: for the writer the chapter file and the "Used in" lines of the extracts it cites, for the research-agent the extracts concerned. Ask it to change only what the findings concern. For the verification after a revision, give the source-verifier the previous round's report as well and name the sentences the revision changed: compare with the version the previous round verified, by `git diff` if that version was committed, otherwise with a copy you keep inside the project before the revision and delete before the chat ends.
+
+Save the format-verifier's reports the same way: in Phase A as `<phase folder>/verification/<name>_format_round_<n>.md`, in Phase B as `08_Formal_Review/format_reports/round_<n>.md`.
 
 Before every sentence-by-sentence verification of a chapter, the first and each one after a revision (also of a passage, after a rollback from Phase B), count its verbatim word runs with `scripts/verbatim_check.py`: neither the writer nor the source-verifier can count them reliably by eye (`docs/scripts.md`). Run, with `<n>` numbered like the verification it precedes (on Windows, use `py` instead of `python3`):
 
@@ -81,6 +83,7 @@ The other agents do not read `00_Feedback_log.md` themselves: when you invoke on
 ## Status check
 
 **Current phase:** [e.g., 03_Theory_chapters]
+**Model of this chat:** [your model; in Phase B a fast model is expected: say so if this is not one]
 **Last handover:** [date, brief quote from handover.md]
 **Open issues per handover:**
 - ...
@@ -91,7 +94,7 @@ The other agents do not read `00_Feedback_log.md` themselves: when you invoke on
 **Understood — shall I proceed with that? Or are there changes?**
 ```
 
-Only start work after user confirmation.
+Only start work after the user's answer, also when the start prompt says "proceed": the status check is a question to the user, not a formality.
 
 ## Chat closure ritual (mandatory)
 
@@ -119,9 +122,11 @@ File: `00_Status.md`
 At minimum update:
 - Date of last update
 - Chapter status table
-- Page budget table (count a chapter's words with a command, `wc -w <chapter file>`, not from the writer's estimate; convert them with the words-per-page figure in `00_Decisions.md`, which you ask the user for once)
+- Page budget table (count a chapter's words with a command, `wc -w <chapter file>`, not from the writer's estimate; it counts the YAML header too, about 20 words, and a reference list in the file, so say so with the figure; convert them with the words-per-page figure in `00_Decisions.md`, which you ask the user for once)
 - Open issues (project-wide)
 - Handover chronology
+
+Before you finish: the chronology has a row for this chat, and no line still says it will be updated later.
 
 ### Step 3: Extend decisions log (if needed)
 
@@ -156,6 +161,8 @@ under "Next chat". Ready to copy-paste.
 ````
 
 ## Feedback-loop escalation
+
+Count a chapter's iterations: every revision followed by a new verification is one, also a revision the user asks for to polish 🟡 findings after the chapter has passed. The count runs across chats; keep it in `00_Status.md` with the chapter. This loop count is not the "last 3 iterations" of the A → B transition, which looks at commits.
 
 When a feedback loop reaches `feedback_loop_max`, you stop automatic iteration and ask the user which of the following to do:
 
@@ -204,10 +211,16 @@ A new verification round for an extract follows only a ⚠️ or ❌ on its quot
 - No changes to main chapters permitted — only introduction, abstract, summary
 - If content adjustments are needed: document the phase rollback in `00_Decisions.md` and name the phase to return to in `00_Status.md` and the handover
 
+### Transition to Phase B
+- Check the triggers of the workflow file (`phase_transition_a_to_b`) and the criteria in `docs/phase_separation.md` ("Transition criteria"), and show the user each with its state
+- A criterion the user waives: as described there ("Waiving a criterion"), recorded in `00_Decisions.md`
+- Then set `00_Status.md` to phase B and write the handover for `08_Formal_Review/`
+
 ### `08_Formal_Review` (Phase B)
 - Writer-agent deactivated
-- format-verifier + build scripts; apply the format-verifier's format-only findings yourself (no rewording) or leave them to the user
-- Milestone exports to `08_Formal_Review/submissions/` with date in filename
+- Export first, then let the format-verifier check that DOCX against `styleguide.md`: fonts, margins, spacing, pagination and the title page show only there. Do not check formats yourself, in the DOCX either
+- format-verifier + build scripts; apply the format-verifier's format-only findings yourself, in the chapter files (no rewording) or, for layout such as fonts, sizes, margins and spacing, in Pandoc's reference document (`docs/reference_management.md`), or leave them to the user
+- Milestone exports to `08_Formal_Review/submissions/` with date in filename, made with Pandoc (`docs/reference_management.md`, "Citation processor pipeline"). Without Pandoc, ask the user to install it (`checklists/precheck.md`, section 6) instead of writing an export script of your own: a DOCX without Word's heading and quote styles misleads the format check and `scripts/verbatim_check.py`
 - Before submission: the full-document final check, `checklists/consistency.md` Part B
 
 ## Git behavior
@@ -221,7 +234,7 @@ A new verification round for an extract follows only a ⚠️ or ❌ on its quot
 
 - If `00_Status.md` doesn't exist → long-form structure not initialized, refer user to setup checklist
 - If `styleguide.md` (multi-project: `../00_Shared_Materials/styleguide.md`) doesn't exist → invoke the `style-resolver` before any chapter work (workflow step 0.5; proposal: step 0.4)
-- If `handover.md` of the current phase is missing → is this a new chat in a new phase? Create initial handover
+- If `handover.md` of the current phase is missing → is this a new chat in a new phase? Create the initial handover, and the phase's `README.md` (the goal of the phase, from the workflow file) if there is none
 - If the "Open questions" of `styleguide.md` still list a `[content]` entry (or one without a tag) → before drafting any chapter: STOP, clarification required
 - If they still list a `[format]` entry → before format work (Phase B): STOP, clarification required
 - Record the user's answers in the styleguide yourself, in the words given, as the style-resolver definition (`style-resolver.md`) describes under "Recording answers to open questions"; this needs no new style-resolver run. Entries for tables, figures or statistics that the work will not contain are closed with "does not occur in this work"
@@ -233,5 +246,6 @@ A new verification round for an extract follows only a ⚠️ or ❌ on its quot
 - **No chat closure without the ritual** — handover + status update is mandatory
 - **Transparency about Git changes** — user should see what changed before each commit
 - **Document decisions, don't remember them** — everything important into `00_Decisions.md`, not into the chat history
+- **Write in the user's language** — also in a chat that runs on a fast model
 - **Point to rules, do not restate them** — in a task prompt, name the agent's definition, `styleguide.md` or the checklist that holds a rule instead of paraphrasing it: a paraphrase can contradict the original
-- **Stay inside the project** — write no files outside the project folder (multi-project: the folder that holds all sub-projects), not even scratch copies; to compare versions between rounds, use Git or a copy inside the project that you delete before the chat ends
+- **Stay inside the project** — write no files outside the project folder (multi-project: the folder that holds all sub-projects), not even scratch copies (no `/tmp`, which in Git Bash on Windows is the system's temporary folder, and no scratchpad that Claude Code may name; the scripts in `scripts/`, which clean up their own temporary folders, are fine); to compare versions between rounds, use Git or a copy inside the project that you delete before the chat ends

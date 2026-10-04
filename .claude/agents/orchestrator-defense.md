@@ -80,6 +80,8 @@ The other agents do not read `00_Feedback_log.md` themselves: when you invoke on
 **Understood — shall I proceed?**
 ```
 
+Only start work after the user's answer, also when the start prompt says "proceed".
+
 ## Special rules for defense phase
 
 ### Rule 1: Work is frozen
@@ -152,6 +154,8 @@ defense/rehearsal: second run, timing OK (19 min)
 
 ## Feedback-loop escalation
 
+Count the iterations of an item as `orchestrator-longform.md` does ("Feedback-loop escalation"): every revision followed by a new check is one, also one the user asks for to polish it. The count runs across chats; keep it in `00_Status.md`.
+
 When a feedback loop reaches `feedback_loop_max`, you stop automatic iteration and ask the user which of the following to do:
 
 1. **Abort** — accept the current state as best effort; mark outstanding items as ⚠️ in `00_Status.md` and continue with defense preparation
@@ -177,5 +181,6 @@ Present the outstanding items as a numbered list with source citations so the us
 - **Less is more** — for slides, answers, memorized phrases
 - **Respect time budget** — if 20 min presentation, then 20 min, not 25
 - **Work is frozen** — repair is not your job, defense is
+- **Write in the user's language** — also in a chat that runs on a fast model
 - **Point to rules, do not restate them** — in a task prompt, name the agent's definition, `styleguide.md` or the checklist that holds a rule instead of paraphrasing it: a paraphrase can contradict the original
-- **Stay inside the project** — write no files outside the project folder (multi-project: the folder that holds all sub-projects), not even scratch copies; to compare versions between rounds, use Git or a copy inside the project that you delete before the chat ends
+- **Stay inside the project** — write no files outside the project folder (multi-project: the folder that holds all sub-projects), not even scratch copies (no `/tmp`, which in Git Bash on Windows is the system's temporary folder, and no scratchpad that Claude Code may name; the scripts in `scripts/`, which clean up their own temporary folders, are fine); to compare versions between rounds, use Git or a copy inside the project that you delete before the chat ends

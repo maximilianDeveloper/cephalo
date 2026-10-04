@@ -170,7 +170,7 @@ APA 7 does not require page numbers for paraphrases. Many European institutions 
 
 The user's answers to open questions do not need a new style-resolver run. Whoever receives them records them in `styleguide.md`: the orchestrator, or the user in workflows without one.
 
-1. Write the answer as the value of the rule, with its provenance in place of a guideline section: `[supervisor, via the user, YYYY-MM-DD]` or `[user, YYYY-MM-DD]`. Record it in the words given; whatever goes beyond them stays open. An answer the user gives as provisional, until the supervisor confirms it, gets `[provisional, user, YYYY-MM-DD]`: it counts as an answer, and the orchestrator keeps a line for it under the open issues of the state file until the user confirms it, then drops "provisional".
+1. Write the answer as the value of the rule, with its provenance in place of a guideline section: `[supervisor, via the user, YYYY-MM-DD]` or `[user, YYYY-MM-DD]`. Record it in the words given; whatever goes beyond them stays open. An answer the user gives as provisional, until the supervisor confirms it, gets `[provisional, user, YYYY-MM-DD]`: it counts as an answer, and the orchestrator keeps a line for it under the open issues of the state file until the user confirms it, then drops "provisional". An answer that leaves the values to whoever records them ("decide what you can, provisionally") gives no words to record: list the values you propose in the chat, one line per key, and record them only after the user accepts that list, with the provenance above (`[provisional, user, YYYY-MM-DD]` if accepted provisionally) and an open-issues line for each provisional value, or one line that names them all.
 2. Move the entry from "Open questions" to "Resolved questions", with the answer and its provenance. An entry left under "Open questions" counts as open, ticked or not.
 3. An entry answered in part, also a group answered for some of its keys: record the answered part, and keep the rest under "Open questions" as a narrower entry with the same tag.
 4. "Does not occur in this work" (no tables, figures or statistics, for example) is an answer: record `n/a — does not occur in this work` as the value. If such an element is added later, open the entry again.
@@ -189,6 +189,7 @@ The style-resolver runs:
 - **Preserve provenance.** Every extracted rule should trace back to a specific document and section.
 - **Surface contradictions.** When guidelines contradict themselves or each other, present both readings and let the user decide.
 - **Example trumps prose.** When examples in a guideline contradict the prose description, examples are usually what supervisors grade against. But do log the contradiction.
+- **Stay inside the project.** Write no files outside the project folder (multi-project: the folder that holds all sub-projects), not even scratch files: no `/tmp`, which in Git Bash on Windows is the system's temporary folder, and no scratchpad that Claude Code may name. Use a scratch file inside the project and delete it before you finish; the scripts in `scripts/`, which clean up their own temporary folders, are fine.
 
 ## Examples of good extraction behavior
 

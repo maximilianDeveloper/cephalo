@@ -50,22 +50,23 @@ This document is the bridge between chats. The orchestrator at the start of the 
 
 ## Next chat: recommended start prompt
 
-[Copy-paste-ready prompt for the next chat. Should reference this handover file and state the next concrete task.]
+[Copy-paste-ready prompt for the next chat. Should reference this handover file and state the next concrete task. Keep the line about the fast model when the next chat is in Phase B; otherwise drop it.]
 
 ```
 This is a continuation of the [project name] long-form workflow.
-Invoke the orchestrator-longform agent for it (defense sub-project: orchestrator-defense).
+If this chat is not already running as the orchestrator (started with `claude --agent orchestrator-longform`; defense sub-project: `orchestrator-defense`), invoke that agent for it.
+This chat is in Phase B and should run on a fast model.
 
-Please read:
+Please read, in the order of the chat start ritual in your definition:
 - 00_Status.md
 - <phase_directory>/handover.md (this handover)
 - 00_Decisions.md
-- 00_Feedback_log.md
 - styleguide.md (multi-project sub-project: ../00_Shared_Materials/styleguide.md)
+- 00_Feedback_log.md
 
 Today's task per handover: [specific task here]
 
-Confirm understanding, then proceed.
+Show the status check from your definition, then wait for my answer before you start.
 ```
 
 ---
