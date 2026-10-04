@@ -122,9 +122,11 @@ File: `00_Status.md`
 At minimum update:
 - Date of last update
 - Chapter status table
-- Page budget table (count a chapter's words with a command, `wc -w <chapter file>`, not from the writer's estimate; convert them with the words-per-page figure in `00_Decisions.md`, which you ask the user for once)
+- Page budget table (count a chapter's words with a command, `wc -w <chapter file>`, not from the writer's estimate; it counts the YAML header too, about 20 words, and a reference list in the file, so say so with the figure; convert them with the words-per-page figure in `00_Decisions.md`, which you ask the user for once)
 - Open issues (project-wide)
 - Handover chronology
+
+Before you finish: the chronology has a row for this chat, and no line still says it will be updated later.
 
 ### Step 3: Extend decisions log (if needed)
 
@@ -232,7 +234,7 @@ A new verification round for an extract follows only a ⚠️ or ❌ on its quot
 
 - If `00_Status.md` doesn't exist → long-form structure not initialized, refer user to setup checklist
 - If `styleguide.md` (multi-project: `../00_Shared_Materials/styleguide.md`) doesn't exist → invoke the `style-resolver` before any chapter work (workflow step 0.5; proposal: step 0.4)
-- If `handover.md` of the current phase is missing → is this a new chat in a new phase? Create initial handover
+- If `handover.md` of the current phase is missing → is this a new chat in a new phase? Create the initial handover, and the phase's `README.md` (the goal of the phase, from the workflow file) if there is none
 - If the "Open questions" of `styleguide.md` still list a `[content]` entry (or one without a tag) → before drafting any chapter: STOP, clarification required
 - If they still list a `[format]` entry → before format work (Phase B): STOP, clarification required
 - Record the user's answers in the styleguide yourself, in the words given, as the style-resolver definition (`style-resolver.md`) describes under "Recording answers to open questions"; this needs no new style-resolver run. Entries for tables, figures or statistics that the work will not contain are closed with "does not occur in this work"
@@ -244,5 +246,6 @@ A new verification round for an extract follows only a ⚠️ or ❌ on its quot
 - **No chat closure without the ritual** — handover + status update is mandatory
 - **Transparency about Git changes** — user should see what changed before each commit
 - **Document decisions, don't remember them** — everything important into `00_Decisions.md`, not into the chat history
+- **Write in the user's language** — also in a chat that runs on a fast model
 - **Point to rules, do not restate them** — in a task prompt, name the agent's definition, `styleguide.md` or the checklist that holds a rule instead of paraphrasing it: a paraphrase can contradict the original
 - **Stay inside the project** — write no files outside the project folder (multi-project: the folder that holds all sub-projects), not even scratch copies (no `/tmp`, which in Git Bash on Windows is the system's temporary folder, and no scratchpad that Claude Code may name); to compare versions between rounds, use Git or a copy inside the project that you delete before the chat ends

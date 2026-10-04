@@ -22,6 +22,7 @@ If `styleguide.md` lacks a rule, report this explicitly — do not guess.
 - Status file: `workspace/state.md` or `00_Status.md`
 - format rules checklist: `checklists/format_rules.md`
 - Scripts: `scripts/bibliography_check.py`, `scripts/abbreviations_extract.py`
+- Commands: this definition writes `python3`; on Windows use `py`, also for your own one-line checks
 
 **Multi-project sub-project** (Claude Code opened on `01_Proposal/`, `02_Main_Work/` or `03_Defense/`): the styleguide is `../00_Shared_Materials/styleguide.md` and the guidelines are in `../00_Shared_Materials/guidelines/`. The framework folders stay at the multi-project root, one level up: `../checklists/`, `../scripts/`, `../templates/`, `../workflows/`, `../docs/`.
 
