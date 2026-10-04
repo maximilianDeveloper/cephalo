@@ -324,8 +324,8 @@ phases:
     content_or_form_phase: B
     
     steps:
-      - Full styleguide check
-      - Milestone export as DOCX to submissions/ (the scripts below read this file)
+      - Milestone export as DOCX to submissions/ with Pandoc (docs/reference_management.md; the steps below read this file)
+      - Full styleguide check of that DOCX (format-verifier; report in format_reports/round_<n>.md)
       - scripts/bibliography_check.py
       - scripts/abbreviations_extract.py
       - Consistency checks

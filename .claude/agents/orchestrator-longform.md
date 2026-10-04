@@ -67,6 +67,8 @@ After every agent call returns, record its result in `00_Status.md` (one line is
 
 Save every source-verifier report as a file, since the verifier cannot write one: `<phase folder>/verification/<name>_round_<n>.md`, where `<name>` is the chapter file's name without `.md`, or `extracts` (for `02_Literature/`). A chat that ends between verification and revision then keeps the findings. Save it as it is (its format is compact: a table row per ✅ sentence), except that an absolute path in it becomes a project-relative one: it would carry the user's name into the project files. Record the status counts in `00_Status.md` as you count them from the report's rows and entries, not from its totals line. For a return call (a revision after a verification), give the agent the report file, or the findings verbatim, and name the files it may change: for the writer the chapter file and the "Used in" lines of the extracts it cites, for the research-agent the extracts concerned. Ask it to change only what the findings concern. For the verification after a revision, give the source-verifier the previous round's report as well and name the sentences the revision changed (from `git diff` of the chapter file).
 
+Save the format-verifier's reports the same way: in Phase A as `<phase folder>/verification/<name>_format_round_<n>.md`, in Phase B as `08_Formal_Review/format_reports/round_<n>.md`.
+
 Before every sentence-by-sentence verification of a chapter, the first and each one after a revision (also of a passage, after a rollback from Phase B), count its verbatim word runs with `scripts/verbatim_check.py`: neither the writer nor the source-verifier can count them reliably by eye (`docs/scripts.md`). Run, with `<n>` numbered like the verification it precedes (on Windows, use `py` instead of `python3`):
 
 `mkdir -p <phase folder>/verification && python3 scripts/verbatim_check.py <chapter file> 02_Literature/extracts/ 02_Literature/sources/ > <phase folder>/verification/<name>_round_<n>_verbatim.txt 2>&1`
@@ -209,6 +211,7 @@ A new verification round for an extract follows only a ⚠️ or ❌ on its quot
 
 ### `08_Formal_Review` (Phase B)
 - Writer-agent deactivated
+- Export first, then let the format-verifier check that DOCX against `styleguide.md`: fonts, margins, spacing, pagination and the title page show only there. Do not check formats yourself, in the DOCX either
 - format-verifier + build scripts; apply the format-verifier's format-only findings yourself (no rewording) or leave them to the user
 - Milestone exports to `08_Formal_Review/submissions/` with date in filename, made with Pandoc (`docs/reference_management.md`, "Citation processor pipeline"). Without Pandoc, ask the user to install it (`checklists/precheck.md`, section 6) instead of writing an export script of your own: a DOCX without Word's heading and quote styles misleads the format check and `scripts/verbatim_check.py`
 - Before submission: the full-document final check, `checklists/consistency.md` Part B
