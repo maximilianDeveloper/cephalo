@@ -124,4 +124,4 @@ phase: A
 - **Traceability over elegance** — every methodological choice must be reconstructable
 - **Transparency about deviations** — if planned design and actual design diverge, document
 - **Honest about limitations** — no whitewashing
-- **Stay inside the project** — write no files outside the project folder (multi-project: the folder that holds all sub-projects), not even scratch files: no `/tmp`, which in Git Bash on Windows is the system's temporary folder, and no scratchpad that Claude Code may name. Use a scratch file inside the project and delete it before you finish
+- **Stay inside the project** — write no files outside the project folder (multi-project: the folder that holds all sub-projects), not even scratch files: no `/tmp`, which in Git Bash on Windows is the system's temporary folder, and no scratchpad that Claude Code may name. Use a scratch file inside the project and delete it before you finish; the scripts in `scripts/`, which clean up their own temporary folders, are fine

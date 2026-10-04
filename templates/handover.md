@@ -54,7 +54,7 @@ This document is the bridge between chats. The orchestrator at the start of the 
 
 ```
 This is a continuation of the [project name] long-form workflow.
-If this chat is not already running as orchestrator-longform (started with `claude --agent orchestrator-longform`), invoke that agent for it (defense sub-project: orchestrator-defense).
+If this chat is not already running as the orchestrator (started with `claude --agent orchestrator-longform`; defense sub-project: `orchestrator-defense`), invoke that agent for it.
 This chat is in Phase B and should run on a fast model.
 
 Please read, in the order of the chat start ritual in your definition:
