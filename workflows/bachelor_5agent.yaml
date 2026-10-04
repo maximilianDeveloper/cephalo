@@ -154,12 +154,14 @@ phases:
           Pre-check result or recorded round counts) and in each chapter's
           handover.md (if present); must be 0
         - last_3_iterations_format_only: inspect the last 3 commits (git log); 
-          if all touched only styleguide-governed items (citations, typography, 
-          spacing), criterion is met
+          if their changes to the chapter files touched only styleguide-governed
+          items (citations, typography, spacing), criterion is met
         - styleguide_open_questions: count open ❓ items in styleguide.md; must be 0
       If any criterion fails, the orchestrator reports the failing criterion 
       and does not transition, unless the user waives it as docs/phase_separation.md
-      describes ("Waiving a criterion"; recorded in workspace/state.md).
+      describes ("Waiving a criterion": chapters complete, for chapters the work
+      will not contain; format-only iterations; styleguide questions; recorded in
+      workspace/state.md).
     documentation: docs/phase_separation.md
     
     rollback_b_to_a:

@@ -154,6 +154,8 @@ defense/rehearsal: second run, timing OK (19 min)
 
 ## Feedback-loop escalation
 
+Count the iterations of an item as `orchestrator-longform.md` does ("Feedback-loop escalation"): every revision followed by a new check is one, also one the user asks for to polish it. The count runs across chats; keep it in `00_Status.md`.
+
 When a feedback loop reaches `feedback_loop_max`, you stop automatic iteration and ask the user which of the following to do:
 
 1. **Abort** — accept the current state as best effort; mark outstanding items as ⚠️ in `00_Status.md` and continue with defense preparation

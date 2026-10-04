@@ -200,8 +200,10 @@ phases:
       - styleguide_open_questions: 0
     waiver: |
       The user may waive the criteria docs/phase_separation.md names under
-      "Waiving a criterion" (chapters complete, format-only iterations, styleguide
-      questions), not the source verification; record which and why in workspace/state.md.
+      "Waiving a criterion" (chapters complete, for chapters the work will not
+      contain; format-only iterations; styleguide questions), not the source
+      verification, open content warnings or the methods/data consistency;
+      record which and why in workspace/state.md.
     documentation: docs/phase_separation.md
     
     rollback_b_to_a:

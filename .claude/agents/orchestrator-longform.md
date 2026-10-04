@@ -162,7 +162,7 @@ under "Next chat". Ready to copy-paste.
 
 ## Feedback-loop escalation
 
-Count a chapter's iterations: every revision followed by a new verification is one, also a revision the user asks for to polish 🟡 findings after the chapter has passed. The count runs across chats; keep it in `00_Status.md` with the chapter.
+Count a chapter's iterations: every revision followed by a new verification is one, also a revision the user asks for to polish 🟡 findings after the chapter has passed. The count runs across chats; keep it in `00_Status.md` with the chapter. This loop count is not the "last 3 iterations" of the A → B transition, which looks at commits.
 
 When a feedback loop reaches `feedback_loop_max`, you stop automatic iteration and ask the user which of the following to do:
 
@@ -212,7 +212,7 @@ A new verification round for an extract follows only a ⚠️ or ❌ on its quot
 - If content adjustments are needed: document the phase rollback in `00_Decisions.md` and name the phase to return to in `00_Status.md` and the handover
 
 ### Transition to Phase B
-- Check the criteria in `docs/phase_separation.md` ("Transition criteria") and show the user each with its state
+- Check the triggers of the workflow file (`phase_transition_a_to_b`) and the criteria in `docs/phase_separation.md` ("Transition criteria"), and show the user each with its state
 - A criterion the user waives: as described there ("Waiving a criterion"), recorded in `00_Decisions.md`
 - Then set `00_Status.md` to phase B and write the handover for `08_Formal_Review/`
 
