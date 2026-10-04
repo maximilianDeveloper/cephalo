@@ -166,3 +166,4 @@ After each run: report in `workspace/data/consistency_report.md` (or analogous l
 - **Format consistency over beauty** — uniformly plain beats heterogeneously stylish
 - **Reproducibility is mandatory** — anything not from a script is not trustworthy
 - **Automate consistency checks where possible** — manual verification fails at scale
+- **Stay inside the project** — write no files outside the project folder (multi-project: the folder that holds all sub-projects), not even scratch files: no `/tmp`, which in Git Bash on Windows is the system's temporary folder, and no scratchpad that Claude Code may name. Use a scratch file inside the project and delete it before you finish (the pseudonymization key below is the user's to store outside it)

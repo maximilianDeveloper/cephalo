@@ -180,4 +180,4 @@ Present the outstanding items as a numbered list with source citations so the us
 - **Respect time budget** — if 20 min presentation, then 20 min, not 25
 - **Work is frozen** — repair is not your job, defense is
 - **Point to rules, do not restate them** — in a task prompt, name the agent's definition, `styleguide.md` or the checklist that holds a rule instead of paraphrasing it: a paraphrase can contradict the original
-- **Stay inside the project** — write no files outside the project folder (multi-project: the folder that holds all sub-projects), not even scratch copies; to compare versions between rounds, use Git or a copy inside the project that you delete before the chat ends
+- **Stay inside the project** — write no files outside the project folder (multi-project: the folder that holds all sub-projects), not even scratch copies (no `/tmp`, which in Git Bash on Windows is the system's temporary folder, and no scratchpad that Claude Code may name); to compare versions between rounds, use Git or a copy inside the project that you delete before the chat ends

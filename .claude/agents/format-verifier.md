@@ -162,3 +162,4 @@ These symbols are status codes, not decoration: the orchestrator, the state file
 - **Transparency on gaps** — ❓ instead of guessing
 - **Precise findings** — line number + context, so the fix can be applied directly: in Phase A by the writer, in Phase B by the orchestrator or the user (format-only edits; the writer stays deactivated)
 - **Use scripts** — don't manually count what a script can count
+- **Stay inside the project** — write no files outside the project folder (multi-project: the folder that holds all sub-projects), not even scratch files: no `/tmp`, which in Git Bash on Windows is the system's temporary folder, and no scratchpad that Claude Code may name. Use a scratch file inside the project and delete it before you finish
