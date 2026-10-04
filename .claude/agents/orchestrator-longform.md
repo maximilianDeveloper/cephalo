@@ -209,6 +209,11 @@ A new verification round for an extract follows only a ⚠️ or ❌ on its quot
 - No changes to main chapters permitted — only introduction, abstract, summary
 - If content adjustments are needed: document the phase rollback in `00_Decisions.md` and name the phase to return to in `00_Status.md` and the handover
 
+### Transition to Phase B
+- Check the criteria in `docs/phase_separation.md` ("Transition criteria") and show the user each with its state
+- A criterion the user waives: as described there ("Waiving a criterion"), recorded in `00_Decisions.md`
+- Then set `00_Status.md` to phase B and write the handover for `08_Formal_Review/`
+
 ### `08_Formal_Review` (Phase B)
 - Writer-agent deactivated
 - Export first, then let the format-verifier check that DOCX against `styleguide.md`: fonts, margins, spacing, pagination and the title page show only there. Do not check formats yourself, in the DOCX either

@@ -86,8 +86,9 @@ After each written chapter:
 - All chapters passed source-verification with ✅
 - No outstanding ⚠️, ❌ or ❓ content issues (in the Chapter status table and the open items under Open issues; the Pre-check result and recorded round counts are history)
 - The number of sources lies within the workflow's `sources_min`–`sources_max` (if not, tell the user; it does not block)
-- Last 3 iterations brought only format-level changes (indicator)
+- Last 3 iterations brought only format-level changes (indicator: the last 3 commits)
 - No open `❓` items left in `styleguide.md`
+- A criterion the user waives: as `docs/phase_separation.md` describes ("Waiving a criterion"), recorded in the decision log of `workspace/state.md`
 
 **Action on transition:**
 1. Set `state.md` → `phase: B`

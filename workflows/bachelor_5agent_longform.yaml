@@ -262,8 +262,12 @@ phases:
     triggers:
       - All content chapters (incl. introduction) complete with ✅ source verification
       - No outstanding content ⚠️, ❌ or ❓ items
-      - Last 3 iterations were format-only (content has stabilized)
+      - Last 3 iterations were format-only (content has stabilized; the last 3 commits touched only styleguide-governed items)
       - All ❓ items in styleguide.md clarified
+    waiver: |
+      The user may waive the criteria docs/phase_separation.md names under
+      "Waiving a criterion" (chapters complete, format-only iterations, styleguide
+      questions), not the source verification; record which and why in 00_Decisions.md.
     
     actions:
       - 00_Status.md  ->  overall phase: B

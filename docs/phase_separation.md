@@ -63,7 +63,7 @@ The orchestrator transitions the project from A to B when:
 1. **All chapters complete** — body, conclusion, AND introduction (introduction is always last)
 2. **Source verification ✅** — every chapter passed sentence-by-sentence verification
 3. **No outstanding ⚠️, ❌ or ❓ content items** — all flagged content issues resolved (a 🟡 polish flag does not block)
-4. **Last 3 iterations were format-only** — empirical signal that content has stabilized
+4. **Last 3 iterations were format-only** — empirical signal that content has stabilized: the last three commits touched only styleguide-governed items (citations, typography, spacing)
 5. **All `❓` items in `styleguide.md` resolved** — no open formatting questions
 
 When all criteria are met, the orchestrator:
@@ -71,6 +71,10 @@ When all criteria are met, the orchestrator:
 - Deactivates the writer-agent
 - Activates the format-verifier as the lead agent
 - Begins phase 08_Formal_Review (long-form) or the flat workflow's Phase B steps (`phase_B_form`, then its closing checklist)
+
+### Waiving a criterion
+
+The user may waive criteria 1, 4 and 5 for a reason of their own, for example a practice work without an introduction. The orchestrator then records in the decision log (`00_Decisions.md`; flat: `workspace/state.md`) which criteria are waived and why, and transitions. Open `❓ [format]` items in `styleguide.md` are answered at the start of Phase B, before any format work. Criteria 2 and 3, the source verification and the open content items, cannot be waived: a chapter with an open ⚠️, ❌ or ❓ stays in Phase A.
 
 ---
 
