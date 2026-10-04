@@ -83,7 +83,7 @@ The writer-agent uses citekeys in citations within chapter drafts:
 Information asymmetry impedes access to capital providers [@smith2020, p. 975].
 ```
 
-When exporting to the final document (DOCX or PDF), citekeys are resolved to the styleguide-compliant citation format via a citation processor (Pandoc, LaTeX with biblatex, etc.).
+When exporting to the final document (DOCX or PDF), citekeys are resolved to the styleguide-compliant citation format via a citation processor: Pandoc, which cephalo's formatting phase uses for the DOCX export, or LaTeX with biblatex for a PDF.
 
 ### Bibliography generation
 
@@ -167,11 +167,13 @@ Use your structure's `literature.bib` path from "Set up auto-export" (flat: `--b
 
 cephalo's formatting phase exports with Pandoc also when the chapters cite in the styleguide's format and not by citekey: Pandoc sets Markdown headings and block quotes (`>`) in Word's heading and quote styles, which the format check and `scripts/verbatim_check.py` rely on. Without citekeys, leave out `--citeproc`, `--bibliography` and `--csl`; the reference list then comes from the chapter files.
 
+The `--reference-doc` file carries the layout: fonts, sizes, margins, page size and the paragraph styles. Set it up once per styleguide (start from `pandoc -o template.docx --print-default-data-file reference.docx` and adjust its styles in Word); the format check's layout findings are fixed there, not in the chapter files.
+
 **Prerequisite:** a CSL file matching your institution's citation style. APA 7 is the closest standard for many institutions; download from [zotero.org/styles](https://www.zotero.org/styles). For institution-specific deviations, you may need to edit the CSL.
 
 Without Pandoc or such a CSL file, citekeys never become citations in your styleguide's form. The pre-check therefore records whether the chapters cite by citekey (`checklists/precheck.md`, section 6); if not, the writer-agent writes citations in the styleguide's format directly, and `literature.bib` still serves the research-agent's citekey check. In citekey form, a German prefix and locator work as usual (`[vgl. @mueller2019, S. 44]`), and a secondary citation whose original stays out of the bibliography carries the original as plain text: `[Weber 1922, S. 31, zit. nach @keller2018, S. 5]`.
 
-For LaTeX users: biblatex with biber works similarly. cephalo does not prescribe a tool — use what you're comfortable with.
+For LaTeX users: biblatex with biber renders citekeys as well, for a PDF. The DOCX that cephalo's formatting phase checks comes from Pandoc.
 
 ---
 
@@ -273,7 +275,7 @@ For long-form or multi-project setups.
 - [ ] Project collection created in Zotero
 - [ ] Auto-export to `literature.bib` enabled and verified
 - [ ] CSL file for the institution's citation style available
-- [ ] Pandoc (or LaTeX) available for bibliography generation
+- [ ] Pandoc available (the DOCX export of the formatting phase needs it; LaTeX only for a PDF of your own)
 - [ ] First test: add one source to Zotero, verify `literature.bib` updates, generate a small DOCX with one citation
 
 **If you use Citavi:**
@@ -284,7 +286,7 @@ For long-form or multi-project setups.
 - [ ] First BibTeX export to `literature.bib` completed
 - [ ] Export settings verified: author order preserved, umlauts as `ä ö ü ß` (not LaTeX escapes)
 - [ ] CSL file for the institution's citation style available
-- [ ] Pandoc (or LaTeX) available for bibliography generation
+- [ ] Pandoc available (the DOCX export of the formatting phase needs it; LaTeX only for a PDF of your own)
 - [ ] Habit established: re-export `literature.bib` before each cephalo chat
 - [ ] First test: add one source, re-export, generate a small DOCX with one citation
 
