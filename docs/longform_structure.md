@@ -178,7 +178,7 @@ Synthesis. Two files: `discussion.md` and `conclusion.md`.
 
 ### Phase 08_Formal_Review
 
-Phase B. Format-verifier and build scripts only. Milestones export to `submissions/`.
+Phase B. Format-verifier and build scripts only. A milestone is first exported to `submissions/` with Pandoc; the format-verifier then checks that DOCX, and the build scripts read it.
 
 ---
 
@@ -212,6 +212,7 @@ It then summarizes to the user:
 ## Status check
 
 Current phase: ...
+Model of this chat: ...
 Last handover: ...
 Open issues per handover: ...
 External blockers: ...
@@ -220,7 +221,7 @@ Today's task per handover: ...
 Understood — shall I proceed with that?
 ```
 
-Wait for the user's confirmation before doing actual work. This catches the case where the user wants to do something different than the handover suggested.
+Wait for the user's confirmation before doing actual work, also when the start prompt says "proceed". This catches the case where the user wants to do something different than the handover suggested.
 
 ---
 
