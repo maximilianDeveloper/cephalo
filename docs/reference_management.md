@@ -167,6 +167,12 @@ Use your structure's `literature.bib` path from "Set up auto-export" (flat: `--b
 
 cephalo's formatting phase exports with Pandoc also when the chapters cite in the styleguide's format and not by citekey: Pandoc sets Markdown headings and block quotes (`>`) in Word's heading and quote styles, which the format check and `scripts/verbatim_check.py` rely on. Without citekeys, leave out `--citeproc`, `--bibliography` and `--csl`; the reference list then comes from the chapter files.
 
+**Prerequisite:** a CSL file matching your institution's citation style. APA 7 is the closest standard for many institutions; download from [zotero.org/styles](https://www.zotero.org/styles). For institution-specific deviations, you may need to edit the CSL.
+
+Without Pandoc or such a CSL file, citekeys never become citations in your styleguide's form. The pre-check therefore records whether the chapters cite by citekey (`checklists/precheck.md`, section 6); if not, the writer-agent writes citations in the styleguide's format directly, and `literature.bib` still serves the research-agent's citekey check. In citekey form, a German prefix and locator work as usual (`[vgl. @mueller2019, S. 44]`), and a secondary citation whose original stays out of the bibliography carries the original as plain text: `[Weber 1922, S. 31, zit. nach @keller2018, S. 5]`.
+
+For LaTeX users: biblatex with biber renders citekeys as well, for a PDF. The DOCX that cephalo's formatting phase checks comes from Pandoc.
+
 ### The reference document
 
 The `--reference-doc` file carries the layout: page size, margins, the footer with the page number, and the paragraph styles; Pandoc takes all of these from it. Keep it in the project, as `08_Formal_Review/reference.docx` (flat: `workspace/output/reference.docx`), and set it up once per styleguide: start from Pandoc's own with `pandoc -o 08_Formal_Review/reference.docx --print-default-data-file reference.docx` and adjust it in Word (Modify Style; Layout for page size and margins) or with python-docx. The format check's layout findings are fixed there, not in the chapter files.
@@ -178,11 +184,13 @@ Pandoc sets the text in these styles, so these are the ones to adjust:
 | `Normal` | the base of the others: font, size, line spacing |
 | `First Paragraph` | the first paragraph after a heading |
 | `Body Text` | every further paragraph (Pandoc's own has 9 pt before and after) |
-| `Compact` | list items |
+| `Compact` | items of a tight list (a loose list, with blank lines between its items, gets `Body Text`) |
 | `Block Text` | block quotes written with `>` (Pandoc's own is indented by 0.85 cm on both sides) |
-| `Heading 1` to `Heading 3` | headings; with their character styles `Heading 1 Char` to `Heading 3 Char` |
+| `Heading 1` to `Heading 4` | headings, as deep as `headings.max_depth` goes; with their character styles `Heading 1 Char` and so on |
 | `Bibliography` | the reference list |
-| `Footnote Text` | footnotes |
+| `Footnote Text`, `Footnote Reference` | footnotes, and the number that marks them in the text |
+| `Hyperlink` | links and URLs (Pandoc's own is blue) |
+| `Table Caption`, `Image Caption`, `Captioned Figure` | captions and figures (`captions.*`) |
 | `Title`, `Subtitle`, `Author`, `Date` | a title block from the metadata, if one is used |
 
 Pandoc's own reference document takes the heading font and colour from the document theme: set both in the heading styles and in their character styles. It has no page size, no margins and no page number: set them, and put a `PAGE` field into the footer, aligned as the styleguide says.
@@ -203,7 +211,7 @@ The div is markup, not wording: in Phase B the orchestrator adds it as a format-
 
 ### The title page
 
-Pandoc writes no title page of its own. Write it as a Markdown file in the project, `08_Formal_Review/title_page.md` (flat: `workspace/output/title_page.md`), and list it first, before the chapter files, when you call Pandoc. Its contents come from `styleguide.md` (`title_page.*`); what the user has not given yet stays a placeholder such as `[Name]`. Set its lines in the styles `Title`, `Subtitle`, `Author` and `Date` (or in styles of your own, which Pandoc adds to the document) with fenced divs, and end it with a page break:
+Pandoc writes no title page of its own. Write it as a Markdown file in the project, `08_Formal_Review/title_page.md` (flat: `workspace/output/title_page.md`), and list it first, before the chapter files, when you call Pandoc. Its contents come from `styleguide.md` (`title_page.*`); what the user has not given yet stays a placeholder such as `[Name]`. Set its lines in the styles `Title`, `Subtitle`, `Author` and `Date` (or in styles of your own, which Pandoc adds to the document) with fenced divs, and end it with a page break. A table of contents goes into the same file, as a Word field after the title page, with the levels of `headings.max_depth` (`\o "1-3"`); Word fills it in when the user updates the fields (Ctrl+A, then F9, a step of the workflows' submission). Do not use Pandoc's `--toc`: Pandoc places its table of contents before all text, so before the title page.
 
 ````markdown
 ::: {custom-style="Title"}
@@ -216,21 +224,21 @@ Title of the work
 
 ```{=openxml}
 <w:p><w:r><w:br w:type="page"/></w:r></w:p>
+<w:p><w:r><w:fldChar w:fldCharType="begin" w:dirty="true"/></w:r><w:r><w:instrText xml:space="preserve"> TOC \o "1-3" \h \z \u </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>Table of contents: update the fields (F9)</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>
+<w:p><w:r><w:br w:type="page"/></w:r></w:p>
 ```
 ````
+
+The level formatting of the table of contents (`headings.toc_emphasis`) comes from the styles `TOC 1` to `TOC 3`, which Word adds to the document when it fills the field in.
 
 The page numbers follow `pagination.title_page` in `styleguide.md`, and Pandoc takes the settings for them from the reference document:
 
 - **Counted but not shown:** give the reference document a different first page (Word: Layout, Page Setup, Layout tab, "Different first page"; in its XML `w:titlePg`), with no page number in the first-page footer. The first text page then shows 2.
 - **Not counted:** in addition, start the page numbering at 0 (Word: Insert, Page Number, Format Page Numbers, "Start at" 0; in its XML `<w:pgNumType w:start="0"/>`). The first text page then shows 1.
 
-Front matter numbered in Roman numerals needs a section of its own, which a reference document cannot give: set it in Word in the final DOCX, and record that in the handover.
+Who edits the XML of the reference document keeps the order of the section properties (`w:sectPr`), which Word expects: `w:pgNumType` follows `w:pgSz` and `w:pgMar`, and `w:titlePg` follows `w:pgNumType`. A table of contents after the title page counts like a text page: with one page of it, the first text page shows 3, or 2 if the title page is not counted.
 
-**Prerequisite:** a CSL file matching your institution's citation style. APA 7 is the closest standard for many institutions; download from [zotero.org/styles](https://www.zotero.org/styles). For institution-specific deviations, you may need to edit the CSL.
-
-Without Pandoc or such a CSL file, citekeys never become citations in your styleguide's form. The pre-check therefore records whether the chapters cite by citekey (`checklists/precheck.md`, section 6); if not, the writer-agent writes citations in the styleguide's format directly, and `literature.bib` still serves the research-agent's citekey check. In citekey form, a German prefix and locator work as usual (`[vgl. @mueller2019, S. 44]`), and a secondary citation whose original stays out of the bibliography carries the original as plain text: `[Weber 1922, S. 31, zit. nach @keller2018, S. 5]`.
-
-For LaTeX users: biblatex with biber renders citekeys as well, for a PDF. The DOCX that cephalo's formatting phase checks comes from Pandoc.
+Front matter numbered in Roman numerals (`pagination.front_matter`) needs a section of its own, which a reference document cannot give. The user sets it in Word in the final DOCX, after the final export (a step of the workflows' submission); until then the format check lists it as an open manual step, not as a finding to fix.
 
 ---
 

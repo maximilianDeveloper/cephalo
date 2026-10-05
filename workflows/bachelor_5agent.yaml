@@ -243,6 +243,7 @@ phases:
     - step: F.3
       manual: true
       task: |
+        - Roman front matter: only if styleguide.md pagination.front_matter is Roman, the user sets it as a section of its own in Word (docs/reference_management.md, "The title page")
         - Update table of contents (in Word: Ctrl+A then F9)
         - Confirm the hyphenation setting matches styleguide.md (document.hyphenation)
         - Visual proofreading

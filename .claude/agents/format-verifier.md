@@ -67,7 +67,7 @@ Verify the following categories. Concrete values (font size, page-range notation
 - [ ] Decoration/logo policy per styleguide (`title_page.decoration`; some institutions forbid any decoration or logo)
 
 ## Pagination
-- [ ] Numbering scheme per styleguide (a common convention: title page counted but unnumbered, front matter in Roman numerals, main text in Arabic from the introduction onward)
+- [ ] Numbering scheme per styleguide (a common convention: title page counted but unnumbered, front matter in Roman numerals, main text in Arabic from the introduction onward). Roman front matter is a section the user sets in Word after the final export (`docs/reference_management.md`, "The title page"): before that, list it as an open manual step, not as ❌
 - [ ] Position per styleguide
 
 ## Indexes

@@ -323,6 +323,7 @@ phases:
       - Full-document final check: checklists/consistency.md, Part B (orchestrator-longform; B.6 is completed by the commit and tag below)
       - Final DOCX export to 08_Formal_Review/submissions/v_final_<date>.docx
       - Run scripts/docx_postprocess.sh on this v_final file (only if styleguide.md document.hyphenation = automatic; a fresh export may not carry the earlier patch)
+      - Roman front matter: only if styleguide.md pagination.front_matter is Roman, the user sets it as a section of its own in Word (docs/reference_management.md, "The title page")
       - Update table of contents (Ctrl+A then F9)
       - Confirm the hyphenation setting matches styleguide.md (document.hyphenation)
       - Visual proofreading
