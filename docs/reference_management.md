@@ -175,7 +175,7 @@ For LaTeX users: biblatex with biber renders citekeys as well, for a PDF. The DO
 
 ### The reference document
 
-The `--reference-doc` file carries the layout: page size, margins, the footer with the page number, and the paragraph styles; Pandoc takes all of these from it. Keep it in the project, as `08_Formal_Review/reference.docx` (flat: `workspace/output/reference.docx`), and set it up once per styleguide: start from Pandoc's own with `pandoc -o 08_Formal_Review/reference.docx --print-default-data-file reference.docx` and adjust it in Word (Modify Style; Layout for page size and margins) or with python-docx. The format check's layout findings are fixed there, not in the chapter files.
+The `--reference-doc` file carries the layout: page size, margins, the footer with the page number, and the paragraph styles; Pandoc takes all of these from it. Keep it in the project, as `08_Formal_Review/reference.docx` (flat: `workspace/output/reference.docx`), and build it from the values in `styleguide.md` with `scripts/build_reference_docx.py` (`docs/scripts.md`): it starts from Pandoc's own and sets the styles below, page size, margins, the page number and the title page's numbering. By hand, start from `pandoc -o 08_Formal_Review/reference.docx --print-default-data-file reference.docx` and adjust it in Word (Modify Style; Layout for page size and margins). The format check's layout findings are fixed there, by building it again with the corrected value, not in the chapter files.
 
 Pandoc sets the text in these styles, so these are the ones to adjust:
 

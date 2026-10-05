@@ -34,7 +34,7 @@ jobs:
         run: python -m pip install -r requirements.txt pyyaml
 
       - name: Python syntax
-        run: python -m py_compile scripts/abbreviations_extract.py scripts/bibliography_check.py scripts/cross_session_audit.py scripts/verbatim_check.py
+        run: python -m py_compile scripts/abbreviations_extract.py scripts/bibliography_check.py scripts/build_reference_docx.py scripts/cross_session_audit.py scripts/verbatim_check.py
 
       - name: Shell syntax
         # One file per call: `bash -n a b c` parses only a (b and c become its arguments).
@@ -181,6 +181,7 @@ jobs:
         run: |
           python scripts/abbreviations_extract.py --help
           python scripts/bibliography_check.py --help
+          python scripts/build_reference_docx.py --help
           python scripts/cross_session_audit.py --help
           python scripts/verbatim_check.py --help
           bash scripts/docx_postprocess.sh --help
@@ -1520,6 +1521,149 @@ jobs:
           grep -qF 'ller.epub (.epub is not read' "$V/out.txt"
           if grep -q 'a.pdf\|logo.png\|handover.md\|Could not be read' "$V/out.txt"; then cat "$V/out.txt"; echo "a hidden, archive or note file was listed"; exit 1; fi
 
+      - name: build_reference_docx.py (styles, page settings, errors; round trip through Pandoc)
+        run: |
+          R=/tmp/ci_refdoc; rm -rf "$R"; mkdir -p "$R"
+          expect() {
+            want=$1; shift
+            set +e; "$@" >"$R/out.txt" 2>&1; code=$?; set -e
+            if [ "$code" -ne "$want" ]; then cat "$R/out.txt"; echo "expected exit $want, got $code: $*"; exit 1; fi
+          }
+          # An error is one line that names the option: not argparse's usage block, which also exits 2.
+          one_error() {
+            if [ "$(wc -l < "$R/out.txt")" -ne 1 ] || ! grep -q "^Error: $1" "$R/out.txt"; then cat "$R/out.txt"; echo "expected one line 'Error: $1...'"; exit 1; fi
+          }
+          python -c "import docx, sys; docx.Document().save(sys.argv[1])" "$R/base.docx"
+          ARGS="--font Arial --size 11 --line-spacing 1,5 --align justify --space-after 6 --first-line-indent 0.5
+                --heading-sizes 14,12,11 --heading-bold yes --heading-color 000000 --quote-indent 1 --quote-size 10
+                --quote-line-spacing 1 --footnote-size 10 --bib-hanging 1 --bib-line-spacing 1 --link-color 000000
+                --page-size A4 --margins 2.5,3,2.5,3 --page-number bottom-right --title-page not-counted --lang de-DE"
+          # Without Pandoc: from a python-docx document, which lacks Pandoc's own styles (they are added)
+          # and sets its headings in theme fonts and colours, which a plain value must replace.
+          # shellcheck disable=SC2086
+          expect 0 python scripts/build_reference_docx.py "$R/ref.docx" --base "$R/base.docx" $ARGS
+          grep -q '^Reference document written' "$R/out.txt"
+          python - "$R/ref.docx" <<'EOF'
+          import re, sys, zipfile
+          import docx
+          from docx.shared import Pt
+          path = sys.argv[1]
+          d = docx.Document(path)
+          st = {s.name: s for s in d.styles}
+          styles_xml = zipfile.ZipFile(path).read("word/styles.xml").decode("utf-8")
+          def xml(style_id):
+              m = re.search(r'<w:style [^>]*w:styleId="' + style_id + r'"[^>]*>.*?</w:style>', styles_xml, re.S)
+              return m.group(0) if m else ""
+          def check(cond, what):
+              if not cond:
+                  raise SystemExit("build_reference_docx.py: " + what)
+          def cm(length, value):  # Word stores lengths in twips: 0.5 cm comes back as 0.4992 cm
+              return length is not None and abs(length.cm - value) < 0.01
+          for name in ("Body Text", "First Paragraph", "Block Text", "Bibliography", "Footnote Text"):
+              check(name in st, f"style {name} missing")
+          n = st["Normal"]
+          check(n.font.name == "Arial" and n.font.size == Pt(11) and n.paragraph_format.line_spacing == 1.5, "Normal")
+          b = st["Body Text"].paragraph_format
+          check(b.space_before == Pt(0) and b.space_after == Pt(6), "Body Text spacing: 0 before when only --space-after is given")
+          check(cm(b.first_line_indent, 0.5) and b.alignment == 3, "Body Text indent and alignment")
+          for name in ("First Paragraph", "Block Text"):
+              check(cm(st[name].paragraph_format.first_line_indent, 0), f"{name} without first-line indent")
+          for level in (1, 4):  # a level beyond --heading-sizes takes font, weight and colour too
+              h = xml(f"Heading{level}")
+              check(h and "asciiTheme" not in h and "themeColor" not in h, f"Heading {level} keeps a theme font or colour")
+              check('w:ascii="Arial"' in h and 'w:val="000000"' in h, f"Heading {level}: font or colour not set")
+          check(st["Heading 1"].font.size == Pt(14) and st["Heading 3"].font.size == Pt(11) and st["Heading 1"].font.bold, "heading sizes")
+          q = st["Block Text"]
+          check(cm(q.paragraph_format.left_indent, 1) and cm(q.paragraph_format.right_indent, 0) and q.font.size == Pt(10), "Block Text")
+          bib = st["Bibliography"].paragraph_format
+          check(cm(bib.left_indent, 1) and cm(bib.first_line_indent, -1) and bib.line_spacing == 1.0, "Bibliography")
+          s0 = d.sections[-1]
+          check(cm(s0.page_width, 21.0) and cm(s0.page_height, 29.7), "page size")
+          check(cm(s0.top_margin, 2.5) and cm(s0.left_margin, 3), "margins")
+          check(s0.different_first_page_header_footer, "different first page")
+          doc_xml = zipfile.ZipFile(path).read("word/document.xml").decode("utf-8")
+          sect = doc_xml[doc_xml.rfind("<w:sectPr"):]
+          pgmar = re.search(r"<w:pgMar[^>]*/>", sect).group(0)
+          check(all(f"w:{a}=" in pgmar for a in ("top", "right", "bottom", "left", "header", "footer", "gutter")), f"incomplete {pgmar}")
+          tags = re.findall(r"<w:(\w+)", sect)[1:]
+          check('w:start="0"' in sect, "page numbering start 0")
+          check(tags.index("pgMar") < tags.index("pgNumType") < tags.index("titlePg"), f"order of the section properties: {tags}")
+          footers = [f for f in zipfile.ZipFile(path).namelist() if f.startswith("word/footer")]
+          check(sum(zipfile.ZipFile(path).read(f).decode("utf-8").count("PAGE") for f in footers) == 1, "not exactly one PAGE field")
+          print("OK: reference document from a python-docx document")
+          EOF
+          # A template's own page number gives way to the new one.
+          expect 0 python scripts/build_reference_docx.py "$R/again.docx" --base "$R/ref.docx" --page-number bottom-center
+          python - "$R/again.docx" <<'EOF'
+          import sys, zipfile
+          z = zipfile.ZipFile(sys.argv[1])
+          n = sum(z.read(f).decode("utf-8").count("PAGE") for f in z.namelist() if f.startswith("word/footer"))
+          if n != 1:
+              raise SystemExit(f"build_reference_docx.py: {n} PAGE fields after a rebuild over a page number")
+          EOF
+          # Errors: one line, exit 2, nothing written.
+          expect 2 python scripts/build_reference_docx.py "$R/x.docx" --base "$R/base.docx" --margins 2.5,3
+          one_error "--margins"
+          expect 2 python scripts/build_reference_docx.py "$R/x.docx" --base "$R/base.docx" --heading-color blue
+          one_error "--heading-color"
+          expect 2 python scripts/build_reference_docx.py "$R/x.docx" --base "$R/base.docx" --size 11cm
+          one_error "--size"
+          expect 2 python scripts/build_reference_docx.py "$R/x.docx" --base "$R/missing.docx"
+          one_error "--base"
+          expect 2 python scripts/build_reference_docx.py "$R/nofolder/x.docx" --base "$R/base.docx"
+          one_error "the folder"
+          expect 2 python scripts/build_reference_docx.py "$R/x.docx" --pandoc "$R/no-pandoc"
+          one_error "Pandoc"
+          test ! -e "$R/x.docx"
+          # With Pandoc: from Pandoc's own reference document, and a round trip whose DOCX carries the
+          # styles and page settings. On a GitHub runner Pandoc is installed for this check.
+          if ! command -v pandoc >/dev/null 2>&1 && command -v apt-get >/dev/null 2>&1; then
+            sudo apt-get update -qq >/dev/null 2>&1 && sudo apt-get install -y -qq pandoc >/dev/null 2>&1 || true
+          fi
+          if ! command -v pandoc >/dev/null 2>&1; then
+            if [ "${GITHUB_ACTIONS:-}" = "true" ]; then echo "Pandoc could not be installed"; exit 1; fi
+            echo "Pandoc not installed: round trip skipped"
+            exit 0
+          fi
+          pandoc --version | head -1
+          # shellcheck disable=SC2086
+          expect 0 python scripts/build_reference_docx.py "$R/pandoc-ref.docx" $ARGS
+          printf '# 1 Kapitel\n\nErster Absatz.\n\nZweiter Absatz.\n\n> Ein Blockzitat.\n\n| A | B |\n|---|---|\n| x | y |\n\n#### Ebene vier\n\nText.\n\n## Literaturverzeichnis\n\n::: {custom-style="Bibliography"}\nAutor, Anna (2020): Titel.\n:::\n' > "$R/doc.md"
+          pandoc "$R/doc.md" --reference-doc "$R/pandoc-ref.docx" -o "$R/doc.docx"
+          python - "$R/doc.docx" <<'EOF'
+          import sys, zipfile
+          import docx
+          from docx.shared import Pt
+          d = docx.Document(sys.argv[1])
+          def eff(st, get):
+              while st is not None:
+                  v = get(st)
+                  if v is not None:
+                      return v
+                  st = st.base_style
+          seen = {p.style.name: p.style for p in d.paragraphs}
+          def check(cond, what):
+              if not cond:
+                  raise SystemExit("round trip: " + what)
+          def cm(length, value):
+              return length is not None and abs(length.cm - value) < 0.01
+          for name in ("Heading 1", "Heading 4", "First Paragraph", "Body Text", "Block Text", "Bibliography"):
+              check(name in seen, f"no paragraph in {name}: {sorted(seen)}")
+          check(eff(seen["Body Text"], lambda s: s.font.name) == "Arial", "body font")
+          check(eff(seen["Body Text"], lambda s: s.font.size) == Pt(11), "body size")
+          check(eff(seen["Heading 1"], lambda s: s.font.size) == Pt(14), "heading size")
+          check(str(eff(seen["Heading 4"], lambda s: s.font.color.rgb if s.font.color.type else None)) == "000000", "Heading 4 colour")
+          check(cm(eff(seen["Block Text"], lambda s: s.paragraph_format.left_indent), 1), "block quote indent")
+          check(cm(eff(seen["Bibliography"], lambda s: s.paragraph_format.first_line_indent), -1), "hanging indent")
+          cells = [c.paragraphs[0] for t in d.tables for r in t.rows for c in r.cells]
+          check(cells and all(cm(eff(p.style, lambda s: s.paragraph_format.first_line_indent), 0) for p in cells), "first-line indent in table cells")
+          xml = zipfile.ZipFile(sys.argv[1]).read("word/document.xml").decode("utf-8")
+          sect = xml[xml.rfind("<w:sectPr"):]
+          for part in ('<w:pgSz', 'w:start="0"', "<w:titlePg", "<w:footerReference", "w:footer="):
+              check(part in sect, f"{part} not in the exported section properties")
+          print("OK: Pandoc round trip")
+          EOF
+
   windows:
     name: PowerShell 5.1 parse & setup smoke (Windows)
     runs-on: windows-latest
@@ -1699,7 +1843,7 @@ jobs:
 
       - name: Python syntax (Windows)
         shell: powershell
-        run: python -m py_compile scripts/abbreviations_extract.py scripts/bibliography_check.py scripts/cross_session_audit.py scripts/verbatim_check.py
+        run: python -m py_compile scripts/abbreviations_extract.py scripts/bibliography_check.py scripts/build_reference_docx.py scripts/cross_session_audit.py scripts/verbatim_check.py
 
       # Informational only: not part of the verified baseline. Remove
       # continue-on-error once a clean run is confirmed.
