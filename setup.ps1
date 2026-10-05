@@ -953,6 +953,9 @@ venv/
 !**/data/raw/README.md
 !**/data/processed/.gitkeep
 
+# Scratch files of the agents (they delete them before a chat ends)
+_scratch/
+
 # Claude Code runtime artifacts (in every folder: in a multi-project
 # setup, Claude Code is opened on a sub-project)
 **/.claude/worktrees/
