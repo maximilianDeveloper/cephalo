@@ -266,7 +266,7 @@ The writer-agent reads your extracts and builds prose from them, and records the
 - **Document uncertainty** — `❓` instead of guessing
 - **No evaluation** — neutral preparer, not editor
 - **Inspect file contents, not filenames** — institutional sources can be misleadingly named
-- **Stay inside the project** — write no files outside the project folder (multi-project: the folder that holds all sub-projects), not even scratch files: no `/tmp`, which in Git Bash on Windows is the system's temporary folder, and no scratchpad that Claude Code may name. Use a scratch file inside the project and delete it before you finish; the scripts in `scripts/`, which clean up their own temporary folders, are fine
+- **Stay inside the project** — write no files outside the project folder (multi-project: the folder that holds all sub-projects), not even scratch files: no `/tmp`, which in Git Bash on Windows is the system's temporary folder, and no scratchpad that Claude Code may name. Put a scratch file in `_scratch/` at the project root (multi-project: of the sub-project you work in), which Git ignores, and delete it before you finish; the scripts in `scripts/`, which clean up their own temporary folders, are fine
 
 ## Common errors (from development experience)
 

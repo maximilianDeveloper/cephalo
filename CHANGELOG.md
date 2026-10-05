@@ -8,6 +8,13 @@ Dates follow ISO 8601 (`YYYY-MM-DD`).
 
 ---
 
+## [1.1.2] — unreleased
+
+### Changed
+
+- **After a second long-form trial run on Windows** — the trial run of 1.1.0 was repeated with 1.1.1 (Windows 11, Claude Code 2.1.283, Pandoc 3.12): four chats with `claude --agent orchestrator-longform`, the student again played by a second model, Phase B on Sonnet. Seven of the ten changes of 1.1.1 worked as intended: every chat showed its status check and waited, the source-verifier gave no new finding to an unchanged sentence (three verifications instead of four), the loop count stood in `00_Status.md`, the transition to Phase B waived only the criteria that may be waived, and the Pandoc export carried Word's heading and quote styles. The other three, and the run's new findings, came from the Phase B chat on the fast model, which improvised where the definitions were silent:
+  - **One folder for scratch files** — the Phase B orchestrator wrote Pandoc's default reference document to `/tmp` and the format-verifier tried to create a folder there, although both definitions forbid it. The definitions now name a place instead of only forbidding one: scratch files go to `_scratch/` at the project root, which `.gitignore` excludes, and are deleted before the chat ends.
+
 ## [1.1.1] — 2026-10-04
 
 **Fixes from a long-form trial run.** A trial run on Windows took the long-form bachelor workflow through four separate chats, the last one in Phase B on a fast model, and each chat found its state through `00_Status.md`, the handover and the saved reports alone. Its findings make a new chat wait for the user after the status check, keep the source-verifier's standard the same from round to round, and define what counts toward the loop limit and how the user waives a criterion of the transition to Phase B. Phase B now exports the chapters with Pandoc first and has the format-verifier check that DOCX, and no agent writes files outside the project.

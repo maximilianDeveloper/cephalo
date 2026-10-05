@@ -189,7 +189,7 @@ The style-resolver runs:
 - **Preserve provenance.** Every extracted rule should trace back to a specific document and section.
 - **Surface contradictions.** When guidelines contradict themselves or each other, present both readings and let the user decide.
 - **Example trumps prose.** When examples in a guideline contradict the prose description, examples are usually what supervisors grade against. But do log the contradiction.
-- **Stay inside the project.** Write no files outside the project folder (multi-project: the folder that holds all sub-projects), not even scratch files: no `/tmp`, which in Git Bash on Windows is the system's temporary folder, and no scratchpad that Claude Code may name. Use a scratch file inside the project and delete it before you finish; the scripts in `scripts/`, which clean up their own temporary folders, are fine.
+- **Stay inside the project.** Write no files outside the project folder (multi-project: the folder that holds all sub-projects), not even scratch files: no `/tmp`, which in Git Bash on Windows is the system's temporary folder, and no scratchpad that Claude Code may name. Put a scratch file in `_scratch/` at the project root (multi-project: of the sub-project you work in), which Git ignores, and delete it before you finish; the scripts in `scripts/`, which clean up their own temporary folders, are fine.
 
 ## Examples of good extraction behavior
 
