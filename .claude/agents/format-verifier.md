@@ -17,7 +17,7 @@ If `styleguide.md` lacks a rule, report this explicitly — do not guess.
 
 - Styleguide: `styleguide.md` (project root) — **single source of truth**
 - Chapter texts: `workspace/output/chapters/` or phase directories
-- Full document: `workspace/output/document.docx` (flat), the PPTX in `workspace/output/slides/` (presentations), the latest export in `08_Formal_Review/submissions/` (long-form) or in `04_Submission/` (proposal sub-project). The commands below show the flat path: use the actual document instead.
+- Full document: `workspace/output/document.docx` (flat), the PPTX in `workspace/output/slides/` (presentations), the export the task prompt names, in `08_Formal_Review/submissions/` (long-form) or in `04_Submission/` (proposal sub-project). The commands below show the flat path: use the actual document instead.
 - Institutional guidelines (fallback reference): `workspace/sources/_guidelines/` or `guidelines/`
 - Status file: `workspace/state.md` or `00_Status.md`
 - format rules checklist: `checklists/format_rules.md`
@@ -99,7 +99,7 @@ Verify the following categories. Concrete values (font size, page-range notation
 
 ### 3. Automated mechanical checks
 
-These run deterministically (on Windows, use `py` instead of `python3`). Run each one as given, without piping its output through `head` or another command, so that the last line shows its exit code, and put the exit code into your report:
+These run deterministically (on Windows, use `py` instead of `python3`). Run the three scripts below as given, without piping their output through `head` or another command, so that the last line shows the exit code, and put each exit code into your report:
 
 **Bibliography minus-test:**
 ```bash
@@ -135,7 +135,14 @@ python-docx instead and grep that.)
 
 ### 4. Output format
 
-Per verified rule:
+At the top of the report, the file you checked and the scripts' exit codes:
+
+```markdown
+**Checked file:** [path of the DOCX, as the task prompt names it]
+**Script exit codes:** bibliography_check.py [n], abbreviations_extract.py [n], docx_postprocess.sh [n or "not run"]
+```
+
+Then per verified rule:
 
 ```markdown
 **Rule:** [description, source: styleguide.md line X]
