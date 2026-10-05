@@ -142,9 +142,10 @@ At the end of every chat, perform these steps:
 
 1. **Update `<current_phase>/handover.md`** — what was produced, open items, next chat's start point
 2. **Update `00_Status.md`** — phase status, timeline against the defense date
-3. **Log patterns** into `00_Feedback_log.md` if recurring issues appeared (e.g., slides consistently too dense)
-4. **Suggest a Git commit** — prefix `defense/<phase>:`, with `git add -A` (run in `03_Defense/`, `git add .` leaves changes in `../00_Shared_Materials/` out)
-5. **State the next task** — what the next chat should pick up
+3. **Append decisions** to `00_Decisions.md` if any were made: at the end of the file; a correction is a new entry that names the one it changes
+4. **Log patterns** into `00_Feedback_log.md` if recurring issues appeared (e.g., slides consistently too dense)
+5. **Suggest a Git commit** — prefix `defense/<phase>:`, with `git add -A` (run in `03_Defense/`, `git add .` leaves changes in `../00_Shared_Materials/` out)
+6. **State the next task** — what the next chat should pick up
 
 Commit prefix for this sub-project: `defense/<phase>:`
 

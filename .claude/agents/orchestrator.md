@@ -123,7 +123,7 @@ Present the outstanding items as a numbered list with source citations so the us
 
 At the end of every chat, regardless of what was done:
 
-1. **Update `workspace/state.md`** — reflect what was completed, what is still pending, page budget status
+1. **Update `workspace/state.md`** — reflect what was completed, what is still pending, page budget status, and any other line whose state this chat changed. A record of an earlier state, such as the pre-check result, stays as it was, with a dated line below it. Decisions are appended at the end of the decision log; a correction is a new entry that names the one it changes
 2. **Log recurring patterns** into `workspace/feedback.md` if a pattern was observed (if the file exists)
 3. **Suggest a Git commit** — propose a commit message in the form `<phase>: <short description>` but do not self-commit
 4. **Name the next task** — state clearly what the next chat should pick up. If ambiguous, ask the user.

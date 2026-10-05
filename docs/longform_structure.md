@@ -86,10 +86,13 @@ project/
 ├── 08_Formal_Review/                  (Phase B)
 │   ├── handover.md
 │   ├── README.md
+│   ├── reference.docx                 ← Pandoc's reference document (layout)
+│   ├── title_page.md                  ← first file of every export
 │   ├── format_reports/
 │   └── submissions/
-│       └── v_<tag>_<date>.docx
+│       └── v_<tag>_<date>.docx        (a new tag per format round: v_r1_…, v_r2_…)
 │
+├── _scratch/                          ← agents' scratch files, deleted after use (git-ignored)
 ├── .gitignore
 ├── .gitattributes
 └── .git/

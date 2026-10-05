@@ -66,6 +66,8 @@ project_root/                          ← Git repo root (one repo for all)
 │   ├── 06_Discussion_Conclusion/
 │   ├── 07_Introduction/
 │   └── 08_Formal_Review/
+│       ├── reference.docx             ← Pandoc's reference document (layout)
+│       ├── title_page.md              ← first file of every export
 │       └── submissions/
 │           └── v_final_<date>.docx
 │
