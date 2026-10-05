@@ -47,7 +47,7 @@ If `styleguide.md` does not yet exist:
 - Invoke the `style-resolver` agent
 - Wait for result
 - Check for open `❓` items
-- Open `[content]` entries under "Open questions" (or entries without a tag): prompt the user to clarify them before any chapter is drafted. Group the entries for tables, figures and statistics, so that a work without them can close them at once with "does not occur in this work"
+- Open `[content]` entries under "Open questions" (or entries without a tag): prompt the user to clarify them before any chapter is drafted. Group the entries for tables, figures and statistics, so that a work without them can close them at once with "does not occur in this work"; the user may answer so for any other element the work will not contain as well (`style-resolver.md`, "Recording answers to open questions")
 - Record the answers in `styleguide.md` yourself, in the words given, as `.claude/agents/style-resolver.md` describes ("Recording answers to open questions"); this needs no new style-resolver run
 - Open `[format]` entries: remind the user; they may stay open until the Phase A → B transition
 
