@@ -129,6 +129,7 @@ At minimum update:
 - Page budget table (count a chapter's words with a command, `wc -w <chapter file>`, not from the writer's estimate; it counts the YAML header too, about 20 words, and a reference list in the file, so say so with the figure; convert them with the words-per-page figure in `00_Decisions.md`, which you ask the user for once)
 - Open issues (project-wide)
 - Handover chronology
+- Any other line whose state this chat changed, also outside the tables: for example the styleguide line of the pre-check result once open questions are answered
 
 Before you finish: the chronology has a row for this chat, and no line still says it will be updated later.
 

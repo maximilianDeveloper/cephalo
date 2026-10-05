@@ -107,9 +107,7 @@ Each chapter as a separate file with YAML frontmatter:
 chapter: 2
 title: "..."
 target_pages: 2.0
-actual_pages: [filled after formatting]
 sources_used: [Author1, Author2, ...]
-phase: A
 ---
 ```
 

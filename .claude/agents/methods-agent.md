@@ -115,7 +115,6 @@ research_design: "[quantitative / qualitative / mixed]"
 sample_size: "[N or saturation justified]"
 analysis_procedure: "[e.g., linear regression, qualitative content analysis]"
 software: "[e.g., R 4.3, MAXQDA 2024]"
-phase: A
 ---
 ```
 
