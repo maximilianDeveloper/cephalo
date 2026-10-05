@@ -1,6 +1,6 @@
 # Scripts
 
-cephalo ships six utility scripts in `scripts/`. They are optional — the agents can guide a project without them — but each one automates a check or transformation that would otherwise take manual effort.
+cephalo ships seven utility scripts in `scripts/`. They are optional — the agents can guide a project without them — but each one automates a check or transformation that would otherwise take manual effort.
 
 | Script | Purpose | When to run |
 |--------|---------|-------------|
@@ -8,6 +8,7 @@ cephalo ships six utility scripts in `scripts/`. They are optional — the agent
 | `verbatim_check.py` | Count the verbatim word runs a chapter shares with its sources, rated by the plagiarism thresholds | Phase A, before each chapter verification (bachelor and master workflows: step A.4) |
 | `abbreviations_extract.py` | Derive the list of abbreviations from a finished DOCX | Phase B, final stages |
 | `bibliography_check.py` | Minus-test by author surname: every cited author is in the bibliography, every entry's lead author is cited | Phase B, final stages |
+| `build_reference_docx.py` | Build Pandoc's reference document (layout of the exported DOCX) from the styleguide's values | Phase B, before the first export and after a layout finding |
 | `docx_postprocess.sh` | Enable automatic hyphenation in a DOCX (python-docx doesn't set this) | Phase B, before final export |
 | `cross_session_audit.py` | Cross-worktree audit: surfaces notes and changes from other worktrees/sessions that never reached the main worktree | Multi-worktree projects, at session start or weekly |
 
@@ -15,7 +16,7 @@ cephalo ships six utility scripts in `scripts/`. They are optional — the agent
 
 ## Installation
 
-All scripts require Python 3.9 or newer. `abbreviations_extract.py`, `bibliography_check.py`, `verbatim_check.py` and `extract_styleguide.sh` have dependencies listed in `requirements.txt` (`python-docx`, and `pypdf` with its `[crypto]` extra, which installs `cryptography` for AES-encrypted PDFs). `cross_session_audit.py` uses only the Python standard library.
+All scripts require Python 3.9 or newer. `abbreviations_extract.py`, `bibliography_check.py`, `build_reference_docx.py`, `verbatim_check.py` and `extract_styleguide.sh` have dependencies listed in `requirements.txt` (`python-docx`, and `pypdf` with its `[crypto]` extra, which installs `cryptography` for AES-encrypted PDFs). `cross_session_audit.py` uses only the Python standard library.
 
 ### On Linux / macOS
 
@@ -188,6 +189,35 @@ The check uses heuristics and may produce false positives — and, in a few know
 - **Unusual bibliography headings**: numbered (`7 Literaturverzeichnis`, `7.1 Literatur`) and punctuated (`References:`) headings are tolerated — the detection strips typed decimal numbering and trailing punctuation before matching against `BIBLIOGRAPHY_HEADERS` (case-insensitive). A genuinely different heading word, or a typed letter or Roman number (`A. Literaturverzeichnis`, `IV. Literaturverzeichnis`), fails detection; if that happens, add your exact heading text to `BIBLIOGRAPHY_HEADERS` in the script.
 
 Use the output as a starting point for manual verification, not as a final verdict.
+
+### `build_reference_docx.py`
+
+Builds the reference document from which Pandoc takes the layout of an exported DOCX (`pandoc --reference-doc`, see `docs/reference_management.md`, "The reference document"): fonts, sizes, line spacing, paragraph spacing and alignment, headings, block quotes, footnotes, the reference list's hanging indent, page size, margins, the page number and the title page's numbering. The orchestrator reads the values in `styleguide.md` and passes them as options; what is not given stays as in Pandoc's own reference document.
+
+```bash
+python3 scripts/build_reference_docx.py 08_Formal_Review/reference.docx \
+    --font Arial --size 11 --line-spacing 1.5 --align justify --space-after 6 \
+    --heading-sizes 14,12,11 --heading-bold yes --heading-color 000000 \
+    --quote-indent 1,0 --quote-size 10 --quote-line-spacing 1 \
+    --footnote-size 10 --footnote-line-spacing 1 --bib-hanging 1 --bib-line-spacing 1 \
+    --page-size A4 --margins 2.5 --page-number bottom-right --title-page counted --lang de-DE
+python3 scripts/build_reference_docx.py --help
+```
+
+Sizes are in pt, lengths in cm, line spacing a multiple (`1`, `1.5`; a single value also takes a decimal comma, `1,5`). Lists are separated by commas, with decimal points: `--margins 2.5` for all sides, or `--margins 2.5,3,2.5,3` for top, right, bottom and left; `--quote-indent 1,0` for left and right. `--title-page counted` leaves the first page without a number, `not-counted` also starts the numbering at 0, so that the first text page shows 1 (`pagination.title_page`). `--heading-color` and `--link-color` replace Pandoc's blue.
+
+What it does:
+
+1. Starts from Pandoc's own reference document (`pandoc --print-default-data-file reference.docx`), or from a DOCX given with `--base`, such as an institution's template; styles Pandoc uses and the starting document lacks are added
+2. Sets the given values in the styles Pandoc uses (`Normal`, `Body Text`, `First Paragraph`, `Block Text`, `Heading 1` and following with their character styles, `Bibliography`, `Footnote Text`, `Title` and the other title styles, `Hyperlink`), with the font also where the document theme set it
+3. Sets page size and margins, puts a `PAGE` field into the footer (or header), and for the title page sets "different first page" and, if not counted, the start of the numbering, in the order Word expects
+4. Writes the file and lists what it set
+
+Run it before the first export of Phase B, and again after a layout finding of the format check, with the corrected value: fix the layout there, not in the chapter files. Start each run from Pandoc's own document (no `--base` with an earlier result), so that a value left out falls back to Pandoc's.
+
+Exit code 0 = reference document written, 2 = not written (bad option, Pandoc not found and no `--base`, a folder or file that does not exist; the message says which).
+
+Not covered: the table of contents styles (`TOC 1` and following, which Word adds when it fills in the field), heading numbers (they come from the heading text, or from Pandoc's `--number-sections`, not from the reference document), and front matter in Roman numerals, which needs a section of its own (`docs/reference_management.md`, "The title page").
 
 ### `docx_postprocess.sh`
 
