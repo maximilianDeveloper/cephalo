@@ -110,7 +110,7 @@ python3 scripts/bibliography_check.py workspace/output/document.docx; echo "exit
 ```bash
 python3 scripts/abbreviations_extract.py workspace/output/document.docx; echo "exit=$?"
 ```
-Run it on a copy of the document without the list of abbreviations: the script reads the list too, so every listed entry would count as used.
+Run it on a copy of the document without the list of abbreviations, in `_scratch/format-verifier/`: the script reads the list too, so every listed entry would count as used.
 
 **Automatic hyphenation** (only if `styleguide.md` sets `document.hyphenation` to automatic; before final export):
 ```bash
@@ -170,4 +170,4 @@ These symbols are status codes, not decoration: the orchestrator, the state file
 - **Transparency on gaps** — ❓ instead of guessing
 - **Precise findings** — line number + context, so the fix can be applied directly: in Phase A by the writer, in Phase B by the orchestrator or the user (format-only edits; the writer stays deactivated)
 - **Use scripts** — don't manually count what a script can count
-- **Stay inside the project** — write no files outside the project folder (multi-project: the folder that holds all sub-projects), not even scratch files: no `/tmp`, which in Git Bash on Windows is the system's temporary folder, and no scratchpad that Claude Code may name. Put a scratch file in `_scratch/` at the project root (multi-project: of the sub-project you work in), which Git ignores, and delete it before you finish; the scripts in `scripts/`, which clean up their own temporary folders, are fine
+- **Stay inside the project** — write no files outside the project folder (multi-project: the folder that holds all sub-projects), not even scratch files: no `/tmp`, which in Git Bash on Windows is the system's temporary folder, and no scratchpad that Claude Code may name. Put scratch files in `_scratch/format-verifier/` at the project root (multi-project: of the sub-project you work in), which Git ignores, and delete that folder before you finish; leave the rest of `_scratch/` alone, the orchestrator may keep a file there; the scripts in `scripts/`, which clean up their own temporary folders, are fine

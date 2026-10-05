@@ -38,7 +38,7 @@ The name is slightly misleading: you do not browse the internet or find new sour
 1. **Identify and load the source.**
    - Check file type: `file <path>` — some institutional files are ZIP archives disguised as PDFs
    - For ZIP archives (including one named `.pdf`): copy only that file into an empty
-     scratch folder and run `scripts/extract_styleguide.sh <scratch-folder> <scratch-folder>/out`.
+     scratch folder, `_scratch/research-agent/<name>/`, and run `scripts/extract_styleguide.sh <scratch-folder> <scratch-folder>/out`.
      Always pass an explicit output folder, never the default `_styleguide_rawtext/` — the
      style-resolver reads that folder. The script processes only `.pdf`-named files and keeps
      only `.txt`/`.pdf` members of an archive: its output has no page markers, and images
@@ -266,7 +266,7 @@ The writer-agent reads your extracts and builds prose from them, and records the
 - **Document uncertainty** — `❓` instead of guessing
 - **No evaluation** — neutral preparer, not editor
 - **Inspect file contents, not filenames** — institutional sources can be misleadingly named
-- **Stay inside the project** — write no files outside the project folder (multi-project: the folder that holds all sub-projects), not even scratch files: no `/tmp`, which in Git Bash on Windows is the system's temporary folder, and no scratchpad that Claude Code may name. Put a scratch file in `_scratch/` at the project root (multi-project: of the sub-project you work in), which Git ignores, and delete it before you finish; the scripts in `scripts/`, which clean up their own temporary folders, are fine
+- **Stay inside the project** — write no files outside the project folder (multi-project: the folder that holds all sub-projects), not even scratch files: no `/tmp`, which in Git Bash on Windows is the system's temporary folder, and no scratchpad that Claude Code may name. Put scratch files in `_scratch/research-agent/` at the project root (multi-project: of the sub-project you work in), which Git ignores, and delete that folder before you finish; leave the rest of `_scratch/` alone, the orchestrator may keep a file there; the scripts in `scripts/`, which clean up their own temporary folders, are fine
 
 ## Common errors (from development experience)
 
