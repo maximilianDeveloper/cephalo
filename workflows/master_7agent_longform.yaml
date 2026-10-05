@@ -331,6 +331,7 @@ phases:
     content_or_form_phase: B
     
     steps:
+      - Title page as 08_Formal_Review/title_page.md, the first file of every export (docs/reference_management.md, "The title page")
       - Milestone export as DOCX to submissions/ with Pandoc (docs/reference_management.md; the steps below read this file)
       - Full styleguide check of that DOCX (format-verifier; report in format_reports/round_<n>.md)
       - scripts/bibliography_check.py

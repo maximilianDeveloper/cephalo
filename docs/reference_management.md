@@ -201,6 +201,31 @@ Writer, Ben (2018): Title. In: Journal 12 (3), pp. 1–20.
 
 The div is markup, not wording: in Phase B the orchestrator adds it as a format-only change.
 
+### The title page
+
+Pandoc writes no title page of its own. Write it as a Markdown file in the project, `08_Formal_Review/title_page.md` (flat: `workspace/output/title_page.md`), and list it first, before the chapter files, when you call Pandoc. Its contents come from `styleguide.md` (`title_page.*`); what the user has not given yet stays a placeholder such as `[Name]`. Set its lines in the styles `Title`, `Subtitle`, `Author` and `Date` (or in styles of your own, which Pandoc adds to the document) with fenced divs, and end it with a page break:
+
+````markdown
+::: {custom-style="Title"}
+Title of the work
+:::
+
+::: {custom-style="Author"}
+[Name], [Matrikelnummer]
+:::
+
+```{=openxml}
+<w:p><w:r><w:br w:type="page"/></w:r></w:p>
+```
+````
+
+The page numbers follow `pagination.title_page` in `styleguide.md`, and Pandoc takes the settings for them from the reference document:
+
+- **Counted but not shown:** give the reference document a different first page (Word: Layout, Page Setup, Layout tab, "Different first page"; in its XML `w:titlePg`), with no page number in the first-page footer. The first text page then shows 2.
+- **Not counted:** in addition, start the page numbering at 0 (Word: Insert, Page Number, Format Page Numbers, "Start at" 0; in its XML `<w:pgNumType w:start="0"/>`). The first text page then shows 1.
+
+Front matter numbered in Roman numerals needs a section of its own, which a reference document cannot give: set it in Word in the final DOCX, and record that in the handover.
+
 **Prerequisite:** a CSL file matching your institution's citation style. APA 7 is the closest standard for many institutions; download from [zotero.org/styles](https://www.zotero.org/styles). For institution-specific deviations, you may need to edit the CSL.
 
 Without Pandoc or such a CSL file, citekeys never become citations in your styleguide's form. The pre-check therefore records whether the chapters cite by citekey (`checklists/precheck.md`, section 6); if not, the writer-agent writes citations in the styleguide's format directly, and `literature.bib` still serves the research-agent's citekey check. In citekey form, a German prefix and locator work as usual (`[vgl. @mueller2019, S. 44]`), and a secondary citation whose original stays out of the bibliography carries the original as plain text: `[Weber 1922, S. 31, zit. nach @keller2018, S. 5]`.

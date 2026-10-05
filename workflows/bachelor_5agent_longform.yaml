@@ -306,6 +306,7 @@ phases:
       - Closing handover.md lists found and resolved issues
     
     steps:
+      - Title page as 08_Formal_Review/title_page.md, the first file of every export (docs/reference_management.md, "The title page")
       - Milestone export as DOCX into submissions/v_<tag>_<date>.docx with Pandoc (docs/reference_management.md; the steps below read this file)
       - Full styleguide check of that DOCX (format-verifier; report in format_reports/round_<n>.md)
       - scripts/bibliography_check.py (minus-test)
