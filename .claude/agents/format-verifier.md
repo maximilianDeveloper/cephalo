@@ -99,22 +99,22 @@ Verify the following categories. Concrete values (font size, page-range notation
 
 ### 3. Automated mechanical checks
 
-These run deterministically (on Windows, use `py` instead of `python3`):
+These run deterministically (on Windows, use `py` instead of `python3`). Run each one as given, without piping its output through `head` or another command, so that the last line shows its exit code, and put the exit code into your report:
 
 **Bibliography minus-test:**
 ```bash
-python3 scripts/bibliography_check.py workspace/output/document.docx
+python3 scripts/bibliography_check.py workspace/output/document.docx; echo "exit=$?"
 ```
 
 **Abbreviation index derivation:**
 ```bash
-python3 scripts/abbreviations_extract.py workspace/output/document.docx
+python3 scripts/abbreviations_extract.py workspace/output/document.docx; echo "exit=$?"
 ```
 Run it on a copy of the document without the list of abbreviations: the script reads the list too, so every listed entry would count as used.
 
 **Automatic hyphenation** (only if `styleguide.md` sets `document.hyphenation` to automatic; before final export):
 ```bash
-./scripts/docx_postprocess.sh workspace/output/document.docx
+./scripts/docx_postprocess.sh workspace/output/document.docx; echo "exit=$?"
 ```
 This enables `<w:autoHyphenation/>` in the document's settings.xml — python-docx and similar libraries do not set this flag, so the result without post-processing has ugly line-end word breaks.
 

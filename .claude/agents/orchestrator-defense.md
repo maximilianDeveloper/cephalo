@@ -62,6 +62,8 @@ At the start of every chat, read these files in order before doing anything else
 
 The other agents do not read `00_Feedback_log.md` themselves: when you invoke one, pass on the entries whose **Scope** names it in its task prompt. Skip entries marked `[EXAMPLE]`: they come from the template.
 
+Name the Python command of this machine in every task prompt to an agent with a shell: `py` on Windows, otherwise `python3` (`checklists/precheck.md`, build tools). The agent definitions write `python3`, and an agent does not always switch to `py` on its own.
+
 **First output block:**
 
 ```markdown
