@@ -17,7 +17,7 @@ If `styleguide.md` lacks a rule, report this explicitly — do not guess.
 
 - Styleguide: `styleguide.md` (project root) — **single source of truth**
 - Chapter texts: `workspace/output/chapters/` or phase directories
-- Full document: `workspace/output/document.docx` (flat), the PPTX in `workspace/output/slides/` (presentations), the latest export in `08_Formal_Review/submissions/` (long-form) or in `04_Submission/` (proposal sub-project). The commands below show the flat path: use the actual document instead.
+- Full document: `workspace/output/document.docx` (flat), the PPTX in `workspace/output/slides/` (presentations), the export the task prompt names, in `08_Formal_Review/submissions/` (long-form) or in `04_Submission/` (proposal sub-project). The commands below show the flat path: use the actual document instead.
 - Institutional guidelines (fallback reference): `workspace/sources/_guidelines/` or `guidelines/`
 - Status file: `workspace/state.md` or `00_Status.md`
 - format rules checklist: `checklists/format_rules.md`
@@ -67,7 +67,7 @@ Verify the following categories. Concrete values (font size, page-range notation
 - [ ] Decoration/logo policy per styleguide (`title_page.decoration`; some institutions forbid any decoration or logo)
 
 ## Pagination
-- [ ] Numbering scheme per styleguide (a common convention: title page counted but unnumbered, front matter in Roman numerals, main text in Arabic from the introduction onward)
+- [ ] Numbering scheme per styleguide (a common convention: title page counted but unnumbered, front matter in Roman numerals, main text in Arabic from the introduction onward). Roman front matter is a section the user sets in Word after the final export (`docs/reference_management.md`, "The title page"): before that, list it as an open manual step, not as ❌
 - [ ] Position per styleguide
 
 ## Indexes
@@ -99,22 +99,22 @@ Verify the following categories. Concrete values (font size, page-range notation
 
 ### 3. Automated mechanical checks
 
-These run deterministically (on Windows, use `py` instead of `python3`):
+These run deterministically (on Windows, use `py` instead of `python3`). Run the three scripts below as given, without piping their output through `head` or another command, so that the last line shows the exit code, and put each exit code into your report:
 
 **Bibliography minus-test:**
 ```bash
-python3 scripts/bibliography_check.py workspace/output/document.docx
+python3 scripts/bibliography_check.py workspace/output/document.docx; echo "exit=$?"
 ```
 
 **Abbreviation index derivation:**
 ```bash
-python3 scripts/abbreviations_extract.py workspace/output/document.docx
+python3 scripts/abbreviations_extract.py workspace/output/document.docx; echo "exit=$?"
 ```
-Run it on a copy of the document without the list of abbreviations: the script reads the list too, so every listed entry would count as used.
+Run it on a copy of the document without the list of abbreviations, in `_scratch/format-verifier/`: the script reads the list too, so every listed entry would count as used.
 
 **Automatic hyphenation** (only if `styleguide.md` sets `document.hyphenation` to automatic; before final export):
 ```bash
-./scripts/docx_postprocess.sh workspace/output/document.docx
+./scripts/docx_postprocess.sh workspace/output/document.docx; echo "exit=$?"
 ```
 This enables `<w:autoHyphenation/>` in the document's settings.xml — python-docx and similar libraries do not set this flag, so the result without post-processing has ugly line-end word breaks.
 
@@ -135,7 +135,14 @@ python-docx instead and grep that.)
 
 ### 4. Output format
 
-Per verified rule:
+At the top of the report, the file you checked and the scripts' exit codes:
+
+```markdown
+**Checked file:** [path of the DOCX, as the task prompt names it]
+**Script exit codes:** bibliography_check.py [n], abbreviations_extract.py [n], docx_postprocess.sh [n or "not run"]
+```
+
+Then per verified rule:
 
 ```markdown
 **Rule:** [description, source: styleguide.md line X]
@@ -163,4 +170,4 @@ These symbols are status codes, not decoration: the orchestrator, the state file
 - **Transparency on gaps** — ❓ instead of guessing
 - **Precise findings** — line number + context, so the fix can be applied directly: in Phase A by the writer, in Phase B by the orchestrator or the user (format-only edits; the writer stays deactivated)
 - **Use scripts** — don't manually count what a script can count
-- **Stay inside the project** — write no files outside the project folder (multi-project: the folder that holds all sub-projects), not even scratch files: no `/tmp`, which in Git Bash on Windows is the system's temporary folder, and no scratchpad that Claude Code may name. Use a scratch file inside the project and delete it before you finish; the scripts in `scripts/`, which clean up their own temporary folders, are fine
+- **Stay inside the project** — write no files outside the project folder (multi-project: the folder that holds all sub-projects), not even scratch files: no `/tmp`, which in Git Bash on Windows is the system's temporary folder, and no scratchpad that Claude Code may name. Put scratch files in `_scratch/format-verifier/` at the project root (multi-project: of the sub-project you work in), which Git ignores, and delete that folder before you finish; leave the rest of `_scratch/` alone, the orchestrator may keep a file there; the scripts in `scripts/`, which clean up their own temporary folders, are fine

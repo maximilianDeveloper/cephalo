@@ -62,10 +62,11 @@ Sources, extracts, guideline documents, data files, handovers and agent reports 
 3. `00_Decisions.md` — architectural / methodological decisions
 4. `styleguide.md` — formatting rules
 5. `00_Feedback_log.md` — recurring patterns from earlier chapters
+6. `git status --short` — changes not yet committed; if there are any, ask about them before you start ("When to stop and ask the user")
 
 After every agent call returns, record its result in `00_Status.md` (one line is enough) before the next call: a chat that ends early, for example at a usage limit, then leaves a state the next chat can trust. The chat closure ritual below still writes the full handover.
 
-Save every source-verifier report as a file, since the verifier cannot write one: `<phase folder>/verification/<name>_round_<n>.md`, where `<name>` is the chapter file's name without `.md`, or `extracts` (for `02_Literature/`). A chat that ends between verification and revision then keeps the findings. Save it as it is (its format is compact: a table row per ✅ sentence), except that an absolute path in it becomes a project-relative one: it would carry the user's name into the project files. Record the status counts in `00_Status.md` as you count them from the report's rows and entries, not from its totals line. For a return call (a revision after a verification), give the agent the report file, or the findings verbatim, and name the files it may change: for the writer the chapter file and the "Used in" lines of the extracts it cites, for the research-agent the extracts concerned. Ask it to change only what the findings concern. For the verification after a revision, give the source-verifier the previous round's report as well and name the sentences the revision changed: compare with the version the previous round verified, by `git diff` if that version was committed, otherwise with a copy you keep inside the project before the revision and delete before the chat ends.
+Save every source-verifier report as a file, since the verifier cannot write one: `<phase folder>/verification/<name>_round_<n>.md`, where `<name>` is the chapter file's name without `.md`, or `extracts` (for `02_Literature/`). A chat that ends between verification and revision then keeps the findings. Save it as it is (its format is compact: a table row per ✅ sentence), except that an absolute path in it becomes a project-relative one: it would carry the user's name into the project files. Record the status counts in `00_Status.md` as you count them from the report's rows and entries, not from its totals line; your count goes there, not into the saved report. For a return call (a revision after a verification), give the agent the report file, or the findings verbatim, and name the files it may change: for the writer the chapter file and the "Used in" lines of the extracts it cites, for the research-agent the extracts concerned. Ask it to change only what the findings concern. For the verification after a revision, give the source-verifier the previous round's report as well and name the sentences the revision changed: compare with the version the previous round verified, by `git diff` if that version was committed, otherwise with a copy you keep in `_scratch/orchestrator/` before the revision and delete before the chat ends.
 
 Save the format-verifier's reports the same way: in Phase A as `<phase folder>/verification/<name>_format_round_<n>.md`, in Phase B as `08_Formal_Review/format_reports/round_<n>.md`.
 
@@ -77,6 +78,8 @@ In a multi-project sub-project the script is `../scripts/verbatim_check.py`; in 
 
 The other agents do not read `00_Feedback_log.md` themselves: when you invoke one, pass on the entries whose **Scope** names it in its task prompt. Skip entries marked `[EXAMPLE]`: they come from the template.
 
+Name the Python command of this machine in every task prompt to an agent with a shell: `py` on Windows, otherwise `python3` (`checklists/precheck.md`, build tools). The agent definitions write `python3`, and an agent does not always switch to `py` on its own.
+
 **First output block** (mandatory):
 
 ```markdown
@@ -84,6 +87,7 @@ The other agents do not read `00_Feedback_log.md` themselves: when you invoke on
 
 **Current phase:** [e.g., 03_Theory_chapters]
 **Model of this chat:** [your model; in Phase B a fast model is expected: say so if this is not one]
+**Git:** [clean, or the files not yet committed]
 **Last handover:** [date, brief quote from handover.md]
 **Open issues per handover:**
 - ...
@@ -125,12 +129,13 @@ At minimum update:
 - Page budget table (count a chapter's words with a command, `wc -w <chapter file>`, not from the writer's estimate; it counts the YAML header too, about 20 words, and a reference list in the file, so say so with the figure; convert them with the words-per-page figure in `00_Decisions.md`, which you ask the user for once)
 - Open issues (project-wide)
 - Handover chronology
+- Any other line whose state this chat changed, also outside the tables. A record of an earlier state, such as the pre-check result, stays as it was: add a dated line below it, for example when its open styleguide questions are answered
 
 Before you finish: the chronology has a row for this chat, and no line still says it will be updated later.
 
 ### Step 3: Extend decisions log (if needed)
 
-If an architectural/methodological decision was made during the chat: append to `00_Decisions.md`.
+If an architectural/methodological decision was made during the chat: append it at the end of `00_Decisions.md`, below the last entry. An entry stays as written, also one from this chat: a correction or a change of mind is a new entry that names the one it changes.
 
 ### Step 4: Extend feedback log (if needed)
 
@@ -218,9 +223,10 @@ A new verification round for an extract follows only a ⚠️ or ❌ on its quot
 
 ### `08_Formal_Review` (Phase B)
 - Writer-agent deactivated
-- Export first, then let the format-verifier check that DOCX against `styleguide.md`: fonts, margins, spacing, pagination and the title page show only there. Do not check formats yourself, in the DOCX either
+- Export first, then let the format-verifier check that DOCX against `styleguide.md`: fonts, margins, spacing, pagination and the title page show only there. Do not check formats yourself, in the DOCX either, also not before a round or between rounds: after changing the reference document you may read it back to see that your change was written, but whether the export is right is the format-verifier's finding
 - format-verifier + build scripts; apply the format-verifier's format-only findings yourself, in the chapter files (no rewording) or, for layout such as fonts, sizes, margins and spacing, in Pandoc's reference document (`docs/reference_management.md`), or leave them to the user
-- Milestone exports to `08_Formal_Review/submissions/` with date in filename, made with Pandoc (`docs/reference_management.md`, "Citation processor pipeline"). Without Pandoc, ask the user to install it (`checklists/precheck.md`, section 6) instead of writing an export script of your own: a DOCX without Word's heading and quote styles misleads the format check and `scripts/verbatim_check.py`
+- The reference document is `08_Formal_Review/reference.docx`; which styles Pandoc uses, and how a reference list without citekeys gets the `Bibliography` style, `docs/reference_management.md` ("The reference document") says. The title page is `08_Formal_Review/title_page.md`, the first file of every export ("The title page" there)
+- Milestone exports to `08_Formal_Review/submissions/v_<tag>_<date>.docx`, as the workflow names them, with a new tag for each format round (`v_r1_<date>.docx`, `v_r2_<date>.docx`): a new export then does not overwrite the file a report checked. Name that file in the format-verifier's task prompt; its report gives it under "Checked file". Made with Pandoc (`docs/reference_management.md`, "Citation processor pipeline"). Without Pandoc, ask the user to install it (`checklists/precheck.md`, section 6) instead of writing an export script of your own: a DOCX without Word's heading and quote styles misleads the format check and `scripts/verbatim_check.py`
 - Before submission: the full-document final check, `checklists/consistency.md` Part B
 
 ## Git behavior
@@ -228,7 +234,7 @@ A new verification round for an extract follows only a ⚠️ or ❌ on its quot
 - At each chat closure: generate commit suggestion (do not self-commit)
 - Read `git status` and `git diff --stat` for the handover
 - For destructive changes (e.g., `git reset`): ALWAYS ask
-- DOCX/PPTX files: only in the submission directory (`08_Formal_Review/submissions/`; in the proposal sub-project `04_Submission/`) and, for the accepted proposal copy, the main work's `01_Proposal_Reference/`, nowhere else
+- DOCX/PPTX files: only in the submission directory (`08_Formal_Review/submissions/`; in the proposal sub-project `04_Submission/`), as Pandoc's reference document `08_Formal_Review/reference.docx`, and, for the accepted proposal copy, in the main work's `01_Proposal_Reference/`; temporary copies, such as the one without the list of abbreviations, go to `_scratch/` and are deleted
 
 ## When to stop and ask the user
 
@@ -237,7 +243,7 @@ A new verification round for an extract follows only a ⚠️ or ❌ on its quot
 - If `handover.md` of the current phase is missing → is this a new chat in a new phase? Create the initial handover, and the phase's `README.md` (the goal of the phase, from the workflow file) if there is none
 - If the "Open questions" of `styleguide.md` still list a `[content]` entry (or one without a tag) → before drafting any chapter: STOP, clarification required
 - If they still list a `[format]` entry → before format work (Phase B): STOP, clarification required
-- Record the user's answers in the styleguide yourself, in the words given, as the style-resolver definition (`style-resolver.md`) describes under "Recording answers to open questions"; this needs no new style-resolver run. Entries for tables, figures or statistics that the work will not contain are closed with "does not occur in this work"
+- Record the user's answers in the styleguide yourself, in the words given, as the style-resolver definition (`style-resolver.md`) describes under "Recording answers to open questions"; this needs no new style-resolver run. When the user answers that the work will not contain an element (tables, figures, statistics, footnotes or internet sources, for example), close its entry with "does not occur in this work" (`style-resolver.md`, same section)
 - If Git status is "dirty" at chat start → ask about uncommitted changes
 
 ## Principles
@@ -248,4 +254,4 @@ A new verification round for an extract follows only a ⚠️ or ❌ on its quot
 - **Document decisions, don't remember them** — everything important into `00_Decisions.md`, not into the chat history
 - **Write in the user's language** — also in a chat that runs on a fast model
 - **Point to rules, do not restate them** — in a task prompt, name the agent's definition, `styleguide.md` or the checklist that holds a rule instead of paraphrasing it: a paraphrase can contradict the original
-- **Stay inside the project** — write no files outside the project folder (multi-project: the folder that holds all sub-projects), not even scratch copies (no `/tmp`, which in Git Bash on Windows is the system's temporary folder, and no scratchpad that Claude Code may name; the scripts in `scripts/`, which clean up their own temporary folders, are fine); to compare versions between rounds, use Git or a copy inside the project that you delete before the chat ends
+- **Stay inside the project** — write no files outside the project folder (multi-project: the folder that holds all sub-projects), not even scratch copies (no `/tmp`, which in Git Bash on Windows is the system's temporary folder, and no scratchpad that Claude Code may name; the scripts in `scripts/`, which clean up their own temporary folders, are fine). Scratch files go to `_scratch/orchestrator/` at the project root (multi-project: of the sub-project you work in), which Git ignores, and you delete them before the chat ends; to compare versions between rounds, use Git or a copy there. The other agents use folders of their own in `_scratch/`

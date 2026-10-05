@@ -331,7 +331,8 @@ phases:
     content_or_form_phase: B
     
     steps:
-      - Milestone export as DOCX to submissions/ with Pandoc (docs/reference_management.md; the steps below read this file)
+      - Title page as 08_Formal_Review/title_page.md, the first file of every export (docs/reference_management.md, "The title page")
+      - Milestone export as DOCX into submissions/v_<tag>_<date>.docx with Pandoc, a new tag for each format round (v_r1_<date>.docx, v_r2_<date>.docx) (docs/reference_management.md; the steps below read this file)
       - Full styleguide check of that DOCX (format-verifier; report in format_reports/round_<n>.md)
       - scripts/bibliography_check.py
       - scripts/abbreviations_extract.py
@@ -348,6 +349,7 @@ phases:
       - data-agent: final data audit, all numbers in the text vs. raw data (empirical theses only)
       - Final DOCX export to 08_Formal_Review/submissions/v_final_<date>.docx
       - Run scripts/docx_postprocess.sh on this v_final file (only if styleguide.md document.hyphenation = automatic; a fresh export may not carry the earlier patch)
+      - Roman front matter: only if styleguide.md pagination.front_matter is Roman, the user sets it as a section of its own in Word (docs/reference_management.md, "The title page")
       - Update table of contents
       - Confirm the hyphenation setting matches styleguide.md (document.hyphenation)
       - Visual proofreading

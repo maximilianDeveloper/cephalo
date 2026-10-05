@@ -63,6 +63,7 @@ Please read, in the order of the chat start ritual in your definition:
 - 00_Decisions.md
 - styleguide.md (multi-project sub-project: ../00_Shared_Materials/styleguide.md)
 - 00_Feedback_log.md
+- `git status --short` (changes not yet committed)
 
 Today's task per handover: [specific task here]
 

@@ -86,10 +86,13 @@ project/
 ├── 08_Formal_Review/                  (Phase B)
 │   ├── handover.md
 │   ├── README.md
+│   ├── reference.docx                 ← Pandoc's reference document (layout)
+│   ├── title_page.md                  ← first file of every export
 │   ├── format_reports/
 │   └── submissions/
-│       └── v_<tag>_<date>.docx
+│       └── v_<tag>_<date>.docx        (a new tag per format round: v_r1_…, v_r2_…)
 │
+├── _scratch/                          ← agents' scratch files, deleted after use (git-ignored)
 ├── .gitignore
 ├── .gitattributes
 └── .git/
@@ -205,6 +208,7 @@ At the beginning of every chat, the orchestrator reads:
 3. `00_Decisions.md` — historical decisions
 4. `styleguide.md` — formatting rules
 5. `00_Feedback_log.md` — recurring patterns
+6. `git status --short` — changes not yet committed (if there are any, it asks about them)
 
 It then summarizes to the user:
 
@@ -213,6 +217,7 @@ It then summarizes to the user:
 
 Current phase: ...
 Model of this chat: ...
+Git: ...
 Last handover: ...
 Open issues per handover: ...
 External blockers: ...

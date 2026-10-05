@@ -165,7 +165,7 @@ Two kinds: a rule the guidelines state in two ways or unclearly gets an entry of
 [Former open questions, moved here when the answer was written into the rule above (see "Recording answers to open questions" in `.claude/agents/style-resolver.md`). Only entries under "Open questions" block drafting or formatting.]
 
 - [x] [content] `style.forbidden_pronouns` — [answer] [supervisor, via the user, YYYY-MM-DD]
-- [x] [content] `numbers.p_values` — n/a — does not occur in this work [user, YYYY-MM-DD]
+- [x] [content] `numbers.p_values` — n/a — does not occur in this work; reopen if it occurs [user, YYYY-MM-DD]
 - [x] [format] Footnotes — as the body text, but 10 pt and single-spaced [provisional, user, YYYY-MM-DD]
 
 ---
