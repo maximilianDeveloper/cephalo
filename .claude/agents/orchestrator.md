@@ -93,7 +93,7 @@ After each written chapter:
 **Action on transition:**
 1. Set `state.md` → `phase: B`
 2. Deactivate writer-agent (except for genuine content corrections)
-3. format-verifier takes lead and checks the exported DOCX; you do not check formats yourself, in the DOCX either (after changing the reference document you may read it back to see that your change was written). You apply its format-only findings in the chapter files (no rewording) or, for layout such as fonts, sizes, margins and spacing, in Pandoc's reference document (`docs/reference_management.md`), or leave them to the user, then re-export the DOCX with Pandoc (without it, ask the user to install it instead of writing an export script of your own)
+3. format-verifier takes lead and checks the exported DOCX; you do not check formats yourself, in the DOCX either (after changing the reference document you may read it back to see that your change was written). You apply its format-only findings in the chapter files (no rewording) or, for layout such as fonts, sizes, margins and spacing, in Pandoc's reference document `workspace/output/reference.docx` (`docs/reference_management.md`, "The reference document": the styles Pandoc uses, and the `Bibliography` style for a reference list without citekeys), or leave them to the user, then re-export the DOCX with Pandoc (without it, ask the user to install it instead of writing an export script of your own)
 4. Only fast-model agents active
 5. Build scripts run regularly
 

@@ -220,6 +220,7 @@ A new verification round for an extract follows only a ⚠️ or ❌ on its quot
 - Writer-agent deactivated
 - Export first, then let the format-verifier check that DOCX against `styleguide.md`: fonts, margins, spacing, pagination and the title page show only there. Do not check formats yourself, in the DOCX either, also not before a round or between rounds: after changing the reference document you may read it back to see that your change was written, but whether the export is right is the format-verifier's finding
 - format-verifier + build scripts; apply the format-verifier's format-only findings yourself, in the chapter files (no rewording) or, for layout such as fonts, sizes, margins and spacing, in Pandoc's reference document (`docs/reference_management.md`), or leave them to the user
+- The reference document is `08_Formal_Review/reference.docx`; which styles Pandoc uses, and how a reference list without citekeys gets the `Bibliography` style, `docs/reference_management.md` ("The reference document") says
 - Milestone exports to `08_Formal_Review/submissions/` with date in filename, made with Pandoc (`docs/reference_management.md`, "Citation processor pipeline"). Without Pandoc, ask the user to install it (`checklists/precheck.md`, section 6) instead of writing an export script of your own: a DOCX without Word's heading and quote styles misleads the format check and `scripts/verbatim_check.py`
 - Before submission: the full-document final check, `checklists/consistency.md` Part B
 
@@ -228,7 +229,7 @@ A new verification round for an extract follows only a ⚠️ or ❌ on its quot
 - At each chat closure: generate commit suggestion (do not self-commit)
 - Read `git status` and `git diff --stat` for the handover
 - For destructive changes (e.g., `git reset`): ALWAYS ask
-- DOCX/PPTX files: only in the submission directory (`08_Formal_Review/submissions/`; in the proposal sub-project `04_Submission/`) and, for the accepted proposal copy, the main work's `01_Proposal_Reference/`, nowhere else
+- DOCX/PPTX files: only in the submission directory (`08_Formal_Review/submissions/`; Pandoc's reference document `08_Formal_Review/reference.docx`; in the proposal sub-project `04_Submission/`) and, for the accepted proposal copy, the main work's `01_Proposal_Reference/`, nowhere else
 
 ## When to stop and ask the user
 

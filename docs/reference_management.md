@@ -159,15 +159,47 @@ pandoc chapter.md \
   --csl path/to/style.csl \
   --metadata reference-section-title="References" \
   --metadata title="" \
-  --reference-doc template.docx \
+  --reference-doc 08_Formal_Review/reference.docx \
   -o output.docx
 ```
 
-Use your structure's `literature.bib` path from "Set up auto-export" (flat: `--bibliography workspace/sources/literature.bib`), and your styleguide's bibliography heading as `reference-section-title`. Without it, Pandoc adds the reference list without a heading, and `scripts/bibliography_check.py` cannot find the bibliography (exit 2). For the whole work, list the chapter files in document order instead of `chapter.md`. `--metadata title=""` keeps the `title:` of the chapter files' frontmatter out of the document: without it, Pandoc puts that title (with several files, the last chapter's) above the text as a document title.
+Use your structure's `literature.bib` path from "Set up auto-export" (flat: `--bibliography workspace/sources/literature.bib`, `--reference-doc workspace/output/reference.docx`), and your styleguide's bibliography heading as `reference-section-title`. Without it, Pandoc adds the reference list without a heading, and `scripts/bibliography_check.py` cannot find the bibliography (exit 2). For the whole work, list the chapter files in document order instead of `chapter.md`. `--metadata title=""` keeps the `title:` of the chapter files' frontmatter out of the document: without it, Pandoc puts that title (with several files, the last chapter's) above the text as a document title.
 
 cephalo's formatting phase exports with Pandoc also when the chapters cite in the styleguide's format and not by citekey: Pandoc sets Markdown headings and block quotes (`>`) in Word's heading and quote styles, which the format check and `scripts/verbatim_check.py` rely on. Without citekeys, leave out `--citeproc`, `--bibliography` and `--csl`; the reference list then comes from the chapter files.
 
-The `--reference-doc` file carries the layout: fonts, sizes, margins, page size and the paragraph styles. Set it up once per styleguide (start from `pandoc -o template.docx --print-default-data-file reference.docx` and adjust its styles in Word); the format check's layout findings are fixed there, not in the chapter files.
+### The reference document
+
+The `--reference-doc` file carries the layout: page size, margins, the footer with the page number, and the paragraph styles; Pandoc takes all of these from it. Keep it in the project, as `08_Formal_Review/reference.docx` (flat: `workspace/output/reference.docx`), and set it up once per styleguide: start from Pandoc's own with `pandoc -o 08_Formal_Review/reference.docx --print-default-data-file reference.docx` and adjust it in Word (Modify Style; Layout for page size and margins) or with python-docx. The format check's layout findings are fixed there, not in the chapter files.
+
+Pandoc sets the text in these styles, so these are the ones to adjust:
+
+| Style | Used for |
+|---|---|
+| `Normal` | the base of the others: font, size, line spacing |
+| `First Paragraph` | the first paragraph after a heading |
+| `Body Text` | every further paragraph (Pandoc's own has 9 pt before and after) |
+| `Compact` | list items |
+| `Block Text` | block quotes written with `>` (Pandoc's own is indented by 0.85 cm on both sides) |
+| `Heading 1` to `Heading 3` | headings; with their character styles `Heading 1 Char` to `Heading 3 Char` |
+| `Bibliography` | the reference list |
+| `Footnote Text` | footnotes |
+| `Title`, `Subtitle`, `Author`, `Date` | a title block from the metadata, if one is used |
+
+Pandoc's own reference document takes the heading font and colour from the document theme: set both in the heading styles and in their character styles. It has no page size, no margins and no page number: set them, and put a `PAGE` field into the footer, aligned as the styleguide says.
+
+A reference list written in the chapter files (without citekeys) comes out in `First Paragraph` and `Body Text`. Give it the `Bibliography` style with a fenced div around its entries, below the heading:
+
+```markdown
+## References
+
+::: {custom-style="Bibliography"}
+Author, Anna (2020): Title. Place: Publisher.
+
+Writer, Ben (2018): Title. In: Journal 12 (3), pp. 1–20.
+:::
+```
+
+The div is markup, not wording: in Phase B the orchestrator adds it as a format-only change.
 
 **Prerequisite:** a CSL file matching your institution's citation style. APA 7 is the closest standard for many institutions; download from [zotero.org/styles](https://www.zotero.org/styles). For institution-specific deviations, you may need to edit the CSL.
 
