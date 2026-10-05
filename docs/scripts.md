@@ -192,32 +192,39 @@ Use the output as a starting point for manual verification, not as a final verdi
 
 ### `build_reference_docx.py`
 
-Builds the reference document from which Pandoc takes the layout of an exported DOCX (`pandoc --reference-doc`, see `docs/reference_management.md`, "The reference document"): fonts, sizes, line spacing, paragraph spacing and alignment, headings, block quotes, footnotes, the reference list's hanging indent, page size, margins, the page number and the title page's numbering. The orchestrator reads the values in `styleguide.md` and passes them as options; what is not given stays as in Pandoc's own reference document.
+Builds the reference document from which Pandoc takes the layout of an exported DOCX (`pandoc --reference-doc`, see `docs/reference_management.md`, "The reference document"): fonts, sizes, line spacing, paragraph spacing and alignment, headings, block quotes, footnotes, the reference list's hanging indent, link colour, page size, margins, the page number and the title page's numbering. The orchestrator reads the values in `styleguide.md` and passes them as options; what is not given stays as in Pandoc's own reference document.
 
 ```bash
 python3 scripts/build_reference_docx.py 08_Formal_Review/reference.docx \
     --font Arial --size 11 --line-spacing 1.5 --align justify --space-after 6 \
     --heading-sizes 14,12,11 --heading-bold yes --heading-color 000000 \
-    --quote-indent 1,0 --quote-size 10 --quote-line-spacing 1 \
+    --quote-indent 1 --quote-size 10 --quote-line-spacing 1 \
     --footnote-size 10 --footnote-line-spacing 1 --bib-hanging 1 --bib-line-spacing 1 \
     --page-size A4 --margins 2.5 --page-number bottom-right --title-page counted --lang de-DE
 python3 scripts/build_reference_docx.py --help
 ```
 
-Sizes are in pt, lengths in cm, line spacing a multiple (`1`, `1.5`; a single value also takes a decimal comma, `1,5`). Lists are separated by commas, with decimal points: `--margins 2.5` for all sides, or `--margins 2.5,3,2.5,3` for top, right, bottom and left; `--quote-indent 1,0` for left and right. `--title-page counted` leaves the first page without a number, `not-counted` also starts the numbering at 0, so that the first text page shows 1 (`pagination.title_page`). `--heading-color` and `--link-color` replace Pandoc's blue.
+Sizes are in pt, lengths in cm, also with a unit (`12mm`, `0.5in`), line spacing a multiple (`1`, `1.5`); a single value also takes a decimal comma (`1,5`). `--margins` takes one value for all sides, or four for top, right, bottom and left, separated by slashes (`2,5/3/2,5/3`) or by commas with decimal points (`2.5,3,2.5,3`). Some options do more than their name says, so that a styleguide value comes out as meant:
+
+- `--space-after` alone also sets the space before a paragraph to 0, instead of Pandoc's 9 pt (and `--space-before` alone the space after).
+- `--first-line-indent` leaves out the paragraph after a heading, a block quote or a list (Pandoc sets it in `First Paragraph`), and block quotes, list items and table cells. List items and table cells follow the text's alignment.
+- The heading options apply to every heading level the document has: `--heading-sizes 14,12,11` sets the sizes of levels 1 to 3, while font, weight and colour reach level 4 and below too. Any heading option also sets the headings upright (Pandoc's own sets level 4 and below in italics).
+- `--quote-indent` sets the left indent and, unless `--quote-indent-right` gives one, no right indent (Pandoc's own indents block quotes on both sides).
+- `--title-page counted` leaves the first page without a number, `not-counted` also starts the numbering at 0, so that the first text page shows 1 (`pagination.title_page`).
+- `--heading-color` and `--link-color` replace Pandoc's blue; `--footnote-font` sets a footnote font other than the text's.
 
 What it does:
 
-1. Starts from Pandoc's own reference document (`pandoc --print-default-data-file reference.docx`), or from a DOCX given with `--base`, such as an institution's template; styles Pandoc uses and the starting document lacks are added
-2. Sets the given values in the styles Pandoc uses (`Normal`, `Body Text`, `First Paragraph`, `Block Text`, `Heading 1` and following with their character styles, `Bibliography`, `Footnote Text`, `Title` and the other title styles, `Hyperlink`), with the font also where the document theme set it
-3. Sets page size and margins, puts a `PAGE` field into the footer (or header), and for the title page sets "different first page" and, if not counted, the start of the numbering, in the order Word expects
+1. Starts from Pandoc's own reference document (`pandoc --print-default-data-file reference.docx`), or from a DOCX or DOTX given with `--base`, such as an institution's template; styles Pandoc uses and the starting document lacks are added, and a style Word names in lower case (`footnote text`) is found as well
+2. Sets the given values in the styles Pandoc uses (`Normal`, `Body Text`, `First Paragraph`, `Compact`, `Block Text`, `Heading 1` and following with their character styles, `Bibliography`, `Footnote Text`, `Title` and the other title styles, `Hyperlink`), with font and colour also where the document theme set them
+3. Sets page size and margins (with the header, footer and gutter distances Word needs), replaces any page number the starting document has by a `PAGE` field in the footer (or header), and for the title page sets "different first page" and, if not counted, the start of the numbering, in the order Word expects
 4. Writes the file and lists what it set
 
 Run it before the first export of Phase B, and again after a layout finding of the format check, with the corrected value: fix the layout there, not in the chapter files. Start each run from Pandoc's own document (no `--base` with an earlier result), so that a value left out falls back to Pandoc's.
 
-Exit code 0 = reference document written, 2 = not written (bad option, Pandoc not found and no `--base`, a folder or file that does not exist; the message says which).
+Exit code 0 = reference document written, 2 = not written (bad option, Pandoc not found and no `--base`, a folder or file that does not exist, a starting document it cannot read; one line says which).
 
-Not covered: the table of contents styles (`TOC 1` and following, which Word adds when it fills in the field), heading numbers (they come from the heading text, or from Pandoc's `--number-sections`, not from the reference document), and front matter in Roman numerals, which needs a section of its own (`docs/reference_management.md`, "The title page").
+Not covered: the table of contents styles (`TOC 1` and following, which Word adds when it fills in the field); heading numbers (they come from the heading text, from Pandoc's `--number-sections`, or from numbering that a `--base` template links to its heading styles, which Pandoc keeps; the script does not set any); and front matter in Roman numerals, which needs a section of its own (`docs/reference_management.md`, "The title page").
 
 ### `docx_postprocess.sh`
 
