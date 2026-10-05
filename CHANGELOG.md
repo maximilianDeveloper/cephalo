@@ -8,6 +8,12 @@ Dates follow ISO 8601 (`YYYY-MM-DD`).
 
 ---
 
+## [1.2.0] — unreleased
+
+### Added
+
+- **`scripts/build_reference_docx.py`** — builds the reference document from which Pandoc takes the layout of the exported DOCX (`--reference-doc`), from the values in `styleguide.md`: font, size, line spacing, paragraph spacing, alignment and first-line indent of the text; size, weight and colour of the headings; indent, size and spacing of block quotes; footnotes; the reference list's hanging indent; link colour; page size, margins, the page number and the title page's numbering. It starts from Pandoc's own reference document, or from a DOCX given with `--base`, and adds the styles Pandoc uses where the starting document lacks them. In the second long-form trial run the Phase B orchestrator wrote a throwaway script for this and needed three corrections; the orchestrators now build the document with this script, and build it again with the corrected value after a layout finding. CI checks the result, and with Pandoc installed a round trip through it.
+
 ## [1.1.2] — 2026-10-05
 
 **Phase B with fewer gaps.** A second long-form trial run on Windows showed the changes of 1.1.1 at work in the Phase A chats, while its Phase B chat on a fast model improvised where the definitions were silent. The definitions now name a folder for scratch files, leave the check of the exported DOCX to the format-verifier, give each format round an export of its own, and describe Pandoc's reference document, the title page and the table of contents. The orchestrators pass the Python command on to the agents, keep saved reports and the decision log as written, and look at `git status` when a chat starts.
