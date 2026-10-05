@@ -8,7 +8,9 @@ Dates follow ISO 8601 (`YYYY-MM-DD`).
 
 ---
 
-## [1.1.2] — unreleased
+## [1.1.2] — 2026-10-05
+
+**Phase B with fewer gaps.** A second long-form trial run on Windows showed the changes of 1.1.1 at work in the Phase A chats, while its Phase B chat on a fast model improvised where the definitions were silent. The definitions now name a folder for scratch files, leave the check of the exported DOCX to the format-verifier, give each format round an export of its own, and describe Pandoc's reference document, the title page and the table of contents. The orchestrators pass the Python command on to the agents, keep saved reports and the decision log as written, and look at `git status` when a chat starts.
 
 ### Changed
 
