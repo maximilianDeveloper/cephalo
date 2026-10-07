@@ -332,7 +332,7 @@ phases:
     
     steps:
       - Title page as 08_Formal_Review/title_page.md, the first file of every export (docs/reference_management.md, "The title page")
-      - Without citekeys, the reference list as 08_Formal_Review/bibliography.md, the last file of every export (docs/reference_management.md, "The reference list")
+      - Without citekeys, the reference list as 08_Formal_Review/bibliography.md, after the chapter files in every export, before an appendix (docs/reference_management.md, "The reference list")
       - Milestone export as DOCX into submissions/v_<tag>_<date>.docx with Pandoc, a new tag for each format round (v_r1_<date>.docx, v_r2_<date>.docx) (docs/reference_management.md; the steps below read this file)
       - Full styleguide check of that DOCX (format-verifier; report in format_reports/round_<n>.md)
       - scripts/bibliography_check.py

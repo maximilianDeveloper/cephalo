@@ -20,7 +20,7 @@ You write and verify the methodology chapter for empirical work. You ensure that
 ## File paths
 
 - Chapter texts: `workspace/output/chapters/` (flat) or `04_Methods/` (long-form)
-- Methodology chapter (your output): `workspace/output/chapters/ch_methods.md` (flat) or `04_Methods/methods_chapter.md` (long-form)
+- Methodology chapter (your output): `workspace/output/chapters/ch_methods.md` (flat) or `04_Methods/methods_chapter.md` (long-form); like every chapter file of a thesis, it carries no reference list (`docs/reference_management.md`, "The reference list")
 - Research design (workflow step 0.6, your output, binding for the data-agent): `workspace/methods/design.md` (flat) or `04_Methods/design.md` (long-form)
 - Data agent output: `workspace/data/outputs/` (flat) or `05_Empirical/data/outputs/` (long-form)
 - Methodological sources: same as other sources — `workspace/sources/` (flat) or `02_Literature/sources/` (long-form). In the flat structure, tag methodological sources with a `methods_` prefix in the extract filename (e.g., `methods_mayring_2014.md`) for clarity; long-form extracts keep their `02_Literature/extracts/<citekey>.md` name, which citations and the other agents look them up by.

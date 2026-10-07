@@ -165,7 +165,7 @@ pandoc chapter.md \
 
 Use your structure's `literature.bib` path from "Set up auto-export" (flat: `--bibliography workspace/sources/literature.bib`, `--reference-doc workspace/output/reference.docx`), and your styleguide's bibliography heading as `reference-section-title`. Without it, Pandoc adds the reference list without a heading, and `scripts/bibliography_check.py` cannot find the bibliography (exit 2). For the whole work, list the chapter files in document order instead of `chapter.md`. `--metadata title=""` keeps the `title:` of the chapter files' frontmatter out of the document: without it, Pandoc puts that title (with several files, the last chapter's) above the text as a document title.
 
-cephalo's formatting phase exports with Pandoc also when the chapters cite in the styleguide's format and not by citekey: Pandoc sets Markdown headings and block quotes (`>`) in Word's heading and quote styles, which the format check and `scripts/verbatim_check.py` rely on. Without citekeys, leave out `--citeproc`, `--bibliography` and `--csl`; the reference list then comes from the chapter files.
+cephalo's formatting phase exports with Pandoc also when the chapters cite in the styleguide's format and not by citekey: Pandoc sets Markdown headings and block quotes (`>`) in Word's heading and quote styles, which the format check and `scripts/verbatim_check.py` rely on. Without citekeys, leave out `--citeproc`, `--bibliography` and `--csl`; the reference list is then a file of its own, which the export lists after the chapter files ("The reference list" below).
 
 **Prerequisite:** a CSL file matching your institution's citation style. APA 7 is the closest standard for many institutions; download from [zotero.org/styles](https://www.zotero.org/styles). For institution-specific deviations, you may need to edit the CSL.
 
@@ -207,15 +207,17 @@ Writer, Ben (2018): Title. In: Journal 12 (3), pp. 1–20.
 :::
 ```
 
-The div is markup, not wording: in Phase B the orchestrator adds it as a format-only change.
+The div is markup, not wording: added to a reference list written without it, it is a format-only change.
 
 ### The reference list
 
-With citekeys, Pandoc writes the reference list from `literature.bib` (`--citeproc`). Without them, the reference list is a file of its own, `08_Formal_Review/bibliography.md` (flat: `workspace/output/bibliography.md`), listed last, after the chapter files, in every export; the chapter files carry none. The orchestrator writes it at the start of Phase B:
+With citekeys, Pandoc writes the reference list from `literature.bib` (`--citeproc`). Without them, in a bachelor or master thesis, the reference list is a file of its own, `08_Formal_Review/bibliography.md` (flat: `workspace/output/bibliography.md`), which every export lists after the chapter files and before an appendix, if there is one; the chapter files carry none. The orchestrator writes it at the start of Phase B:
 
-- one entry for each source whose extract names a chapter under **Used in**, with the bibliographic data of `literature.bib` and the extract header, which the source-verifier checked in Phase A; no other source, and no data of its own;
-- in the patterns of `bibliography.entry_patterns` and the order of `bibliography.sort_order` in `styleguide.md`, under the styleguide's heading, inside the `Bibliography` div above;
+- one entry for each source whose extract names a chapter under **Used in**, with the data under the extract's "Bibliographic info", which the source-verifier checked in Phase A (and `literature.bib`, if there is one); no other source, and no data from anywhere else;
+- as the `bibliography.*` rules of `styleguide.md` say (entry patterns, authors, editions, DOI and URL, italics, sort order), under the styleguide's heading, inside the `Bibliography` div above;
 - a source the styleguide keeps out (`bibliography.secondary_original`, such as the original of a secondary citation) stays out.
+
+A seminar paper and the proposal have no Phase B. Without citekeys, the writer-agent writes their reference list as the last section of the last chapter file (proposal: of `03_Drafting/proposal_draft.md`): one entry for each source the text cites, as the `bibliography.*` rules of `styleguide.md` say, under the styleguide's heading, inside the `Bibliography` div.
 
 `scripts/bibliography_check.py` on the export then shows whether cited and listed authors match, and the format-verifier checks the patterns.
 

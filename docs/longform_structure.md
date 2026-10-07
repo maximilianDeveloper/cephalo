@@ -88,7 +88,7 @@ project/
 │   ├── README.md
 │   ├── reference.docx                 ← Pandoc's reference document (layout)
 │   ├── title_page.md                  ← first file of every export
-│   ├── bibliography.md                ← reference list without citekeys, last file of every export
+│   ├── bibliography.md                ← reference list without citekeys, after the chapters in every export
 │   ├── format_reports/
 │   └── submissions/
 │       └── v_<tag>_<date>.docx        (a new tag per format round: v_r1_…, v_r2_…)
