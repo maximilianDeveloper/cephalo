@@ -24,6 +24,7 @@ Dates follow ISO 8601 (`YYYY-MM-DD`).
   - **Which models are fast** — the Phase B chat on Sonnet reported itself as "not explicitly a fast model": no definition named one. `docs/phase_separation.md` and the status check now do (Sonnet and Haiku; a capable model such as Opus for Phase A).
   - **What the loop count leaves out** — the user's request for a new structure counted as an iteration of the chapter's feedback loop, as a polish round does. A change the user asks for that no finding prompted (a new structure, a section added, moved or removed; in the defense, a new slide order) no longer counts; the new verification after it runs all the same. Polish rounds still count.
   - **Waiting for the answer** — orchestrators asked the user and went on in the same turn, before the answer came. All three now end their turn with the question when what comes next depends on the answer; work the answer does not touch may come first.
+  - **Files with the Write tool** — in the third run, writing a file through a Git Bash here-document with umlauts and quotes failed five times. Every agent with a shell now writes files with the Write or Edit tool and uses the shell to run scripts and commands.
 
 ## [1.1.2] — 2026-10-05
 
