@@ -8,7 +8,9 @@ Dates follow ISO 8601 (`YYYY-MM-DD`).
 
 ---
 
-## [1.2.0] — unreleased
+## [1.2.0] — 2026-10-07
+
+**A reference document from the styleguide.** A new script, `scripts/build_reference_docx.py`, builds the reference document Pandoc takes the export's layout from, out of the values in `styleguide.md`. A third long-form trial run on Windows used it: the first format round found no layout error, where the second run had found four. The run's other findings, again mostly from the Phase B chat on a fast model, are fixed. The format-verifier now writes its own report, and a format round runs as steps that include a status line. The definitions say who writes the reference list without citekeys, and name the fast models. A change the user asks for no longer counts as a loop iteration. The orchestrators wait for the answer to a question, and agents write files with the Write tool rather than through the shell.
 
 ### Added
 
