@@ -195,7 +195,7 @@ Pandoc sets the text in these styles, so these are the ones to adjust:
 
 Pandoc's own reference document takes the heading font and colour from the document theme: set both in the heading styles and in their character styles. It has no page size, no margins and no page number: set them, and put a `PAGE` field into the footer, aligned as the styleguide says.
 
-A reference list written in the chapter files (without citekeys) comes out in `First Paragraph` and `Body Text`. Give it the `Bibliography` style with a fenced div around its entries, below the heading:
+A reference list without citekeys (below, "The reference list") comes out in `First Paragraph` and `Body Text`. Give it the `Bibliography` style with a fenced div around its entries, below the heading:
 
 ```markdown
 ## References
@@ -208,6 +208,16 @@ Writer, Ben (2018): Title. In: Journal 12 (3), pp. 1–20.
 ```
 
 The div is markup, not wording: in Phase B the orchestrator adds it as a format-only change.
+
+### The reference list
+
+With citekeys, Pandoc writes the reference list from `literature.bib` (`--citeproc`). Without them, the reference list is a file of its own, `08_Formal_Review/bibliography.md` (flat: `workspace/output/bibliography.md`), listed last, after the chapter files, in every export; the chapter files carry none. The orchestrator writes it at the start of Phase B:
+
+- one entry for each source whose extract names a chapter under **Used in**, with the bibliographic data of `literature.bib` and the extract header, which the source-verifier checked in Phase A; no other source, and no data of its own;
+- in the patterns of `bibliography.entry_patterns` and the order of `bibliography.sort_order` in `styleguide.md`, under the styleguide's heading, inside the `Bibliography` div above;
+- a source the styleguide keeps out (`bibliography.secondary_original`, such as the original of a secondary citation) stays out.
+
+`scripts/bibliography_check.py` on the export then shows whether cited and listed authors match, and the format-verifier checks the patterns.
 
 ### The title page
 

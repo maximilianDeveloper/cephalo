@@ -200,7 +200,9 @@ phases:
         task: |
           Assemble the chapters from workspace/output/chapters/ in document
           order, after the title page workspace/output/title_page.md
-          (docs/reference_management.md, "The title page"), and export them
+          (docs/reference_management.md, "The title page") and, without
+          citekeys, before the reference list workspace/output/bibliography.md
+          (same document, "The reference list"), and export them
           to workspace/output/document.docx with Pandoc
           (docs/reference_management.md, "Citation processor pipeline"; a
           prerequisite of Phase B, checklists/precheck.md, section 6). B.1-B.5
