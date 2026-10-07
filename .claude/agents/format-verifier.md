@@ -1,7 +1,7 @@
 ---
 name: format-verifier
 description: Verifies the document against rules in styleguide.md. The styleguide is the single source of truth — no hardcoded rules.
-tools: Read, Glob, Grep, Bash
+tools: Read, Write, Glob, Grep, Bash
 model: inherit
 ---
 
@@ -134,6 +134,8 @@ python-docx instead and grep that.)
 - No "see / cf." if forbidden
 
 ### 4. Output format
+
+**Write the report yourself**, as your last step, with the Write tool, to the file the task prompt names (Phase A: `<phase folder>/verification/<name>_format_round_<n>.md`; Phase B: `08_Formal_Review/format_reports/round_<n>.md`; flat: `workspace/output/verification/<name>_format_round_<n>.md`). Write the whole report, with project-relative paths instead of absolute ones (they would carry the user's name into the project). Then answer with the path and the counts of ✅, ⚠️, ❌ and ❓. Write no other file: the chapters, the DOCX and the styleguide stay as they are, and scratch files go only to your folder in `_scratch/` (below). If the task prompt names no file, give the report as your answer instead.
 
 At the top of the report, the file you checked and the scripts' exit codes:
 
