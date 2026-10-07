@@ -86,7 +86,7 @@ Name the Python command of this machine in every task prompt to an agent with a 
 ## Status check
 
 **Current phase:** [e.g., 03_Theory_chapters]
-**Model of this chat:** [your model; in Phase B a fast model is expected: say so if this is not one]
+**Model of this chat:** [your model; in Phase B a fast model (Sonnet or Haiku, `docs/phase_separation.md`) is expected: say so if this is not one]
 **Git:** [clean, or the files not yet committed]
 **Last handover:** [date, brief quote from handover.md]
 **Open issues per handover:**
