@@ -169,7 +169,7 @@ under "Next chat". Ready to copy-paste.
 
 ## Feedback-loop escalation
 
-Count a chapter's iterations: every revision followed by a new verification is one, also a revision the user asks for to polish 🟡 findings after the chapter has passed. The count runs across chats; keep it in `00_Status.md` with the chapter. This loop count is not the "last 3 iterations" of the A → B transition, which looks at commits.
+Count a chapter's iterations: every revision followed by a new verification is one, also a revision the user asks for to polish 🟡 findings after the chapter has passed. A change the user asks for that no finding prompted (a new structure, a section added, moved or removed) is not one: verify the chapter again as after any revision; the count goes on from where it stood. The count runs across chats; keep it in `00_Status.md` with the chapter. This loop count is not the "last 3 iterations" of the A → B transition, which looks at commits.
 
 When a feedback loop reaches `feedback_loop_max`, you stop automatic iteration and ask the user which of the following to do:
 
