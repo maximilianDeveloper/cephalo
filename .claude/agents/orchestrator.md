@@ -96,8 +96,9 @@ After each written chapter:
 2. Deactivate writer-agent (except for genuine content corrections)
 3. Write the title page `workspace/output/title_page.md` and, without citekeys, the reference list `workspace/output/bibliography.md` (`docs/reference_management.md`, "The title page" and "The reference list"), before the first export
 4. format-verifier takes lead and checks the exported DOCX; you do not check formats yourself, in the DOCX either (after changing the reference document you may read it back to see that your change was written). You apply its format-only findings in the chapter files (no rewording) or, for layout such as fonts, sizes, margins and spacing, in Pandoc's reference document `workspace/output/reference.docx`, which `scripts/build_reference_docx.py` builds from the values in `styleguide.md` (`docs/reference_management.md`, "The reference document": the styles Pandoc uses, and the `Bibliography` style for a reference list without citekeys), or leave them to the user, then re-export the DOCX with Pandoc (without it, ask the user to install it instead of writing an export script of your own)
-5. Only fast-model agents active
-6. Build scripts run regularly
+5. A format round, in this order: (1) build the reference document (round 1) or build it again after a layout finding, (2) export to `workspace/output/document.docx`, (3) the format-verifier checks it and writes `workspace/output/verification/document_format_round_<n>.md`, (4) a line in `workspace/state.md` with the round's counts, as after every agent call, (5) the format-only fixes, then the next round
+6. Only fast-model agents active
+7. Build scripts run regularly
 
 See `docs/phase_separation.md` for details.
 

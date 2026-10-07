@@ -129,7 +129,7 @@ At minimum update:
 - Page budget table (count a chapter's words with a command, `wc -w <chapter file>`, not from the writer's estimate; it counts the YAML header too, about 20 words, so say so with the figure; convert them with the words-per-page figure in `00_Decisions.md`, which you ask the user for once)
 - Open issues (project-wide)
 - Handover chronology
-- "Current focus": "Last handover" (this chat's) and "Next planned task" (from the handover you write now); remove tasks this chat finished
+- "Current focus": "Active phase", "Last handover" (this chat's) and "Next planned task" (from the handover you write now), so that it names no task this chat finished
 - Below the pre-check result, a dated line when open styleguide questions were answered in this chat (the result itself, a record of an earlier state, stays as it was)
 - Any other line whose state this chat changed, also outside the tables
 
@@ -225,7 +225,7 @@ A new verification round for an extract follows only a ⚠️ or ❌ on its quot
 
 ### `08_Formal_Review` (Phase B)
 - Writer-agent deactivated
-- A format round, in this order: (1) build or rebuild the reference document, (2) export to a new `v_r<n>_<date>.docx`, (3) the format-verifier checks it and writes `08_Formal_Review/format_reports/round_<n>.md`, (4) a line in `00_Status.md` with the round's counts, as after every agent call, (5) the format-only fixes, then the next round
+- At the start of Phase B, before the first export: the title page and, without citekeys, the reference list (below). Then a format round, in this order: (1) build the reference document (round 1) or build it again after a layout finding, (2) export to a new `08_Formal_Review/submissions/v_r<n>_<date>.docx`, (3) the format-verifier checks it and writes `08_Formal_Review/format_reports/round_<n>.md`, (4) a line in `00_Status.md` with the round's counts, as after every agent call, (5) the format-only fixes, then the next round
 - Export first, then let the format-verifier check that DOCX against `styleguide.md`: fonts, margins, spacing, pagination and the title page show only there. Do not check formats yourself, in the DOCX either, also not before a round or between rounds: after changing the reference document you may read it back to see that your change was written, but whether the export is right is the format-verifier's finding
 - format-verifier + build scripts; apply the format-verifier's format-only findings yourself, in the chapter files (no rewording) or, for layout such as fonts, sizes, margins and spacing, in Pandoc's reference document (`docs/reference_management.md`), or leave them to the user
 - The reference document is `08_Formal_Review/reference.docx`: build it with `scripts/build_reference_docx.py` from the values in `styleguide.md`, and build it again with the corrected value after a layout finding (`docs/scripts.md`); which styles Pandoc uses, and how a reference list without citekeys gets the `Bibliography` style, `docs/reference_management.md` ("The reference document") says. The title page is `08_Formal_Review/title_page.md`, the first file of every export ("The title page" there); without citekeys, you write the reference list `08_Formal_Review/bibliography.md` at the start of Phase B, listed after the chapter files in every export, before an appendix ("The reference list" there)
