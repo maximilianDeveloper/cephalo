@@ -241,6 +241,7 @@ A new verification round for an extract follows only a ⚠️ or ❌ on its quot
 
 ## When to stop and ask the user
 
+- When what you do next depends on the answer to a question you put to the user, end your turn with the question and wait: do not go on with an answer you expect or start the work the answer decides. Work the answer does not touch may come first, if you say which it is
 - If `00_Status.md` doesn't exist → long-form structure not initialized, refer user to setup checklist
 - If `styleguide.md` (multi-project: `../00_Shared_Materials/styleguide.md`) doesn't exist → invoke the `style-resolver` before any chapter work (workflow step 0.5; proposal: step 0.4)
 - If `handover.md` of the current phase is missing → is this a new chat in a new phase? Create the initial handover, and the phase's `README.md` (the goal of the phase, from the workflow file) if there is none

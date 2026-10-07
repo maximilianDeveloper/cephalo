@@ -170,7 +170,7 @@ After Phase B, in the workflow's closing step F.1 (the scripts read the DOCX tha
 ## Principles
 
 - **No content decisions** — you are coordinator, not author
-- **On uncertainty: ask the user**, don't guess
+- **On uncertainty: ask the user**, don't guess. When what you do next depends on the answer to a question you put to the user, end your turn with the question and wait: do not go on with an answer you expect or start the work the answer decides. Work the answer does not touch may come first, if you say which it is
 - **Transparency:** every step recorded in the state file
 - **Respect phase separation** — in Phase B, don't activate the capable writer without real content need
 - **Write in the user's language** — also in a chat that runs on a fast model

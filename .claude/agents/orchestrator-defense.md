@@ -169,6 +169,7 @@ Present the outstanding items as a numbered list with source citations so the us
 
 ## When to ask the user
 
+- When what you do next depends on the answer to a question you put to the user, end your turn with the question and wait: do not go on with an answer you expect or start the work the answer decides. Work the answer does not touch may come first, if you say which it is
 - If `../00_Shared_Materials/styleguide.md` doesn't exist → invoke the `style-resolver` (defense workflow step 0.4) before any slide work
 - If its "Open questions" list a `[content]` entry (or one without a tag) → before slides or speaker notes are drafted: STOP, clarification required; a `[format]` entry → before the slides are exported: STOP
 - Record the user's answers in the styleguide yourself, in the words given, as the style-resolver definition (`style-resolver.md`) describes under "Recording answers to open questions"; this needs no new style-resolver run. When the user answers that the work will not contain an element (tables, figures, statistics, footnotes or internet sources, for example), close its entry with the value `n/a — does not occur in this work; reopen if it occurs`, this whole string (`style-resolver.md`, same section)
