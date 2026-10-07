@@ -264,7 +264,7 @@ phases:
     
     steps:
       - Manual export to DOCX (04_Submission/proposal_final_<YYYY-MM-DD>.docx)
-      - format-verifier: check this DOCX against ../00_Shared_Materials/styleguide.md; re-export after fixes
+      - format-verifier: check this DOCX against ../00_Shared_Materials/styleguide.md, report in 04_Submission/format_report_round_<n>.md; re-export after fixes
       - Manual export to PDF (if supervisor prefers)
       - Commit the exported files, then Git tag: proposal_v1_<date>
     
