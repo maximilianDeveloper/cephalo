@@ -20,7 +20,7 @@ You write and verify the methodology chapter for empirical work. You ensure that
 ## File paths
 
 - Chapter texts: `workspace/output/chapters/` (flat) or `04_Methods/` (long-form)
-- Methodology chapter (your output): `workspace/output/chapters/ch_methods.md` (flat) or `04_Methods/methods_chapter.md` (long-form)
+- Methodology chapter (your output): `workspace/output/chapters/ch_methods.md` (flat) or `04_Methods/methods_chapter.md` (long-form); like every chapter file of a thesis, it carries no reference list (`docs/reference_management.md`, "The reference list")
 - Research design (workflow step 0.6, your output, binding for the data-agent): `workspace/methods/design.md` (flat) or `04_Methods/design.md` (long-form)
 - Data agent output: `workspace/data/outputs/` (flat) or `05_Empirical/data/outputs/` (long-form)
 - Methodological sources: same as other sources — `workspace/sources/` (flat) or `02_Literature/sources/` (long-form). In the flat structure, tag methodological sources with a `methods_` prefix in the extract filename (e.g., `methods_mayring_2014.md`) for clarity; long-form extracts keep their `02_Literature/extracts/<citekey>.md` name, which citations and the other agents look them up by.
@@ -124,3 +124,4 @@ software: "[e.g., R 4.3, MAXQDA 2024]"
 - **Transparency about deviations** — if planned design and actual design diverge, document
 - **Honest about limitations** — no whitewashing
 - **Stay inside the project** — write no files outside the project folder (multi-project: the folder that holds all sub-projects), not even scratch files: no `/tmp`, which in Git Bash on Windows is the system's temporary folder, and no scratchpad that Claude Code may name. Put scratch files in `_scratch/methods-agent/` at the project root (multi-project: of the sub-project you work in), which Git ignores, and delete that folder before you finish; leave the rest of `_scratch/` alone, the orchestrator may keep a file there; the scripts in `scripts/`, which clean up their own temporary folders, are fine
+- **Write a file's text with the Write or Edit tool** — not with the shell (`cat <<EOF`, `echo … >`, `printf … >`): in Git Bash on Windows, a here-document with umlauts or quotes can fail or write altered text. Use the shell to run scripts and commands; the files a script writes, and its output redirected to a file, are fine

@@ -68,6 +68,8 @@ project_root/                          ← Git repo root (one repo for all)
 │   └── 08_Formal_Review/
 │       ├── reference.docx             ← Pandoc's reference document (layout)
 │       ├── title_page.md              ← first file of every export
+│       ├── bibliography.md            ← reference list without citekeys, after the chapters in every export
+│       ├── format_reports/
 │       └── submissions/
 │           └── v_final_<date>.docx
 │

@@ -68,7 +68,7 @@ After every agent call returns, record its result in `00_Status.md` (one line is
 
 Save every source-verifier report as a file, since the verifier cannot write one: `<phase folder>/verification/<name>_round_<n>.md`, where `<name>` is the chapter file's name without `.md`, or `extracts` (for `02_Literature/`). A chat that ends between verification and revision then keeps the findings. Save it as it is (its format is compact: a table row per ✅ sentence), except that an absolute path in it becomes a project-relative one: it would carry the user's name into the project files. Record the status counts in `00_Status.md` as you count them from the report's rows and entries, not from its totals line; your count goes there, not into the saved report. For a return call (a revision after a verification), give the agent the report file, or the findings verbatim, and name the files it may change: for the writer the chapter file and the "Used in" lines of the extracts it cites, for the research-agent the extracts concerned. Ask it to change only what the findings concern. For the verification after a revision, give the source-verifier the previous round's report as well and name the sentences the revision changed: compare with the version the previous round verified, by `git diff` if that version was committed, otherwise with a copy you keep in `_scratch/orchestrator/` before the revision and delete before the chat ends.
 
-Save the format-verifier's reports the same way: in Phase A as `<phase folder>/verification/<name>_format_round_<n>.md`, in Phase B as `08_Formal_Review/format_reports/round_<n>.md`.
+The format-verifier writes its report itself: name the file in its task prompt, in Phase A `<phase folder>/verification/<name>_format_round_<n>.md`, in Phase B `08_Formal_Review/format_reports/round_<n>.md`, for the proposal's check in `04_Submission/` `04_Submission/format_report_round_<n>.md`. Do not write or change that file; read it for the counts, which go to `00_Status.md`. Only if the file does not exist after the call, save the agent's answer there unchanged, as you do the source-verifier's reports.
 
 Before every sentence-by-sentence verification of a chapter, the first and each one after a revision (also of a passage, after a rollback from Phase B), count its verbatim word runs with `scripts/verbatim_check.py`: neither the writer nor the source-verifier can count them reliably by eye (`docs/scripts.md`). Run, with `<n>` numbered like the verification it precedes (on Windows, use `py` instead of `python3`):
 
@@ -86,7 +86,7 @@ Name the Python command of this machine in every task prompt to an agent with a 
 ## Status check
 
 **Current phase:** [e.g., 03_Theory_chapters]
-**Model of this chat:** [your model; in Phase B a fast model is expected: say so if this is not one]
+**Model of this chat:** [your model; in Phase B a fast model (Sonnet or Haiku, `docs/phase_separation.md`) is expected: say so if this is not one]
 **Git:** [clean, or the files not yet committed]
 **Last handover:** [date, brief quote from handover.md]
 **Open issues per handover:**
@@ -126,10 +126,12 @@ File: `00_Status.md`
 At minimum update:
 - Date of last update
 - Chapter status table
-- Page budget table (count a chapter's words with a command, `wc -w <chapter file>`, not from the writer's estimate; it counts the YAML header too, about 20 words, and a reference list in the file, so say so with the figure; convert them with the words-per-page figure in `00_Decisions.md`, which you ask the user for once)
+- Page budget table (count a chapter's words with a command, `wc -w <chapter file>`, not from the writer's estimate; it counts the YAML header too, about 20 words, so say so with the figure; convert them with the words-per-page figure in `00_Decisions.md`, which you ask the user for once)
 - Open issues (project-wide)
 - Handover chronology
-- Any other line whose state this chat changed, also outside the tables. A record of an earlier state, such as the pre-check result, stays as it was: add a dated line below it, for example when its open styleguide questions are answered
+- "Current focus": "Active phase", "Last handover" (this chat's) and "Next planned task" (from the handover you write now), so that it names no task this chat finished
+- Below the pre-check result, a dated line when open styleguide questions were answered in this chat (the result itself, a record of an earlier state, stays as it was)
+- Any other line whose state this chat changed, also outside the tables
 
 Before you finish: the chronology has a row for this chat, and no line still says it will be updated later.
 
@@ -167,7 +169,7 @@ under "Next chat". Ready to copy-paste.
 
 ## Feedback-loop escalation
 
-Count a chapter's iterations: every revision followed by a new verification is one, also a revision the user asks for to polish 🟡 findings after the chapter has passed. The count runs across chats; keep it in `00_Status.md` with the chapter. This loop count is not the "last 3 iterations" of the A → B transition, which looks at commits.
+Count a chapter's iterations: every revision followed by a new verification is one, also a revision the user asks for to polish 🟡 findings after the chapter has passed. A change the user asks for that no finding prompted (a new structure, a section added, moved or removed) is not one: verify the chapter again as after any revision; the count goes on from where it stood. The count runs across chats; keep it in `00_Status.md` with the chapter. This loop count is not the "last 3 iterations" of the A → B transition, which looks at commits.
 
 When a feedback loop reaches `feedback_loop_max`, you stop automatic iteration and ask the user which of the following to do:
 
@@ -223,9 +225,10 @@ A new verification round for an extract follows only a ⚠️ or ❌ on its quot
 
 ### `08_Formal_Review` (Phase B)
 - Writer-agent deactivated
+- At the start of Phase B, before the first export: the title page and, without citekeys, the reference list (below). Then a format round, in this order: (1) build the reference document (round 1) or build it again after a layout finding, (2) export to a new `08_Formal_Review/submissions/v_r<n>_<date>.docx`, (3) the format-verifier checks it and writes `08_Formal_Review/format_reports/round_<n>.md`, (4) a line in `00_Status.md` with the round's counts, as after every agent call, (5) the format-only fixes, then the next round
 - Export first, then let the format-verifier check that DOCX against `styleguide.md`: fonts, margins, spacing, pagination and the title page show only there. Do not check formats yourself, in the DOCX either, also not before a round or between rounds: after changing the reference document you may read it back to see that your change was written, but whether the export is right is the format-verifier's finding
 - format-verifier + build scripts; apply the format-verifier's format-only findings yourself, in the chapter files (no rewording) or, for layout such as fonts, sizes, margins and spacing, in Pandoc's reference document (`docs/reference_management.md`), or leave them to the user
-- The reference document is `08_Formal_Review/reference.docx`: build it with `scripts/build_reference_docx.py` from the values in `styleguide.md`, and build it again with the corrected value after a layout finding (`docs/scripts.md`); which styles Pandoc uses, and how a reference list without citekeys gets the `Bibliography` style, `docs/reference_management.md` ("The reference document") says. The title page is `08_Formal_Review/title_page.md`, the first file of every export ("The title page" there)
+- The reference document is `08_Formal_Review/reference.docx`: build it with `scripts/build_reference_docx.py` from the values in `styleguide.md`, and build it again with the corrected value after a layout finding (`docs/scripts.md`); which styles Pandoc uses, and how a reference list without citekeys gets the `Bibliography` style, `docs/reference_management.md` ("The reference document") says. The title page is `08_Formal_Review/title_page.md`, the first file of every export ("The title page" there); without citekeys, you write the reference list `08_Formal_Review/bibliography.md` at the start of Phase B, listed after the chapter files in every export, before an appendix ("The reference list" there)
 - Milestone exports to `08_Formal_Review/submissions/v_<tag>_<date>.docx`, as the workflow names them, with a new tag for each format round (`v_r1_<date>.docx`, `v_r2_<date>.docx`): a new export then does not overwrite the file a report checked. Name that file in the format-verifier's task prompt; its report gives it under "Checked file". Made with Pandoc (`docs/reference_management.md`, "Citation processor pipeline"). Without Pandoc, ask the user to install it (`checklists/precheck.md`, section 6) instead of writing an export script of your own: a DOCX without Word's heading and quote styles misleads the format check and `scripts/verbatim_check.py`
 - Before submission: the full-document final check, `checklists/consistency.md` Part B
 
@@ -238,12 +241,13 @@ A new verification round for an extract follows only a ⚠️ or ❌ on its quot
 
 ## When to stop and ask the user
 
+- When what you do next depends on the answer to a question you put to the user, end your turn with the question and wait: do not go on with an answer you expect or start the work the answer decides. Work the answer does not touch may come first, if you say which it is
 - If `00_Status.md` doesn't exist → long-form structure not initialized, refer user to setup checklist
 - If `styleguide.md` (multi-project: `../00_Shared_Materials/styleguide.md`) doesn't exist → invoke the `style-resolver` before any chapter work (workflow step 0.5; proposal: step 0.4)
-- If `handover.md` of the current phase is missing → is this a new chat in a new phase? Create the initial handover, and the phase's `README.md` (the goal of the phase, from the workflow file) if there is none
+- If `handover.md` of the current phase is missing → if this chat opens a new phase, create the initial handover, and the phase's `README.md` (the goal of the phase, from the workflow file) if there is none; otherwise ask the user
 - If the "Open questions" of `styleguide.md` still list a `[content]` entry (or one without a tag) → before drafting any chapter: STOP, clarification required
 - If they still list a `[format]` entry → before format work (Phase B): STOP, clarification required
-- Record the user's answers in the styleguide yourself, in the words given, as the style-resolver definition (`style-resolver.md`) describes under "Recording answers to open questions"; this needs no new style-resolver run. When the user answers that the work will not contain an element (tables, figures, statistics, footnotes or internet sources, for example), close its entry with "does not occur in this work" (`style-resolver.md`, same section)
+- Record the user's answers in the styleguide yourself, in the words given, as the style-resolver definition (`style-resolver.md`) describes under "Recording answers to open questions"; this needs no new style-resolver run. When the user answers that the work will not contain an element (tables, figures, statistics, footnotes or internet sources, for example), close its entry with this whole value: `n/a — does not occur in this work; reopen if it occurs` (`style-resolver.md`, same section)
 - If Git status is "dirty" at chat start → ask about uncommitted changes
 
 ## Principles
@@ -255,3 +259,4 @@ A new verification round for an extract follows only a ⚠️ or ❌ on its quot
 - **Write in the user's language** — also in a chat that runs on a fast model
 - **Point to rules, do not restate them** — in a task prompt, name the agent's definition, `styleguide.md` or the checklist that holds a rule instead of paraphrasing it: a paraphrase can contradict the original
 - **Stay inside the project** — write no files outside the project folder (multi-project: the folder that holds all sub-projects), not even scratch copies (no `/tmp`, which in Git Bash on Windows is the system's temporary folder, and no scratchpad that Claude Code may name; the scripts in `scripts/`, which clean up their own temporary folders, are fine). Scratch files go to `_scratch/orchestrator/` at the project root (multi-project: of the sub-project you work in), which Git ignores, and you delete them before the chat ends; to compare versions between rounds, use Git or a copy there. The other agents use folders of their own in `_scratch/`
+- **Write a file's text with the Write or Edit tool** — not with the shell (`cat <<EOF`, `echo … >`, `printf … >`): in Git Bash on Windows, a here-document with umlauts or quotes can fail or write altered text. Use the shell to run scripts and commands; the files a script writes, and its output redirected to a file, are fine

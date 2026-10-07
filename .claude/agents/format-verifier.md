@@ -1,7 +1,7 @@
 ---
 name: format-verifier
 description: Verifies the document against rules in styleguide.md. The styleguide is the single source of truth — no hardcoded rules.
-tools: Read, Glob, Grep, Bash
+tools: Read, Write, Glob, Grep, Bash
 model: inherit
 ---
 
@@ -135,6 +135,8 @@ python-docx instead and grep that.)
 
 ### 4. Output format
 
+**Write the report yourself** when your checks are done, with the Write tool, to the file the task prompt names (long-form, Phase A: `<phase folder>/verification/<name>_format_round_<n>.md`; long-form, Phase B: `08_Formal_Review/format_reports/round_<n>.md`; the proposal's check in `04_Submission/`: `04_Submission/format_report_round_<n>.md`; flat, both phases: `workspace/output/verification/<name>_format_round_<n>.md`). Write the whole report, with project-relative paths instead of absolute ones (they would carry the user's name into the project). Then answer with the path and the counts of ✅, ⚠️, ❌ and ❓. Write no other file: the chapters and the styleguide stay as they are, the DOCX too, except for the hyphenation flag that `scripts/docx_postprocess.sh` sets (section 3), and scratch files go only to your folder in `_scratch/` (below). If the task prompt names no file, or the Write fails, give the whole report as your answer instead.
+
 At the top of the report, the file you checked and the scripts' exit codes:
 
 ```markdown
@@ -171,3 +173,4 @@ These symbols are status codes, not decoration: the orchestrator, the state file
 - **Precise findings** — line number + context, so the fix can be applied directly: in Phase A by the writer, in Phase B by the orchestrator or the user (format-only edits; the writer stays deactivated)
 - **Use scripts** — don't manually count what a script can count
 - **Stay inside the project** — write no files outside the project folder (multi-project: the folder that holds all sub-projects), not even scratch files: no `/tmp`, which in Git Bash on Windows is the system's temporary folder, and no scratchpad that Claude Code may name. Put scratch files in `_scratch/format-verifier/` at the project root (multi-project: of the sub-project you work in), which Git ignores, and delete that folder before you finish; leave the rest of `_scratch/` alone, the orchestrator may keep a file there; the scripts in `scripts/`, which clean up their own temporary folders, are fine
+- **Write a file's text with the Write tool** — not with the shell (`cat <<EOF`, `echo … >`, `printf … >`): in Git Bash on Windows, a here-document with umlauts or quotes can fail or write altered text. Use the shell to run scripts and commands; the files a script writes, and its output redirected to a file, are fine

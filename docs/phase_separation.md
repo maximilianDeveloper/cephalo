@@ -44,7 +44,7 @@ cephalo splits the project lifecycle into two distinct phases:
 
 Format work uses fast (cheap) models exclusively. For a typical bachelor thesis, this cuts overall token spending by an estimated 60-70% versus running capable models throughout, provided Phase B really runs on a fast model (see the next paragraph).
 
-The saving depends on how you run Phase B: `format-verifier` and the orchestrators are defined with `model: inherit`, so they use whatever model the main chat runs. Start Phase B chats on a fast model (for example with `/model`), or pin `format-verifier` to a fast model in its frontmatter; otherwise Phase B runs on your default model.
+The saving depends on how you run Phase B: `format-verifier` and the orchestrators are defined with `model: inherit`, so they use whatever model the main chat runs. Start Phase B chats on a fast model (for example with `/model`), or pin `format-verifier` to a fast model in its frontmatter; otherwise Phase B runs on your default model. Fast models in this sense are Sonnet and Haiku (`/model sonnet`, `/model haiku`); Phase A needs a capable model such as Opus.
 
 ### Quality stability
 
@@ -63,7 +63,7 @@ The orchestrator transitions the project from A to B when:
 1. **All chapters complete** — body, conclusion, AND introduction (introduction is always last)
 2. **Source verification ✅** — every chapter passed sentence-by-sentence verification
 3. **No outstanding ⚠️, ❌ or ❓ content items** — all flagged content issues resolved (a 🟡 polish flag does not block)
-4. **Last 3 iterations were format-only** — empirical signal that content has stabilized: in the last three commits, the changes to the chapter files touched only styleguide-governed items (citations, typography, spacing); state, handover and report files aside. This is not the loop count of the orchestrators, which counts revisions with a new verification
+4. **Last 3 iterations were format-only** — empirical signal that content has stabilized: in the last three commits, the changes to the chapter files touched only styleguide-governed items (citations, typography, spacing); state, handover and report files aside. This is not the loop count of the orchestrators, which counts the revisions after findings, each followed by a new verification
 5. **All `❓` items in `styleguide.md` resolved** — no open formatting questions
 
 When all criteria are met, the orchestrator:

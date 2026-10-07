@@ -111,6 +111,8 @@ sources_used: [Author1, Author2, ...]
 ---
 ```
 
+In a bachelor or master thesis, a chapter file carries no reference list: Pandoc writes it from citekeys, or the orchestrator writes it in Phase B. A seminar paper and the proposal have no Phase B: without citekeys, write their reference list yourself, as the last section of the last chapter file (proposal: of `03_Drafting/proposal_draft.md`). Both: `docs/reference_management.md`, "The reference list".
+
 Mark a block quote (a long direct quote set off from the text) with `>` at the start of each of its lines, whatever its final layout per `styleguide.md`: `scripts/verbatim_check.py` then counts it as a direct quote, and Pandoc exports it as a block quote. A short direct quote stays in quotation marks within the sentence.
 
 After finishing a chapter, add it to the **Used in:** line of each source extract you drew on, with the quote IDs of the entries you used, the `### Q<n>` headings: `Chapter 3 (Q1, Q4)`. For an extract without IDs (written before quote IDs existed), name the chapter alone. The research-agent leaves that line to you. Not in `03_Defense/`: the main work's extracts are read-only there.
