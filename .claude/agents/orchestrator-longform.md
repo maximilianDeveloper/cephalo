@@ -246,7 +246,7 @@ A new verification round for an extract follows only a ⚠️ or ❌ on its quot
 - If `handover.md` of the current phase is missing → is this a new chat in a new phase? Create the initial handover, and the phase's `README.md` (the goal of the phase, from the workflow file) if there is none
 - If the "Open questions" of `styleguide.md` still list a `[content]` entry (or one without a tag) → before drafting any chapter: STOP, clarification required
 - If they still list a `[format]` entry → before format work (Phase B): STOP, clarification required
-- Record the user's answers in the styleguide yourself, in the words given, as the style-resolver definition (`style-resolver.md`) describes under "Recording answers to open questions"; this needs no new style-resolver run. When the user answers that the work will not contain an element (tables, figures, statistics, footnotes or internet sources, for example), close its entry with "does not occur in this work" (`style-resolver.md`, same section)
+- Record the user's answers in the styleguide yourself, in the words given, as the style-resolver definition (`style-resolver.md`) describes under "Recording answers to open questions"; this needs no new style-resolver run. When the user answers that the work will not contain an element (tables, figures, statistics, footnotes or internet sources, for example), close its entry with the value `n/a — does not occur in this work; reopen if it occurs`, this whole string (`style-resolver.md`, same section)
 - If Git status is "dirty" at chat start → ask about uncommitted changes
 
 ## Principles
