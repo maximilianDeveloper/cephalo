@@ -157,7 +157,7 @@ defense/rehearsal: second run, timing OK (19 min)
 
 ## Feedback-loop escalation
 
-Count the iterations of an item as `orchestrator-longform.md` does ("Feedback-loop escalation"): every revision followed by a new check is one, also one the user asks for to polish it, but not a change the user asks for that no finding prompted (a new slide order, a slide added or removed). The count runs across chats; keep it in `00_Status.md`.
+Count the iterations of an item as `orchestrator-longform.md` does ("Feedback-loop escalation"): every revision followed by a new check is one, also one the user asks for to polish it. A change the user asks for that no finding prompted (a new slide order, a slide added or removed) is not one. The count runs across chats; keep it in `00_Status.md`.
 
 When a feedback loop reaches `feedback_loop_max`, you stop automatic iteration and ask the user which of the following to do:
 
@@ -172,7 +172,7 @@ Present the outstanding items as a numbered list with source citations so the us
 - When what you do next depends on the answer to a question you put to the user, end your turn with the question and wait: do not go on with an answer you expect or start the work the answer decides. Work the answer does not touch may come first, if you say which it is
 - If `../00_Shared_Materials/styleguide.md` doesn't exist → invoke the `style-resolver` (defense workflow step 0.4) before any slide work
 - If its "Open questions" list a `[content]` entry (or one without a tag) → before slides or speaker notes are drafted: STOP, clarification required; a `[format]` entry → before the slides are exported: STOP
-- Record the user's answers in the styleguide yourself, in the words given, as the style-resolver definition (`style-resolver.md`) describes under "Recording answers to open questions"; this needs no new style-resolver run. When the user answers that the work will not contain an element (tables, figures, statistics, footnotes or internet sources, for example), close its entry with the value `n/a — does not occur in this work; reopen if it occurs`, this whole string (`style-resolver.md`, same section)
+- Record the user's answers in the styleguide yourself, in the words given, as the style-resolver definition (`style-resolver.md`) describes under "Recording answers to open questions"; this needs no new style-resolver run. When the user answers that the work will not contain an element (tables, figures, statistics, footnotes or internet sources, for example), close its entry with this whole value: `n/a — does not occur in this work; reopen if it occurs` (`style-resolver.md`, same section)
 - If defense date is missing from `00_Decisions.md` → prompt; no timing without it
 - If submitted work is not tagged as "frozen" (no Git tag) → clarify: really submitted?
 - If formal requirements are unclear (slide count, time, handout) → recommend asking the examination office
@@ -188,4 +188,4 @@ Present the outstanding items as a numbered list with source citations so the us
 - **Write in the user's language** — also in a chat that runs on a fast model
 - **Point to rules, do not restate them** — in a task prompt, name the agent's definition, `styleguide.md` or the checklist that holds a rule instead of paraphrasing it: a paraphrase can contradict the original
 - **Stay inside the project** — write no files outside the project folder (multi-project: the folder that holds all sub-projects), not even scratch copies (no `/tmp`, which in Git Bash on Windows is the system's temporary folder, and no scratchpad that Claude Code may name; the scripts in `scripts/`, which clean up their own temporary folders, are fine). Scratch files go to `_scratch/orchestrator/` at the project root (multi-project: of the sub-project you work in), which Git ignores, and you delete them before the chat ends; to compare versions between rounds, use Git or a copy there. The other agents use folders of their own in `_scratch/`
-- **Write a file's text with the Write or Edit tool** — not with the shell (`cat <<EOF`, `echo … >`, `printf … >`): in Git Bash on Windows, a here-document with umlauts or quotes can fail or write a different text. Use the shell to run scripts and commands; the files a script writes itself are fine
+- **Write a file's text with the Write or Edit tool** — not with the shell (`cat <<EOF`, `echo … >`, `printf … >`): in Git Bash on Windows, a here-document with umlauts or quotes can fail or write altered text. Use the shell to run scripts and commands; the files a script writes, and its output redirected to a file, are fine
