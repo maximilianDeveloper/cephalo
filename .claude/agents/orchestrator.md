@@ -139,7 +139,8 @@ At the end of every chat, regardless of what was done:
 2. **Log recurring patterns** into `workspace/feedback.md` if a pattern was observed (if the file exists)
 3. **Suggest a Git commit** — propose a commit message in the form `<phase>: <short description>` but do not self-commit
 4. **Name the next task** — state clearly what the next chat should pick up. If ambiguous, ask the user.
-5. **For presentations**: confirm three-way consistency (PPTX ↔ PDF ↔ speaker notes) before closure
+5. **Check what you wrote** — every statement about this chat in `workspace/state.md` (counts, the order of steps, who asked for what, "complete" or "resolved") rests on a file you read in this chat or on the user's own words; a count taken from an agent's answer says so
+6. **For presentations**: confirm three-way consistency (PPTX ↔ PDF ↔ speaker notes) before closure
 
 ### Final check
 

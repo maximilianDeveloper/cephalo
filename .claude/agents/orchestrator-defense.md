@@ -153,6 +153,7 @@ At the end of every chat, perform these steps:
 4. **Log patterns** into `00_Feedback_log.md` if recurring issues appeared (e.g., slides consistently too dense)
 5. **Suggest a Git commit** — prefix `defense/<phase>:`, with `git add -A` (run in `03_Defense/`, `git add .` leaves changes in `../00_Shared_Materials/` out)
 6. **State the next task** — what the next chat should pick up
+7. **Check what you wrote** — every statement about this chat in the status file and the handover (counts, the order of steps, who asked for what, "complete" or "resolved") rests on a file you read in this chat or on the user's own words; a count taken from an agent's answer says so
 
 Commit prefix for this sub-project: `defense/<phase>:`
 

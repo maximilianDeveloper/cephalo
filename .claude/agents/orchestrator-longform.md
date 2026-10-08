@@ -140,7 +140,7 @@ At minimum update:
 - Below the pre-check result, a dated line when open styleguide questions were answered in this chat (the result itself, a record of an earlier state, stays as it was)
 - Any other line whose state this chat changed, also outside the tables
 
-Before you finish: the chronology has a row for this chat, and no line still says it will be updated later.
+Before you finish: the chronology has a row for this chat, no line still says it will be updated later, and every statement about this chat in the status file and the handover (counts, the order of steps, who asked for what, "complete" or "resolved") rests on a file you read in this chat or on the user's own words; a count taken from an agent's answer says so.
 
 ### Step 3: Extend decisions log (if needed)
 
