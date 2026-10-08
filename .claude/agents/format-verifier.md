@@ -114,9 +114,9 @@ Run it on a copy of the document without the list of abbreviations, in `_scratch
 
 **Automatic hyphenation** (only if `styleguide.md` sets `document.hyphenation` to automatic): check that the DOCX carries the flag, without changing it:
 ```bash
-python3 -c "import re,sys,zipfile; s=zipfile.ZipFile(sys.argv[1]).read('word/settings.xml').decode('utf-8'); print('hyphenation flag: ' + ('set' if re.search(r'<w:autoHyphenation(?![^>]*w:val=\"(0|false|off)\")', s) else 'missing'))" workspace/output/document.docx
+python3 -c "import re,sys,zipfile; s=zipfile.ZipFile(sys.argv[1]).read('word/settings.xml').decode('utf-8'); print('hyphenation flag: ' + ('set' if re.search(r'<w:autoHyphenation(\s+w:val=[\x22\x27](1|true|on)[\x22\x27])?\s*(/>|>\s*</w:autoHyphenation>)', s) else 'missing'))" workspace/output/document.docx
 ```
-Pandoc does not set `<w:autoHyphenation/>`; the orchestrator sets it with `scripts/docx_postprocess.sh` right after each export. A missing flag is a ⚠️ for the orchestrator to fix that way. Do not run the script yourself: the file you check stays as it was exported.
+`set` is what `scripts/docx_postprocess.sh` counts as enabled. Pandoc does not set `<w:autoHyphenation/>`; the orchestrator sets it with `scripts/docx_postprocess.sh` right after each export. A missing flag is a ⚠️ for the orchestrator to fix that way. Do not run the script yourself: the file you check stays as it was exported.
 
 **Pronoun check** (styleguide-configured):
 ```bash
