@@ -146,6 +146,8 @@ Before you finish: the chronology has a row for this chat, no line still says it
 
 If an architectural/methodological decision was made during the chat: append it at the end of `00_Decisions.md`, below the last entry. An entry stays as written, also one from this chat: a correction or a change of mind is a new entry that names the one it changes.
 
+A decision that sets aside a rule of `styleguide.md` for this work (a page count, a structure rule) is also noted at that rule in `styleguide.md`, with `[user, YYYY-MM-DD]` and the decision's title (multi-project: naming the sub-project it applies to, since the styleguide is shared): the format-verifier checks only the styleguide.
+
 ### Step 4: Extend feedback log (if needed)
 
 If recurring patterns were observed: append to `00_Feedback_log.md`.
