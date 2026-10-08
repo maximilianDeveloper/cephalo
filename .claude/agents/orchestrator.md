@@ -47,9 +47,9 @@ If `styleguide.md` does not yet exist:
 - Invoke the `style-resolver` agent
 - Wait for result
 - Check for open `❓` items
-- Open `[content]` entries under "Open questions" (or entries without a tag): prompt the user to clarify them before any chapter is drafted. Group the entries for tables, figures and statistics, so that a work without them can close them at once with exactly the value `n/a — does not occur in this work; reopen if it occurs`, in English whatever the language of the styleguide; the user may answer so for any other element the work will not contain as well, but not for a key the work uses, such as the layout of the reference list or the space before a page number (`style-resolver.md`, "Recording answers to open questions", item 4)
-- Record the answers in `styleguide.md` yourself, in the words given, as `.claude/agents/style-resolver.md` describes ("Recording answers to open questions"); this needs no new style-resolver run
-- Open `[format]` entries: remind the user; they may stay open until the Phase A → B transition
+- Open `[content]` entries under "Open questions" (or entries without a tag): prompt the user to clarify them before any chapter is drafted. Group the entries for tables, figures and statistics, so that a work without them can close them at once with the n/a value (next point)
+- Record the answers in `styleguide.md` yourself, in the words given, as `.claude/agents/style-resolver.md` describes ("Recording answers to open questions"); this needs no new style-resolver run. When the user answers, for a `[content]` or a `[format]` entry, that the work will not contain an element (tables, figures, statistics, footnotes or internet sources, for example), close its entry with exactly this value, in English whatever the language of the styleguide or the chat: `n/a — does not occur in this work; reopen if it occurs`. Offer and accept it only for such an element, never for a key the work uses, such as the layout of the reference list or the space before a page number; for such a key, ask for a value (`style-resolver.md`, same section, item 4)
+- Open `[format]` entries: remind the user; they may stay open until the Phase A → B transition, and their answers are recorded as above
 
 ### Task prompts
 
