@@ -236,7 +236,7 @@ Title of the work
 
 ```{=openxml}
 <w:p><w:r><w:br w:type="page"/></w:r></w:p>
-<w:p><w:r><w:fldChar w:fldCharType="begin" w:dirty="true"/></w:r><w:r><w:instrText xml:space="preserve"> TOC \o "1-3" \h \z \u </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>Table of contents: update the fields (F9)</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>
+<w:p><w:r><w:fldChar w:fldCharType="begin" w:dirty="true"/></w:r><w:r><w:instrText xml:space="preserve"> TOC \o "1-3" \h \z \u </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>Table of contents: update the fields in Word</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>
 <w:p><w:r><w:br w:type="page"/></w:r></w:p>
 ```
 ````
