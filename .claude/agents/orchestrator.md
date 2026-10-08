@@ -149,7 +149,7 @@ After Phase B, in the workflow's closing step F.1 (the scripts read the DOCX tha
 - Run scripts:
   - `scripts/bibliography_check.py` (minus-test)
   - `scripts/abbreviations_extract.py`
-  - `scripts/docx_postprocess.sh` (only if `document.hyphenation` in `styleguide.md` is automatic)
+  - `scripts/docx_postprocess.sh` on a new export made in this step, if `document.hyphenation` in `styleguide.md` is automatic (the DOCX of the last format round carries the flag already)
 - For presentations: three-way check PPTX ↔ PDF ↔ speaker notes
 
 ## State file format
