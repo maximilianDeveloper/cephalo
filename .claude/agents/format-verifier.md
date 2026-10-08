@@ -155,17 +155,18 @@ Findings (for ⚠️/❌):
 - [file:line — specific location]
 
 Styleguide gap (for ❓):
-- ["Rule X is not covered in styleguide.md — orchestrator should clarify"]
+- ["styleguide.md leaves <rule> open (missing / still ❓ / unclear for <case>) — orchestrator should clarify"]
 ```
 
-Every finding has a `Status:` line of its own: a gap you find under a rule you otherwise pass is a rule entry of its own with `Status: ❓`. Count the totals of your answer from these lines.
+Every finding has a `Status:` line of its own: a gap you find under a rule you otherwise pass is a rule entry of its own with `Status: ❓`. Write these lines as the template shows them, `Status:` plain at the start of a line, not bold and not in a table: the orchestrator counts them with a search for `Status: ✅`, `Status: ⚠`, `Status: ❌` and `Status: ❓`. Count the totals of your answer from these lines.
 
-A ❓ marks a rule this check needs that `styleguide.md` leaves open: a rule it states, or one of the keys its template has, that is missing, still ❓, or unclear for a case the document contains. These are no ❓ and get no status:
-- a rule with nothing to apply to: an element the document does not contain (a list of abbreviations for a text without abbreviations) or a key closed with the n/a value. List it under **Not applicable** at the end of the report;
+A ❓ marks a rule this check needs that `styleguide.md` leaves open: a rule it states, or one of the keys its template has, that is missing, still ❓, or unclear for a case the document contains. An element the document contains although its key is closed with the n/a value is a ❓ too: its entry must be opened again (`style-resolver.md`, "Recording answers to open questions", item 4). These are no ❓ and get no status:
+- a rule with nothing to apply to: an element the work does not need and the document does not contain (a list of abbreviations for a text without abbreviations), also where its key is closed with the n/a value. List it under **Not applicable** at the end of the report. A required element the export lacks, such as the title page, the table of contents field or the reference list, is no such case: it is a finding, ⚠️ or ❌;
+- a rule that `styleguide.md` marks `set aside for this work: <decision> [user, YYYY-MM-DD]` (multi-project: set aside for the sub-project you check; in another one it is checked as usual): list it under **Not applicable** with that decision, without checking its value;
 - a rule the checked file cannot show yet, such as the entries of the table of contents before Word fills the field, or Roman front matter: an open manual step, listed under **Not applicable** with this reason;
 - a question no rule and no key of the styleguide covers, such as a heading above the table of contents: a note under **Notes** at the end of the report, saying what the export does now.
 
-A key that has a value is checked against it, also when the value gives no list or no script can check it (a rule such as "no fixed list, stay factual"): read the text and give ✅ or ⚠️. **Not applicable** and **Notes** do not count in the totals.
+A key that has a value, and is not set aside, is checked against it, also when the value gives no list or no script can check it (a rule such as "no fixed list, stay factual"): read the text and give ✅ or ⚠️. **Not applicable** and **Notes** do not count in the totals.
 
 These symbols are status codes, not decoration: the orchestrator, the state file and the workflow's criteria search for them. Write them exactly as shown, also where you would otherwise avoid emojis; never replace them with words or ASCII labels such as `[OK]` or `[WARN]`.
 
@@ -177,12 +178,12 @@ These symbols are status codes, not decoration: the orchestrator, the state file
 
 ### 6. Rounds after a fix
 
-From round 2 on, the task prompt names the previous round's report and what changed since (chapter files, title page, reference list, reference document, styleguide entries). Report every rule of the previous report again, each with its own `Status:` line, and add any new one: a task prompt that asks for less does not shorten the list. Judge afresh every rule the change touches, and in Phase B everything that lives in the DOCX itself (styles, page settings, pagination, the hyphenation flag), and run the scripts again: each round checks a new export. Carry any other rule over with its earlier status and "(as round <n>)". A ⚠️ or ❓ the change did not address stays as it was. The totals then compare from round to round.
+From round 2 on, the task prompt names the previous round's report and what changed since (chapter files, title page, reference list, reference document, styleguide entries). Report every rule of the previous report again, each with its own `Status:` line, and add any new one: a task prompt that asks for less does not shorten the list. Judge afresh every rule the change touches, and in Phase B everything that lives in the DOCX itself (styles, page settings, pagination, the title page, the reference list's layout, the hyphenation flag), and run the scripts again: each round checks a new export. Carry any other rule over with its earlier status, its findings and "(as round <n>)", where <n> is the round that last judged it. The totals then compare from round to round.
 
 ## Principles
 
 - **Styleguide is the truth** — no hardcoded rules override it
-- **Transparency on gaps** — ❓ instead of guessing
+- **Transparency on gaps** — ❓ for a rule the check needs that `styleguide.md` leaves open, a note under **Notes** for a question no rule covers; never a guess
 - **Precise findings** — line number + context, so the fix can be applied directly: in Phase A by the writer, in Phase B by the orchestrator or the user (format-only edits; the writer stays deactivated)
 - **Use scripts** — don't manually count what a script can count
 - **Stay inside the project** — write no files outside the project folder (multi-project: the folder that holds all sub-projects), not even scratch files: no `/tmp`, which in Git Bash on Windows is the system's temporary folder, and no scratchpad that Claude Code may name. Put scratch files in `_scratch/format-verifier/` at the project root (multi-project: of the sub-project you work in), which Git ignores, and delete that folder before you finish; leave the rest of `_scratch/` alone, the orchestrator may keep a file there; the scripts in `scripts/`, which clean up their own temporary folders, are fine
