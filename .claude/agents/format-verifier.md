@@ -99,7 +99,7 @@ Verify the following categories. Concrete values (font size, page-range notation
 
 ### 3. Automated mechanical checks
 
-These run deterministically (on Windows, use `py` instead of `python3`). Run the three scripts below as given, without piping their output through `head` or another command, so that the last line shows the exit code, and put each exit code into your report:
+These run deterministically (on Windows, use `py` instead of `python3`). Run the two scripts below as given, without piping their output through `head` or another command, so that the last line shows the exit code, and put each exit code into your report:
 
 **Bibliography minus-test:**
 ```bash
@@ -112,11 +112,11 @@ python3 scripts/abbreviations_extract.py workspace/output/document.docx; echo "e
 ```
 Run it on a copy of the document without the list of abbreviations, in `_scratch/format-verifier/`: the script reads the list too, so every listed entry would count as used.
 
-**Automatic hyphenation** (only if `styleguide.md` sets `document.hyphenation` to automatic; before final export):
+**Automatic hyphenation** (only if `styleguide.md` sets `document.hyphenation` to automatic): check that the DOCX carries the flag, without changing it:
 ```bash
-./scripts/docx_postprocess.sh workspace/output/document.docx; echo "exit=$?"
+python3 -c "import re,sys,zipfile; s=zipfile.ZipFile(sys.argv[1]).read('word/settings.xml').decode('utf-8'); print('hyphenation flag: ' + ('set' if re.search(r'<w:autoHyphenation(?![^>]*w:val=\"(0|false|off)\")', s) else 'missing'))" workspace/output/document.docx
 ```
-This enables `<w:autoHyphenation/>` in the document's settings.xml — python-docx and similar libraries do not set this flag, so the result without post-processing has ugly line-end word breaks.
+Pandoc does not set `<w:autoHyphenation/>`; the orchestrator sets it with `scripts/docx_postprocess.sh` right after each export. A missing flag is a ⚠️ for the orchestrator to fix that way. Do not run the script yourself: the file you check stays as it was exported.
 
 **Pronoun check** (styleguide-configured):
 ```bash
@@ -135,13 +135,13 @@ python-docx instead and grep that.)
 
 ### 4. Output format
 
-**Write the report yourself** when your checks are done, with the Write tool, to the file the task prompt names (long-form, Phase A: `<phase folder>/verification/<name>_format_round_<n>.md`; long-form, Phase B: `08_Formal_Review/format_reports/round_<n>.md`; the proposal's check in `04_Submission/`: `04_Submission/format_report_round_<n>.md`; flat, both phases: `workspace/output/verification/<name>_format_round_<n>.md`). Write the whole report, with project-relative paths instead of absolute ones (they would carry the user's name into the project). Then answer with the path and the counts of ✅, ⚠️, ❌ and ❓. Write no other file: the chapters and the styleguide stay as they are, the DOCX too, except for the hyphenation flag that `scripts/docx_postprocess.sh` sets (section 3), and scratch files go only to your folder in `_scratch/` (below). If the task prompt names no file, or the Write fails, give the whole report as your answer instead.
+**Write the report yourself** when your checks are done, with the Write tool, to the file the task prompt names (long-form, Phase A: `<phase folder>/verification/<name>_format_round_<n>.md`; long-form, Phase B: `08_Formal_Review/format_reports/round_<n>.md`; the proposal's check in `04_Submission/`: `04_Submission/format_report_round_<n>.md`; flat, both phases: `workspace/output/verification/<name>_format_round_<n>.md`). Write the whole report, with project-relative paths instead of absolute ones (they would carry the user's name into the project). Then answer with the path and the counts of ✅, ⚠️, ❌ and ❓. Write no other file: the chapters, the styleguide and the DOCX stay as they are, and scratch files go only to your folder in `_scratch/` (below). If the task prompt names no file, or the Write fails, give the whole report as your answer instead.
 
 At the top of the report, the file you checked and the scripts' exit codes:
 
 ```markdown
 **Checked file:** [path of the DOCX, as the task prompt names it]
-**Script exit codes:** bibliography_check.py [n], abbreviations_extract.py [n], docx_postprocess.sh [n or "not run"]
+**Script exit codes:** bibliography_check.py [n], abbreviations_extract.py [n]; hyphenation flag: [set / missing / not required]
 ```
 
 Then per verified rule:
