@@ -155,7 +155,7 @@ Findings (for ⚠️/❌):
 - [file:line — specific location]
 
 Styleguide gap (for ❓):
-- ["styleguide.md leaves <rule> open (missing / still ❓ / unclear for <case>) — orchestrator should clarify"]
+- ["styleguide.md leaves <rule> open (missing / still ❓ / unclear for <case> / closed with n/a, but the document contains it at <location>) — orchestrator should clarify, or open the entry again"]
 ```
 
 Every finding has a `Status:` line of its own: a gap you find under a rule you otherwise pass is a rule entry of its own with `Status: ❓`. Write these lines as the template shows them, `Status:` plain at the start of a line, not bold and not in a table: the orchestrator counts them with a search for `Status: ✅`, `Status: ⚠`, `Status: ❌` and `Status: ❓`. Count the totals of your answer from these lines.
@@ -166,7 +166,7 @@ A ❓ marks a rule this check needs that `styleguide.md` leaves open: a rule it 
 - a rule the checked file cannot show yet, such as the entries of the table of contents before Word fills the field, or Roman front matter: an open manual step, listed under **Not applicable** with this reason;
 - a question no rule and no key of the styleguide covers, such as a heading above the table of contents: a note under **Notes** at the end of the report, saying what the export does now.
 
-A key that has a value, and is not set aside, is checked against it, also when the value gives no list or no script can check it (a rule such as "no fixed list, stay factual"): read the text and give ✅ or ⚠️. **Not applicable** and **Notes** do not count in the totals.
+A key that has a value and fits none of the cases above is checked against it, also when the value gives no list or no script can check it (a rule such as "no fixed list, stay factual"): read the text and give ✅ or ⚠️. **Not applicable** and **Notes** do not count in the totals.
 
 These symbols are status codes, not decoration: the orchestrator, the state file and the workflow's criteria search for them. Write them exactly as shown, also where you would otherwise avoid emojis; never replace them with words or ASCII labels such as `[OK]` or `[WARN]`.
 
@@ -178,7 +178,7 @@ These symbols are status codes, not decoration: the orchestrator, the state file
 
 ### 6. Rounds after a fix
 
-From round 2 on, the task prompt names the previous round's report and what changed since (chapter files, title page, reference list, reference document, styleguide entries). Report every rule of the previous report again, each with its own `Status:` line, and add any new one: a task prompt that asks for less does not shorten the list. Judge afresh every rule the change touches, and in Phase B everything that lives in the DOCX itself (styles, page settings, pagination, the title page, the reference list's layout, the hyphenation flag), and run the scripts again: each round checks a new export. Carry any other rule over with its earlier status, its findings and "(as round <n>)", where <n> is the round that last judged it. The totals then compare from round to round.
+From round 2 on, the task prompt names the previous round's report and what changed since (chapter files, title page, reference list, reference document, styleguide entries). Report every rule of the previous report again, each with its own `Status:` line, and add any new one: a task prompt that asks for less does not shorten the list. The exception is a rule that is now not applicable (section 4: set aside, closed with the n/a value and absent, or not yet shown by the file): it goes under **Not applicable** without a status, also when the previous round gave it one, so check the styleguide's set-aside notes and n/a values in every round. Judge afresh every rule the change touches, and in Phase B everything that lives in the DOCX itself (styles, page settings, pagination, the title page, the reference list's layout, the hyphenation flag), and run the scripts again: each round checks a new export. Carry any other rule over with its earlier status, its findings and "(as round <n>)", where <n> is the round that last judged it. The totals then compare from round to round.
 
 ## Principles
 
