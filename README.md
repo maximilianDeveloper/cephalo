@@ -49,7 +49,7 @@ To make that concrete, this is the kind of finding the source-verifier produces 
 
 **Dynamic guideline extraction.** Most writing tools hardcode citation rules (APA, Chicago, etc.). cephalo reads whatever style guide your institution gives you — however idiosyncratic — and extracts the rules into a structured configuration. If the rules change, you update the document; the agents update themselves.
 
-**Phase separation.** Content quality stabilizes well before formatting does. cephalo formalizes this: a Content phase uses capable, expensive models; a Formatting phase uses fast, cheap models. This is meant to cut costs without sacrificing quality, provided the formatting chats really run on a fast model; how much it saves is an estimate, not yet measured (see `docs/phase_separation.md`).
+**Phase separation.** Content quality stabilizes well before formatting does. cephalo formalizes this: a Content phase uses capable, expensive models; a Formatting phase uses fast, cheap models. This keeps the formatting work cheap without sacrificing quality, provided the formatting chats really run on a fast model; how much it saves on a whole thesis has not been measured (see `docs/phase_separation.md`).
 
 **Source fidelity as first-class concern.** The most valuable agent in the system is the source verifier — catching subtle errors like "your text says *X*, but the source says *Y* (close but not identical)." These errors are invisible without a dedicated review pass, and they are the difference between good and publishable work.
 
@@ -282,7 +282,7 @@ Both systems mark every file a browser downloads. Windows then refuses to open t
 
 ### How much does it cost?
 
-cephalo itself is free. You pay for the Claude Code subscription (standard Anthropic pricing). Typical thesis projects use a mix of expensive and cheap models, with the phase separation feature cutting total costs by an estimated 60–70% versus naive use of the capable model throughout. This is an estimate for a whole thesis, not a measurement: in the four long-form trial runs, with one short chapter each, the formatting phase on a fast model made up only about a tenth of the cost, so they could not show such a saving. The saving needs the formatting-phase chats to run on a fast model (e.g. switch with `/model`): the formatting agents inherit the chat's model.
+cephalo itself is free. You pay for the Claude Code subscription (standard Anthropic pricing). Phase separation keeps the formatting phase cheap: it runs on a fast model, which costs a fraction of a capable one. In the four long-form trial runs, the formatting phase on Sonnet cost 4–5 USD at list prices, about a tenth of the run; how much this saves on a whole thesis has not been measured. The saving needs the formatting-phase chats to run on a fast model (e.g. switch with `/model`): the formatting agents inherit the chat's model.
 
 ### Can I contribute?
 
