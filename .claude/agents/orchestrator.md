@@ -51,12 +51,22 @@ If `styleguide.md` does not yet exist:
 - Record the answers in `styleguide.md` yourself, in the words given, as `.claude/agents/style-resolver.md` describes ("Recording answers to open questions"); this needs no new style-resolver run
 - Open `[format]` entries: remind the user; they may stay open until the Phase A → B transition
 
+### Task prompts
+
+Every task prompt to another agent names:
+
+- the files it works on and the files it may change; for the format-verifier the checked file and the report file;
+- for an agent with a shell, the Python command of this machine: `py` on Windows, otherwise `python3` (`checklists/precheck.md`, build tools). The agent definitions write `python3`, and an agent does not always switch to `py` on its own;
+- the entries of `workspace/feedback.md` that concern it, as written: the other agents do not read the file themselves;
+- for a rule, the definition, `styleguide.md` or the checklist that holds it, not the rule in other words ("Point to rules, do not restate them" under "Principles").
+
+A task prompt does not narrow the check that the agent's definition sets (the format-verifier's full check in Phase B, for example), and it does not rate in advance what the agent will find.
+
 ### Steps 1..N: Chapter assignment
 
 - Read the workflow config
 - Before each chapter: no open `[content]` entry (or one without a tag) under "Open questions" in `styleguide.md`; otherwise stop and ask the user (Step 0.5)
-- If `workspace/feedback.md` exists, read it before each chapter and pass the entries that concern an agent on in its task prompt: the other agents do not read the file themselves
-- Name the Python command of this machine in every task prompt to an agent with a shell: `py` on Windows, otherwise `python3` (`checklists/precheck.md`, build tools). The agent definitions write `python3`, and an agent does not always switch to `py` on its own.
+- If `workspace/feedback.md` exists, read it before each chapter; write each task prompt as "Task prompts" above says
 - Order: body → conclusion → introduction (last)
 - After every agent call returns, record its result in `workspace/state.md` (a line under chapter status or open issues is enough) before the next call: a chat that ends early, for example at a usage limit, then leaves a state the next chat can trust
 - Save every source-verifier report as a file, since the verifier cannot write one: `workspace/output/verification/<name>_round_<n>.md`, where `<name>` is the chapter file's name without `.md`, or `extracts`. A chat that ends between verification and revision then keeps the findings. Save it as it is (its format is compact: a table row per ✅ sentence), except that an absolute path in it becomes a project-relative one: it would carry the user's name into the project files. Record the status counts in `workspace/state.md` as you count them from the report's rows and entries, not from its totals line; your count goes there, not into the saved report. The format-verifier writes its report itself: name the file in its task prompt, `workspace/output/verification/<name>_format_round_<n>.md` (`<name>` is `document` for the check of the exported DOCX in Phase B), and do not write or change it; read it for the counts. Only if the file does not exist after the call, save the agent's answer there unchanged
@@ -96,7 +106,7 @@ After each written chapter:
 2. Deactivate writer-agent (except for genuine content corrections)
 3. Write the title page `workspace/output/title_page.md` and, without citekeys, the reference list `workspace/output/bibliography.md` (`docs/reference_management.md`, "The title page" and "The reference list"), before the first export
 4. format-verifier takes lead and checks the exported DOCX; you do not check formats yourself, in the DOCX either (after changing the reference document you may read it back to see that your change was written). You apply its format-only findings in the chapter files (no rewording) or, for layout such as fonts, sizes, margins and spacing, in Pandoc's reference document `workspace/output/reference.docx`, which `scripts/build_reference_docx.py` builds from the values in `styleguide.md` (`docs/reference_management.md`, "The reference document": the styles Pandoc uses, and the `Bibliography` style for a reference list without citekeys), or leave them to the user, then re-export the DOCX with Pandoc (without it, ask the user to install it instead of writing an export script of your own)
-5. A format round, in this order: (1) build the reference document (round 1) or build it again after a layout finding, (2) export to `workspace/output/document.docx` and, if `styleguide.md` sets `document.hyphenation` to automatic, run `scripts/docx_postprocess.sh` on it (each round: a new export does not carry the flag; this belongs to the export, not to the format check), (3) the format-verifier checks it and writes `workspace/output/verification/document_format_round_<n>.md`, (4) a line in `workspace/state.md` with the round's counts, as after every agent call, (5) the format-only fixes, then the next round
+5. A format round, in this order: (1) build the reference document (round 1) or build it again after a layout finding, (2) export to `workspace/output/document.docx` and, if `styleguide.md` sets `document.hyphenation` to automatic, run `scripts/docx_postprocess.sh` on it (each round: a new export does not carry the flag; this belongs to the export, not to the format check), (3) the format-verifier checks it and writes `workspace/output/verification/document_format_round_<n>.md`, with a task prompt as "Task prompts" says, (4) a line in `workspace/state.md` with the round's counts, as after every agent call, (5) the format-only fixes, then the next round
 6. Only fast-model agents active
 7. Build scripts run regularly
 

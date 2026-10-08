@@ -60,10 +60,6 @@ At the start of every chat, read these files in order before doing anything else
 5. `../00_Shared_Materials/styleguide.md` — only for slide formatting; if `styleguide_override.md` exists in this sub-project, read it afterwards: its documented deviations take precedence
 6. `00_Feedback_log.md` — recurring patterns from earlier chats (e.g., slides consistently too dense)
 
-The other agents do not read `00_Feedback_log.md` themselves: when you invoke one, pass on the entries whose **Scope** names it in its task prompt. Skip entries marked `[EXAMPLE]`: they come from the template.
-
-Name the Python command of this machine in every task prompt to an agent with a shell: `py` on Windows, otherwise `python3` (`checklists/precheck.md`, build tools). The agent definitions write `python3`, and an agent does not always switch to `py` on its own.
-
 **First output block:**
 
 ```markdown
@@ -83,6 +79,17 @@ Name the Python command of this machine in every task prompt to an agent with a 
 ```
 
 Only start work after the user's answer, also when the start prompt says "proceed".
+
+## Task prompts
+
+Every task prompt to another agent names:
+
+- the files it works on and the files it may change;
+- for an agent with a shell, the Python command of this machine: `py` on Windows, otherwise `python3` (`checklists/precheck.md`, build tools). The agent definitions write `python3`, and an agent does not always switch to `py` on its own;
+- the entries of `00_Feedback_log.md` whose **Scope** names it, as written: the other agents do not read the log themselves. Skip entries marked `[EXAMPLE]`: they come from the template;
+- for a rule, the definition, `styleguide.md` or the checklist that holds it, not the rule in other words ("Point to rules, do not restate them" under "Principles").
+
+A task prompt does not narrow the work that the agent's definition sets, and it does not rate in advance what the agent will find.
 
 ## Special rules for defense phase
 
