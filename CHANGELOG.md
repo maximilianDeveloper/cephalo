@@ -8,7 +8,9 @@ Dates follow ISO 8601 (`YYYY-MM-DD`).
 
 ---
 
-## [1.2.1] — unreleased
+## [1.2.1] — 2026-10-08
+
+**A fourth trial run, and preparation for publishing.** A fourth long-form trial run on Windows confirmed the changes of 1.2.0: none of its twelve re-checked points failed. Its findings, checked against the transcripts and reviewed twice, are fixed. Hyphenation is set right after each export, and the format-verifier only checks it. Task prompts follow one list. Format rounds after a fix report every rule again, so their counts compare. Open questions are kept apart from rules that do not apply, the n/a value is fixed, and closure statements rest on what was read. Before publication, the README now says which workflows the trial runs covered, and the unmeasured 60–70% cost saving figure is gone.
 
 ### Changed
 
