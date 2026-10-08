@@ -13,6 +13,7 @@ Dates follow ISO 8601 (`YYYY-MM-DD`).
 ### Changed
 
 - **`README.md`: what the trial runs cover** — the status section now says which workflows went through the unattended trial runs on Windows (the bachelor workflow, flat and long-form) and which have not yet (the master workflows with the methods-agent and data-agent, the multi-project structure with proposal and defense, presentations, an agent run on macOS). The setup assistant's copy follows.
+- **The cost saving is an estimate** — `README.md`, `CLAUDE.md` and `docs/phase_separation.md` gave the 60–70% saving of phase separation without saying that it is an estimate for a whole thesis; the trial runs, with one short chapter each, could not measure it. They now say so.
 
 ## [1.2.0] — 2026-10-07
 

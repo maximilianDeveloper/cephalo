@@ -282,7 +282,7 @@ Both systems mark every file a browser downloads. Windows then refuses to open t
 
 ### How much does it cost?
 
-cephalo itself is free. You pay for the Claude Code subscription (standard Anthropic pricing). Typical thesis projects use a mix of expensive and cheap models, with the phase separation feature cutting total costs by an estimated 60–70% versus naive use of the capable model throughout. That saving needs the formatting-phase chats to run on a fast model (e.g. switch with `/model`): the formatting agents inherit the chat's model.
+cephalo itself is free. You pay for the Claude Code subscription (standard Anthropic pricing). Typical thesis projects use a mix of expensive and cheap models, with the phase separation feature cutting total costs by an estimated 60–70% versus naive use of the capable model throughout. This is an estimate for a whole thesis, not a measurement: the trial runs, with one short chapter each, could neither confirm nor refute it. The saving needs the formatting-phase chats to run on a fast model (e.g. switch with `/model`): the formatting agents inherit the chat's model.
 
 ### Can I contribute?
 
