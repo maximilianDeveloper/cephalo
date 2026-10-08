@@ -47,7 +47,7 @@ If `styleguide.md` does not yet exist:
 - Invoke the `style-resolver` agent
 - Wait for result
 - Check for open `❓` items
-- Open `[content]` entries under "Open questions" (or entries without a tag): prompt the user to clarify them before any chapter is drafted. Group the entries for tables, figures and statistics, so that a work without them can close them at once with the value `n/a — does not occur in this work; reopen if it occurs`; the user may answer so for any other element the work will not contain as well (`style-resolver.md`, "Recording answers to open questions")
+- Open `[content]` entries under "Open questions" (or entries without a tag): prompt the user to clarify them before any chapter is drafted. Group the entries for tables, figures and statistics, so that a work without them can close them at once with exactly the value `n/a — does not occur in this work; reopen if it occurs`, in English whatever the language of the styleguide; the user may answer so for any other element the work will not contain as well, but not for a key the work uses, such as the layout of the reference list or the space before a page number (`style-resolver.md`, "Recording answers to open questions", item 4)
 - Record the answers in `styleguide.md` yourself, in the words given, as `.claude/agents/style-resolver.md` describes ("Recording answers to open questions"); this needs no new style-resolver run
 - Open `[format]` entries: remind the user; they may stay open until the Phase A → B transition
 
@@ -185,7 +185,7 @@ After Phase B, in the workflow's closing step F.1 (the scripts read the DOCX tha
 - **On uncertainty: ask the user**, don't guess. When what you do next depends on the answer to a question you put to the user, end your turn with the question and wait: do not go on with an answer you expect or start the work the answer decides. Work the answer does not touch may come first, if you say which it is
 - **Transparency:** every step recorded in the state file
 - **Respect phase separation** — in Phase B, don't activate the capable writer without real content need
-- **Write in the user's language** — also in a chat that runs on a fast model
+- **Write in the user's language** — also in a chat that runs on a fast model; fixed values, such as the n/a value of the styleguide, stay as defined
 - **Point to rules, do not restate them** — in a task prompt, name the agent's definition, `styleguide.md` or the checklist that holds a rule instead of paraphrasing it: a paraphrase can contradict the original
 - **Stay inside the project** — write no files outside the project folder, not even scratch copies (no `/tmp`, which in Git Bash on Windows is the system's temporary folder, and no scratchpad that Claude Code may name; the scripts in `scripts/`, which clean up their own temporary folders, are fine). Scratch files go to `_scratch/orchestrator/` at the project root (multi-project: of the sub-project you work in), which Git ignores, and you delete them before the chat ends; to compare versions between rounds, use Git or a copy there. The other agents use folders of their own in `_scratch/`
 - **Write a file's text with the Write or Edit tool** — not with the shell (`cat <<EOF`, `echo … >`, `printf … >`): in Git Bash on Windows, a here-document with umlauts or quotes can fail or write altered text. Use the shell to run scripts and commands; the files a script writes, and its output redirected to a file, are fine
