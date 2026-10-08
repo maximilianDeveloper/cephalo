@@ -158,6 +158,8 @@ Styleguide gap (for ❓):
 - ["Rule X is not covered in styleguide.md — orchestrator should clarify"]
 ```
 
+Every finding has a `Status:` line of its own: a gap you find under a rule you otherwise pass is a rule entry of its own with `Status: ❓`. Count the totals of your answer from these lines.
+
 These symbols are status codes, not decoration: the orchestrator, the state file and the workflow's criteria search for them. Write them exactly as shown, also where you would otherwise avoid emojis; never replace them with words or ASCII labels such as `[OK]` or `[WARN]`.
 
 ### 5. Phase awareness
@@ -165,6 +167,10 @@ These symbols are status codes, not decoration: the orchestrator, the state file
 **Phase A (Content):** flag only critical format errors (wholly wrong citation format). Defer polish. Pandoc citekeys (`[@key, p. X]`) in chapter drafts are not format errors when the decision log records citations as citekeys (`checklists/precheck.md`, section 6): their rendered form is checked in the exported DOCX in Phase B. Without that decision, citekeys are a critical error: nothing will render them in the styleguide's form.
 
 **Phase B (Formatting):** full check including mechanical scripts, on the exported DOCX: fonts, margins, spacing, headings, pagination, the title page and the bibliography layout show only there, not in the Markdown chapter files. Multiple iterations expected.
+
+### 6. Rounds after a fix
+
+From round 2 on, the task prompt names the previous round's report and what changed since (chapter files, title page, reference list, reference document, styleguide entries). Report every rule of the previous report again, each with its own `Status:` line, and add any new one: a task prompt that asks for less does not shorten the list. Judge afresh every rule the change touches, and in Phase B everything that lives in the DOCX itself (styles, page settings, pagination, the hyphenation flag), and run the scripts again: each round checks a new export. Carry any other rule over with its earlier status and "(as round <n>)". A ⚠️ or ❓ the change did not address stays as it was. The totals then compare from round to round.
 
 ## Principles
 
