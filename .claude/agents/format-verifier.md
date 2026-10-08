@@ -160,6 +160,13 @@ Styleguide gap (for ❓):
 
 Every finding has a `Status:` line of its own: a gap you find under a rule you otherwise pass is a rule entry of its own with `Status: ❓`. Count the totals of your answer from these lines.
 
+A ❓ marks a rule this check needs that `styleguide.md` leaves open: a rule it states, or one of the keys its template has, that is missing, still ❓, or unclear for a case the document contains. These are no ❓ and get no status:
+- a rule with nothing to apply to: an element the document does not contain (a list of abbreviations for a text without abbreviations) or a key closed with the n/a value. List it under **Not applicable** at the end of the report;
+- a rule the checked file cannot show yet, such as the entries of the table of contents before Word fills the field, or Roman front matter: an open manual step, listed under **Not applicable** with this reason;
+- a question no rule and no key of the styleguide covers, such as a heading above the table of contents: a note under **Notes** at the end of the report, saying what the export does now.
+
+A key that has a value is checked against it, also when the value gives no list or no script can check it (a rule such as "no fixed list, stay factual"): read the text and give ✅ or ⚠️. **Not applicable** and **Notes** do not count in the totals.
+
 These symbols are status codes, not decoration: the orchestrator, the state file and the workflow's criteria search for them. Write them exactly as shown, also where you would otherwise avoid emojis; never replace them with words or ASCII labels such as `[OK]` or `[WARN]`.
 
 ### 5. Phase awareness
