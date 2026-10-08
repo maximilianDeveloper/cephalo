@@ -9,7 +9,7 @@ cephalo ships seven utility scripts in `scripts/`. They are optional — the age
 | `abbreviations_extract.py` | Derive the list of abbreviations from a finished DOCX | Phase B, final stages |
 | `bibliography_check.py` | Minus-test by author surname: every cited author is in the bibliography, every entry's lead author is cited | Phase B, final stages |
 | `build_reference_docx.py` | Build Pandoc's reference document (layout of the exported DOCX) from the styleguide's values | Phase B, before the first export and after a layout finding |
-| `docx_postprocess.sh` | Enable automatic hyphenation in a DOCX (python-docx doesn't set this) | Phase B, before final export |
+| `docx_postprocess.sh` | Enable automatic hyphenation in a DOCX (Pandoc and python-docx don't set this) | Phase B, right after every export (orchestrator), only if `document.hyphenation` is automatic |
 | `cross_session_audit.py` | Cross-worktree audit: surfaces notes and changes from other worktrees/sessions that never reached the main worktree | Multi-worktree projects, at session start or weekly |
 
 ---
@@ -242,7 +242,7 @@ What it does:
 3. Re-zips, keeping `[Content_Types].xml` as the first entry and stored (uncompressed) — not an OOXML requirement, but it maximizes compatibility with strict/streaming consumers
 4. Replaces the original file only after the new archive was built successfully (for a symbolic link, the document it points to; the link stays)
 
-Run once before the final export. Re-running is safe (the script detects if the flag is already set and enabled).
+Run it on every export right after Pandoc writes it, before the format check: a new export does not carry the flag. The format-verifier only checks that the flag is there. Re-running is safe (the script detects if the flag is already set and enabled).
 
 ### `cross_session_audit.py`
 

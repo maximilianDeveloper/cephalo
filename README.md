@@ -14,6 +14,8 @@ The name is short for *cephalopod* — one orchestrator, many specialized arms (
 
 **Early stage.** The system has been developed and refined through actual coursework (bachelor-level) across multiple projects and iterations. It works and is stable enough to use productively — expect the rough edges typical of an early release, and please report them via the project's GitHub issues.
 
+**What the trial runs cover.** Besides CI on Linux, macOS and Windows, the releases were tried out in unattended trial runs on Windows with fictional material, the student played by a second model: the bachelor workflow in the flat structure (three runs) and in the long-form structure (four runs, each through the content phase and a formatting phase on a fast model). Not yet through such a run: the master workflows with the methods-agent and data-agent, the multi-project structure with proposal and defense, seminar papers and presentations, and an agent run on macOS.
+
 If you are reading this as an early adopter: welcome. Feedback and improvements are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for how to report issues and contribute. Changes are tracked in [CHANGELOG.md](CHANGELOG.md).
 
 ---
@@ -47,7 +49,7 @@ To make that concrete, this is the kind of finding the source-verifier produces 
 
 **Dynamic guideline extraction.** Most writing tools hardcode citation rules (APA, Chicago, etc.). cephalo reads whatever style guide your institution gives you — however idiosyncratic — and extracts the rules into a structured configuration. If the rules change, you update the document; the agents update themselves.
 
-**Phase separation.** Content quality stabilizes well before formatting does. cephalo formalizes this: a Content phase uses capable, expensive models; a Formatting phase uses fast, cheap models. This cuts costs significantly without sacrificing quality, provided the formatting chats really run on a fast model (see `docs/phase_separation.md`).
+**Phase separation.** Content quality stabilizes well before formatting does. cephalo formalizes this: a Content phase uses capable, expensive models; a Formatting phase uses fast, cheap models. This keeps the formatting work cheap without sacrificing quality, provided the formatting chats really run on a fast model; how much it saves on a whole thesis has not been measured (see `docs/phase_separation.md`).
 
 **Source fidelity as first-class concern.** The most valuable agent in the system is the source verifier — catching subtle errors like "your text says *X*, but the source says *Y* (close but not identical)." These errors are invisible without a dedicated review pass, and they are the difference between good and publishable work.
 
@@ -280,7 +282,7 @@ Both systems mark every file a browser downloads. Windows then refuses to open t
 
 ### How much does it cost?
 
-cephalo itself is free. You pay for the Claude Code subscription (standard Anthropic pricing). Typical thesis projects use a mix of expensive and cheap models, with the phase separation feature cutting total costs by an estimated 60–70% versus naive use of the capable model throughout. That saving needs the formatting-phase chats to run on a fast model (e.g. switch with `/model`): the formatting agents inherit the chat's model.
+cephalo itself is free. You pay for the Claude Code subscription (standard Anthropic pricing). Phase separation keeps the formatting phase cheap: it runs on a fast model, which costs a fraction of a capable one. In the four long-form trial runs, the formatting phase on Sonnet cost 4–5 USD at list prices, about a tenth of the run; how much this saves on a whole thesis has not been measured. The saving needs the formatting-phase chats to run on a fast model (e.g. switch with `/model`): the formatting agents inherit the chat's model.
 
 ### Can I contribute?
 

@@ -99,7 +99,7 @@ Verify the following categories. Concrete values (font size, page-range notation
 
 ### 3. Automated mechanical checks
 
-These run deterministically (on Windows, use `py` instead of `python3`). Run the three scripts below as given, without piping their output through `head` or another command, so that the last line shows the exit code, and put each exit code into your report:
+These run deterministically (on Windows, use `py` instead of `python3`). Run the two scripts below as given, without piping their output through `head` or another command, so that the last line shows the exit code, and put each exit code into your report:
 
 **Bibliography minus-test:**
 ```bash
@@ -112,11 +112,11 @@ python3 scripts/abbreviations_extract.py workspace/output/document.docx; echo "e
 ```
 Run it on a copy of the document without the list of abbreviations, in `_scratch/format-verifier/`: the script reads the list too, so every listed entry would count as used.
 
-**Automatic hyphenation** (only if `styleguide.md` sets `document.hyphenation` to automatic; before final export):
+**Automatic hyphenation** (only if `styleguide.md` sets `document.hyphenation` to automatic): check that the DOCX carries the flag, without changing it:
 ```bash
-./scripts/docx_postprocess.sh workspace/output/document.docx; echo "exit=$?"
+python3 -c "import re,sys,zipfile; s=zipfile.ZipFile(sys.argv[1]).read('word/settings.xml').decode('utf-8'); print('hyphenation flag: ' + ('set' if re.search(r'<w:autoHyphenation(\s+w:val=[\x22\x27](1|true|on)[\x22\x27])?\s*(/>|>\s*</w:autoHyphenation>)', s) else 'missing'))" workspace/output/document.docx
 ```
-This enables `<w:autoHyphenation/>` in the document's settings.xml — python-docx and similar libraries do not set this flag, so the result without post-processing has ugly line-end word breaks.
+`set` is what `scripts/docx_postprocess.sh` counts as enabled. Pandoc does not set `<w:autoHyphenation/>`; the orchestrator sets it with `scripts/docx_postprocess.sh` right after each export. A missing flag is a ⚠️ for the orchestrator to fix that way. Do not run the script yourself: the file you check stays as it was exported.
 
 **Pronoun check** (styleguide-configured):
 ```bash
@@ -135,13 +135,13 @@ python-docx instead and grep that.)
 
 ### 4. Output format
 
-**Write the report yourself** when your checks are done, with the Write tool, to the file the task prompt names (long-form, Phase A: `<phase folder>/verification/<name>_format_round_<n>.md`; long-form, Phase B: `08_Formal_Review/format_reports/round_<n>.md`; the proposal's check in `04_Submission/`: `04_Submission/format_report_round_<n>.md`; flat, both phases: `workspace/output/verification/<name>_format_round_<n>.md`). Write the whole report, with project-relative paths instead of absolute ones (they would carry the user's name into the project). Then answer with the path and the counts of ✅, ⚠️, ❌ and ❓. Write no other file: the chapters and the styleguide stay as they are, the DOCX too, except for the hyphenation flag that `scripts/docx_postprocess.sh` sets (section 3), and scratch files go only to your folder in `_scratch/` (below). If the task prompt names no file, or the Write fails, give the whole report as your answer instead.
+**Write the report yourself** when your checks are done, with the Write tool, to the file the task prompt names (long-form, Phase A: `<phase folder>/verification/<name>_format_round_<n>.md`; long-form, Phase B: `08_Formal_Review/format_reports/round_<n>.md`; the proposal's check in `04_Submission/`: `04_Submission/format_report_round_<n>.md`; flat, both phases: `workspace/output/verification/<name>_format_round_<n>.md`). Write the whole report, with project-relative paths instead of absolute ones (they would carry the user's name into the project). Then answer with the path and the counts of ✅, ⚠️, ❌ and ❓. Write no other file: the chapters, the styleguide and the DOCX stay as they are, and scratch files go only to your folder in `_scratch/` (below). If the task prompt names no file, or the Write fails, give the whole report as your answer instead.
 
 At the top of the report, the file you checked and the scripts' exit codes:
 
 ```markdown
 **Checked file:** [path of the DOCX, as the task prompt names it]
-**Script exit codes:** bibliography_check.py [n], abbreviations_extract.py [n], docx_postprocess.sh [n or "not run"]
+**Script exit codes:** bibliography_check.py [n], abbreviations_extract.py [n]; hyphenation flag: [set / missing / not required]
 ```
 
 Then per verified rule:
@@ -155,8 +155,18 @@ Findings (for ⚠️/❌):
 - [file:line — specific location]
 
 Styleguide gap (for ❓):
-- ["Rule X is not covered in styleguide.md — orchestrator should clarify"]
+- ["styleguide.md leaves <rule> open (missing / still ❓ / unclear for <case> / closed with n/a, but the document contains it at <location>) — orchestrator should clarify, or open the entry again"]
 ```
+
+Every finding has a `Status:` line of its own: a gap you find under a rule you otherwise pass is a rule entry of its own with `Status: ❓`. Write these lines as the template shows them, `Status:` plain at the start of a line, not bold and not in a table: the orchestrator counts them with a search for `Status: ✅`, `Status: ⚠`, `Status: ❌` and `Status: ❓`. Count the totals of your answer from these lines.
+
+A ❓ marks a rule this check needs that `styleguide.md` leaves open: a rule it states, or one of the keys its template has, that is missing, still ❓, or unclear for a case the document contains. An element the document contains although its key is closed with the n/a value is a ❓ too: its entry must be opened again (`style-resolver.md`, "Recording answers to open questions", item 4). These are no ❓ and get no status:
+- a rule with nothing to apply to: an element the work does not need and the document does not contain (a list of abbreviations for a text without abbreviations), also where its key is closed with the n/a value. List it under **Not applicable** at the end of the report. A required element the export lacks, such as the title page, the table of contents field or the reference list, is no such case: it is a finding, ⚠️ or ❌;
+- a rule that `styleguide.md` marks `set aside for this work: <decision> [user, YYYY-MM-DD]` (multi-project: set aside for the sub-project you check; in another one it is checked as usual): list it under **Not applicable** with that decision, without checking its value;
+- a rule the checked file cannot show yet, such as the entries of the table of contents before Word fills the field, or Roman front matter: an open manual step, listed under **Not applicable** with this reason;
+- a question no rule and no key of the styleguide covers, such as a heading above the table of contents: a note under **Notes** at the end of the report, saying what the export does now.
+
+A key that has a value and fits none of the cases above is checked against it, also when the value gives no list or no script can check it (a rule such as "no fixed list, stay factual"): read the text and give ✅ or ⚠️. **Not applicable** and **Notes** do not count in the totals.
 
 These symbols are status codes, not decoration: the orchestrator, the state file and the workflow's criteria search for them. Write them exactly as shown, also where you would otherwise avoid emojis; never replace them with words or ASCII labels such as `[OK]` or `[WARN]`.
 
@@ -166,10 +176,14 @@ These symbols are status codes, not decoration: the orchestrator, the state file
 
 **Phase B (Formatting):** full check including mechanical scripts, on the exported DOCX: fonts, margins, spacing, headings, pagination, the title page and the bibliography layout show only there, not in the Markdown chapter files. Multiple iterations expected.
 
+### 6. Rounds after a fix
+
+From round 2 on, the task prompt names the previous round's report and what changed since (chapter files, title page, reference list, reference document, styleguide entries). Report every rule of the previous report again, each with its own `Status:` line, and add any new one: a task prompt that asks for less does not shorten the list. The exception is a rule that is now not applicable (section 4: set aside, closed with the n/a value and absent, or not yet shown by the file): it goes under **Not applicable** without a status, also when the previous round gave it one, so check the styleguide's set-aside notes and n/a values in every round. Judge afresh every rule the change touches, and in Phase B everything that lives in the DOCX itself (styles, page settings, pagination, the title page, the reference list's layout, the hyphenation flag), and run the scripts again: each round checks a new export. Carry any other rule over with its earlier status, its findings and "(as round <n>)", where <n> is the round that last judged it. The totals then compare from round to round.
+
 ## Principles
 
 - **Styleguide is the truth** — no hardcoded rules override it
-- **Transparency on gaps** — ❓ instead of guessing
+- **Transparency on gaps** — ❓ for a rule the check needs that `styleguide.md` leaves open, a note under **Notes** for a question no rule covers; never a guess
 - **Precise findings** — line number + context, so the fix can be applied directly: in Phase A by the writer, in Phase B by the orchestrator or the user (format-only edits; the writer stays deactivated)
 - **Use scripts** — don't manually count what a script can count
 - **Stay inside the project** — write no files outside the project folder (multi-project: the folder that holds all sub-projects), not even scratch files: no `/tmp`, which in Git Bash on Windows is the system's temporary folder, and no scratchpad that Claude Code may name. Put scratch files in `_scratch/format-verifier/` at the project root (multi-project: of the sub-project you work in), which Git ignores, and delete that folder before you finish; leave the rest of `_scratch/` alone, the orchestrator may keep a file there; the scripts in `scripts/`, which clean up their own temporary folders, are fine

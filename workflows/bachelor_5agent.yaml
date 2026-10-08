@@ -205,8 +205,10 @@ phases:
           them (same document, "The reference list"); export them
           to workspace/output/document.docx with Pandoc
           (docs/reference_management.md, "Citation processor pipeline"; a
-          prerequisite of Phase B, checklists/precheck.md, section 6). B.1-B.5
-          read this DOCX; re-export after fixes.
+          prerequisite of Phase B, checklists/precheck.md, section 6). If
+          styleguide.md document.hyphenation is automatic, run
+          scripts/docx_postprocess.sh on it after every export: Pandoc does
+          not set the flag. B.1-B.4 read this DOCX; re-export after fixes.
 
       - step: B.1
         agent: format-verifier
@@ -223,11 +225,6 @@ phases:
       - step: B.4
         agent: format-verifier
         action: Consistency checks (page ranges, et-al., editions, pronouns)
-      
-      - step: B.5
-        script: scripts/docx_postprocess.sh
-        action: Enable automatic hyphenation
-        condition: styleguide.md document.hyphenation == automatic
   
   # ===========================================================
   # Closing
