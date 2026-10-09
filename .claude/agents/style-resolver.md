@@ -135,7 +135,7 @@ The generated `styleguide.md` follows the template in `templates/styleguide.md`.
 - Metadata (source documents, extraction date)
 - In-text citations (format, et-al. rules, "see / cf." conventions, several sources, two authors, secondary citations, sources without date or page numbers)
 - Page ranges (`in_text.page_range`; notation: "15–16" vs. "15-16" vs. "15 to 16")
-- Bibliography (entry pattern per source type, co-authors, alignment, hanging indent, separator conventions, DOI/URL policy)
+- Bibliography (heading, entry pattern per source type, co-authors, alignment, hanging indent, separator conventions, DOI/URL policy)
 - Document formalia (`document.*`: page count, margins, hyphenation, page size)
 - Body text and footnotes (`body.*`, `footnotes.*`: font, size, line spacing, alignment, paragraph spacing)
 - Headings (sizes, numbering conventions, max depth)

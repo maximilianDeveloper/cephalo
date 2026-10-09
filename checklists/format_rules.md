@@ -62,6 +62,7 @@ For every category below: **read concrete values from `styleguide.md`**, not fro
 
 ### Bibliography
 
+- [ ] Heading (styleguide: `bibliography.heading`)
 - [ ] Alignment (styleguide: `bibliography.alignment`)
 - [ ] Hanging indent (styleguide: `bibliography.hanging_indent`)
 - [ ] Line spacing (styleguide: `bibliography.line_spacing`)

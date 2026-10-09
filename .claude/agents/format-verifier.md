@@ -75,7 +75,7 @@ Verify the following categories. Concrete values (font size, page-range notation
 - [ ] Table of contents: automatic generation; level formatting per styleguide (`headings.toc_emphasis`)
 - [ ] Abbreviations: only actually-used abbreviations
   (automation: scripts/abbreviations_extract.py)
-- [ ] Bibliography: conventions per styleguide, including the entry pattern per source type, co-authors and the originals of secondary citations (`bibliography.entry_patterns`, `bibliography.multiple_authors`, `bibliography.secondary_original`)
+- [ ] Bibliography: conventions per styleguide, including its heading (`bibliography.heading`), the entry pattern per source type, co-authors and the originals of secondary citations (`bibliography.entry_patterns`, `bibliography.multiple_authors`, `bibliography.secondary_original`)
   (automation: scripts/bibliography_check.py — minus-test)
 
 ## Tables and figures
