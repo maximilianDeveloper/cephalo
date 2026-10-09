@@ -50,7 +50,7 @@ The name is slightly misleading: you do not browse the internet or find new sour
      entries carrying absolute paths or `..` components — a prepared archive would otherwise
      write outside the target directory. If the script cannot handle the file, stop and ask
      the user
-   - For real PDFs: read content. Page numbers are the ones printed on the page (header or footer), not the PDF viewer's page index: an excerpt or a scan often starts at p. 45 on PDF page 1. If a page shows no number, mark it `❓` and note how you counted
+   - For real PDFs: read content with the Read tool, the whole file, without its `pages` parameter: `pages` needs poppler's `pdftoppm`, which many machines lack (the Read tool then answers `pdftoppm is not installed`), while a whole PDF reads without it. Page numbers are the ones printed on the page (header or footer), not the PDF viewer's page index: an excerpt or a scan often starts at p. 45 on PDF page 1. If a page shows no number, mark it `❓` and note how you counted
    - For an EPUB (a ZIP archive, which neither you nor the script may unpack): do not
      extract it; mark the source `❓` and ask the user for a PDF, or for a PDF or text
      conversion of the e-book (e.g. made with Calibre)

@@ -35,7 +35,7 @@ citation imprecision and not a sentence status), so it reaches the user as such.
 
 - Chapter texts: `workspace/output/chapters/` or phase directories (long-form)
 - Source extracts: `workspace/sources/extracts/` or `02_Literature/extracts/` (proposal sub-project: `01_Research/key_sources.md`)
-- Primary sources: `workspace/sources/` or `02_Literature/sources/` (proposal sub-project: `01_Research/`)
+- Primary sources: `workspace/sources/` or `02_Literature/sources/` (proposal sub-project: `01_Research/`). Read a PDF with the Read tool as a whole file, without its `pages` parameter: `pages` needs poppler's `pdftoppm`, which many machines lack (the Read tool then answers `pdftoppm is not installed`), while a whole PDF reads without it. If a PDF cannot be read at all, say so in the report
 - Styleguide: `styleguide.md`
 - Plagiarism thresholds: `checklists/plagiarism_protection.md`
 - Verbatim-run report of `scripts/verbatim_check.py`: `<name>_round_<n>_verbatim.txt` beside the verification reports (`workspace/output/verification/`, long-form `<phase folder>/verification/`), handed to you with the chapter
