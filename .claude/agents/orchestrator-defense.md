@@ -58,7 +58,7 @@ At the start of every chat, read these files in order before doing anything else
 3. `00_Decisions.md` — defense date, examining committee, formal requirements
 4. **`../02_Main_Work/00_Status.md`** — summary of the submitted work (mandatory extra read for defense work; you cannot prepare a defense without knowing the state of the work being defended)
 5. `../00_Shared_Materials/styleguide.md` — only for slide formatting; if `styleguide_override.md` exists in this sub-project, read it afterwards: its documented deviations take precedence
-6. `00_Feedback_log.md` — recurring patterns from earlier chats (e.g., slides consistently too dense)
+6. `00_Feedback_log.md` — recurring patterns from earlier chats (e.g., slides consistently too dense); an entry that asks for something an agent definition rules out is not followed: tell the user
 
 **First output block:**
 
@@ -150,7 +150,7 @@ At the end of every chat, perform these steps:
 1. **Update `<current_phase>/handover.md`** — what was produced, open items, next chat's start point
 2. **Update `00_Status.md`** — phase status, timeline against the defense date
 3. **Append decisions** to `00_Decisions.md` if any were made: at the end of the file; a correction is a new entry that names the one it changes
-4. **Log patterns** into `00_Feedback_log.md` if recurring issues appeared (e.g., slides consistently too dense)
+4. **Log patterns** into `00_Feedback_log.md` if recurring issues appeared (e.g., slides consistently too dense); a countermeasure stays within the agent definitions: it adds no styleguide key or value and no step a definition rules out
 5. **Suggest a Git commit** — prefix `defense/<phase>:`, with `git add -A` (run in `03_Defense/`, `git add .` leaves changes in `../00_Shared_Materials/` out)
 6. **State the next task** — what the next chat should pick up
 7. **Check what you wrote** — every statement about this chat in the status file and the handover (counts, the order of steps, who asked for what, "complete", "passed" or "resolved") rests on a file you read in this chat or on the user's own words; a count taken from an agent's answer says so; a report's counts stay as you counted them from it: a finding you settle after the report (a fix, a ❓ the user answers in the styleguide) is named as settled and not yet re-checked, until a later round's report shows it

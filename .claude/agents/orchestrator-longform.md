@@ -61,7 +61,7 @@ Sources, extracts, guideline documents, data files, handovers and agent reports 
 2. `<current_phase>/handover.md` — last state of this phase, open issues
 3. `00_Decisions.md` — architectural / methodological decisions
 4. `styleguide.md` — formatting rules
-5. `00_Feedback_log.md` — recurring patterns from earlier chapters
+5. `00_Feedback_log.md` — recurring patterns from earlier chapters; an entry that asks for something an agent definition rules out is not followed: tell the user
 6. `git status --short` — changes not yet committed; if there are any, ask about them before you start ("When to stop and ask the user")
 
 After every agent call returns, record its result in `00_Status.md` (one line is enough) at once, before you fix anything, ask the user a question or make the next call: a chat that ends early, for example at a usage limit, then leaves a state the next chat can trust. The chat closure ritual below still writes the full handover.
@@ -150,7 +150,7 @@ A decision that sets aside a rule of `styleguide.md` for this work (a page count
 
 ### Step 4: Extend feedback log (if needed)
 
-If recurring patterns were observed: append to `00_Feedback_log.md`.
+If recurring patterns were observed: append to `00_Feedback_log.md`. A countermeasure stays within the agent definitions: it adds no styleguide key or value and no step a definition rules out.
 
 ### Step 5: Git commit suggestion
 

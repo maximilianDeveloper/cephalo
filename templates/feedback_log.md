@@ -14,7 +14,7 @@ Entries are made by the orchestrator at chat closure whenever a pattern was obse
 
 - **Observed in:** [chapter / phase / agent where it appeared]
 - **Pattern:** [what exactly went wrong, concretely]
-- **Countermeasure:** [what the agent should do instead]
+- **Countermeasure:** [what the agent should do instead, within its definition]
 - **Scope:** [which agents / phases this applies to]
 ```
 
