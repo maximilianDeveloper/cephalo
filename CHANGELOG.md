@@ -8,6 +8,13 @@ Dates follow ISO 8601 (`YYYY-MM-DD`).
 
 ---
 
+## [1.2.2] — unreleased
+
+### Changed
+
+- **After a fifth long-form trial run on Windows** — the run repeated the long-form trial with 1.2.1 (four chats, the student played by a second model, Phase B on Sonnet). Of the ten re-checked points about cephalo, seven worked as intended and two partly, and of the earlier fixes one slipped (the status line, below). Hyphenation was set right after each export and the format-verifier only checked it, every task prompt named `py` and the feedback-log entries, the format round after a fix reported all 42 rules again, the orchestrator counted the `Status:` lines itself, all 14 n/a values were exact, and the set-aside rules were listed as not applicable. Its findings, checked against the transcripts, changed:
+  - **The status line comes at once** — in Phase B the orchestrator recorded neither format round in `00_Status.md` when it returned, but only two turns later, after it had fixed the first round's finding, started the second round and asked the user two questions; until then the status file still said that no format round had run. The rule and the format round's step 4 in `orchestrator-longform.md` and `orchestrator.md` now say "at once, before any fix or question to the user", not only "before the next call".
+
 ## [1.2.1] — 2026-10-08
 
 **A fourth trial run, and preparation for publishing.** A fourth long-form trial run on Windows confirmed the changes of 1.2.0: none of its twelve re-checked points failed. Its findings, checked against the transcripts and reviewed twice, are fixed. Hyphenation is set right after each export, and the format-verifier only checks it. Task prompts follow one list. Format rounds after a fix report every rule again, so their counts compare. Open questions are kept apart from rules that do not apply, the n/a value is fixed, and closure statements rest on what was read. Before publication, the README now says which workflows the trial runs covered, and the unmeasured 60–70% cost saving figure is gone.
