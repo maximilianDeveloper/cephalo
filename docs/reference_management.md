@@ -198,7 +198,7 @@ Pandoc's own reference document takes the heading font and colour from the docum
 A reference list without citekeys (below, "The reference list") comes out in `First Paragraph` and `Body Text`. Give it the `Bibliography` style with a fenced div around its entries, below the heading:
 
 ```markdown
-## References
+# References
 
 ::: {custom-style="Bibliography"}
 Author, Anna (2020): Title. Place: Publisher.
@@ -214,10 +214,10 @@ The div is markup, not wording: added to a reference list written without it, it
 With citekeys, Pandoc writes the reference list from `literature.bib` (`--citeproc`). Without them, in a bachelor or master thesis, the reference list is a file of its own, `08_Formal_Review/bibliography.md` (flat: `workspace/output/bibliography.md`), which every export lists after the chapter files and before an appendix, if there is one; the chapter files carry none. The orchestrator writes it at the start of Phase B:
 
 - one entry for each source whose extract names a chapter under **Used in**, with the data under the extract's "Bibliographic info", which the source-verifier checked in Phase A (and `literature.bib`, if there is one); no other source, and no data from anywhere else;
-- as the `bibliography.*` rules of `styleguide.md` say (entry patterns, authors, editions, DOI and URL, italics, sort order), under the styleguide's heading, inside the `Bibliography` div above;
+- as the `bibliography.*` rules of `styleguide.md` say (entry patterns, authors, editions, DOI and URL, italics, sort order), under the styleguide's heading at the level of a chapter heading (`#`, Word's Heading 1), inside the `Bibliography` div above;
 - a source the styleguide keeps out (`bibliography.secondary_original`, such as the original of a secondary citation) stays out.
 
-A seminar paper and the proposal have no Phase B. Without citekeys, the writer-agent writes their reference list as the last section of the last chapter file (proposal: of `03_Drafting/proposal_draft.md`): one entry for each source the text cites, as the `bibliography.*` rules of `styleguide.md` say, under the styleguide's heading, inside the `Bibliography` div.
+A seminar paper and the proposal have no Phase B. Without citekeys, the writer-agent writes their reference list as the last section of the last chapter file (proposal: of `03_Drafting/proposal_draft.md`): one entry for each source the text cites, as the `bibliography.*` rules of `styleguide.md` say, under the styleguide's heading at the level of a chapter heading, inside the `Bibliography` div.
 
 `scripts/bibliography_check.py` on the export then shows whether cited and listed authors match, and the format-verifier checks the patterns.
 
