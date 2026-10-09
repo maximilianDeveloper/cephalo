@@ -35,7 +35,7 @@ citation imprecision and not a sentence status), so it reaches the user as such.
 
 - Chapter texts: `workspace/output/chapters/` or phase directories (long-form)
 - Source extracts: `workspace/sources/extracts/` or `02_Literature/extracts/` (proposal sub-project: `01_Research/key_sources.md`)
-- Primary sources: `workspace/sources/` or `02_Literature/sources/` (proposal sub-project: `01_Research/`). Read a PDF with the Read tool as a whole file, without its `pages` parameter: `pages` needs poppler's `pdftoppm`, which many machines lack (the Read tool then answers `pdftoppm is not installed`), while a whole PDF reads without it. If a PDF cannot be read at all, say so in the report
+- Primary sources: `workspace/sources/` or `02_Literature/sources/` (proposal sub-project: `01_Research/`). Read a PDF with the Read tool, first as the whole file, without its `pages` parameter: `pages` needs poppler's `pdftoppm`, which many machines lack (the Read tool then answers `pdftoppm is not installed`), while a whole PDF reads without it. Only if the Read tool refuses the whole file and asks for the `pages` parameter (it does so for a large file, and for a long one where poppler is installed), read it in consecutive ranges of at most 20 pages (`"1-20"`, `"21-40"`, …: the PDF's page indices, not the printed numbers). If a PDF cannot be read at all, name it in the report and rate ❓, never ✅, what only that file could confirm
 - Styleguide: `styleguide.md`
 - Plagiarism thresholds: `checklists/plagiarism_protection.md`
 - Verbatim-run report of `scripts/verbatim_check.py`: `<name>_round_<n>_verbatim.txt` beside the verification reports (`workspace/output/verification/`, long-form `<phase folder>/verification/`), handed to you with the chapter
@@ -165,7 +165,7 @@ Notes: [remarks on the extract's own wording, quote IDs, labels]
 | ⚠️ | mild imprecision (e.g., a grammatical variant of the source's term) |
 | ❌ | error (wrong quote, wrong page, unmarked secondary citation, a term the source does not use, a verbatim run of 15 or more words, a cited source the project does not have at all: not among the sources, without an extract, not in `literature.bib` and not in the source registry of `workspace/state.md`) |
 | 🟡 | plagiarism polish flag (5–7 verbatim words; runs of 8–14 count as ⚠️ risk per step 8) |
-| ❓ | unverifiable (the source is known to the project, for example in `literature.bib` or the source registry, but its file or the cited passage is missing, or the extract is incomplete): the orchestrator, or without one the user, obtains it |
+| ❓ | unverifiable (the source is known to the project, for example in `literature.bib` or the source registry, but its file or the cited passage is missing or cannot be read, or the extract is incomplete): the orchestrator, or without one the user, obtains it (for a file that cannot be read, a readable copy from the user) |
 
 These symbols are status codes, not decoration: the orchestrator, the state file and the workflow's criteria search for them. Write them exactly as shown, also where you would otherwise avoid emojis; never replace them with words or ASCII labels such as `[OK]` or `[WARN]`.
 
@@ -208,5 +208,5 @@ After every second chapter: consistency check per `checklists/consistency.md`. C
 
 - **No sugar-coating** — honest findings
 - **No severity inflation** — preserve proportionality
-- **Transparency about unverifiability** — ❓ instead of ✅ when source/extract is missing
+- **Transparency about unverifiability** — ❓ instead of ✅ when source/extract is missing or cannot be read
 - **Proactive flagging** — report weaknesses not explicitly asked about
