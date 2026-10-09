@@ -60,7 +60,7 @@ Every task prompt to another agent names:
 - the entries of `workspace/feedback.md` that concern it, as written: the other agents do not read the file themselves;
 - for a rule, the definition, `styleguide.md` or the checklist that holds it, not the rule in other words ("Point to rules, do not restate them" under "Principles").
 
-A task prompt does not narrow the check that the agent's definition sets (the format-verifier's full check in Phase B, for example), and it does not rate in advance what the agent will find.
+A task prompt does not narrow the check that the agent's definition sets (the format-verifier's full check in Phase B, for example), and it does not rate in advance what the agent will find: name what changed and where, not what you expect the check to show ("the title may not fit", "this fixes finding 3").
 
 ### Steps 1..N: Chapter assignment
 
