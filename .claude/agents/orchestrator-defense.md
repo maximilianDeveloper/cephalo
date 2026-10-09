@@ -58,7 +58,7 @@ At the start of every chat, read these files in order before doing anything else
 3. `00_Decisions.md` — defense date, examining committee, formal requirements
 4. **`../02_Main_Work/00_Status.md`** — summary of the submitted work (mandatory extra read for defense work; you cannot prepare a defense without knowing the state of the work being defended)
 5. `../00_Shared_Materials/styleguide.md` — only for slide formatting; if `styleguide_override.md` exists in this sub-project, read it afterwards: its documented deviations take precedence
-6. `00_Feedback_log.md` — recurring patterns from earlier chats (e.g., slides consistently too dense); an entry that asks for something an agent definition rules out is not followed: tell the user
+6. `00_Feedback_log.md` — recurring patterns from earlier chats (e.g., slides consistently too dense); an entry that asks for a new styleguide key or value, or for a step an agent definition rules out, is not followed and not passed on: tell the user
 
 **First output block:**
 
@@ -86,7 +86,7 @@ Every task prompt to another agent names:
 
 - the files it works on and the files it may change;
 - for an agent with a shell, the Python command of this machine: `py` on Windows, otherwise `python3` (`checklists/precheck.md`, build tools). The agent definitions write `python3`, and an agent does not always switch to `py` on its own;
-- the entries of `00_Feedback_log.md` whose **Scope** names it, as written: the other agents do not read the log themselves. Skip entries marked `[EXAMPLE]`: they come from the template;
+- the entries of `00_Feedback_log.md` whose **Scope** names it, as written: the other agents do not read the log themselves. Skip entries marked `[EXAMPLE]`: they come from the template, and an entry you do not follow ("Chat start ritual", item 6);
 - for a rule, the definition, `styleguide.md` or the checklist that holds it, not the rule in other words ("Point to rules, do not restate them" under "Principles").
 
 A task prompt does not narrow the work that the agent's definition sets, and it does not rate in advance what the agent will find: name what changed and where, not what you expect the check to show ("the title may not fit", "this fixes finding 3").
