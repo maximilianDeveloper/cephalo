@@ -123,7 +123,7 @@ Fill all sections:
 - Decisions made
 - Blockers
 - Next chat: recommended start prompt (copy-paste-ready)
-- Changed files (Git diff summary)
+- Changed files (Git diff summary), also the files Steps 2–4 change after the handover is written
 - Points for `00_Feedback_log.md`
 
 ### Step 2: Update status
