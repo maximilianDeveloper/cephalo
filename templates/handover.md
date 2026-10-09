@@ -74,7 +74,7 @@ Show the status check from your definition, then wait for my answer before you s
 
 ## Changed files (Git diff summary)
 
-[Output of `git status --short` (it lists new, still untracked files) and `git diff --stat HEAD`, edited for clarity]
+[Output of `git status --short` (it lists new, still untracked files) and `git diff --stat HEAD`, edited for clarity, plus the files the later closure steps change after this handover is written: `00_Status.md`, and `00_Decisions.md` or `00_Feedback_log.md` when an entry goes there]
 
 ```
 03_Theory_chapters/chapter_3_framework.md | +145 lines

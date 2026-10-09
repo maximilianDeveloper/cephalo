@@ -58,7 +58,7 @@ At the start of every chat, read these files in order before doing anything else
 3. `00_Decisions.md` — defense date, examining committee, formal requirements
 4. **`../02_Main_Work/00_Status.md`** — summary of the submitted work (mandatory extra read for defense work; you cannot prepare a defense without knowing the state of the work being defended)
 5. `../00_Shared_Materials/styleguide.md` — only for slide formatting; if `styleguide_override.md` exists in this sub-project, read it afterwards: its documented deviations take precedence
-6. `00_Feedback_log.md` — recurring patterns from earlier chats (e.g., slides consistently too dense)
+6. `00_Feedback_log.md` — recurring patterns from earlier chats (e.g., slides consistently too dense); an entry that asks for a new styleguide key or value, or for a step an agent definition rules out, is not followed and not passed on: tell the user
 
 **First output block:**
 
@@ -86,10 +86,10 @@ Every task prompt to another agent names:
 
 - the files it works on and the files it may change;
 - for an agent with a shell, the Python command of this machine: `py` on Windows, otherwise `python3` (`checklists/precheck.md`, build tools). The agent definitions write `python3`, and an agent does not always switch to `py` on its own;
-- the entries of `00_Feedback_log.md` whose **Scope** names it, as written: the other agents do not read the log themselves. Skip entries marked `[EXAMPLE]`: they come from the template;
+- the entries of `00_Feedback_log.md` whose **Scope** names it, as written: the other agents do not read the log themselves. Skip entries marked `[EXAMPLE]`: they come from the template, and an entry you do not follow ("Chat start ritual", item 6);
 - for a rule, the definition, `styleguide.md` or the checklist that holds it, not the rule in other words ("Point to rules, do not restate them" under "Principles").
 
-A task prompt does not narrow the work that the agent's definition sets, and it does not rate in advance what the agent will find.
+A task prompt does not narrow the work that the agent's definition sets, and it does not rate in advance what the agent will find: name what changed and where, not what you expect the check to show ("the title may not fit", "this fixes finding 3").
 
 ## Special rules for defense phase
 
@@ -150,10 +150,10 @@ At the end of every chat, perform these steps:
 1. **Update `<current_phase>/handover.md`** — what was produced, open items, next chat's start point
 2. **Update `00_Status.md`** — phase status, timeline against the defense date
 3. **Append decisions** to `00_Decisions.md` if any were made: at the end of the file; a correction is a new entry that names the one it changes
-4. **Log patterns** into `00_Feedback_log.md` if recurring issues appeared (e.g., slides consistently too dense)
+4. **Log patterns** into `00_Feedback_log.md` if recurring issues appeared (e.g., slides consistently too dense); a countermeasure stays within the agent definitions: it adds no styleguide key or value and no step a definition rules out
 5. **Suggest a Git commit** — prefix `defense/<phase>:`, with `git add -A` (run in `03_Defense/`, `git add .` leaves changes in `../00_Shared_Materials/` out)
 6. **State the next task** — what the next chat should pick up
-7. **Check what you wrote** — every statement about this chat in the status file and the handover (counts, the order of steps, who asked for what, "complete" or "resolved") rests on a file you read in this chat or on the user's own words; a count taken from an agent's answer says so
+7. **Check what you wrote** — every statement about this chat in the status file and the handover (counts, the order of steps, who asked for what, "complete", "passed" or "resolved") rests on a file you read in this chat or on the user's own words; a count taken from an agent's answer says so; a report's counts stay as you counted them from it: a finding you settle after the report (a fix, a ❓ the user answers in the styleguide) is named as settled and not yet re-checked, until a later round's report shows it
 
 Commit prefix for this sub-project: `defense/<phase>:`
 
@@ -180,7 +180,7 @@ Present the outstanding items as a numbered list with source citations so the us
 - When what you do next depends on the answer to a question you put to the user, end your turn with the question and wait: do not go on with an answer you expect or start the work the answer decides. Work the answer does not touch may come first, if you say which it is
 - If `../00_Shared_Materials/styleguide.md` doesn't exist → invoke the `style-resolver` (defense workflow step 0.4) before any slide work
 - If its "Open questions" list a `[content]` entry (or one without a tag) → before slides or speaker notes are drafted: STOP, clarification required; a `[format]` entry → before the slides are exported: STOP
-- Record the user's answers in the styleguide yourself, in the words given, as the style-resolver definition (`style-resolver.md`) describes under "Recording answers to open questions"; this needs no new style-resolver run. When the user answers that the work will not contain an element (tables, figures, statistics, footnotes or internet sources, for example), close its entry with exactly this value, in English whatever the language of the styleguide or the chat: `n/a — does not occur in this work; reopen if it occurs`. Offer and accept it only for such an element, never for a key the work uses, such as the layout of the reference list or the space before a page number; for such a key, ask for a value (`style-resolver.md`, same section, item 4)
+- Record the user's answers in the styleguide yourself, in the words given, as the style-resolver definition (`style-resolver.md`) describes under "Recording answers to open questions"; this needs no new style-resolver run. A value the user leaves to you ("make a proposal, I will take it") is recorded only after the user accepts it: name it in the chat, one line per key, and wait for the answer; a value the user takes provisionally gets `[provisional, user, YYYY-MM-DD]` and a line under the open issues of `00_Status.md` (`style-resolver.md`, same section, item 1). When the user answers that the work will not contain an element (tables, figures, statistics, footnotes or internet sources, for example), close its entry with exactly this value, in English whatever the language of the styleguide or the chat: `n/a — does not occur in this work; reopen if it occurs`. Offer and accept it only for such an element, never for a key the work uses, such as the layout of the reference list or the space before a page number; for such a key, ask for a value (`style-resolver.md`, same section, item 4)
 - If defense date is missing from `00_Decisions.md` → prompt; no timing without it
 - If submitted work is not tagged as "frozen" (no Git tag) → clarify: really submitted?
 - If formal requirements are unclear (slide count, time, handout) → recommend asking the examination office

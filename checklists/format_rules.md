@@ -33,6 +33,7 @@ For every category below: **read concrete values from `styleguide.md`**, not fro
 - [ ] Level 1 (styleguide: `headings.level_1.*`)
 - [ ] Level 2 (styleguide: `headings.level_2.*`)
 - [ ] Level 3 (styleguide: `headings.level_3.*`)
+- [ ] Colour (styleguide: `headings.color`)
 - [ ] Numbering convention (styleguide: `headings.numbering`)
 - [ ] Max nesting depth (styleguide: `headings.max_depth`)
 
@@ -61,6 +62,7 @@ For every category below: **read concrete values from `styleguide.md`**, not fro
 
 ### Bibliography
 
+- [ ] Heading (styleguide: `bibliography.heading`)
 - [ ] Alignment (styleguide: `bibliography.alignment`)
 - [ ] Hanging indent (styleguide: `bibliography.hanging_indent`)
 - [ ] Line spacing (styleguide: `bibliography.line_spacing`)

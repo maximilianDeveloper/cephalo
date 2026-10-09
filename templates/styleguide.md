@@ -37,6 +37,7 @@
 
 ## Bibliography (`bibliography.*`)
 
+- **`heading`:** [heading of the reference list, e.g., Literaturverzeichnis or References]
 - **`entry_patterns`:** [one pattern per source type: book, journal article, chapter in an edited volume, web source, ...; e.g., `Surname, I. (Year): Title. Place: Publisher.`]
 - **`multiple_authors`:** [how co-authors are joined, and how many are listed before "et al."]
 - **`secondary_original`:** [list the original of a secondary citation as well / list only the source read]
@@ -92,6 +93,7 @@
 - **`level_2.weight`:** [bold / regular]
 - **`level_3.size`:** [e.g., 12 pt]
 - **`level_3.weight`:** [bold / regular]
+- **`color`:** [e.g., black, on all levels]
 - **`toc_emphasis`:** [table of contents: e.g., level 1 bold, deeper levels regular]
 
 ---

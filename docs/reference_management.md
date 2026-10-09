@@ -163,7 +163,7 @@ pandoc chapter.md \
   -o output.docx
 ```
 
-Use your structure's `literature.bib` path from "Set up auto-export" (flat: `--bibliography workspace/sources/literature.bib`, `--reference-doc workspace/output/reference.docx`), and your styleguide's bibliography heading as `reference-section-title`. Without it, Pandoc adds the reference list without a heading, and `scripts/bibliography_check.py` cannot find the bibliography (exit 2). For the whole work, list the chapter files in document order instead of `chapter.md`. `--metadata title=""` keeps the `title:` of the chapter files' frontmatter out of the document: without it, Pandoc puts that title (with several files, the last chapter's) above the text as a document title.
+Use your structure's `literature.bib` path from "Set up auto-export" (flat: `--bibliography workspace/sources/literature.bib`, `--reference-doc workspace/output/reference.docx`), and the heading `bibliography.heading` gives as `reference-section-title`. Without it, Pandoc adds the reference list without a heading, and `scripts/bibliography_check.py` cannot find the bibliography (exit 2). For the whole work, list the chapter files in document order instead of `chapter.md`. `--metadata title=""` keeps the `title:` of the chapter files' frontmatter out of the document: without it, Pandoc puts that title (with several files, the last chapter's) above the text as a document title.
 
 cephalo's formatting phase exports with Pandoc also when the chapters cite in the styleguide's format and not by citekey: Pandoc sets Markdown headings and block quotes (`>`) in Word's heading and quote styles, which the format check and `scripts/verbatim_check.py` rely on. Without citekeys, leave out `--citeproc`, `--bibliography` and `--csl`; the reference list is then a file of its own, which the export lists after the chapter files ("The reference list" below).
 
@@ -193,12 +193,12 @@ Pandoc sets the text in these styles, so these are the ones to adjust:
 | `Table Caption`, `Image Caption`, `Captioned Figure` | captions and figures (`captions.*`) |
 | `Title`, `Subtitle`, `Author`, `Date` | a title block from the metadata, if one is used |
 
-Pandoc's own reference document takes the heading font and colour from the document theme: set both in the heading styles and in their character styles. It has no page size, no margins and no page number: set them, and put a `PAGE` field into the footer, aligned as the styleguide says.
+Pandoc's own reference document takes the heading font and colour from the document theme: set both in the heading styles and in their character styles, the colour as `headings.color` gives it (Pandoc's own is blue). It has no page size, no margins and no page number: set them, and put a `PAGE` field into the footer, aligned as the styleguide says.
 
 A reference list without citekeys (below, "The reference list") comes out in `First Paragraph` and `Body Text`. Give it the `Bibliography` style with a fenced div around its entries, below the heading:
 
 ```markdown
-## References
+# References
 
 ::: {custom-style="Bibliography"}
 Author, Anna (2020): Title. Place: Publisher.
@@ -214,16 +214,16 @@ The div is markup, not wording: added to a reference list written without it, it
 With citekeys, Pandoc writes the reference list from `literature.bib` (`--citeproc`). Without them, in a bachelor or master thesis, the reference list is a file of its own, `08_Formal_Review/bibliography.md` (flat: `workspace/output/bibliography.md`), which every export lists after the chapter files and before an appendix, if there is one; the chapter files carry none. The orchestrator writes it at the start of Phase B:
 
 - one entry for each source whose extract names a chapter under **Used in**, with the data under the extract's "Bibliographic info", which the source-verifier checked in Phase A (and `literature.bib`, if there is one); no other source, and no data from anywhere else;
-- as the `bibliography.*` rules of `styleguide.md` say (entry patterns, authors, editions, DOI and URL, italics, sort order), under the styleguide's heading, inside the `Bibliography` div above;
+- as the `bibliography.*` rules of `styleguide.md` say (entry patterns, authors, editions, DOI and URL, italics, sort order), under the heading `bibliography.heading` gives, at the level of a chapter heading (`#`, Word's Heading 1), inside the `Bibliography` div above;
 - a source the styleguide keeps out (`bibliography.secondary_original`, such as the original of a secondary citation) stays out.
 
-A seminar paper and the proposal have no Phase B. Without citekeys, the writer-agent writes their reference list as the last section of the last chapter file (proposal: of `03_Drafting/proposal_draft.md`): one entry for each source the text cites, as the `bibliography.*` rules of `styleguide.md` say, under the styleguide's heading, inside the `Bibliography` div.
+A seminar paper and the proposal have no Phase B. Without citekeys, the writer-agent writes their reference list as the last section of the last chapter file (proposal: of `03_Drafting/proposal_draft.md`): one entry for each source the text cites, as the `bibliography.*` rules of `styleguide.md` say, under the heading `bibliography.heading` gives, at the level of a chapter heading, inside the `Bibliography` div.
 
 `scripts/bibliography_check.py` on the export then shows whether cited and listed authors match, and the format-verifier checks the patterns.
 
 ### The title page
 
-Pandoc writes no title page of its own. Write it as a Markdown file in the project, `08_Formal_Review/title_page.md` (flat: `workspace/output/title_page.md`), and list it first, before the chapter files, when you call Pandoc. Its contents come from `styleguide.md` (`title_page.*`); what the user has not given yet stays a placeholder such as `[Name]`. Set its lines in the styles `Title`, `Subtitle`, `Author` and `Date` (or in styles of your own, which Pandoc adds to the document) with fenced divs, and end it with a page break. A table of contents goes into the same file, as a Word field after the title page, with the levels of `headings.max_depth` (`\o "1-3"`); Word fills it in when the user updates the fields (Ctrl+A, then F9, a step of the workflows' submission). Do not use Pandoc's `--toc`: Pandoc places its table of contents before all text, so before the title page.
+Pandoc writes no title page of its own. Write it as a Markdown file in the project, `08_Formal_Review/title_page.md` (flat: `workspace/output/title_page.md`), and list it first, before the chapter files, when you call Pandoc. Its contents come from `styleguide.md` (`title_page.*`); what the user has not given yet stays a placeholder such as `[Name]`. Set its lines in the styles `Title`, `Subtitle`, `Author` and `Date` (or in styles of your own, which Pandoc adds to the document) with fenced divs, and end it with a page break. Every export of a thesis has a table of contents, whether or not the styleguide names one (`headings.toc_emphasis` sets only how its levels look): it goes into the same file, as a Word field after the title page, with the levels of `headings.max_depth` (`\o "1-3"`); Word fills it in when the user updates the fields (Ctrl+A, then F9, a step of the workflows' submission). Do not use Pandoc's `--toc`: Pandoc places its table of contents before all text, so before the title page.
 
 ````markdown
 ::: {custom-style="Title"}

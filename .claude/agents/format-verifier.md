@@ -16,6 +16,7 @@ If `styleguide.md` lacks a rule, report this explicitly — do not guess.
 ## File paths
 
 - Styleguide: `styleguide.md` (project root) — **single source of truth**
+- Styleguide template: `templates/styleguide.md`, the keys a styleguide has, not their values; "its template" below means this file. Read it when you decide whether a question is a ❓ or a note (section 4)
 - Chapter texts: `workspace/output/chapters/` or phase directories
 - Full document: `workspace/output/document.docx` (flat), the PPTX in `workspace/output/slides/` (presentations), the export the task prompt names, in `08_Formal_Review/submissions/` (long-form) or in `04_Submission/` (proposal sub-project). The commands below show the flat path: use the actual document instead.
 - Institutional guidelines (fallback reference): `workspace/sources/_guidelines/` or `guidelines/`
@@ -59,6 +60,7 @@ Verify the following categories. Concrete values (font size, page-range notation
 
 ## Headings
 - [ ] Sizes per level (1/2/3) per styleguide
+- [ ] Colour per styleguide (`headings.color`)
 - [ ] Numbering convention per styleguide
 - [ ] Max depth per styleguide
 
@@ -74,7 +76,7 @@ Verify the following categories. Concrete values (font size, page-range notation
 - [ ] Table of contents: automatic generation; level formatting per styleguide (`headings.toc_emphasis`)
 - [ ] Abbreviations: only actually-used abbreviations
   (automation: scripts/abbreviations_extract.py)
-- [ ] Bibliography: conventions per styleguide, including the entry pattern per source type, co-authors and the originals of secondary citations (`bibliography.entry_patterns`, `bibliography.multiple_authors`, `bibliography.secondary_original`)
+- [ ] Bibliography: conventions per styleguide, including its heading (`bibliography.heading`), the entry pattern per source type, co-authors and the originals of secondary citations (`bibliography.entry_patterns`, `bibliography.multiple_authors`, `bibliography.secondary_original`)
   (automation: scripts/bibliography_check.py — minus-test)
 
 ## Tables and figures
@@ -160,11 +162,11 @@ Styleguide gap (for ❓):
 
 Every finding has a `Status:` line of its own: a gap you find under a rule you otherwise pass is a rule entry of its own with `Status: ❓`. Write these lines as the template shows them, `Status:` plain at the start of a line, not bold and not in a table: the orchestrator counts them with a search for `Status: ✅`, `Status: ⚠`, `Status: ❌` and `Status: ❓`. Count the totals of your answer from these lines.
 
-A ❓ marks a rule this check needs that `styleguide.md` leaves open: a rule it states, or one of the keys its template has, that is missing, still ❓, or unclear for a case the document contains. An element the document contains although its key is closed with the n/a value is a ❓ too: its entry must be opened again (`style-resolver.md`, "Recording answers to open questions", item 4). These are no ❓ and get no status:
+A ❓ marks a rule this check needs that `styleguide.md` leaves open: a rule it states, or one of the keys its template has, that is missing, still ❓, or unclear for a case the document contains. An element the document contains although its key is closed with the n/a value is a ❓ too: its entry must be opened again (`style-resolver.md`, "Recording answers to open questions", item 4). These are no ❓ and get no `Status:` line, neither a symbol nor `Status: Not applicable`; they stand only in the lists at the end of the report:
 - a rule with nothing to apply to: an element the work does not need and the document does not contain (a list of abbreviations for a text without abbreviations), also where its key is closed with the n/a value. List it under **Not applicable** at the end of the report. A required element the export lacks, such as the title page, the table of contents field or the reference list, is no such case: it is a finding, ⚠️ or ❌;
-- a rule that `styleguide.md` marks `set aside for this work: <decision> [user, YYYY-MM-DD]` (multi-project: set aside for the sub-project you check; in another one it is checked as usual): list it under **Not applicable** with that decision, without checking its value;
+- a rule that `styleguide.md` marks `set aside for this work: <decision> [user, YYYY-MM-DD]` (multi-project: set aside for the sub-project you check; in another one it is checked as usual): list it under **Not applicable** with that decision (if there are several note lines, the last one; multi-project: the last one for the sub-project you check), without checking its value;
 - a rule the checked file cannot show yet, such as the entries of the table of contents before Word fills the field, or Roman front matter: an open manual step, listed under **Not applicable** with this reason;
-- a question no rule and no key of the styleguide covers, such as a heading above the table of contents: a note under **Notes** at the end of the report, saying what the export does now.
+- a question no rule of `styleguide.md` and no key of its template covers, such as a heading above the table of contents or the level of an unnumbered heading (the reference list, an appendix), but not a check this definition asks for itself (sections 2 and 3, such as the table of contents field, the list of abbreviations or the minus-test), which gets a status: a note under **Notes** at the end of the report, saying what the export does now, without proposing a value or a new styleguide key.
 
 A key that has a value and fits none of the cases above is checked against it, also when the value gives no list or no script can check it (a rule such as "no fixed list, stay factual"): read the text and give ✅ or ⚠️. **Not applicable** and **Notes** do not count in the totals.
 
@@ -178,12 +180,12 @@ These symbols are status codes, not decoration: the orchestrator, the state file
 
 ### 6. Rounds after a fix
 
-From round 2 on, the task prompt names the previous round's report and what changed since (chapter files, title page, reference list, reference document, styleguide entries). Report every rule of the previous report again, each with its own `Status:` line, and add any new one: a task prompt that asks for less does not shorten the list. The exception is a rule that is now not applicable (section 4: set aside, closed with the n/a value and absent, or not yet shown by the file): it goes under **Not applicable** without a status, also when the previous round gave it one, so check the styleguide's set-aside notes and n/a values in every round. Judge afresh every rule the change touches, and in Phase B everything that lives in the DOCX itself (styles, page settings, pagination, the title page, the reference list's layout, the hyphenation flag), and run the scripts again: each round checks a new export. Carry any other rule over with its earlier status, its findings and "(as round <n>)", where <n> is the round that last judged it. The totals then compare from round to round.
+From round 2 on, the task prompt names the previous round's report and what changed since (chapter files, title page, reference list, reference document, styleguide entries). Report every rule of the previous report again, each with its own `Status:` line, and add any new one: a task prompt that asks for less does not shorten the list. A note of the previous report stays a note, without a status, unless a rule of `styleguide.md` or a key of its template now covers it: then it is checked like any other rule, and a template key that `styleguide.md` lacks is a ❓. An entry the previous report gave a status for a question that section 4 makes a note (no rule of `styleguide.md` and no key of its template covers it, such as the level of an unnumbered heading) now goes under **Notes**, without a `Status:` line. A check this definition asks for itself keeps its status even where no styleguide key names it: the table of contents field, the list of abbreviations, the minus-test, instruction-like text in the document. Another exception is a rule that is now not applicable (section 4: set aside, closed with the n/a value and absent, or not yet shown by the file): it goes under **Not applicable** without a `Status:` line, also when the previous round gave it one, so check the styleguide's set-aside notes and n/a values in every round. Judge afresh every rule the change touches, and in Phase B everything that lives in the DOCX itself (styles, page settings, pagination, the title page, the reference list's layout, the hyphenation flag), and run the scripts again: each round checks a new export. Carry any other rule over with its earlier status, its findings and "(as round <n>)", where <n> is the round that last judged it; a rule you judged afresh in this round carries no such marker. The totals then compare from round to round.
 
 ## Principles
 
 - **Styleguide is the truth** — no hardcoded rules override it
-- **Transparency on gaps** — ❓ for a rule the check needs that `styleguide.md` leaves open, a note under **Notes** for a question no rule covers; never a guess
+- **Transparency on gaps** — ❓ for a rule the check needs that `styleguide.md` leaves open, a note under **Notes** for a question no rule of `styleguide.md` and no key of its template covers; never a guess
 - **Precise findings** — line number + context, so the fix can be applied directly: in Phase A by the writer, in Phase B by the orchestrator or the user (format-only edits; the writer stays deactivated)
 - **Use scripts** — don't manually count what a script can count
 - **Stay inside the project** — write no files outside the project folder (multi-project: the folder that holds all sub-projects), not even scratch files: no `/tmp`, which in Git Bash on Windows is the system's temporary folder, and no scratchpad that Claude Code may name. Put scratch files in `_scratch/format-verifier/` at the project root (multi-project: of the sub-project you work in), which Git ignores, and delete that folder before you finish; leave the rest of `_scratch/` alone, the orchestrator may keep a file there; the scripts in `scripts/`, which clean up their own temporary folders, are fine
