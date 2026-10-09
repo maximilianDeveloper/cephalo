@@ -8,7 +8,9 @@ Dates follow ISO 8601 (`YYYY-MM-DD`).
 
 ---
 
-## [1.2.2] — unreleased
+## [1.2.2] — 2026-10-09
+
+**A fifth trial run.** A fifth long-form trial run on Windows confirmed most changes of 1.2.1: of its ten re-checked points, seven worked as intended and two partly. Its findings, checked against the transcripts and reviewed twice, are fixed. The format-verifier's notes stay notes and propose nothing, and the styleguide template gets keys for the headings' colour and the reference list's heading. Agents read PDFs whole first, which works without poppler. Proposed styleguide values are shown and accepted before they are recorded, and a value holds only the rule. The status line follows every agent call at once, and closure statements keep a report's counts as counted.
 
 ### Changed
 
