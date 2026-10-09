@@ -193,7 +193,7 @@ Pandoc sets the text in these styles, so these are the ones to adjust:
 | `Table Caption`, `Image Caption`, `Captioned Figure` | captions and figures (`captions.*`) |
 | `Title`, `Subtitle`, `Author`, `Date` | a title block from the metadata, if one is used |
 
-Pandoc's own reference document takes the heading font and colour from the document theme: set both in the heading styles and in their character styles. It has no page size, no margins and no page number: set them, and put a `PAGE` field into the footer, aligned as the styleguide says.
+Pandoc's own reference document takes the heading font and colour from the document theme: set both in the heading styles and in their character styles, the colour as `headings.color` gives it (Pandoc's own is blue). It has no page size, no margins and no page number: set them, and put a `PAGE` field into the footer, aligned as the styleguide says.
 
 A reference list without citekeys (below, "The reference list") comes out in `First Paragraph` and `Body Text`. Give it the `Bibliography` style with a fenced div around its entries, below the heading:
 

@@ -92,6 +92,7 @@
 - **`level_2.weight`:** [bold / regular]
 - **`level_3.size`:** [e.g., 12 pt]
 - **`level_3.weight`:** [bold / regular]
+- **`color`:** [e.g., black, on all levels]
 - **`toc_emphasis`:** [table of contents: e.g., level 1 bold, deeper levels regular]
 
 ---

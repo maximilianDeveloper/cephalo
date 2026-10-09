@@ -211,7 +211,7 @@ Sizes are in pt, lengths in cm, also with a unit (`12mm`, `0.5in`), line spacing
 - The heading options apply to every heading level the document has: `--heading-sizes 14,12,11` sets the sizes of levels 1 to 3, while font, weight and colour reach level 4 and below too. Any heading option also sets the headings upright (Pandoc's own sets level 4 and below in italics).
 - `--quote-indent` sets the left indent and, unless `--quote-indent-right` gives one, no right indent (Pandoc's own indents block quotes on both sides).
 - `--title-page counted` leaves the first page without a number, `not-counted` also starts the numbering at 0, so that the first text page shows 1 (`pagination.title_page`).
-- `--heading-color` and `--link-color` replace Pandoc's blue; `--footnote-font` sets a footnote font other than the text's.
+- `--heading-color` (from `headings.color`) and `--link-color` replace Pandoc's blue; `--footnote-font` sets a footnote font other than the text's.
 
 What it does:
 

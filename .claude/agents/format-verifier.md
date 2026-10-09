@@ -59,6 +59,7 @@ Verify the following categories. Concrete values (font size, page-range notation
 
 ## Headings
 - [ ] Sizes per level (1/2/3) per styleguide
+- [ ] Colour per styleguide (`headings.color`)
 - [ ] Numbering convention per styleguide
 - [ ] Max depth per styleguide
 
