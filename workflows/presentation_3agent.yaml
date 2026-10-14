@@ -159,8 +159,10 @@ phases:
           runs (pptx_notes below; without python-pptx, ask the user). Either
           way the deck keeps the writer's wording unchanged and takes its
           layout from the institution's slide template, if the guidelines
-          give one, and from styleguide.md; a layout neither gives is asked
-          of the user, not chosen. After a revision of slide text or speaker
+          give one, and from a rule styleguide.md gives for slides, not from
+          its rules for the written companion (body text, headings, page
+          size and margins, pagination); a layout neither gives is asked of
+          the user, not chosen. After a revision of slide text or speaker
           notes, the deck is built again the same way before the next check.
       
       - step: 2
