@@ -1268,6 +1268,18 @@ jobs:
           grep -qF 'in author_a.md (p. 42, secondary citation)' "$V/out.txt"
           grep -qF 'in state.md: Weber 2019 (p. 15)' "$V/out.txt"
           grep -qF 'fake.pdf (a ZIP archive named .pdf' "$V/out.txt"
+          # words are counted as written: with two hyphenated compounds, a run of 9 tokens is
+          # 5 words, a 🟡 (exit 0); a quotation of 8 tokens in 4 words is a short one, which
+          # keeps the copied sentence around it one run
+          printf '%s\n' 'Planners need up-to-date maps of day-to-day heat stress in the old town.' > "$V/compound_src.txt"
+          printf '%s\n' 'Cities collect up-to-date maps of day-to-day heat in summer.' > "$V/compound.md"
+          expect 0 python scripts/verbatim_check.py "$V/compound.md" "$V/compound_src.txt"
+          grep -qF '🟡 5 words, line 1: "up-to-date maps of day-to-day heat"' "$V/out.txt"
+          grep -qxF 'Summary: ❌ 0, ⚠️ 0, 🟡 1. Runs of 1-4 words are not listed;' "$V/out.txt"
+          printf '%s\n' 'Planners need „up-to-date maps of day-to-day“ heat stress in the old town.' > "$V/compound_quoted.md"
+          expect 1 python scripts/verbatim_check.py "$V/compound_quoted.md" "$V/compound_src.txt"
+          grep -qF '⚠️  8 words (and 4 in quotation marks), line 1:' "$V/out.txt"
+          if grep -q 'not found verbatim' "$V/out.txt"; then cat "$V/out.txt"; echo "a short quotation was taken for a direct quote"; exit 1; fi
           # the script's thresholds are those of the checklist's table
           python - <<'EOF'
           import re, sys
@@ -1361,7 +1373,8 @@ jobs:
           assert got == want, got
           EOF
           # review cases: a quoted term inside a copied sentence does not cut the run; an
-          # apostrophe does not end a quotation in single marks; a field without a bullet
+          # apostrophe does not end a quotation in single marks, and city’s is one word as
+          # written (line 14: 10 words in 11 tokens); a field without a bullet
           # ends the quote above it; a page bullet (Rule 7) and "Pages" headings; a
           # bracketed letter in a quote; lazy continuation of a block quote; a UTF-16
           # text source; other files in a source folder are listed, a .bib is not
@@ -1384,7 +1397,7 @@ jobs:
           expect 1 python scripts/verbatim_check.py "$V/review.md" "$V/review"
           grep -qF '⚠️  13 words (and 3 in quotation marks), line 1:' "$V/out.txt"
           grep -qx '    in a.md Q1 (p. 92–94)' "$V/out.txt"
-          grep -qF '⚠️  11 words, line 14:' "$V/out.txt"
+          grep -qF '⚠️  10 words, line 14:' "$V/out.txt"
           grep -qx '    in a.md Q2 (p. 87 ❓)' "$V/out.txt"
           grep -qF 'page.html (.html is not read' "$V/out.txt"
           grep -qF 'Sources: 1 extract(s) with 3 quotes, 0 PDF(s), 1 text file(s)' "$V/out.txt"
@@ -1406,7 +1419,8 @@ jobs:
           grep -qF '❌ 15 words, line 3:' "$V/out.txt"
           if grep -q 'line [579]\b\|line 1[0-2]\b\|not found verbatim' "$V/out.txt"; then cat "$V/out.txt"; echo "a short or marked quotation was counted"; exit 1; fi
           # PDFs: a soft hyphen at a line end is joined when the chapter has the word, a
-          # compound hyphen is kept; mostly scanned pages are listed; an extract quote
+          # compound hyphen is kept (long-term: one word as written, two tokens to match);
+          # mostly scanned pages are listed; an extract quote
           # inside a longer PDF run is named too
           mkdir -p "$V/pdfs" "$V/book"
           python - "$V" <<'EOF'
@@ -1439,7 +1453,7 @@ jobs:
           printf '%s\n' 'Trees cool their surroundings through evaporation on hot days, a long-term effect that planners measured.' '' \
             'Die Wirkung von Stadtgrün hängt vor allem von der Wasserversorgung der Bäume im Sommer ab und nicht vom Boden.' > "$V/pdfs.md"
           expect 1 python scripts/verbatim_check.py "$V/pdfs.md" "$V/pdfs" "$V/review/a.md"
-          grep -qF '⚠️  14 words, line 1: "Trees cool their surroundings through evaporation on hot days, a long-term effect that"' "$V/out.txt"
+          grep -qF '⚠️  13 words, line 1: "Trees cool their surroundings through evaporation on hot days, a long-term effect that"' "$V/out.txt"
           grep -qF 'scan.pdf (3 of 4 pages without a text layer' "$V/out.txt"
           if grep -v scan.pdf "$V/out.txt" | grep -q 'pages without a text layer'; then cat "$V/out.txt"; echo "a PDF with text on every page was listed"; exit 1; fi
           grep -qx '    in longer.pdf (PDF page 1); a.md Q3 (p. 92–94, 15 of these words)' "$V/out.txt"
