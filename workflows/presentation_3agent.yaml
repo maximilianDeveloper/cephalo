@@ -225,11 +225,15 @@ phases:
     - step: F.1
       manual: true
       task: |
-        - No open ❓ entries left under Open questions in styleguide.md
+        - No open ❓ entries left under Open questions in styleguide.md, and no
+          styleguide question left under the open issues of workspace/state.md
         - Final PPTX export
         - Final PDF (for submission)
         - Speaker notes export (if required)
         - Rehearsal with timing (target per assignment / styleguide.md, e.g. 15-20 min)
+        - Before closing: the "Current state" and "Open issues" of
+          workspace/state.md and the "Open questions" of styleguide.md agree;
+          nothing is called resolved in one that is still open in another
 
 # python-pptx specifics (from project experience)
 
