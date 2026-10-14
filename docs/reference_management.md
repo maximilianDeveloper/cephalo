@@ -241,6 +241,8 @@ Title of the work
 ```
 ````
 
+A list of abbreviations goes into the same file, after this block, on a page of its own: end it with the same page-break paragraph, in an `{=openxml}` block of its own (`<w:p><w:r><w:br w:type="page"/></w:r></w:p>`). The main text then starts on a new page, and the front matter ends with a page break, as the steps for a section of its own below expect (step 1).
+
 The text in `<w:t>` shows in the DOCX until Word fills the field in: write it in the language of the work, without an abbreviation (`scripts/abbreviations_extract.py` would report it).
 
 The level formatting of the table of contents (`headings.toc_emphasis`) comes from the styles `TOC 1` to `TOC 3` of the reference document: build them with `scripts/build_reference_docx.py --toc-bold`, which gives them Word's own indents and spacing and sets only their weight. Without them, Word uses its own when it fills the field in.

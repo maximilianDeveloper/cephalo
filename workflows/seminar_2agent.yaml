@@ -235,8 +235,10 @@ phases:
         5. If the text uses abbreviations that styleguide.md or the guidelines
            want listed: export once as item 6 says, derive the list from that
            export with scripts/abbreviations_extract.py, and add it to
-           workspace/output/title_page.md after the table of contents field,
-           before the first format round.
+           workspace/output/title_page.md after the table of contents field and
+           its page break, ending with a page break of its own
+           (docs/reference_management.md, "The title page"), before the first
+           format round.
         6. Format rounds, as .claude/agents/orchestrator.md, "Phase A → B
            transition", describes in items 4 and 5 of "Action on transition":
            build workspace/output/reference.docx with
