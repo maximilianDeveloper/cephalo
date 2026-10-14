@@ -92,10 +92,10 @@ The styleguide is extracted per-project from the institution's guidelines. It ma
 
 ## Page budget
 
-The orchestrator (without one, Claude in the main chat) gives you the chapter's budget in words. On approaching overflow:
-- Shorten body chapters (not introduction/conclusion)
+The orchestrator (without one, Claude in the main chat) gives you the chapter's budget in words; write the chapter within it. To stay within it, and when a task asks you to shorten the chapter to its budget (the introduction or the conclusion too):
 - Consolidate repeated citations
-- Over 20% overflow: escalate to orchestrator rather than silently cutting
+- Cut restatements, and summaries of what another chapter already says
+- If the budget cannot be reached without dropping a claim the chapter's argument needs, shorten as far as it goes, and name that claim and your length estimate in your answer for the orchestrator (without one, Claude in the main chat) rather than cutting the claim silently
 
 You cannot count words reliably: give a length you report as an estimate. The orchestrator counts the words with a command (without an orchestrator, Claude in the main chat or the user does).
 
