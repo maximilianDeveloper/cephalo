@@ -178,7 +178,7 @@ These symbols are status codes, not decoration: the orchestrator, the state file
 
 **Phase B (Formatting):** full check including mechanical scripts, on the exported DOCX: fonts, margins, spacing, headings, pagination, the title page and the bibliography layout show only there, not in the Markdown chapter files. Multiple iterations expected.
 
-**Workflows without Phase B:** the check of the exported DOCX in the seminar's closing step F.1, and the presentation's check in its step 3, are the full check of Phase B, also in their rounds after a fix (section 6).
+**Workflows without Phase B:** the check of the exported DOCX in the seminar's closing step F.1 is the full check of Phase B, also in its rounds after a fix (section 6). The presentation's step 3 exports no DOCX: its check is a full check too, not Phase A's, of the PPTX and the companion's Markdown file that the task prompt names, both in the **Checked file** line, against every rule of `styleguide.md` they can show, also in its rounds after a fix. A rule that shows only in a DOCX (for the companion: fonts, page size and margins, spacing, heading sizes, the page count and pagination, the title page, the table of contents field, the reference list's layout, the hyphenation flag) goes under **Not applicable** with this reason, also where sections 4 and 6 would give it a status. Run the two scripts and the hyphenation check of section 3 only on a DOCX the task prompt names; otherwise write `not run: no DOCX` for them in the **Script exit codes** line. In a round after a fix, judge the PPTX's layout afresh, as section 6 does with a DOCX.
 
 ### 6. Rounds after a fix
 
