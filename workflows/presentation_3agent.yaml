@@ -92,7 +92,7 @@ main_session:
       quotes of the source registry, source and format checks, style
       resolution. If the Agent tool is missing, tell the user and stop.
     - Yours: step 0.0 and workspace/state.md; recording the answers to open
-      styleguide questions; the companion's word counts; running
+      styleguide questions; the companion's budget and word counts; running
       scripts/verbatim_check.py on the companion and saving the
       source-verifier's reports (step 2); naming the format-verifier's
       report files (step 3); the three-way check and F.1 with the user.

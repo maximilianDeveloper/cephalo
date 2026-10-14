@@ -91,7 +91,7 @@ The styleguide is extracted per-project from the institution's guidelines. It ma
 
 ## Page budget
 
-The orchestrator provides a per-chapter budget. On approaching overflow:
+The orchestrator (without one, Claude in the main chat) gives you the chapter's budget in words. On approaching overflow:
 - Shorten body chapters (not introduction/conclusion)
 - Consolidate repeated citations
 - Over 20% overflow: escalate to orchestrator rather than silently cutting

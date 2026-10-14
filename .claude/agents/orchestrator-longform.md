@@ -133,7 +133,7 @@ File: `00_Status.md`
 At minimum update:
 - Date of last update
 - Chapter status table
-- Page budget table (count a chapter's words with a command, `wc -w <chapter file>`, not from the writer's estimate; it counts the YAML header too, about 20 words, so say so with the figure; convert them with the words-per-page figure in `00_Decisions.md`, which you ask the user for once)
+- Page budget table (count a chapter's words with `python3 scripts/verbatim_check.py --words <chapter file>`, on Windows `py`, in a multi-project sub-project `../scripts/verbatim_check.py`, not from the writer's estimate; without Python, with `wc -w <chapter file>` minus the words of its YAML header, and say so with the figure; convert them with the words-per-page figure in `00_Decisions.md`, which you ask the user for once)
 - Open issues (project-wide)
 - Handover chronology
 - "Current focus": "Active phase", "Last handover" (this chat's) and "Next planned task" (from the handover you write now), so that it names no task this chat finished

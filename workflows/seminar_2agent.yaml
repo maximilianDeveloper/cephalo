@@ -96,9 +96,9 @@ main_session:
       source and format checks, style resolution. If the Agent tool is
       missing, tell the user and stop.
     - Yours: step 0.0 and workspace/state.md; recording the answers to open
-      styleguide questions; the word counts; running scripts/verbatim_check.py
-      and saving the source-verifier's reports (step 2); in F.1, what its
-      steps give you.
+      styleguide questions; each chapter's budget and word counts (steps 1
+      and 3); running scripts/verbatim_check.py and saving the
+      source-verifier's reports (step 2); in F.1, what its steps give you.
 
 # Workflow
 
@@ -146,7 +146,11 @@ phases:
           - Record original quotes with page numbers in the state file (source registry table, see writer-agent.md)
           - Draft prose from the extracted material
           - Follow the styleguide
-          - Stay within the page budget
+          - Stay within the chapter's budget in words, which Claude names in the task (main_session, "Page budget monitoring")
+        note: |
+          Before step 2, also after a revision, Claude counts the draft; more
+          than 20% over its budget, the writer shortens it first, unless the
+          user accepts the length (main_session, "Page budget monitoring").
       
       - step: 2
         agent: source-verifier
@@ -185,7 +189,10 @@ phases:
       
       - step: 3
         manual: true
-        task: Update state file (manually or via writer-agent), with the chapter's word count (wc -w; the writer's figure is an estimate)
+        task: |
+          Update workspace/state.md (manually or via writer-agent): the chapter
+          status, its word count as "Page budget monitoring" counts it, and
+          Page count: [X] of [max]
   
   # ===========================================================
   # Closing

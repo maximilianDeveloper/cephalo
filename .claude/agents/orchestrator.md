@@ -81,16 +81,18 @@ A task prompt does not narrow the work or the check that the agent's definition 
   1. Give research-agent the chapter-relevant sources
   2. Give source-verifier the extracts for verification
   3. Give writer-agent the verified extracts + `styleguide.md`
-  4. Run `scripts/verbatim_check.py` on the chapter (see above), then give source-verifier the chapter text and the script's report for sentence-by-sentence verification
+  4. Count its words and compare them with its budget ("Page budget monitoring" below), run `scripts/verbatim_check.py` on the chapter (see above), then give source-verifier the chapter text and the script's report for sentence-by-sentence verification
   5. Give format-verifier the text for styleguide compliance
   6. Update `workspace/state.md`
 
 ### Page budget monitoring
 
-After each written chapter:
-- Count its words with a command (`wc -w <chapter file>`; it counts the YAML header too, about 20 words): the writer cannot count, its figure is an estimate. Convert words to pages with the words-per-page figure in the decision log; if there is none yet, ask the user once (for example, the word count of one page formatted per `styleguide.md`) and record it
-- Calculate: pages used / total budget
-- Over 20% overrun vs. planned per-chapter: escalate to writer
+Before a chapter's first writer task, set its budget: the figure the user names for it, otherwise `document.page_count` in `styleguide.md` times the chapter's share in the per-chapter figures the workflow gives (`chapter_weighting`, with a body share split over the body chapters as planned with the user); a workflow without them: ask the user once for the split and record it. A figure the user names for a chapter or for the total, in whatever chat, goes into the decision log when it is named; later chats take the budget from there. Give the budget to the writer in words, converted with the words-per-page figure in the decision log; if there is none yet, ask the user once (for example, the word count of one page formatted per `styleguide.md`) and record it. If the user's figures do not fit `document.page_count` (their sum, or a chapter's figure against its share), ask before the writer starts whether the total changes. A different total the user sets is a decision that sets aside `document.page_count`, written when the user decides: its entry in the decision log, and the note line below the rule's value, which stays as it is ("Chat closure ritual", item 1).
+
+After each written chapter, and after each revision, before the verification:
+- Count its words with `python3 scripts/verbatim_check.py --words <chapter file>` (on Windows `py`), the same way for every chapter; without Python, `wc -w <chapter file>` minus the words of its YAML header, and say so with the figure. The writer cannot count: its figure is an estimate
+- Calculate: pages used / total budget, and keep `Page count: [X] of [max]` in `workspace/state.md` current
+- Over 20% above the chapter's budget: before the verification, a return call to the writer to shorten it; if the writer escalates, or the user wants the length, ask the user, and record a length the user accepts in the decision log
 - At 80% total usage after chapter 3: warn and propose adjustment
 
 ### Phase A → B transition
