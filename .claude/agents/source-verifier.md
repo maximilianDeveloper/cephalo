@@ -124,6 +124,8 @@ Name an extract entry by its file name and quote ID, the `### Q<n>` heading abov
    | 3 | [Author, p. X; <extract file> Q<n>] | ✅ |
    ```
 
+   A ✅ row has the sentence number, the source with its page, and the status, nothing else: no quote and no comment (a remark that matters goes under Notes). For a sentence that needs no source, such as the research question or a sentence on the chapter's outline, the source is `—`.
+
 2. A full entry per sentence with ⚠️, ❌, 🟡 or ❓:
 
    ```markdown
