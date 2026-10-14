@@ -229,7 +229,7 @@ Run it before the first export of Phase B, and again after a layout finding of t
 
 Exit code 0 = reference document written, 2 = not written (bad option, Pandoc not found and no `--base`, a folder or file that does not exist, a starting document it cannot read; one line says which).
 
-Not covered: the table of contents styles (`TOC 1` and following, which Word adds when it fills in the field); heading numbers (they come from the heading text, from Pandoc's `--number-sections`, or from numbering that a `--base` template links to its heading styles, which Pandoc keeps; the script does not set any); and front matter in Roman numerals, which needs a section of its own (`docs/reference_management.md`, "The title page").
+Not covered: the table of contents styles (`TOC 1` and following, which Word adds when it fills in the field); heading numbers (they come from the heading text, from Pandoc's `--number-sections`, or from numbering that a `--base` template links to its heading styles, which Pandoc keeps; the script does not set any); and front matter numbered unlike the main text (Roman, or counted but not shown), which needs a section of its own (`docs/reference_management.md`, "The title page").
 
 ### `docx_postprocess.sh`
 

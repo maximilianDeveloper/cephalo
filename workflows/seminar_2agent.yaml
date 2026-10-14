@@ -255,11 +255,12 @@ phases:
            writer-agent, and a verification round (step 2) checks the sentences
            it changed.
         7. For the user, in Word, after the last export, listed under the open
-           issues of workspace/state.md and named in the chat: update the fields
-           (Ctrl+A, then F9); set front matter numbered unlike the main text
-           (styleguide.md pagination.front_matter) as a section of its own
-           (docs/reference_management.md, "The title page"); fill in the title
-           page's placeholders; visual proofreading.
+           issues of workspace/state.md and named in the chat: set front matter
+           numbered unlike the main text (styleguide.md pagination.front_matter
+           Roman or counted but not shown) as a section of its own
+           (docs/reference_management.md, "The title page"); update the fields
+           (Ctrl+A, then F9); fill in the title page's placeholders; visual
+           proofreading.
         8. Before the chat closes: the "Current state" and "Open issues" of
            workspace/state.md and the "Open questions" of styleguide.md agree;
            nothing is called resolved in one that is still open in another.

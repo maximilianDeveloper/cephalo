@@ -101,8 +101,8 @@
 ## Pagination (`pagination.*`)
 
 - **`title_page`:** [counted but not shown / not counted]
-- **`front_matter`:** [Roman numerals / Arabic / none]
-- **`main_text`:** [Arabic from introduction onward / continuous]
+- **`front_matter`:** [Roman numerals / counted but not shown / Arabic, like the main text / none]
+- **`main_text`:** [Arabic from the introduction on, continuing the count / Arabic from the introduction on, starting at 1 / continuous]
 - **`position`:** [bottom center / bottom right / top right]
 
 ---
