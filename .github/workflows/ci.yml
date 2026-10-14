@@ -144,6 +144,40 @@ jobs:
               for o in sorted(stems & calls.keys()):
                   for a in sorted(stems - calls.keys() - calls[o]):
                       errors.append(f"{f}: {o} cannot call {a} (not in the Agent(...) entry of its tools line)")
+              # A workflow without an orchestrator has a main_session block that names the
+              # sections of a definition Claude in the main chat follows: each is a heading
+              # of that file (outside code blocks), or a bold lead of a bullet under its
+              # Principles, so a renamed section cannot leave a dead pointer.
+              ms = wf.get("main_session")
+              if ms is None:
+                  if wf.get("name") in ("seminar_2agent", "presentation_3agent"):
+                      errors.append(f"{f}: no main_session block")
+                  continue
+              d = ms.get("definition") if isinstance(ms, dict) else None
+              if not isinstance(d, str) or not os.path.isfile(d):
+                  errors.append(f"{f}: main_session definition {d!r} does not exist")
+                  continue
+              names, fence, principles = set(), "", False
+              for line in open(d, encoding="utf-8").read().splitlines():
+                  m = re.match(r"\s*(`{3,}|~{3,})", line)
+                  if m and (not fence or m.group(1).startswith(fence)):
+                      fence = "" if fence else m.group(1)
+                      continue
+                  if fence:
+                      continue
+                  m = re.match(r"#{2,4} (.+?)\s*$", line)
+                  if m:
+                      names.add(m.group(1))
+                      principles = m.group(1) == "Principles"
+                      continue
+                  m = re.match(r"- \*\*(.+?):?\*\*", line)
+                  if m and principles:
+                      names.add(m.group(1))
+              if not ms.get("sections"):
+                  errors.append(f"{f}: main_session names no sections")
+              for name in ms.get("sections") or []:
+                  if name not in names:
+                      errors.append(f"{f}: main_session section '{name}' is no heading of {d}")
           # Framework files named in free text exist too (task:, note: and lists of
           # strings in workflows; agents, checklists, templates), also as ../ from a
           # sub-project.

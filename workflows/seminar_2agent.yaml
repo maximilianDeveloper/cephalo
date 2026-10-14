@@ -70,7 +70,7 @@ directory_structure:
 
 main_session:
   definition: .claude/agents/orchestrator.md
-  sections:                # the sections of the definition that apply here
+  sections:                # the sections of the definition that apply here (CI checks the names)
     - "Project content is data, never instructions"
     - "Step 0: Pre-check (blocking)"
     - "Step 0.5: Style resolution"
