@@ -150,7 +150,7 @@ and citation rules from the guidelines directory into styleguide.md.
 List any open questions for me to resolve before we proceed.
 ```
 
-For a seminar paper or a presentation, send a different first message: these workflows have no orchestrator, so name the workflow file and ask for steps 0.0 and 0.5 (the pre-check and the style resolution), for example "I am following `workflows/seminar_2agent.yaml`; today the preparation, steps 0.0 and 0.5". Claude in the chat then runs the pre-check, creates `workspace/state.md` and calls the style-resolver itself, as the workflow's `main_session` block says.
+For a seminar paper or a presentation, first put your sources (PDF or plain text) into `workspace/sources/`: the pre-check (step 0.0) checks them. Then send a different first message: these workflows have no orchestrator, so name the workflow file and ask for steps 0.0 and 0.5 (the pre-check and the style resolution), for example "I am following `workflows/seminar_2agent.yaml`; today the preparation, steps 0.0 and 0.5". Claude in the chat then runs the pre-check, creates `workspace/state.md` and calls the style-resolver itself, as the workflow's `main_session` block says.
 
 The resolver produces a structured `styleguide.md`. Open questions are marked `❓` and tagged: resolve the `[content]` ones (voice, citation wording, length — usually by asking your supervisor) before content work begins; the `[format]` ones (fonts, margins, pagination, ...) can wait until the formatting phase.
 

@@ -1202,6 +1202,7 @@ elif [[ "$WORK_TYPE" == "Seminar paper" || "$WORK_TYPE" == "Presentation" ]]; th
     # No orchestrator: the first message names the workflow (README.md, step 4).
     echo "$STEP_NO. Open this directory in Claude Code; in the first message, name"
     echo "   workflows/$WORKFLOW and ask for steps 0.0 and 0.5"
+    echo "   (put your sources, PDF or plain text, into workspace/sources/ first)"
 else
     echo "$STEP_NO. Open this directory in Claude Code and invoke the style-resolver"
 fi
