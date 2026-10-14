@@ -223,7 +223,7 @@ A seminar paper and the proposal have no Phase B. Without citekeys, the writer-a
 
 ### The title page
 
-Pandoc writes no title page of its own. Write it as a Markdown file in the project, `08_Formal_Review/title_page.md` (flat: `workspace/output/title_page.md`), and list it first, before the chapter files, when you call Pandoc. Its contents come from `styleguide.md` (`title_page.*`); what the user has not given yet stays a placeholder such as `[Name]`. Set its lines in the styles `Title`, `Subtitle`, `Author` and `Date` (or in styles of your own, which Pandoc adds to the document) with fenced divs, and end it with a page break. Every export of a thesis has a table of contents, whether or not the styleguide names one (`headings.toc_emphasis` sets only how its levels look): it goes into the same file, as a Word field after the title page, with the levels of `headings.max_depth` (`\o "1-3"`); Word fills it in when the user updates the fields (Ctrl+A, then F9, a step of the workflows' submission). Do not use Pandoc's `--toc`: Pandoc places its table of contents before all text, so before the title page.
+Pandoc writes no title page of its own. Write it as a Markdown file in the project, `08_Formal_Review/title_page.md` (flat: `workspace/output/title_page.md`), and list it first, before the chapter files, when you call Pandoc. Its contents come from `styleguide.md` (`title_page.*`); what the user has not given yet stays a placeholder such as `[Name]`. Write its text in the language of the work, with quotation marks typed as the characters `in_text.format_direct` shows: Pandoc turns ASCII `"…"` into English “…” in the DOCX, whatever the language. Set its lines in the styles `Title`, `Subtitle`, `Author` and `Date` (or in styles of your own, which Pandoc adds to the document) with fenced divs, and end it with a page break. Every export of a thesis has a table of contents, whether or not the styleguide names one (`headings.toc_emphasis` sets only how its levels look): it goes into the same file, as a Word field after the title page, with the levels of `headings.max_depth` (`\o "1-3"`); Word fills it in when the user updates the fields (Ctrl+A, then F9, a step of the workflows' submission). Do not use Pandoc's `--toc`: Pandoc places its table of contents before all text, so before the title page.
 
 ````markdown
 ::: {custom-style="Title"}
@@ -240,6 +240,8 @@ Title of the work
 <w:p><w:r><w:br w:type="page"/></w:r></w:p>
 ```
 ````
+
+The text in `<w:t>` shows in the DOCX until Word fills the field in: write it in the language of the work, without an abbreviation (`scripts/abbreviations_extract.py` would report it).
 
 The level formatting of the table of contents (`headings.toc_emphasis`) comes from the styles `TOC 1` to `TOC 3` of the reference document: build them with `scripts/build_reference_docx.py --toc-bold`, which gives them Word's own indents and spacing and sets only their weight. Without them, Word uses its own when it fills the field in.
 
