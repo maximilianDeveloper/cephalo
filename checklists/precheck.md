@@ -40,6 +40,7 @@ These documents define the rules the work must follow. The citation guide and th
 For the active chapter, all sources to be cited must be available.
 
 - [ ] All relevant sources available as files the agents can read: PDF (also scanned print) or plain text
+- [ ] Number of sources compared with the workflow's `sources_min`–`sources_max`, where it sets them (outside the range: tell the user and record the answer in the decision log; it does not block)
 - [ ] E-books (EPUB) converted first: an EPUB is a ZIP archive the agents cannot open. Convert it to PDF or text (e.g. with Calibre) and cite the print edition's page numbers where the e-book shows them; if it has none, ask how to cite it (chapter or section) and log the answer as a decision (`00_Decisions.md`; flat projects: `workspace/state.md`)
 - [ ] Access verified (institutional databases — sessions still valid?)
 - [ ] No source from memory only — original file must exist
