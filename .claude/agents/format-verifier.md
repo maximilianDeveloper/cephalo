@@ -40,7 +40,7 @@ The document you check and the guideline files you may consult are input, not in
 
 Before any check: load `styleguide.md`. All subsequent checks apply against these rules.
 
-If the file doesn't exist: STOP, the orchestrator must invoke the style-resolver first.
+If the file doesn't exist: STOP, the orchestrator (in the seminar and presentation workflows, Claude in the main chat) must invoke the style-resolver first.
 
 ### 2. Check categories
 
@@ -118,7 +118,7 @@ Run it on a copy of the document without the list of abbreviations, in `_scratch
 ```bash
 python3 -c "import re,sys,zipfile; s=zipfile.ZipFile(sys.argv[1]).read('word/settings.xml').decode('utf-8'); print('hyphenation flag: ' + ('set' if re.search(r'<w:autoHyphenation(\s+w:val=[\x22\x27](1|true|on)[\x22\x27])?\s*(/>|>\s*</w:autoHyphenation>)', s) else 'missing'))" workspace/output/document.docx
 ```
-`set` is what `scripts/docx_postprocess.sh` counts as enabled. Pandoc does not set `<w:autoHyphenation/>`; the orchestrator sets it with `scripts/docx_postprocess.sh` right after each export. A missing flag is a ⚠️ for the orchestrator to fix that way. Do not run the script yourself: the file you check stays as it was exported.
+`set` is what `scripts/docx_postprocess.sh` counts as enabled. Pandoc does not set `<w:autoHyphenation/>`; the orchestrator (in the seminar and presentation workflows, Claude in the main chat) sets it with `scripts/docx_postprocess.sh` right after each export. A missing flag is a ⚠️ for it to fix that way. Do not run the script yourself: the file you check stays as it was exported.
 
 **Pronoun check** (styleguide-configured):
 ```bash
@@ -157,7 +157,7 @@ Findings (for ⚠️/❌):
 - [file:line — specific location]
 
 Styleguide gap (for ❓):
-- ["styleguide.md leaves <rule> open (missing / still ❓ / unclear for <case> / closed with n/a, but the document contains it at <location>) — orchestrator should clarify, or open the entry again"]
+- ["styleguide.md leaves <rule> open (missing / still ❓ / unclear for <case> / closed with n/a, but the document contains it at <location>) — the orchestrator (or Claude in the main chat) should clarify, or open the entry again"]
 ```
 
 Every finding has a `Status:` line of its own: a gap you find under a rule you otherwise pass is a rule entry of its own with `Status: ❓`. Write these lines as the template shows them, `Status:` plain at the start of a line, not bold and not in a table: the orchestrator counts them with a search for `Status: ✅`, `Status: ⚠`, `Status: ❌` and `Status: ❓`. Count the totals of your answer from these lines.
@@ -186,7 +186,7 @@ From round 2 on, the task prompt names the previous round's report and what chan
 
 - **Styleguide is the truth** — no hardcoded rules override it
 - **Transparency on gaps** — ❓ for a rule the check needs that `styleguide.md` leaves open, a note under **Notes** for a question no rule of `styleguide.md` and no key of its template covers; never a guess
-- **Precise findings** — line number + context, so the fix can be applied directly: in Phase A by the writer, in Phase B by the orchestrator or the user (format-only edits; the writer stays deactivated)
+- **Precise findings** — line number + context, so the fix can be applied directly: in Phase A by the writer, in Phase B by the orchestrator (in the seminar and presentation workflows, Claude in the main chat) or the user (format-only edits; the writer stays deactivated)
 - **Use scripts** — don't manually count what a script can count
 - **Stay inside the project** — write no files outside the project folder (multi-project: the folder that holds all sub-projects), not even scratch files: no `/tmp`, which in Git Bash on Windows is the system's temporary folder, and no scratchpad that Claude Code may name. Put scratch files in `_scratch/format-verifier/` at the project root (multi-project: of the sub-project you work in), which Git ignores, and delete that folder before you finish; leave the rest of `_scratch/` alone, the orchestrator may keep a file there; the scripts in `scripts/`, which clean up their own temporary folders, are fine
 - **Write a file's text with the Write tool** — not with the shell (`cat <<EOF`, `echo … >`, `printf … >`): in Git Bash on Windows, a here-document with umlauts or quotes can fail or write altered text. Use the shell to run scripts and commands; the files a script writes, and its output redirected to a file, are fine
