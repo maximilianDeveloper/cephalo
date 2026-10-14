@@ -10,9 +10,10 @@ of checklists/plagiarism_protection.md:
     8-14 words   ⚠️ plagiarism risk, must be reformulated
     15+ words    ❌ serious
 
-Words are counted as written, each a stretch between whitespace: a
-hyphenated compound (long-term) or a word with an apostrophe (city’s) is one
-word, although its parts are matched one by one. Runs of 1-4 words are not
+Words are counted as written, each a stretch between whitespace or dashes
+(–, —, a typed -- or ---): a hyphenated compound (long-term) or a word with an
+apostrophe (city’s) is one word, although its parts are matched one by one,
+and a dash between words separates them. Runs of 1-4 words are not
 listed. A run counts across sentence boundaries and across citations, as
 Pandoc citekeys ([@key, p. 5]) or in author-year form ((Keller 2018, S. 44),
 (ebd.)); letter case and punctuation are ignored. A quotation of five or
@@ -50,13 +51,13 @@ hidden files and an .md file in a folder that is no extract (a handover or
 README) are passed over.
 
 The report's header gives the chapter's word count for the page budget, as
-written: the stretches between whitespace that hold a letter or digit (a
-hyphenated compound is one word), headings and block quotes included. In
-Markdown, footnotes count too; the YAML front matter, HTML comments, Pandoc
-citekeys (the whole bracket, [@key, p. 5]: Pandoc writes the citation only
-at the export), footnote marks and the bibliography do not, while
-author-year citations written into the text do. A Word chapter counts its
-body paragraphs, without tables, footnotes, text boxes and the
+written: the stretches between whitespace or dashes that hold a letter or
+digit (a hyphenated compound is one word), headings and block quotes
+included. In Markdown, footnotes count too; the YAML front matter, HTML
+comments, Pandoc citekeys (the whole bracket, [@key, p. 5]: Pandoc writes
+the citation only at the export), footnote marks and the bibliography do
+not, while author-year citations written into the text do. A Word chapter
+counts its body paragraphs, without tables, footnotes, text boxes and the
 bibliography. --words prints only that line and needs no sources.
 
 Usage:
@@ -162,11 +163,23 @@ def tokens(text: str) -> list:
     return [m.group(0).casefold() for m in WORD.finditer(text)]
 
 
+# A dash between words (figure, en and em dash, horizontal bar, or a typed -- or
+# ---) separates them like a space; a single hyphen joins a compound.
+DASH = re.compile(r"[\u2012-\u2015]|-{2,}")
+
+
+def spaced(text: str) -> str:
+    """The text with each dash replaced by spaces of its length, so that offsets
+    stay valid. For counting words as written only, never for matching: tokens()
+    splits at a dash already."""
+    return DASH.sub(lambda m: " " * len(m.group(0)), text)
+
+
 def as_written(text: str) -> int:
-    """The words as written: the stretches between whitespace that hold a letter
-    or digit, so that a hyphenated compound (long-term) or a word with an
-    apostrophe (city's) is one word, though tokens() splits it."""
-    return sum(1 for w in text.split() if WORD.search(w))
+    """The words as written: the stretches between whitespace or dashes that
+    hold a letter or digit, so that a hyphenated compound (long-term) or a word
+    with an apostrophe (city's) is one word, though tokens() splits it."""
+    return sum(1 for w in spaced(text).split() if WORD.search(w))
 
 
 def quote_parts(quote: str) -> list:
@@ -401,8 +414,9 @@ def read_chapter(path: Path) -> Chapter:
 def word_count(chapter: Chapter) -> str:
     """
     The chapter's words as written, for the page budget: the stretches between
-    whitespace that hold a letter or digit (long-term, city's: one word each)
-    in what read_chapter keeps, headings, block quotes and quotations included.
+    whitespace or dashes that hold a letter or digit (long-term, city's: one
+    word each) in what read_chapter keeps, headings, block quotes and
+    quotations included.
     """
     n = as_written(MARKUP.sub(lambda m: m.group(1) or "", chapter.text))
     if chapter.unit == "paragraph":
@@ -750,8 +764,9 @@ def find_runs(chapter: Chapter, seqs: list) -> list:
 
 def written_ids(chapter: Chapter) -> list:
     """For each entry of chapter.words, the number of the word as written (the
-    stretch between whitespace) it falls in, or None where a run breaks."""
-    starts = [m.start() for m in re.finditer(r"\S+", chapter.text)]
+    stretch between whitespace or dashes) it falls in, or None where a run
+    breaks."""
+    starts = [m.start() for m in re.finditer(r"\S+", spaced(chapter.text))]
     return [None if sp is None else bisect.bisect_right(starts, sp[0]) - 1 for sp in chapter.spans]
 
 
@@ -878,9 +893,9 @@ def main() -> None:
         fail("nothing to compare against: no extract quotes, PDF text or text files in "
              + ", ".join(args[1:])
              + "".join(f"; {u}" for u in unchecked + unreadable))
-    # A run is rated by its words as written (a hyphenated compound is one word)
-    # outside quotation marks: the words of a short quotation inside it keep it
-    # going but are not counted.
+    # A run is rated by its words as written (a hyphenated compound is one word,
+    # a dash between words separates them) outside quotation marks: the words of
+    # a short quotation inside it keep it going but are not counted.
     ids = written_ids(chapter)
     runs = []
     for i, n, hits in find_runs(chapter, seqs):

@@ -1280,6 +1280,16 @@ jobs:
           expect 1 python scripts/verbatim_check.py "$V/compound_quoted.md" "$V/compound_src.txt"
           grep -qF '⚠️  8 words (and 4 in quotation marks), line 1:' "$V/out.txt"
           if grep -q 'not found verbatim' "$V/out.txt"; then cat "$V/out.txt"; echo "a short quotation was taken for a direct quote"; exit 1; fi
+          # a dash between words separates them, closed (an em dash, or a typed --- that
+          # Pandoc turns into one) as well as spaced: the run is 9 words as written, a ⚠️
+          printf '%s\n' 'Many authors agree that trees cool their surroundings—as planners know—through evaporation and shade.' > "$V/dash_src.txt"
+          printf '%s\n' 'Research shows that trees cool their surroundings—as planners know—through shade.' > "$V/dash.md"
+          expect 1 python scripts/verbatim_check.py "$V/dash.md" "$V/dash_src.txt"
+          grep -qF '⚠️  9 words, line 1: "that trees cool their surroundings—as planners know—through"' "$V/out.txt"
+          grep -qF 'Words: 12 (as written,' "$V/out.txt"
+          printf '%s\n' 'Research shows that trees cool their surroundings---as planners know---through shade.' > "$V/dash_typed.md"
+          expect 1 python scripts/verbatim_check.py "$V/dash_typed.md" "$V/dash_src.txt"
+          grep -qF '⚠️  9 words, line 1: "that trees cool their surroundings---as planners know---through"' "$V/out.txt"
           # the script's thresholds are those of the checklist's table
           python - <<'EOF'
           import re, sys

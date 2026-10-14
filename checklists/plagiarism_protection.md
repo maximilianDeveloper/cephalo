@@ -13,7 +13,7 @@
 | 8-14 | ⚠️ plagiarism risk | MUST be reformulated |
 | ≥ 15 | ❌ serious | MUST reformulate, or use as direct quote in quotation marks |
 
-Words are counted as written: a hyphenated compound (long-term) or a word with an apostrophe (city’s) is one word.
+Words are counted as written: a hyphenated compound (long-term) or a word with an apostrophe (city’s) is one word; a dash between words separates them.
 
 ### Application by source-verifier
 

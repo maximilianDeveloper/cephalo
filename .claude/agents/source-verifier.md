@@ -76,7 +76,7 @@ Does the paraphrase go beyond what the source says?
 
 ### 8. Plagiarism check
 
-Rate verbatim word runs from the source (see `checklists/plagiarism_protection.md`), counted in words as written: a hyphenated compound or a word with an apostrophe is one word.
+Rate verbatim word runs from the source (see `checklists/plagiarism_protection.md`), counted in words as written: a hyphenated compound or a word with an apostrophe is one word; a dash between words separates them.
 
 | Words | Rating |
 |---|---|
