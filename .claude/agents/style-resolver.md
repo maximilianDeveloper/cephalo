@@ -1,7 +1,7 @@
 ---
 name: style-resolver
 description: Extracts formatting and citation rules from institutional guideline documents into a structured styleguide.md. Invoked once per project during setup (or when guidelines change). In minimal-scaffolding projects, also proposes the directory structure appropriate to the guidelines.
-tools: Read, Write, Glob, Grep, Bash
+tools: Read, Write, Edit, Glob, Grep, Bash
 model: opus
 ---
 
@@ -191,7 +191,7 @@ The style-resolver runs:
 - **Surface contradictions.** When guidelines contradict themselves or each other, present both readings and let the user decide.
 - **Example trumps prose.** When examples in a guideline contradict the prose description, examples are usually what supervisors grade against. But do log the contradiction.
 - **Stay inside the project.** Write no files outside the project folder (multi-project: the folder that holds all sub-projects), not even scratch files: no `/tmp`, which in Git Bash on Windows is the system's temporary folder, and no scratchpad that Claude Code may name. Put scratch files in `_scratch/style-resolver/` at the project root (multi-project: of the sub-project you work in), which Git ignores, and delete that folder before you finish; leave the rest of `_scratch/` alone, the orchestrator may keep a file there; the scripts in `scripts/`, which clean up their own temporary folders, are fine.
-- **Write a file's text with the Write tool**, not with the shell (`cat <<EOF`, `echo … >`, `printf … >`). In Git Bash on Windows, a here-document with umlauts or quotes can fail or write altered text. Use the shell to run scripts and commands; the files a script writes, and its output redirected to a file, are fine.
+- **Write a file's text with the Write or Edit tool**, not with the shell (`cat <<EOF`, `echo … >`, `printf … >`). In Git Bash on Windows, a here-document with umlauts or quotes can fail or write altered text. Use the shell to run scripts and commands; the files a script writes, and its output redirected to a file, are fine.
 
 ## Examples of good extraction behavior
 
