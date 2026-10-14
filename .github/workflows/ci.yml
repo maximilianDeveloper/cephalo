@@ -1560,6 +1560,27 @@ jobs:
           expect 1 python scripts/verbatim_check.py "$V/review.md" "$V/folder"
           grep -qF 'ller.epub (.epub is not read' "$V/out.txt"
           if grep -q 'a.pdf\|logo.png\|handover.md\|Could not be read' "$V/out.txt"; then cat "$V/out.txt"; echo "a hidden, archive or note file was listed"; exit 1; fi
+          # the chapter's word count, as written: headings, a block quote, a footnote and an
+          # author-year citation count, a hyphenated compound once; the YAML header, an HTML
+          # comment, a citekey, a footnote mark, heading attributes and the bibliography do
+          # not; --words prints only that line and needs no sources
+          printf '%s\n' '---' 'chapter: 2' 'title: "2 Grundlagen"' '---' '' '# 2 Grundlagen {#sec-grundlagen}' '' \
+            '<!-- Notiz: dieser Kommentar zählt nicht mit -->' '' \
+            'Stadtgrün kühlt die Straßen, ein long-term effect [@keller2018, S. 44].[^1]' 'Es senkt die Temperatur (Keller 2018, S. 45).' '' \
+            '> Bäume kühlen ihre Umgebung durch Verdunstung.' '' '[^1]: Gemessen im Sommer.' '' '# Literaturverzeichnis' '' \
+            '::: {custom-style="Bibliography"}' 'Keller, Anna (2018): Stadtklima. Berlin: Verlag.' ':::' > "$V/words.md"
+          W='Words: 26 (as written, headings, block quotes and footnotes included; YAML header, HTML comments, citekeys, footnote marks and the bibliography not counted)'
+          expect 0 python scripts/verbatim_check.py --words "$V/words.md"
+          grep -qxF "$W" "$V/out.txt"
+          test "$(wc -l < "$V/out.txt")" -eq 1
+          expect 0 python scripts/verbatim_check.py "$V/words.md" "$V/src"
+          grep -qxF "  $W" "$V/out.txt"
+          python -c "import sys; from docx import Document; d = Document(); d.add_heading('2 Grundlagen', 1); d.add_paragraph('Ein long-term Satz.'); d.add_paragraph('Bäume kühlen ihre Umgebung.', style='Quote'); d.add_heading('Literatur', 1); d.add_paragraph('Keller, A. (2018): Stadtklima.'); d.save(sys.argv[1])" "$V/words.docx"
+          expect 0 python scripts/verbatim_check.py --words "$V/words.docx"
+          grep -qxF 'Words: 9 (as written, headings and block quotes included; tables, footnotes, text boxes and the bibliography not counted)' "$V/out.txt"
+          expect 2 python scripts/verbatim_check.py --words "$V/missing.md"
+          expect 2 python scripts/verbatim_check.py --words
+          expect 2 python scripts/verbatim_check.py --words "$V/words.md" "$V/src"
 
       - name: build_reference_docx.py (styles, page settings, errors; round trip through Pandoc)
         run: |

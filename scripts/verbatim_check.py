@@ -46,8 +46,19 @@ while pypdf is not installed) is listed under "Not checked"; other files,
 hidden files and an .md file in a folder that is no extract (a handover or
 README) are passed over.
 
+The report's header gives the chapter's word count for the page budget, as
+written: the stretches between whitespace that hold a letter or digit (a
+hyphenated compound is one word), headings and block quotes included. In
+Markdown, footnotes count too; the YAML front matter, HTML comments, Pandoc
+citekeys (the whole bracket, [@key, p. 5]: Pandoc writes the citation only
+at the export), footnote marks and the bibliography do not, while
+author-year citations written into the text do. A Word chapter counts its
+body paragraphs, without tables, footnotes, text boxes and the
+bibliography. --words prints only that line and needs no sources.
+
 Usage:
     python scripts/verbatim_check.py <chapter> <source> [<source> ...]
+    python scripts/verbatim_check.py --words <chapter>
     python scripts/verbatim_check.py workspace/output/chapters/ch_2_basics.md workspace/sources/
     python scripts/verbatim_check.py --help
 
@@ -57,6 +68,7 @@ Exit codes: 0 = no run of 8 or more words, 1 = at least one run of 8 or more
 words (⚠️ or ❌), 2 = bad arguments, a chapter that cannot be read or holds no
 text, a source that cannot be read (the report is printed all the same, with
 the file under "Could not be read"), or no source text to compare against.
+With --words: 0, or 2 for bad arguments or a chapter that cannot be read.
 """
 
 import os
@@ -80,7 +92,8 @@ for stream in (sys.stdout, sys.stderr):
 # Thresholds of checklists/plagiarism_protection.md, section 1.
 POLISH, RISK, SERIOUS = 5, 8, 15
 
-USAGE = "Usage: python scripts/verbatim_check.py <chapter> <source> [<source> ...]"
+USAGE = ("Usage: python scripts/verbatim_check.py <chapter> <source> [<source> ...]\n"
+         "       python scripts/verbatim_check.py --words <chapter>")
 CHAPTER_SUFFIXES = {".md", ".markdown", ".txt", ".docx"}
 SOURCE_SUFFIXES = {".md", ".markdown", ".txt", ".pdf"}
 # Document types a source might come in that the script cannot read: listed as
@@ -131,6 +144,9 @@ ROMAN = r"(?:m{0,3}(?:cm|cd|d?c{0,3})(?:xc|xl|l?x{0,3})(?:ix|iv|v?i{0,3}))"
 PAGE_NUMBER_LINE = re.compile(r"(?i)\s*[-–—]?\s*(?:(?:seite|page|s\.|p\.)\s*)?(?:\d{1,4}|(?=[ivxlcdm])" + ROMAN + r")"
                               r"(?:\s*(?:/|of|von)\s*\d{1,4})?\s*[-–—]?\s*")
 FOOTNOTE_MARK = re.compile(r"\[\^[^\]]*\]")
+# Markup that the word count leaves out: a heading's attributes ({#sec-intro
+# .unnumbered}) and the fence lines of a code block or a Pandoc div (::: {...}).
+MARKUP = re.compile(r"(?m)^(\s{0,3}#{1,6}\s.*?)\s*\{[^{}]*\}\s*$|^\s{0,3}(?:`{3,}|~{3,}|:{3,}).*$")
 
 
 def normalize(text: str) -> str:
@@ -369,6 +385,37 @@ def read_chapter(path: Path) -> Chapter:
             pos = e
     return Chapter(words, places, spans, "".join(text_parts), "paragraph" if docx else "line",
                    quotes, inside, cut)
+
+
+def word_count(chapter: Chapter) -> str:
+    """
+    The chapter's words as written, for the page budget: the stretches between
+    whitespace that hold a letter or digit (long-term, city's: one word each)
+    in what read_chapter keeps, headings, block quotes and quotations included.
+    """
+    text = MARKUP.sub(lambda m: m.group(1) or "", chapter.text)
+    n = sum(1 for w in text.split() if WORD.search(w))
+    if chapter.unit == "paragraph":
+        what = ("headings and block quotes included; tables, footnotes, text boxes "
+                "and the bibliography not counted")
+    else:
+        what = ("headings, block quotes and footnotes included; YAML header, HTML comments, "
+                "citekeys, footnote marks and the bibliography not counted")
+    return f"Words: {n} (as written, {what})"
+
+
+def checked_chapter(path: Path) -> Path:
+    """The chapter argument, or exit 2 if it cannot be opened or is no chapter."""
+    try:
+        with open(path, "rb"):
+            pass
+    except OSError as exc:
+        reason = "is a directory" if os.path.isdir(path) else exc.strerror or exc
+        fail(f"cannot open {path}: {reason}")
+    if path.suffix.lower() not in CHAPTER_SUFFIXES:
+        fail(f"expected a .md, .txt or .docx chapter, got "
+             f"{path.suffix or 'a file without extension'}: {path}")
+    return path
 
 
 # ---------------------------------------------------------------------------
@@ -739,21 +786,19 @@ def main() -> None:
     if any(a in ("-h", "--help") for a in args):
         print((__doc__ or USAGE).strip())
         sys.exit(0)
+    if "--words" in args:
+        # the word count alone, for the page budget: no sources needed
+        rest = [a for a in args if a != "--words"]
+        if len(rest) != 1 or args.count("--words") != 1:
+            print(USAGE, file=sys.stderr)
+            sys.exit(2)
+        print(word_count(read_chapter(checked_chapter(Path(rest[0])))))
+        sys.exit(0)
     if len(args) < 2:
         print(USAGE, file=sys.stderr)
         sys.exit(2)
 
-    chapter_path = Path(args[0])
-    try:
-        with open(chapter_path, "rb"):
-            pass
-    except OSError as exc:
-        reason = "is a directory" if os.path.isdir(chapter_path) else exc.strerror or exc
-        fail(f"cannot open {chapter_path}: {reason}")
-    if chapter_path.suffix.lower() not in CHAPTER_SUFFIXES:
-        fail(f"expected a .md, .txt or .docx chapter, got "
-             f"{chapter_path.suffix or 'a file without extension'}: {chapter_path}")
-
+    chapter_path = checked_chapter(Path(args[0]))
     chapter = read_chapter(chapter_path)
     if not any(w is not None for w in chapter.words) and not chapter.quotes:
         fail(f"no text found in {chapter_path}")
@@ -814,6 +859,7 @@ def main() -> None:
     print(f"  Sources: {counts['extract']} extract(s) with "
           f"{sum(1 for s in seqs if s.kind == 'extract' and s.first)} quotes, "
           f"{counts['pdf']} PDF(s), {counts['text']} text file(s)")
+    print(f"  {word_count(chapter)}")
     if chapter.bibliography:
         first, last = chapter.bibliography
         print(f"  Not counted: the bibliography, " + (f"{chapter.unit}s {first}-{last}" if last

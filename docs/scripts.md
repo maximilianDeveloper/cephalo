@@ -5,7 +5,7 @@ cephalo ships seven utility scripts in `scripts/`. They are optional — the age
 | Script | Purpose | When to run |
 |--------|---------|-------------|
 | `extract_styleguide.sh` | Convert institutional guideline PDFs to plain text for the style-resolver | Once per project during setup |
-| `verbatim_check.py` | Count the verbatim word runs a chapter shares with its sources, rated by the plagiarism thresholds | Phase A, before each chapter verification (bachelor and master workflows: step A.4) |
+| `verbatim_check.py` | Count the verbatim word runs a chapter shares with its sources, rated by the plagiarism thresholds; with `--words`, the chapter's word count for the page budget | Phase A, before each chapter verification (bachelor and master workflows: step A.4) |
 | `abbreviations_extract.py` | Derive the list of abbreviations from a finished DOCX | Phase B, final stages |
 | `bibliography_check.py` | Minus-test by author surname: every cited author is in the bibliography, every entry's lead author is cited | Phase B, final stages |
 | `build_reference_docx.py` | Build Pandoc's reference document (layout of the exported DOCX) from the styleguide's values | Phase B, before the first export and after a layout finding |
@@ -110,6 +110,9 @@ python3 scripts/verbatim_check.py 03_Theory_chapters/chapter_3_theory.md 02_Lite
 
 # A Word document, against the extracts folder and a single PDF:
 python3 scripts/verbatim_check.py workspace/output/document.docx workspace/sources/extracts/ workspace/sources/smith_2020.pdf
+
+# The chapter's word count alone, for the page budget (no sources needed):
+python3 scripts/verbatim_check.py --words workspace/output/chapters/ch_2_basics.md
 ```
 
 What it does:
@@ -120,6 +123,8 @@ What it does:
 4. Looks up each marked direct quote of five or more words (the parts between `[…]` or `(…)` omissions) in the sources and lists one that is not found verbatim for a check by hand, since a changed word in a quotation is an error too
 
 Exit code 0 = no run of 8 or more words, 1 = at least one run of 8 or more words (⚠️ or ❌), 2 = bad arguments, a chapter that cannot be read or holds no text (one error line), a source that cannot be read (corrupt, or encrypted with a password; the report is printed all the same, with the file under "Could not be read"), or no source text at all to compare against. Exit code 1 is a finished report, not a failure. Direct quotes not found and 🟡 runs do not change the exit code.
+
+The report's header also gives the chapter's word count, `Words: N`, for the page budget, and `--words <chapter>` prints only that line, without sources (exit code 0, or 2 for a chapter it cannot read). It counts the words as written in the text the check reads, each stretch between whitespace that holds a letter or digit (so a hyphenated compound is one word): headings, block quotes and quotations count, and in Markdown footnotes, but not the YAML front matter, HTML comments, footnote marks or the bibliography. Pandoc citekeys (`[@key, S. 5]`, the whole bracket) are not counted either, since Pandoc writes the citation only at the export: a chapter with citekeys counts a few words fewer per citation than its export, while author-year citations written into the text count. A Word chapter counts its body paragraphs only (see "Word chapters" below).
 
 The word index is built from the chapter; the source words are held in memory once. A check against a million source words takes about 50 MB when they are spread over several files, up to about 110 MB in a single text file, and a few seconds, plus the time `pypdf` needs to read the PDFs.
 
