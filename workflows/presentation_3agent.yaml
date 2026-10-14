@@ -45,7 +45,8 @@ constraints:
   slides_min: 15
   slides_max: 25
   companion_pages: 5-10        # if applicable
-  feedback_loop_max: 2
+  feedback_loop_max: 2   # for source verification (step 2); an iteration is a revision followed by a new verification, counted in workspace/state.md
+  # slides and companion pass when no ⚠️, ❌ or ❓ is left; 🟡 does not block (orchestrator.md, "Feedback loop control")
   feedback_loop_escalation:
     # See orchestrator.md -> "Feedback-loop escalation" for the full behavior.
     on_limit_reached: abort | manual_fix | force_continue (user choice)
@@ -182,7 +183,7 @@ phases:
              they differ, write it again. Your counts and the loop count go to
              workspace/state.md, not into the report.
           The user may run the script instead and hand Claude the file.
-        feedback_loop_max: 2
+        feedback_loop_max: 2   # iterations, not verification rounds: up to 3 rounds
       
       - step: 3
         agent: format-verifier
