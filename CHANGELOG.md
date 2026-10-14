@@ -8,6 +8,13 @@ Dates follow ISO 8601 (`YYYY-MM-DD`).
 
 ---
 
+## [1.3.0] — unreleased
+
+### Changed
+
+- **After the first seminar trial run on Windows** — the run took a seminar paper through `seminar_2agent.yaml`, which has no orchestrator (five chats, the main chat on Sonnet and the agents on Opus as their definitions set, the student played by a second model). All three chapters passed the source check in their second round, all 48 registry quotes stood verbatim on the right printed page, the full definition stood as a block quote, and the instruction-like box planted in one source was reported and never followed. Its findings, checked against the transcripts, changed:
+  - **Claude in the main chat coordinates seminar papers and presentations** — in the seminar run nothing told the main chat what to do without an orchestrator: the workflow said that the user drives it manually, and the main chat read the rules of `orchestrator.md` only after the user asked it to go on as cephalo intends. It created the state file without the page-count line, wrote a format round itself, shortened the source-verifier's reports and narrowed task prompts. `seminar_2agent.yaml` and `presentation_3agent.yaml` now have a `main_session` block: Claude in the main chat coordinates and the user decides; the block names what the main chat does itself and what it leaves to the agents, and the sections of `orchestrator.md` that apply, among them the state file's format, in which Claude creates the file at step 0.0. `orchestrator.md` and `CLAUDE.md` point to the block.
+
 ## [1.2.2] — 2026-10-09
 
 **A fifth trial run.** A fifth long-form trial run on Windows confirmed most changes of 1.2.1: of its ten re-checked points, seven worked as intended and two partly. Its findings, checked against the transcripts and reviewed twice, are fixed. The format-verifier's notes stay notes and propose nothing, and the styleguide template gets keys for the headings' colour and the reference list's heading. Agents read PDFs whole first, which works without poppler. Proposed styleguide values are shown and accepted before they are recorded, and a value holds only the rule. The status line follows every agent call at once, and closure statements keep a report's counts as counted.
