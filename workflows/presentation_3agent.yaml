@@ -97,8 +97,9 @@ main_session:
       running scripts/verbatim_check.py on the companion and saving the
       source-verifier's reports (step 2); naming the format-verifier's
       report files and applying the companion's format-only findings
-      (step 3); in the three-way check, the PDF export and calling its
-      agents; F.1 with the user.
+      (step 3); in the three-way check, the PDF export, calling its agents
+      and saving the source-verifier's answer (three_way_check); F.1 with
+      the user.
 
 # Workflow
 
@@ -232,6 +233,14 @@ phases:
   # ===========================================================
   three_way_check:
     agents: [format-verifier, source-verifier]
+    output: |
+      The format-verifier's part is in its step-3 report. The
+      source-verifier's answer: workspace/output/verification/<companion>_threeway_round_<n>.md
+      (<companion> as in step 2; without a companion:
+      slides_threeway_round_<n>.md; <n>: 1, then +1 after each new
+      comparison), saved unchanged and read back by Claude in the main chat
+      as in step 2, item 3. It is not a round of step 2 and does not count
+      in its loop.
     
     description: |
       Every number, quote, and statement must be consistent across three artifacts:
@@ -250,7 +259,7 @@ phases:
     steps:
       - Export PPTX to PDF (PowerPoint, or LibreOffice via soffice --headless --convert-to pdf), by Claude in the main chat or the user
       - The format-verifier and the source-verifier compare the numbers across PPTX <-> PDF <-> companion and check that the speaker notes contain the key numbers (the format-verifier reads the PPTX and its notes, which the source-verifier cannot)
-      - A discrepancy in slide text, speaker notes or companion goes to the writer as a revision, the deck is built again (step 1), and the agents compare again, until all three versions are identical
+      - A discrepancy in slide text, speaker notes or companion goes to the writer as a revision, and a round of step 2 checks what it changed (step 3's note); then the deck is built again (step 1) and exported to PDF again, and the agents compare again, until all three versions are identical
 
 # ===========================================================
 # Closing
