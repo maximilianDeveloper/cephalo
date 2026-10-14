@@ -1256,7 +1256,7 @@ jobs:
             '- p. 42: "The central challenge is the particularly pronounced' '  uncertainty inherent to this early phase."' \
             '- **Secondary citation?** Yes — Author A cites Author B (2006):' '  "markets punish delay more than they reward caution in every downturn"' > "$V/other/author_a.md"
           printf '%s\n' '| Source | Chapter | Page | Original quote | Rating |' '|---|---|---|---|---|' \
-            '| Weber 2019 | 2 | 15 | "Stadtbäume senken die Oberflächentemperatur von Fassaden an heißen Tagen deutlich" | ✅ |' > "$V/other/state.md"
+            '| Weber 2019 | 2 | 15 | "Stadtbäume senken die Oberflächentemperatur von Fassaden an heißen Tagen deutlich" | paraphrase |' > "$V/other/state.md"
           printf 'PK\003\004not a pdf' > "$V/other/fake.pdf"
           # the worked example of checklists/plagiarism_protection.md: one run of 9 words, and
           # "The central challenge" (3 words) is not listed
