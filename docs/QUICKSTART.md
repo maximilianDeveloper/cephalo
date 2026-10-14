@@ -75,6 +75,8 @@ citation rules from the guidelines directory into styleguide.md.
 List any open questions for me to resolve before we proceed.
 ```
 
+For a seminar paper or a presentation, send a different first message: these workflows have no orchestrator, so name the workflow file and ask for steps 0.0 and 0.5 (the pre-check and the style resolution), for example "I am following `workflows/seminar_2agent.yaml`; today the preparation, steps 0.0 and 0.5". Claude in the chat then runs the pre-check, creates `workspace/state.md` and calls the style-resolver itself, as the workflow's `main_session` block says.
+
 The resolver will:
 1. Read your guidelines
 2. Produce `styleguide.md` at the project root (or `00_Shared_Materials/styleguide.md`)
@@ -103,6 +105,8 @@ Choose your workflow based on your project type:
 Open the chosen workflow file once to understand the phase structure. Then start a chat for the first chapter.
 
 If your workflow uses an orchestrator (all except seminar paper and presentation), start each chat by asking Claude to invoke it: `orchestrator` (flat), `orchestrator-longform` (long-form, and the proposal and main-work sub-projects) or `orchestrator-defense` (defense sub-project). The orchestrator calls the specialist agents itself. In the CLI you can instead start the session as the orchestrator, e.g. `claude --agent orchestrator-longform`; use that mode if the orchestrator reports that it cannot call other agents.
+
+For a seminar paper or a presentation there is no orchestrator: name the workflow file and the step in your first message (for example "I am following `workflows/seminar_2agent.yaml`; today chapter 2, steps 1 to 3"). Claude in the chat then calls the agents itself, as the workflow's `main_session` block says.
 
 For long-form projects, follow the **chat closure ritual** at the end of every chat: update `00_Status.md`, write the phase's `handover.md`, suggest a Git commit. The orchestrator will guide you.
 

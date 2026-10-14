@@ -1198,6 +1198,10 @@ STEP_NO=$((STEP_NO + 1))
 if [[ "$STRUCTURE" =~ ^Multi-project ]]; then
     echo "$STEP_NO. Open a sub-project (e.g. 01_Proposal/) in Claude Code — not this root —"
     echo "   and invoke the style-resolver"
+elif [[ "$WORK_TYPE" == "Seminar paper" || "$WORK_TYPE" == "Presentation" ]]; then
+    # No orchestrator: the first message names the workflow (README.md, step 4).
+    echo "$STEP_NO. Open this directory in Claude Code; in the first message, name"
+    echo "   workflows/$WORKFLOW and ask for steps 0.0 and 0.5"
 else
     echo "$STEP_NO. Open this directory in Claude Code and invoke the style-resolver"
 fi
