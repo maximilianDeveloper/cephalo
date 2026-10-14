@@ -76,7 +76,7 @@ main_session:
     - "Page budget monitoring"           # the companion only, against constraints.companion_pages
     - "Feedback loop control"
     - "Feedback-loop escalation"
-    - "Chat closure ritual"
+    - "Chat closure ritual"              # item 6 from the three-way check on (its chat, each later chat that changes slides, speaker notes or companion, F.1), from the agents' results
     - "State file format"                # no phase line; Chapter status without the Research column
     - "Principles"                       # all but "Respect phase separation"
   note: |
@@ -88,14 +88,17 @@ main_session:
     The rest of the definition does not apply, except where a step below
     points to it: no research-agent, no extracts, no Phase A and B.
     - The agents do the steps that name them. Never do their work yourself:
-      slides, speaker notes and companion text and their revisions, the
+      slide text, speaker notes and companion text and their revisions, the
       quotes of the source registry, source and format checks, style
       resolution. If the Agent tool is missing, tell the user and stop.
     - Yours: step 0.0 and workspace/state.md; recording the answers to open
-      styleguide questions; the companion's budget and word counts; running
-      scripts/verbatim_check.py on the companion and saving the
+      styleguide questions; the companion's budget and word counts; building
+      the deck from the writer's files, as the user decides (step 1);
+      running scripts/verbatim_check.py on the companion and saving the
       source-verifier's reports (step 2); naming the format-verifier's
-      report files (step 3); the three-way check and F.1 with the user.
+      report files and applying the companion's format-only findings
+      (step 3); in the three-way check, the PDF export and calling its
+      agents; F.1 with the user.
 
 # Workflow
 
@@ -147,6 +150,18 @@ phases:
         task: |
           Define slide structure, content per slide, speaker notes.
           In parallel: written companion document if required.
+        note: |
+          The writer writes slide text and speaker notes as text files in
+          workspace/output/slides/; it cannot build a PPTX. Before step 3,
+          workspace/output/slides/<deck>.pptx is built from them, as the user
+          decides: by the user in PowerPoint, or by Claude in the main chat
+          with a python-pptx script it saves in workspace/output/slides/ and
+          runs (pptx_notes below; without python-pptx, ask the user). Either
+          way the deck keeps the writer's wording unchanged and takes its
+          layout from the institution's slide template, if the guidelines
+          give one, and from styleguide.md; a layout neither gives is asked
+          of the user, not chosen. After a revision of slide text or speaker
+          notes, the deck is built again the same way before the next check.
       
       - step: 2
         agent: source-verifier
@@ -190,7 +205,25 @@ phases:
         task: |
           - Slide layout consistent (fonts, colors, logo position)
           - Companion conforms to styleguide.md
-          - Trigger three-way check (see below)
+          - Its part of the three-way check (three_way_check below)
+        output: |
+          workspace/output/verification/<companion>_format_round_<n>.md, one
+          report for the slides and the companion (<companion> as in step 2;
+          without a companion: slides_format_round_<n>.md; <n>: 1, then +1
+          after each fix).
+        note: |
+          Claude in the main chat runs this step (main_session). The task
+          prompt names the PPTX, its PDF export (three_way_check), the
+          companion and the report file, from round 2 on also the previous
+          round's report and what changed since; the format-verifier writes
+          the report itself (orchestrator.md, "Steps 1..N: Chapter
+          assignment"; format-verifier.md, "Workflows without Phase B").
+          Claude applies the companion's format-only findings with the Edit
+          tool, without rewording. A finding in the slide text or speaker
+          notes, or one that needs new wording, goes to the writer, and a
+          round of step 2 checks what it changed; a finding in the PPTX's
+          layout is fixed where the deck is built (step 1). Then the next
+          round checks the fixes.
   
   # ===========================================================
   # Three-way consistency check
@@ -213,10 +246,9 @@ phases:
       - If companion exists: numbers consistent there too
     
     steps:
-      - Export PPTX to PDF (PowerPoint, or LibreOffice via soffice --headless --convert-to pdf)
-      - Compare numbers across PPTX <-> PDF <-> companion (manually, or with a helper script you provide)
-      - Manual check of speaker notes (do they contain the key numbers?)
-      - Correct discrepancies until all three versions are identical
+      - Export PPTX to PDF (PowerPoint, or LibreOffice via soffice --headless --convert-to pdf), by Claude in the main chat or the user
+      - The format-verifier and the source-verifier compare the numbers across PPTX <-> PDF <-> companion and check that the speaker notes contain the key numbers (the format-verifier reads the PPTX and its notes, which the source-verifier cannot)
+      - A discrepancy in slide text, speaker notes or companion goes to the writer as a revision, the deck is built again (step 1), and the agents compare again, until all three versions are identical
 
 # ===========================================================
 # Closing
