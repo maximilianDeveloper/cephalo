@@ -219,15 +219,25 @@ phases:
            comes up later in F.1 is asked too, not filled with a placeholder.
         2. Without citekeys, the writer-agent writes the reference list
            (docs/reference_management.md, "The reference list").
-        3. The title page with the table of contents field,
+        3. Consistency check, before the export: the source-verifier checks all
+           chapters and the reference list by checklists/consistency.md, Part A
+           and B.2-B.3, and each entry of the reference list against the
+           source's title page and imprint (authors, title, year, publisher or
+           series, pages). Save its answer unchanged as
+           workspace/output/verification/consistency_final.md, read back as in
+           step 2, and record its open items under the open issues of
+           workspace/state.md. Its findings go to the writer-agent (chapter text
+           and reference list), and the sentences changed get a verification
+           round (step 2).
+        4. The title page with the table of contents field,
            workspace/output/title_page.md (docs/reference_management.md,
            "The title page").
-        4. If the text uses abbreviations that styleguide.md or the guidelines
-           want listed: export once as item 5 says, derive the list from that
+        5. If the text uses abbreviations that styleguide.md or the guidelines
+           want listed: export once as item 6 says, derive the list from that
            export with scripts/abbreviations_extract.py, and add it to
            workspace/output/title_page.md after the table of contents field,
            before the first format round.
-        5. Format rounds, as .claude/agents/orchestrator.md, "Phase A → B
+        6. Format rounds, as .claude/agents/orchestrator.md, "Phase A → B
            transition", describes in items 4 and 5 of "Action on transition":
            build workspace/output/reference.docx with
            scripts/build_reference_docx.py from the values in styleguide.md;
@@ -244,13 +254,13 @@ phases:
            round check the fixes. A finding that needs new wording goes to the
            writer-agent, and a verification round (step 2) checks the sentences
            it changed.
-        6. For the user, in Word, after the last export, listed under the open
+        7. For the user, in Word, after the last export, listed under the open
            issues of workspace/state.md and named in the chat: update the fields
            (Ctrl+A, then F9); set front matter numbered unlike the main text
            (styleguide.md pagination.front_matter) as a section of its own
            (docs/reference_management.md, "The title page"); fill in the title
            page's placeholders; visual proofreading.
-        7. Before the chat closes: the "Current state" and "Open issues" of
+        8. Before the chat closes: the "Current state" and "Open issues" of
            workspace/state.md and the "Open questions" of styleguide.md agree;
            nothing is called resolved in one that is still open in another.
 
@@ -264,7 +274,7 @@ minimal_setup_notes: |
   
   Trade-offs vs. bachelor_5agent:
   - No strict separation of reading / extracting / writing
-  - No systematic cross-chapter consistency check
+  - Consistency is checked twice, not per chapter pair: by the source-verifier after the second chapter (source-verifier.md, "Cross-chapter consistency") and once in F.1
   
   For < 10 pages and < 15 sources, the overhead of the larger setup
   is not justified. Quality loss is modest.

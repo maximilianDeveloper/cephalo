@@ -124,7 +124,7 @@ The text cites a source as edition X in some places and edition Y in others. The
 
 **Why this happens:** Library copies, e-book versions, and physical copies are often different editions with different page numbers.
 
-**Detection:** source-verifier with `checklists/consistency.md` (A.5, after every second chapter; the orchestrator repeats the checklist in the final check), and format-verifier in Phase B (edition consistency, step 3 of its checks). Look for: same author with different years across the document, bibliography year not matching in-text year, mixed editions in the bibliography itself.
+**Detection:** source-verifier with `checklists/consistency.md` (A.5, after every second chapter; the orchestrator repeats the checklist in the final check, and in a seminar paper the source-verifier repeats Part A in the closing step F.1), and format-verifier in Phase B (edition consistency, step 3 of its checks). Look for: same author with different years across the document, bibliography year not matching in-text year, mixed editions in the bibliography itself.
 
 ---
 

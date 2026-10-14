@@ -1,7 +1,7 @@
 # Consistency Check
 
 **Purpose:** Verifies consistency within and between chapters.
-**Executed by:** source-verifier (cross-chapter checks), orchestrator (final check).
+**Executed by:** source-verifier (cross-chapter checks; in a seminar paper also the final check of Part A and B.2-B.3), orchestrator (final check).
 **When:** After every second chapter, plus a final check before submission.
 
 ---
@@ -50,7 +50,7 @@ To be performed by source-verifier after every second chapter.
 
 ## Part B: Full-document final check (before submission)
 
-To be performed on the exported document, after the last written chapter (introduction, written last) and the formatting phase: in the flat workflows the closing step F.1, in the long-form workflows the submission step.
+To be performed on the exported document, after the last written chapter (introduction, written last) and the formatting phase: in the flat workflows the closing step F.1, in the long-form workflows the submission step. A seminar paper (`seminar_2agent`) has no formatting phase: in its closing step F.1, the source-verifier checks Part A and B.2-B.3 on the chapter files and the reference list before the export; B.1, B.4 and B.7 come from the format rounds and the user.
 
 ### B.1 Indexes
 

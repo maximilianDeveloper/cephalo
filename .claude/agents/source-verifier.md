@@ -206,6 +206,8 @@ After every second chapter: consistency check per `checklists/consistency.md`. C
 - Does this chapter contradict earlier statements?
 - Cross-references ("as shown in Ch. 2") accurate?
 
+A final check that a task prompt names (in a seminar paper, the closing step F.1: Part A and B.2-B.3 of the checklist) covers all chapters and the reference list, and checks each entry of the reference list against the source's title page and imprint (authors, title, year, publisher or series, pages).
+
 ## Verification style
 
 - **No sugar-coating** — honest findings
