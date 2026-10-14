@@ -217,7 +217,7 @@ With citekeys, Pandoc writes the reference list from `literature.bib` (`--citepr
 - as the `bibliography.*` rules of `styleguide.md` say (entry patterns, authors, editions, DOI and URL, italics, sort order), under the heading `bibliography.heading` gives, at the level of a chapter heading (`#`, Word's Heading 1), inside the `Bibliography` div above;
 - a source the styleguide keeps out (`bibliography.secondary_original`, such as the original of a secondary citation) stays out.
 
-A seminar paper and the proposal have no Phase B. Without citekeys, the writer-agent writes their reference list as the last section of the last chapter file (proposal: of `03_Drafting/proposal_draft.md`): one entry for each source the text cites, as the `bibliography.*` rules of `styleguide.md` say, under the heading `bibliography.heading` gives, at the level of a chapter heading, inside the `Bibliography` div.
+A seminar paper and the proposal have no Phase B. Without citekeys, the writer-agent writes their reference list as the last section of the last chapter file in document order (in a seminar paper the conclusion, although the introduction is written last; proposal: of `03_Drafting/proposal_draft.md`): one entry for each source the text cites, with the data of the source itself (its title page and imprint) and of `literature.bib`, if there is one, as a cross-check; as the `bibliography.*` rules of `styleguide.md` say, under the heading `bibliography.heading` gives, at the level of a chapter heading, inside the `Bibliography` div.
 
 `scripts/bibliography_check.py` on the export then shows whether cited and listed authors match, and the format-verifier checks the patterns.
 
