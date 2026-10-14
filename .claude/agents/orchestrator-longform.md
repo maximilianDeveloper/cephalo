@@ -105,7 +105,7 @@ Every task prompt to another agent names:
 - the entries of `00_Feedback_log.md` whose **Scope** names it, as written: the other agents do not read the log themselves. Skip entries marked `[EXAMPLE]`: they come from the template, and an entry you do not follow ("Chat start ritual", item 5);
 - for a rule, the definition, `styleguide.md` or the checklist that holds it, not the rule in other words ("Point to rules, do not restate them" under "Principles").
 
-A task prompt does not narrow the check that the agent's definition sets (the format-verifier's full check in Phase B, for example), and it does not rate in advance what the agent will find: name what changed and where, not what you expect the check to show ("the title may not fit", "this fixes finding 3").
+A task prompt does not narrow the work or the check that the agent's definition sets (the "Used in" lines the writer updates, the format-verifier's full check in Phase B, for example), does not tell the agent to leave out a finding (an open item it finds again is reported again: the next step reads it in the report), and does not rate in advance what the agent will find: name what changed and where, not what you expect the check to show ("the title may not fit", "this fixes finding 3", "these should pass"). A statement about the project's state in a task prompt ("the decision log records …", "already checked against the sources") rests on a file you read in this chat.
 
 ## Chat closure ritual (mandatory)
 
