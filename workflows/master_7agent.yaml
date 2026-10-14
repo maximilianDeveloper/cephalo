@@ -287,7 +287,7 @@ phases:
     - step: F.4
       manual: true
       task: |
-        - Front matter numbered unlike the main text: only if styleguide.md pagination.front_matter is Roman or counted but not shown, the user sets it as a section of its own in Word (docs/reference_management.md, "The title page")
+        - Front matter numbered unlike the main text: only if styleguide.md pagination.front_matter is Roman, counted but not shown or none, or pagination.main_text starts at 1, the user sets it as a section of its own in Word (docs/reference_management.md, "The title page")
         - Update table of contents
         - Confirm the hyphenation setting matches styleguide.md (document.hyphenation)
         - Visual proofreading

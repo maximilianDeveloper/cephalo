@@ -230,7 +230,7 @@ Run it before the first export of Phase B, and again after a layout finding of t
 
 Exit code 0 = reference document written, 2 = not written (bad option, Pandoc not found and no `--base`, a folder or file that does not exist, a starting document it cannot read; one line says which).
 
-Not covered: heading numbers (they come from the heading text, from Pandoc's `--number-sections`, or from numbering that a `--base` template links to its heading styles, which Pandoc keeps; the script does not set any); and front matter numbered unlike the main text (Roman, or counted but not shown), which needs a section of its own (`docs/reference_management.md`, "The title page").
+Not covered: heading numbers (they come from the heading text, from Pandoc's `--number-sections`, or from numbering that a `--base` template links to its heading styles, which Pandoc keeps; the script does not set any); and front matter numbered unlike the main text (Roman, counted but not shown or none) or a main text that starts at 1, which need a section of their own (`docs/reference_management.md`, "The title page").
 
 ### `docx_postprocess.sh`
 

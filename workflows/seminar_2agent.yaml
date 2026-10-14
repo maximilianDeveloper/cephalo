@@ -257,7 +257,8 @@ phases:
         7. For the user, in Word, after the last export, listed under the open
            issues of workspace/state.md and named in the chat: set front matter
            numbered unlike the main text (styleguide.md pagination.front_matter
-           Roman or counted but not shown) as a section of its own
+           Roman, counted but not shown or none, or pagination.main_text
+           starting at 1) as a section of its own
            (docs/reference_management.md, "The title page"); update the fields
            (Ctrl+A, then F9); fill in the title page's placeholders; visual
            proofreading.
