@@ -56,9 +56,10 @@ digit (a hyphenated compound is one word), headings and block quotes
 included. In Markdown, footnotes count too; the YAML front matter, HTML
 comments, Pandoc citekeys (the whole bracket, [@key, p. 5]: Pandoc writes
 the citation only at the export), footnote marks and the bibliography do
-not, while author-year citations written into the text do. A Word chapter
-counts its body paragraphs, without tables, footnotes, text boxes and the
-bibliography. --words prints only that line and needs no sources.
+not (the line says when it recognized none), while author-year citations
+written into the text do. A Word chapter counts its body paragraphs,
+without tables, footnotes, text boxes and the bibliography. --words prints
+only that line and needs no sources.
 
 Usage:
     python scripts/verbatim_check.py <chapter> <source> [<source> ...]
@@ -416,15 +417,22 @@ def word_count(chapter: Chapter) -> str:
     The chapter's words as written, for the page budget: the stretches between
     whitespace or dashes that hold a letter or digit (long-term, city's: one
     word each) in what read_chapter keeps, headings, block quotes and
-    quotations included.
+    quotations included. The line names the bibliography as not counted only
+    if read_chapter recognized one, and otherwise says that a reference list
+    in the file counts.
     """
     n = as_written(MARKUP.sub(lambda m: m.group(1) or "", chapter.text))
     if chapter.unit == "paragraph":
-        what = ("headings and block quotes included; tables, footnotes, text boxes "
-                "and the bibliography not counted")
+        kept, left = "headings and block quotes", ["tables", "footnotes", "text boxes"]
     else:
-        what = ("headings, block quotes and footnotes included; YAML header, HTML comments, "
-                "citekeys, footnote marks and the bibliography not counted")
+        kept, left = ("headings, block quotes and footnotes",
+                      ["YAML header", "HTML comments", "citekeys", "footnote marks"])
+    if chapter.bibliography:
+        left.append("the bibliography")
+    what = f"{kept} included; {', '.join(left[:-1])} and {left[-1]} not counted"
+    if not chapter.bibliography:
+        # none, or one under a heading it does not know or with an entry without a year
+        what += "; no bibliography recognized: a reference list in the file counts"
     return f"Words: {n} (as written, {what})"
 
 
