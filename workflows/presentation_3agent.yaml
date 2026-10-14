@@ -4,8 +4,8 @@ name: presentation_3agent
 version: 3.0
 description: |
   Setup for project presentations (PPTX, typically 15-25 slides) with optional 
-  written companion document. Like seminar_2agent, but adds a format-verifier 
-  for visual consistency and the three-way check (PPTX <-> PDF <-> speaker notes).
+  written companion document. Like seminar_2agent, with the format-verifier
+  also for visual consistency and the three-way check (PPTX <-> PDF <-> speaker notes).
   No orchestrator: Claude in the main chat coordinates the agents (main_session below) and the user decides; one chat per slide cluster or phase.
   Flat directory structure, no phase folders.
   

@@ -34,9 +34,14 @@ agents:
     file: .claude/agents/style-resolver.md
     model: opus
     role: One-time extraction of institutional rules into styleguide.md
+  
+  format-verifier:
+    file: .claude/agents/format-verifier.md
+    model: inherit
+    role: Checks the exported DOCX against styleguide.md in the closing step F.1
 
-# Optional: if formal compliance is critical, the format-verifier can be added.
-# In that case, consider bachelor_5agent instead (its Phase B runs it).
+# The format-verifier checks the exported DOCX in the closing step F.1.
+# For a format phase of its own (Phase B), use bachelor_5agent.
 
 # Constraints
 
@@ -200,15 +205,54 @@ phases:
   closing:
     - step: F.1
       manual: true
+      note: |
+        Claude in the main chat runs this step (main_session), with the user
+        for the answers and the steps in Word. The writer-agent writes the
+        reference list and the format-verifier checks the export; Claude does
+        not check formats itself and writes no format report.
       task: |
-        - Resolve the open ❓ [format] entries in styleguide.md (usually with the supervisor)
-        - Verify all chapters against styleguide (checklists/format_rules.md)
-        - Export to DOCX (the scripts below read the DOCX, not the Markdown)
-        - Derive list of abbreviations from text (scripts/abbreviations_extract.py)
-        - Bibliography minus-test (scripts/bibliography_check.py)
-        - Run scripts/docx_postprocess.sh (hyphenation) only if
-          styleguide.md document.hyphenation = automatic
-        - Visual proofreading
+        1. Open questions first, before the first export: every open ❓ [format]
+           entry of styleguide.md, and every styleguide question under the open
+           issues of workspace/state.md, answered (usually with the supervisor)
+           and recorded as .claude/agents/style-resolver.md describes
+           ("Recording answers to open questions"), read in this chat. One that
+           comes up later in F.1 is asked too, not filled with a placeholder.
+        2. Without citekeys, the writer-agent writes the reference list
+           (docs/reference_management.md, "The reference list").
+        3. The title page with the table of contents field,
+           workspace/output/title_page.md (docs/reference_management.md,
+           "The title page").
+        4. If the text uses abbreviations that styleguide.md or the guidelines
+           want listed: export once as item 5 says, derive the list from that
+           export with scripts/abbreviations_extract.py, and add it to
+           workspace/output/title_page.md after the table of contents field,
+           before the first format round.
+        5. Format rounds, as .claude/agents/orchestrator.md, "Phase A → B
+           transition", describes in items 4 and 5 of "Action on transition":
+           build workspace/output/reference.docx with
+           scripts/build_reference_docx.py from the values in styleguide.md;
+           export workspace/output/document.docx with Pandoc, the title page
+           first, then the chapter files in document order
+           (docs/reference_management.md, "Citation processor pipeline"); if
+           document.hyphenation is automatic, run scripts/docx_postprocess.sh
+           after every export; then the format-verifier checks it and writes
+           workspace/output/verification/document_format_round_<n>.md (it runs
+           scripts/bibliography_check.py and scripts/abbreviations_extract.py
+           itself). Apply its format-only findings (chapter files with the Edit
+           tool, no rewording; layout by building the reference document again),
+           answer its ❓ (item 1), show the user its Notes, and let the next
+           round check the fixes. A finding that needs new wording goes to the
+           writer-agent, and a verification round (step 2) checks the sentences
+           it changed.
+        6. For the user, in Word, after the last export, listed under the open
+           issues of workspace/state.md and named in the chat: update the fields
+           (Ctrl+A, then F9); set front matter numbered unlike the main text
+           (styleguide.md pagination.front_matter) as a section of its own
+           (docs/reference_management.md, "The title page"); fill in the title
+           page's placeholders; visual proofreading.
+        7. Before the chat closes: the "Current state" and "Open issues" of
+           workspace/state.md and the "Open questions" of styleguide.md agree;
+           nothing is called resolved in one that is still open in another.
 
 # Notes on the lean setup
 
@@ -216,7 +260,7 @@ minimal_setup_notes: |
   The 2-agent setup is intentionally lean:
   - No separate research-agent: the writer-agent reads sources directly
   - No orchestrator: Claude in the main chat coordinates (main_session), the user decides
-  - No format-verifier loop: formal compliance is checked manually at the end
+  - No format phase: the format-verifier checks the exported DOCX in F.1, and again after fixes
   
   Trade-offs vs. bachelor_5agent:
   - No strict separation of reading / extracting / writing
