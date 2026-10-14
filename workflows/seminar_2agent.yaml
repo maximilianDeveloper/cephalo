@@ -195,9 +195,9 @@ phases:
       - step: 3
         manual: true
         task: |
-          Update workspace/state.md (manually or via writer-agent): the chapter
-          status, its word count as "Page budget monitoring" counts it, and
-          Page count: [X] of [max]
+          Claude in the main chat updates workspace/state.md (main_session):
+          the chapter status, its word count as "Page budget monitoring"
+          counts it, and Page count: [X] of [max]
   
   # ===========================================================
   # Closing
