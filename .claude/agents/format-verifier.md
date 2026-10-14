@@ -94,7 +94,7 @@ Verify the following categories. Concrete values (font size, page-range notation
 
 ## Style
 - [ ] Forbidden evaluative wording per styleguide (`style.forbidden_evaluative`)
-- [ ] Block quotes per styleguide (`style.block_quote_word_threshold`, `style.block_quote_format`)
+- [ ] Block quotes per styleguide (`style.block_quote_word_threshold`, `style.block_quote_format`, including where a block quote's citation stands)
 - [ ] Changes inside quotes marked per styleguide (`style.quote_alterations`)
 - [ ] Footnote policy per styleguide (`style.footnotes`)
 ```

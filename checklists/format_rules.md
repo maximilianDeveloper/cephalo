@@ -100,6 +100,7 @@ For every category below: **read concrete values from `styleguide.md`**, not fro
 - [ ] Forbidden pronouns (styleguide: `style.forbidden_pronouns`)
 - [ ] Forbidden evaluative wording (styleguide: `style.forbidden_evaluative`; e.g., "remarkable", "particularly noteworthy")
 - [ ] Block quote threshold (styleguide: `style.block_quote_word_threshold`)
+- [ ] Block quote layout, and where its citation stands (styleguide: `style.block_quote_format`)
 - [ ] Footnote policy (styleguide: `style.footnotes`)
 
 ---

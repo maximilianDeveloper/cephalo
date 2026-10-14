@@ -129,7 +129,7 @@
 - **`forbidden_pronouns`:** [list — e.g., "I", "we", "one", "you" or local-language equivalents]
 - **`forbidden_evaluative`:** [optional list — e.g., "remarkable", "particularly noteworthy"]
 - **`block_quote_word_threshold`:** [e.g., 40 words]
-- **`block_quote_format`:** [e.g., indented 1 cm, 10 pt, single-spaced, without quotation marks]
+- **`block_quote_format`:** [e.g., indented 1 cm, 10 pt, single-spaced, without quotation marks; and where its citation stands, inside the quote after its last sentence or after the quote]
 - **`quote_alterations`:** [e.g., insertions in square brackets, omissions as `[...]`, added emphasis marked, a quote within a quote in single quotation marks]
 - **`emphasis`:** [italic only / bold allowed / underline forbidden / etc.]
 - **`footnotes`:** [allowed / discouraged / forbidden]
