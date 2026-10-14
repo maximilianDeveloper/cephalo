@@ -4,7 +4,8 @@ build_reference_docx.py
 
 Builds the reference document Pandoc takes the layout of an exported DOCX
 from (`pandoc --reference-doc`): page size, margins, the page number, the
-title page's numbering, and the paragraph styles Pandoc sets the text in.
+title page's numbering, the paragraph styles Pandoc sets the text in, and
+the styles Word sets the table of contents in.
 The values come from styleguide.md; the orchestrator reads them there and
 passes them as options. What is not given stays as in Pandoc's own reference
 document (see docs/reference_management.md, "The reference document").
@@ -16,7 +17,7 @@ Usage:
         --heading-color 000000 --quote-indent 1 --quote-size 10 \\
         --quote-line-spacing 1 --footnote-size 10 --bib-hanging 1 \\
         --page-size A4 --margins 2.5 --page-number bottom-right \\
-        --title-page counted --lang de-DE
+        --title-page counted --toc-bold 1 --lang de-DE
 
     Sizes in pt, lengths in cm (or with a unit: 12mm, 0.5in, 6pt), line
     spacing as a multiple (1, 1.15, 1.5, 2). A single value may take a
@@ -54,7 +55,7 @@ try:
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.oxml import OxmlElement
     from docx.oxml.ns import qn
-    from docx.shared import Cm, Pt, RGBColor
+    from docx.shared import Cm, Pt, RGBColor, Twips
 except ImportError:
     print("Error: python-docx is not installed (pip install -r requirements.txt).")
     sys.exit(2)
@@ -68,6 +69,10 @@ PAGE_NUMBER = ("bottom-right", "bottom-center", "bottom-left", "top-right", "top
 AFTER_PGNUMTYPE = ("cols", "formProt", "vAlign", "noEndnote", "titlePg", "textDirection",
                    "bidi", "rtlGutter", "docGrid", "printerSettings", "sectPrChange")
 CM_PER = {"cm": 1.0, "mm": 0.1, "in": 2.54, "pt": 2.54 / 72}
+# Word's own layout of its table of contents styles (toc 1, toc 2, ...): space after
+# and the left indent each level below 1 adds, in twips.
+TOC_SPACE_AFTER = 100
+TOC_INDENT_PER_LEVEL = 220
 TEMPLATE_TYPE = b"application/vnd.openxmlformats-officedocument.wordprocessingml.template.main+xml"
 DOCUMENT_TYPE = b"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"
 
@@ -110,6 +115,30 @@ def yes_no(text, what):
     if t in ("no", "n", "false", "0", "regular"):
         return False
     raise UsageError(f"{what}: '{text}' is not yes or no")
+
+
+def level_list(text, what):
+    """Heading levels as a comma list (1, or 1,2), or none."""
+    t = text.strip().lower()
+    if t == "none":
+        return []
+    parts = [p.strip() for p in t.split(",")]
+    if not all(re.fullmatch(r"[1-9]", p) for p in parts):
+        raise UsageError(f"{what}: '{text}' is not a list of levels such as 1 or 1,2, or none")
+    return sorted({int(p) for p in parts})
+
+
+def levels_text(levels):
+    """[1] as 'level 1', [1, 2, 3] as 'levels 1-3', [1, 3, 5] as 'levels 1, 3 and 5'."""
+    runs = []
+    for n in levels:
+        if runs and n == runs[-1][1] + 1:
+            runs[-1][1] = n
+        else:
+            runs.append([n, n])
+    names = [f"{a}-{b}" if b > a else str(a) for a, b in runs]
+    joined = names[0] if len(names) == 1 else ", ".join(names[:-1]) + " and " + names[-1]
+    return ("level " if len(levels) == 1 else "levels ") + joined
 
 
 def hex_color(text, what):
@@ -370,6 +399,29 @@ def build(args):
         if args.heading_color:
             set_color(st, args.heading_color)
 
+    # Table of contents: the styles Word sets its entries in when it fills the field in, named as
+    # Word names them. A new one gets Word's own layout; one the starting document has keeps its
+    # layout. Only the weight comes from the styleguide.
+    if args.toc_bold is not None:
+        depth = max([3] + args.toc_bold)
+        for level in range(1, depth + 1):
+            toc = existing(doc, f"toc {level}")
+            if toc is None:
+                toc = doc.styles.add_style(f"toc {level}", WD_STYLE_TYPE.PARAGRAPH, builtin=True)
+                toc.style_id = f"TOC{level}"
+                toc.base_style = normal
+                toc.next_paragraph_style = normal
+                toc.priority = 39
+                toc.unhide_when_used = True
+                toc.paragraph_format.space_after = Twips(TOC_SPACE_AFTER)
+                if level > 1:
+                    toc.paragraph_format.left_indent = Twips(TOC_INDENT_PER_LEVEL * (level - 1))
+            toc.font.bold = level in args.toc_bold
+        regular = [n for n in range(1, depth + 1) if n not in args.toc_bold]
+        parts = [levels_text(args.toc_bold) + " bold"] if args.toc_bold else []
+        parts += [levels_text(regular) + " regular"] if regular else []
+        done.append("table of contents: " + ", ".join(parts))
+
     # Block quotes.
     if args.quote_indent is not None:
         # Pandoc's own indents block quotes on both sides; a styleguide usually names only the left.
@@ -492,6 +544,8 @@ def main(argv=None):
     ap.add_argument("--heading-color", help="heading colour as hex, e.g. 000000 (all levels; Pandoc's own is blue)")
     ap.add_argument("--heading-space-before", help="space before a heading in pt")
     ap.add_argument("--heading-space-after", help="space after a heading in pt")
+    ap.add_argument("--toc-bold", help="table of contents levels in bold, e.g. 1 or 1,2, or none "
+                                       "(headings.toc_emphasis); writes Word's styles toc 1 to toc 3")
     ap.add_argument("--quote-indent", help="block quote indent on the left in cm (style.block_quote_format)")
     ap.add_argument("--quote-indent-right", help="block quote indent on the right in cm (default 0 once "
                                                  "--quote-indent is given)")
@@ -542,6 +596,8 @@ def main(argv=None):
             args.heading_bold = yes_no(args.heading_bold, "--heading-bold")
         if args.heading_color:
             args.heading_color = hex_color(args.heading_color, "--heading-color")
+        if args.toc_bold is not None:
+            args.toc_bold = level_list(args.toc_bold, "--toc-bold")
         if args.link_color:
             args.link_color = hex_color(args.link_color, "--link-color")
         done = build(args)

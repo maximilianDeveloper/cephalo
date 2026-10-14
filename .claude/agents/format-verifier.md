@@ -73,7 +73,7 @@ Verify the following categories. Concrete values (font size, page-range notation
 - [ ] Position per styleguide
 
 ## Indexes
-- [ ] Table of contents: automatic generation; level formatting per styleguide (`headings.toc_emphasis`)
+- [ ] Table of contents: automatic generation; level formatting per styleguide (`headings.toc_emphasis`), in the DOCX's styles `TOC 1` and following, which Word sets the entries in when it fills the field (`docs/reference_management.md`, "The title page")
 - [ ] Abbreviations: only actually-used abbreviations
   (automation: scripts/abbreviations_extract.py)
 - [ ] Bibliography: conventions per styleguide, including its heading (`bibliography.heading`), the entry pattern per source type, co-authors and the originals of secondary citations (`bibliography.entry_patterns`, `bibliography.multiple_authors`, `bibliography.secondary_original`)

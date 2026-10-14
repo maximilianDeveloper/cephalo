@@ -175,7 +175,7 @@ For LaTeX users: biblatex with biber renders citekeys as well, for a PDF. The DO
 
 ### The reference document
 
-The `--reference-doc` file carries the layout: page size, margins, the footer with the page number, and the paragraph styles; Pandoc takes all of these from it. Keep it in the project, as `08_Formal_Review/reference.docx` (flat: `workspace/output/reference.docx`), and build it from the values in `styleguide.md` with `scripts/build_reference_docx.py` (`docs/scripts.md`): it starts from Pandoc's own and sets the styles below, page size, margins, the page number and the title page's numbering. By hand, start from `pandoc -o 08_Formal_Review/reference.docx --print-default-data-file reference.docx` and adjust it in Word (Modify Style; Layout for page size and margins). The format check's layout findings are fixed there, by building it again with the corrected value, not in the chapter files.
+The `--reference-doc` file carries the layout: page size, margins, the footer with the page number, and the paragraph styles; Pandoc takes all of these from it. Keep it in the project, as `08_Formal_Review/reference.docx` (flat: `workspace/output/reference.docx`), and build it from the values in `styleguide.md` with `scripts/build_reference_docx.py` (`docs/scripts.md`): it starts from Pandoc's own and sets the styles below, page size, margins, the page number, the title page's numbering and the table of contents styles ("The title page"). By hand, start from `pandoc -o 08_Formal_Review/reference.docx --print-default-data-file reference.docx` and adjust it in Word (Modify Style; Layout for page size and margins). The format check's layout findings are fixed there, by building it again with the corrected value, not in the chapter files.
 
 Pandoc sets the text in these styles, so these are the ones to adjust:
 
@@ -241,7 +241,7 @@ Title of the work
 ```
 ````
 
-The level formatting of the table of contents (`headings.toc_emphasis`) comes from the styles `TOC 1` to `TOC 3`, which Word adds to the document when it fills the field in.
+The level formatting of the table of contents (`headings.toc_emphasis`) comes from the styles `TOC 1` to `TOC 3` of the reference document: build them with `scripts/build_reference_docx.py --toc-bold`, which gives them Word's own indents and spacing and sets only their weight. Without them, Word uses its own when it fills the field in.
 
 The page numbers follow `pagination.title_page` in `styleguide.md`, and Pandoc takes the settings for them from the reference document:
 
