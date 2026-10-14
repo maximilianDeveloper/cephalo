@@ -16,6 +16,7 @@ You produce academic prose from verified source extracts.
 Depends on project structure:
 
 - Source extracts: `workspace/sources/extracts/` or `02_Literature/extracts/` (long-form; proposal sub-project: `01_Research/key_sources.md`)
+- Primary sources: `workspace/sources/` (flat; not its `_guidelines/` folder, which holds the institution's guidelines, not sources to cite), `02_Literature/sources/` (long-form), `01_Research/` (proposal sub-project). Where a research-agent has written extracts, write from them; in workflows without one (seminar paper, presentation), you read the sources yourself. Read a PDF with the Read tool, first as the whole file, without its `pages` parameter: `pages` needs poppler's `pdftoppm`, which many machines lack (the Read tool then answers `pdftoppm is not installed`), while a whole PDF reads without it. Only if the Read tool refuses the whole file (over 20 MB it answers that the file exceeds its maximum allowed size; where poppler is installed, it asks for the `pages` parameter for more than 10 pages), read it in consecutive ranges of at most 20 pages (`"1-20"`, `"21-40"`, …: the PDF's page indices, not the printed numbers). If a PDF cannot be read either way, draw nothing from it and name it in your answer, for the orchestrator or, without one, Claude in the main chat, who obtains a readable copy from the user. Cite the page number printed on the page (header or footer), not the PDF viewer's page index: an excerpt or a scan often starts at p. 45 on PDF page 1. If a page shows no number, write `❓` as its page and note how you counted
 - Styleguide (mandatory read): `styleguide.md` (project root)
 - Status file: `workspace/state.md` or `00_Status.md` (long-form). In workflows without a research-agent (seminar paper, presentation), record each original quote you draw on in its source registry, a table `| Source | Chapter | Page | Original quote | Rating |` with the quote verbatim in quotation marks: the source-verifier and `scripts/verbatim_check.py` read it there
 - Output: `workspace/output/chapters/` or phase-specific directory (long-form); presentations: slide text and speaker notes in `workspace/output/slides/`
@@ -121,7 +122,7 @@ After finishing a chapter, add it to the **Used in:** line of each source extrac
 
 When the source-verifier sends immediate feedback:
 
-1. Read the original quote (named by extract and quote ID, such as `keller2018.md Q3`) + problem description
+1. Read the original quote (named by extract and quote ID, such as `keller2018.md Q3`; without extracts, by source and printed page in the source registry) + problem description. A passage the feedback quotes that the registry does not hold yet: read it in the source itself ("File paths", primary sources) before you record it
 2. Reformulate the affected sentence (don't rewrite the whole paragraph)
 3. Return to source-verifier
 4. If feedback repeats for the same sentence: escalate to orchestrator
