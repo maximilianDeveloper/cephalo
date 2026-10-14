@@ -151,12 +151,37 @@ phases:
         agent: source-verifier
         task: |
           Verify all numbers, quotes, citations on slides AND in companion.
-          Plagiarism check on the companion: before every verification round,
-          have Claude run scripts/verbatim_check.py on it (or run it yourself)
-          and give the output to the source-verifier; on Windows, use py instead
-          of python3, and do not save the output with ">" in Windows PowerShell,
-          which writes UTF-16 (see docs/scripts.md):
-            python3 scripts/verbatim_check.py workspace/output/chapters/<companion>.md workspace/sources/ workspace/state.md
+          Plagiarism check on the companion, with the report of
+          scripts/verbatim_check.py (note below).
+        output: |
+          workspace/output/verification/<companion>_round_<n>.md, with
+          <companion>_round_<n>_verbatim.txt beside it (<companion>: the
+          companion file's name without .md; <n>: 1, then +1 after each
+          revision). Without a companion: slides_round_<n>.md alone.
+        note: |
+          Claude in the main chat runs this step (main_session). Each round:
+          1. Count the companion's verbatim runs with the script in Claude
+             Code's Bash tool (Git Bash on Windows, with py instead of python3,
+             not "python3 ... || py ...": exit code 1 is a finished report),
+             and save its output beside the reports:
+               mkdir -p workspace/output/verification && python3 scripts/verbatim_check.py workspace/output/chapters/<companion>.md workspace/sources/ workspace/state.md > workspace/output/verification/<companion>_round_<n>_verbatim.txt 2>&1
+             Not with ">" in Windows PowerShell, which writes UTF-16
+             (docs/scripts.md). Exit code 0 or 1: the report is finished;
+             2: tell the user what the file says. Without Python, the
+             source-verifier counts the runs by eye.
+          2. Give the source-verifier the slides, the companion file and that
+             report file; from round 2 on, also the previous round's report
+             and the sentences the revision changed. For a revision, give the
+             writer the report file, or the findings as the report gives them.
+          3. The source-verifier cannot write files, so do not ask it to. Save
+             its answer unchanged as <companion>_round_<n>.md: the writer and
+             the next round work from it. Nothing is shortened, reworded or
+             added; only an absolute path becomes project-relative. After the
+             Write, read the file back and compare its number of table rows
+             and of "Status:" lines, and its last line, with the answer; if
+             they differ, write it again. Your counts and the loop count go to
+             workspace/state.md, not into the report.
+          The user may run the script instead and hand Claude the file.
         feedback_loop_max: 2
       
       - step: 3
