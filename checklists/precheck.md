@@ -43,7 +43,7 @@ For the active chapter, all sources to be cited must be available.
 - [ ] E-books (EPUB) converted first: an EPUB is a ZIP archive the agents cannot open. Convert it to PDF or text (e.g. with Calibre) and cite the print edition's page numbers where the e-book shows them; if it has none, ask how to cite it (chapter or section) and log the answer as a decision (`00_Decisions.md`; flat projects: `workspace/state.md`)
 - [ ] Access verified (institutional databases — sessions still valid?)
 - [ ] No source from memory only — original file must exist
-- [ ] File contents inspected; do not trust filenames. `file` and a look at the first page (title, author, page numbering) are enough here: reading a source in full is the research-agent's job in its chapter step, and the style-resolver reads the guidelines when it runs
+- [ ] File contents inspected; do not trust filenames. `file` and a look at the first page (title, author, page numbering) are enough here. For that look, read a PDF with the Read tool as the whole file, without its `pages` parameter, which needs poppler's `pdftoppm` (section 6). Working through a source is the research-agent's job in its chapter step (in workflows without one, the writer's), and the style-resolver reads the guidelines when it runs
 
 ### File disguise check
 
