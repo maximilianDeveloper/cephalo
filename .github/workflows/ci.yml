@@ -1861,6 +1861,33 @@ jobs:
           d.save(sys.argv[1])
           EOF
           python scripts/build_reference_docx.py "$R/logo.docx" --base "$R/base-logo.docx" --page-number top-right --title-page counted >/dev/null
+          # The same template with a running head and "Seite 1 von 9" in the paragraph of the logo and the link, and a
+          # footer whose number stands before a text: only the number goes, with the text between the same tabs, in the
+          # reference document (--page-number) and in the front and back matter (the template's own number kept).
+          python - "$R/base-logo.docx" "$R/base-samepar.docx" <<'EOF'
+          import sys
+          import docx
+          from docx.oxml import parse_xml
+          from docx.oxml.ns import nsdecls
+          def runs(p, *xml):
+              for x in xml:
+                  p._p.append(parse_xml(f'<w:r {nsdecls("w")}>{x}</w:r>'))
+          def simple(p, instr):
+              p._p.append(parse_xml(f'<w:fldSimple {nsdecls("w")} w:instr=" {instr} "><w:r><w:t>1</w:t></w:r></w:fldSimple>'))
+          d = docx.Document(sys.argv[1])
+          p = d.sections[0].header.paragraphs[0]
+          runs(p, '<w:tab/><w:t>Laufkopf</w:t><w:tab/><w:t xml:space="preserve">Seite </w:t>', '<w:fldChar w:fldCharType="begin"/>',
+               '<w:instrText xml:space="preserve"> PAGE </w:instrText>', '<w:fldChar w:fldCharType="separate"/>', '<w:t>1</w:t>',
+               '<w:fldChar w:fldCharType="end"/>', '<w:t xml:space="preserve"> von </w:t>')
+          simple(p, "NUMPAGES")
+          footer = d.sections[0].footer
+          footer.is_linked_to_previous = False
+          simple(footer.paragraphs[0], "PAGE")
+          runs(footer.paragraphs[0], '<w:tab/><w:tab/><w:t>Fusszeile</w:t>')
+          d.save(sys.argv[2])
+          EOF
+          python scripts/build_reference_docx.py "$R/samepar.docx" --base "$R/base-samepar.docx" --title-page counted >/dev/null
+          python scripts/build_reference_docx.py "$R/samepar-numbered.docx" --base "$R/base-samepar.docx" --page-number bottom-right --title-page counted >/dev/null
           # A template whose footer is a table with the page number in a cell: the cell keeps a paragraph when
           # the number goes, in the reference document (--page-number) and in the front matter (the template's
           # own number kept).
@@ -1910,7 +1937,7 @@ jobs:
           { cat "$R/back.md"; printf '\n```{=openxml}\n%s\n```\n' "$BACK"; } > "$R/back-twice.md"
           BBM='<w:bookmarkStart w:id="990002" w:name="_cephalo_back_matter_start"/><w:bookmarkEnd w:id="990002"/>'
           sed "s|$BACK|<w:p>$BBM</w:p><w:p><w:r><w:br w:type=\"page\"/></w:r></w:p>|" "$R/back.md" > "$R/back-beside.md"
-          for ref in counted notcounted top dash upper; do
+          for ref in counted notcounted top dash upper samepar; do
             pandoc "$R/title_page.md" "$R/ch.md" "$R/back.md" --reference-doc "$R/$ref.docx" -o "$R/back-$ref-export.docx"
           done
           pandoc "$R/nomark.md" "$R/ch.md" "$R/back.md" --reference-doc "$R/counted.docx" -o "$R/back-nomark-export.docx"
@@ -2002,6 +2029,7 @@ jobs:
           bm dash roman restart restart back-dash
           bm counted hidden continue none back-none
           bm top roman restart none back-none-top
+          bm samepar hidden restart none back-samepar
           # Front matter numbered like the main text: only the back matter is split, also without the front
           # matter's bookmark, unless its count is needed.
           bm counted arabic continue restart back-only
@@ -2116,13 +2144,33 @@ jobs:
           part = part_of("logo", hf(f)[0])
           check("r:embed=" in part and "<w:hyperlink" in part and "PAGE" not in part,
                 "logo: the front matter's header keeps the picture and the link, not the number")
-          z = zipfile.ZipFile(f"{R}/logo.docx")
-          for name in z.namelist():
-              if re.fullmatch(r"word/(header|footer)\d+\.xml", name):
-                  used = set(re.findall(r'\br:(?:embed|id)="([^"]+)"', z.read(name).decode("utf-8")))
-                  rels = "word/_rels/" + name[len("word/"):] + ".rels"
-                  ids = set(re.findall(r'\bId="([^"]+)"', z.read(rels).decode("utf-8"))) if rels in z.namelist() else set()
-                  check(used <= ids, f"logo: {name} refers to {sorted(used - ids)}, which {rels} does not define")
+          for doc in ("logo", "back-samepar", "samepar-numbered"):
+              z = zipfile.ZipFile(f"{R}/{doc}.docx")
+              for name in z.namelist():
+                  if re.fullmatch(r"word/(header|footer)\d+\.xml", name):
+                      used = set(re.findall(r'\br:(?:embed|id)="([^"]+)"', z.read(name).decode("utf-8")))
+                      rels = "word/_rels/" + name[len("word/"):] + ".rels"
+                      ids = set(re.findall(r'\bId="([^"]+)"', z.read(rels).decode("utf-8"))) if rels in z.namelist() else set()
+                      check(used <= ids, f"{doc}: {name} refers to {sorted(used - ids)}, which {rels} does not define")
+          # A page number in a paragraph with a logo, a link and a running head, and one before a text: only the
+          # number goes, with "Seite ... von" and the NUMPAGES field between the same tabs.
+          f, m, b, _ = sections("back-samepar", 3)
+          for where, s in (("front matter", f), ("back matter", b)):
+              check(hf(s) and footers(s), f"samepar: the {where} has no header or footer of its own")
+              head, foot = part_of("back-samepar", hf(s)[0]), part_of("back-samepar", footers(s)[0])
+              check(all(x in head for x in ("r:embed=", "<w:hyperlink", "Laufkopf")) and "Fusszeile" in foot,
+                    f"samepar: the {where} loses what stands beside the page number")
+              check("PAGE" not in head + foot and "Seite" not in head and " von " not in head,
+                    f"samepar: the {where} keeps the page number or its words")
+          head, foot = part_of("back-samepar", hf(m)[0]), part_of("back-samepar", footers(m)[0])
+          check(" PAGE " in head and "Seite" in head and " PAGE " in foot, "samepar: the main text keeps its page numbers")
+          z = zipfile.ZipFile(f"{R}/samepar-numbered.docx")
+          parts = {n: z.read(n).decode("utf-8") for n in z.namelist() if re.fullmatch(r"word/(header|footer)\d+\.xml", n)}
+          heads = "".join(x for n, x in parts.items() if "header" in n)
+          foots = "".join(x for n, x in parts.items() if "footer" in n)
+          check(all(x in heads for x in ("r:embed=", "<w:hyperlink", "Laufkopf")) and "Fusszeile" in foots
+                and "PAGE" not in heads and "Seite" not in heads and foots.count(" PAGE ") == 1,
+                "samepar: the reference document keeps the template's content beside its page number, and one PAGE field")
           def empty_cells(path):
               """The headers and footers of a DOCX with a table cell that holds no paragraph or table."""
               z = zipfile.ZipFile(path)

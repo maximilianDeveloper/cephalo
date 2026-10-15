@@ -248,8 +248,49 @@ def page_field(paragraph):
     paragraph._p.append(fld)
 
 
+def is_page(instr):
+    """Whether a field instruction is a PAGE field."""
+    return "PAGE" in (instr or "").upper().split()
+
+
+def strip_page_field(p):
+    """Take the PAGE fields out of paragraph p, with the text and fields between the same tabs or line breaks
+    ("Page 3 of 9"); a running head, a logo or a link beside them stays, and so does a text box in p, whose
+    paragraphs are taken on their own. The number of PAGE fields taken out."""
+    items, stop, field, depth = [], 0, None, 0  # items: [tab stop, elements, whether a PAGE field]
+    for el in p.iter(qn("w:fldSimple"), qn("w:r")):
+        if next(el.iterancestors(qn("w:p")), None) is not p \
+                or any(a.tag == qn("w:fldSimple") for a in el.iterancestors()):
+            continue
+        if el.tag == qn("w:fldSimple"):
+            items.append([stop, [el], is_page(el.get(qn("w:instr")))])
+            continue
+        chars = [c.get(qn("w:fldCharType")) for c in el.iter(qn("w:fldChar"))]
+        if depth == 0 and "begin" in chars:
+            field = [stop, [], False]
+            items.append(field)
+        depth += chars.count("begin")
+        if depth:  # a field from its begin to its end, as Word writes one: runs of its own
+            field[1].append(el)
+            field[2] = field[2] or any(is_page(t.text) for t in el.iter(qn("w:instrText")))
+            depth = max(depth - chars.count("end"), 0)
+            continue
+        for c in el:
+            if c.tag in (qn("w:tab"), qn("w:ptab"), qn("w:br"), qn("w:cr")):
+                stop += 1
+            elif c.tag == qn("w:t"):
+                items.append([stop, [c], False])
+    stops = {s for s, _, page in items if page}
+    for s, elements, _ in items:
+        for e in elements if s in stops else ():
+            if e.getparent() is not None:
+                e.getparent().remove(e)
+    return sum(1 for _, _, page in items if page)
+
+
 def remove_page_numbers(part_element):
-    """Remove page numbers a starting document already has: Word's gallery blocks and paragraphs with a PAGE field."""
+    """Remove page numbers a starting document already has: Word's gallery blocks, and PAGE fields with the text
+    between the same tabs."""
     removed = 0
     for sdt in list(part_element.iter(qn("w:sdt"))):
         gallery = sdt.find(".//" + qn("w:docPartGallery"))
@@ -257,16 +298,18 @@ def remove_page_numbers(part_element):
             sdt.getparent().remove(sdt)
             removed += 1
     for p in list(part_element.iter(qn("w:p"))):
-        has_field = any("PAGE" in (f.get(qn("w:instr")) or "").upper().split() for f in p.iter(qn("w:fldSimple")))
-        has_field = has_field or any("PAGE" in (t.text or "").upper().split() for t in p.iter(qn("w:instrText")))
         parent = p.getparent()
-        if has_field and parent is not None:
-            parent.remove(p)
-            removed += 1
-            # A table cell or text box needs at least one paragraph or table, or Word reports the file damaged.
-            if parent.tag in (qn("w:tc"), qn("w:txbxContent")) and parent.find(qn("w:p")) is None \
-                    and parent.find(qn("w:tbl")) is None:
-                parent.append(OxmlElement("w:p"))
+        if parent is None or not strip_page_field(p):
+            continue
+        removed += 1
+        if "".join(t.text or "" for t in p.iter(qn("w:t"))).strip() \
+                or any(p.find(".//" + qn(tag)) is not None for tag in ("w:drawing", "w:pict", "w:object")):
+            continue  # a running head, a logo or a link stays in its paragraph
+        parent.remove(p)
+        # A table cell or text box needs at least one paragraph or table, or Word reports the file damaged.
+        if parent.tag in (qn("w:tc"), qn("w:txbxContent")) and parent.find(qn("w:p")) is None \
+                and parent.find(qn("w:tbl")) is None:
+            parent.append(OxmlElement("w:p"))
     # A header or footer needs at least one paragraph or table.
     if part_element.find(qn("w:p")) is None and part_element.find(qn("w:tbl")) is None:
         part_element.append(OxmlElement("w:p"))
@@ -505,7 +548,8 @@ def build(args):
             page_field(p)
             # The empty paragraph a new header or footer starts with would add a line.
             for old in list(part._element.findall(qn("w:p"))):
-                if old is not p._p and not "".join(old.itertext()).strip() and old.find(".//" + qn("w:drawing")) is None:
+                if old is not p._p and not "".join(old.itertext()).strip() \
+                        and all(old.find(".//" + qn(tag)) is None for tag in ("w:drawing", "w:pict", "w:object")):
                     part._element.remove(old)
             done.append(f"page number {args.page_number}")
         if args.title_page and args.title_page != "none":
