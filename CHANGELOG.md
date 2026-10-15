@@ -8,7 +8,9 @@ Dates follow ISO 8601 (`YYYY-MM-DD`).
 
 ---
 
-## [1.3.0] — unreleased
+## [1.3.0] — 2026-10-15
+
+**A first seminar trial run.** A seminar paper went through `seminar_2agent.yaml`, which has no orchestrator, in a trial run on Windows. Its content held up: all three chapters passed the source check in their second round, every registry quote stood verbatim on the right page, and an instruction-like text planted in a source was reported and never followed. Most of its findings came from one gap, that nothing told Claude in the main chat what to do, and are fixed: the seminar and presentation workflows name the main chat's duties and the parts of `orchestrator.md` that apply, reports are saved unchanged, the page budget is set and counted before each verification, and the closing step is spelled out, with the format-verifier on the exported DOCX and a consistency check. The new `scripts/docx_pagination.py` numbers front and back matter unlike the main text after each export (Roman numerals, counted but not shown, or none), in place of steps in Word; a Word check confirmed it. `verbatim_check.py` counts words as written and gives a chapter's word count, and `build_reference_docx.py` builds the table of contents styles.
 
 ### Changed
 
