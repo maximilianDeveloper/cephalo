@@ -124,6 +124,9 @@ def without_page_numbers(doc, ref):
     footer = ref.tag == qn("w:footerReference")
     new = (FooterPart if footer else HeaderPart).new(doc.part.package)
     new._element = element
+    for rel in part.rels.values():  # the copy keeps the pictures and links of the original, under the same ids
+        new.rels.add_relationship(rel.reltype, rel.target_ref if rel.is_external else rel.target_part,
+                                  rel.rId, rel.is_external)
     return doc.part.relate_to(new, RT.FOOTER if footer else RT.HEADER)
 
 

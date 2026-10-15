@@ -1826,7 +1826,35 @@ jobs:
           d.sections[-1].header.add_paragraph("Laufkopf")
           d.save(sys.argv[1])
           EOF
-          for ref in counted notcounted top; do
+          # A template with a logo and a link in the header that gets the page number: the front matter's
+          # copy of that header keeps both.
+          python - "$R/base-logo.docx" <<'EOF'
+          import io, struct, sys, zlib
+          import docx
+          from docx.opc.constants import RELATIONSHIP_TYPE as RT
+          from docx.oxml import OxmlElement
+          from docx.oxml.ns import qn
+          def chunk(kind, data):
+              return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data) & 0xffffffff)
+          raw = b"".join(b"\x00" + b"\x00\x00\xff" * 8 for _ in range(8))
+          png = (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", 8, 8, 8, 2, 0, 0, 0))
+                 + chunk(b"IDAT", zlib.compress(raw)) + chunk(b"IEND", b""))
+          d = docx.Document()
+          header = d.sections[0].header
+          header.is_linked_to_previous = False
+          p = header.paragraphs[0]
+          p.add_run().add_picture(io.BytesIO(png))
+          link = OxmlElement("w:hyperlink")
+          link.set(qn("r:id"), header.part.relate_to("https://example.org/", RT.HYPERLINK, is_external=True))
+          run, text = OxmlElement("w:r"), OxmlElement("w:t")
+          text.text = "Link"
+          run.append(text)
+          link.append(run)
+          p._p.append(link)
+          d.save(sys.argv[1])
+          EOF
+          python scripts/build_reference_docx.py "$R/logo.docx" --base "$R/base-logo.docx" --page-number top-right --title-page counted >/dev/null
+          for ref in counted notcounted top logo; do
             pandoc "$R/title_page.md" "$R/ch.md" --reference-doc "$R/$ref.docx" -o "$R/$ref-export.docx"
           done
           pandoc "$R/nomark.md" "$R/ch.md" --reference-doc "$R/counted.docx" -o "$R/nomark-export.docx"
@@ -1848,6 +1876,7 @@ jobs:
           run notcounted hidden continue hidden-notcounted
           run counted arabic restart arabic
           run top hidden continue top
+          run logo hidden restart logo
           cp "$R/counted-export.docx" "$R/unchanged.docx"
           expect 0 python scripts/docx_pagination.py "$R/unchanged.docx" --front-matter arabic --main-text continue
           grep -q "nothing to change" "$R/out.txt"
@@ -1904,15 +1933,30 @@ jobs:
           check('w:start="0"' in num(f) and num(m) == "", f"hidden after an uncounted title page: {num(f)} / {num(m)}")
           f, m, _ = sections("arabic")
           check(footers(f) == footers(m) and 'w:start="1"' in num(m), f"arabic restart: {num(m)}")
+          def part_of(name, rid):
+              """The XML of the document part that relationship id of word/document.xml names."""
+              rels = zipfile.ZipFile(f"{R}/{name}.docx").read("word/_rels/document.xml.rels").decode("utf-8")
+              target = re.search(r'Id="%s"[^>]*Target="([^"]+)"|Target="([^"]+)"[^>]*Id="%s"' % (rid, rid), rels)
+              return zipfile.ZipFile(f"{R}/{name}.docx").read("word/" + (target.group(1) or target.group(2))).decode("utf-8")
           f, m, _ = sections("top")
           hf = lambda s: refs(s, "header")
           check(hf(f) and hf(m) and hf(f) != hf(m), f"top: the front matter has a header of its own: {hf(f)} / {hf(m)}")
-          z = zipfile.ZipFile(f"{R}/top.docx")
-          rels = z.read("word/_rels/document.xml.rels").decode("utf-8")
-          target = re.search(r'Id="%s"[^>]*Target="([^"]+)"|Target="([^"]+)"[^>]*Id="%s"' % (hf(f)[0], hf(f)[0]), rels)
-          part = z.read("word/" + (target.group(1) or target.group(2))).decode("utf-8")
+          part = part_of("top", hf(f)[0])
           check("Laufkopf" in part and "PAGE" not in part, "top: the front matter's header keeps its text, not the number")
+          z = zipfile.ZipFile(f"{R}/top.docx")
           check("[Content_Types].xml" in z.namelist() and any(n.startswith("word/header") for n in z.namelist()), "top: package")
+          f, m, _ = sections("logo")
+          check(hf(f) and hf(m) and hf(f) != hf(m), f"logo: the front matter has a header of its own: {hf(f)} / {hf(m)}")
+          part = part_of("logo", hf(f)[0])
+          check("r:embed=" in part and "<w:hyperlink" in part and "PAGE" not in part,
+                "logo: the front matter's header keeps the picture and the link, not the number")
+          z = zipfile.ZipFile(f"{R}/logo.docx")
+          for name in z.namelist():
+              if re.fullmatch(r"word/(header|footer)\d+\.xml", name):
+                  used = set(re.findall(r'\br:(?:embed|id)="([^"]+)"', z.read(name).decode("utf-8")))
+                  rels = "word/_rels/" + name[len("word/"):] + ".rels"
+                  ids = set(re.findall(r'\bId="([^"]+)"', z.read(rels).decode("utf-8"))) if rels in z.namelist() else set()
+                  check(used <= ids, f"logo: {name} refers to {sorted(used - ids)}, which {rels} does not define")
           print("OK: docx_pagination.py")
           EOF
 
