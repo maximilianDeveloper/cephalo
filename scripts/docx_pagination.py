@@ -92,9 +92,14 @@ def remove_page_numbers(part_element):
     for p in list(part_element.iter(qn("w:p"))):
         has_field = any("PAGE" in (f.get(qn("w:instr")) or "").upper().split() for f in p.iter(qn("w:fldSimple")))
         has_field = has_field or any("PAGE" in (t.text or "").upper().split() for t in p.iter(qn("w:instrText")))
-        if has_field and p.getparent() is not None:
-            p.getparent().remove(p)
+        parent = p.getparent()
+        if has_field and parent is not None:
+            parent.remove(p)
             removed += 1
+            # A table cell or text box needs at least one paragraph or table, or Word reports the file damaged.
+            if parent.tag in (qn("w:tc"), qn("w:txbxContent")) and parent.find(qn("w:p")) is None \
+                    and parent.find(qn("w:tbl")) is None:
+                parent.append(OxmlElement("w:p"))
     return removed
 
 
