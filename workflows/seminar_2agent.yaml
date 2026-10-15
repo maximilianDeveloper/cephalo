@@ -270,7 +270,8 @@ phases:
            it changed.
         7. For the user, in Word, after the last export, listed under the open
            issues of workspace/state.md and named in the chat: update the fields
-           (Ctrl+A, then F9); with Roman numerals in the back matter that
+           (Ctrl+A, then F9, twice: docs/reference_management.md, "The title
+           page"); with Roman numerals in the back matter that
            continue the front matter's count, check that its first number
            follows the front matter's last page, and if it does not, set it in
            Word with Format Page Numbers, "Start at"

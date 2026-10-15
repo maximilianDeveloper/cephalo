@@ -54,7 +54,7 @@ To be performed on the exported document, after the last written chapter (introd
 
 ### B.1 Indexes
 
-- [ ] **Table of contents** updated (in Word: Ctrl+A then F9)
+- [ ] **Table of contents** updated (in Word: Ctrl+A then F9, twice: right after opening, Word can number the entries before it has laid out every page)
 - [ ] **List of abbreviations:** ONLY abbreviations actually used in the text
   - Automation: `scripts/abbreviations_extract.py`
 - [ ] **Bibliography:**

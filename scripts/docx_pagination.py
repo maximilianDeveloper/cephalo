@@ -560,7 +560,7 @@ def main(argv=None):
         print(f"{what}: {args.document}")
         for line in done:
             print(f"  - {line}")
-        print("  Update the fields in Word (Ctrl+A, then F9) for the table of contents' page numbers.")
+        print("  Update the fields in Word (Ctrl+A, then F9, twice) for the table of contents' page numbers.")
     return 0
 
 
