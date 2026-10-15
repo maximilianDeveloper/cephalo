@@ -1819,6 +1819,9 @@ jobs:
           BM='<w:bookmarkStart w:id="990001" w:name="_cephalo_front_matter_end"/><w:bookmarkEnd w:id="990001"/>'
           sed "s|$MARK|<w:p>$BM</w:p><w:p><w:r><w:br w:type=\"page\"/></w:r></w:p>|" "$R/title_page.md" > "$R/beside.md"
           sed "s|$MARK|<w:p>$BM<w:r><w:br w:type=\"page\"/><w:t>Text</w:t></w:r></w:p>|" "$R/title_page.md" > "$R/after.md"
+          # The list's heading as a heading, which the table of contents lists, and in a style of its own.
+          sed 's/^\*\*Abkürzungen\*\*$/# Abkürzungen {-}/' "$R/title_page.md" > "$R/heading.md"
+          sed 's/^\*\*Abkürzungen\*\*$/::: {custom-style="Front Matter Heading"}\nAbkürzungen\n:::/' "$R/title_page.md" > "$R/styled.md"
           printf '# 1 Einleitung\n\nText.\n\n# 2 Hauptteil\n\nText.\n' > "$R/ch.md"
           python scripts/build_reference_docx.py "$R/counted.docx" --page-number bottom-right --title-page counted >/dev/null
           python scripts/build_reference_docx.py "$R/notcounted.docx" --page-number bottom-right --title-page not-counted >/dev/null
@@ -1897,7 +1900,7 @@ jobs:
           done
           pandoc "$R/nomark.md" "$R/ch.md" --reference-doc "$R/counted.docx" -o "$R/nomark-export.docx"
           pandoc "$R/twice.md" "$R/ch.md" --reference-doc "$R/counted.docx" -o "$R/twice-export.docx"
-          for form in beside after; do
+          for form in beside after heading styled; do
             pandoc "$R/$form.md" "$R/ch.md" --reference-doc "$R/counted.docx" -o "$R/$form-export.docx"
           done
           run() {  # run <reference> <front> <main> <name>: a fresh copy of that export, split
@@ -1923,6 +1926,23 @@ jobs:
           run dash roman continue dash-roman
           run dash none continue dash-none
           run upper hidden continue upper
+          # A heading in front matter whose number is not shown, before a main text that repeats the count:
+          # a warning, which a heading in a style of its own, or front matter that shows its count, does not get.
+          warned() {
+            grep -q '^  - warning: the table of contents lists "Abkürzungen"' "$R/out.txt" && return 0
+            if grep -q "warning" "$R/out.txt"; then cat "$R/out.txt"; echo "an unexpected warning"; exit 1; fi
+            return 1
+          }
+          run heading none continue heading-none
+          warned || { cat "$R/out.txt"; echo "no warning: none, continue"; exit 1; }
+          run heading hidden restart heading-hidden
+          warned || { cat "$R/out.txt"; echo "no warning: hidden, restart"; exit 1; }
+          run heading roman restart heading-roman
+          ! warned || { echo "a warning: roman, restart"; exit 1; }
+          run heading hidden continue heading-hidden
+          ! warned || { echo "a warning: hidden, continue"; exit 1; }
+          run styled none continue styled
+          ! warned || { echo "a warning for a heading in a style of its own"; exit 1; }
           cp "$R/counted-export.docx" "$R/unchanged.docx"
           expect 0 python scripts/docx_pagination.py "$R/unchanged.docx" --front-matter arabic --main-text continue
           grep -q "nothing to change" "$R/out.txt"

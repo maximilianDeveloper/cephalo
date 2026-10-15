@@ -168,6 +168,40 @@ def marker_paragraph(body):
     return p
 
 
+def outline_level(p, styles):
+    """The outline level of a paragraph, its own or its style's (Word's headings have one); None for body text."""
+    el, seen = p, set()
+    while el is not None:
+        lvl = el.find(qn("w:pPr") + "/" + qn("w:outlineLvl"))
+        if lvl is not None:
+            val = lvl.get(qn("w:val")) or ""
+            return int(val) if val.isdigit() and int(val) < 9 else None
+        name = el.find(qn("w:name"))
+        name = (name.get(qn("w:val")) or "").lower() if name is not None else ""
+        if name.startswith("heading ") and name[8:].isdigit():
+            return int(name[8:]) - 1
+        ref = el.find(qn("w:pPr") + "/" + qn("w:pStyle")) if el is p else el.find(qn("w:basedOn"))
+        sid = ref.get(qn("w:val")) if ref is not None else None
+        if sid is None or sid in seen:
+            return None
+        seen.add(sid)
+        el = styles.get(sid)
+    return None
+
+
+def listed_headings(doc, end):
+    """The text of each paragraph before the end of the front matter that a table of contents lists."""
+    styles = {s.get(qn("w:styleId")): s for s in doc.styles.element.findall(qn("w:style"))}
+    found = []
+    for el in doc.element.body.iter(qn("w:p")):
+        if el is end:
+            break
+        text = "".join(t.text or "" for t in el.iter(qn("w:t"))).strip()
+        if text and outline_level(el, styles) is not None:
+            found.append(text)
+    return found
+
+
 def ends_with_page_break(p):
     """Whether the paragraph holds a page break with no text or picture after it."""
     breaks = [br for br in p.iter(qn("w:br")) if br.get(qn("w:type")) == "page"]
@@ -250,6 +284,14 @@ def split(path, front, main):
         done.append("main text continuing the count")
     drop_if_bare(pg2)
     drop_if_bare(sect1.find(qn("w:pgNumType")))
+    if front == "none" or (front == "hidden" and main == "restart"):
+        # The table of contents gives a heading here the count of the front matter, which the main text repeats.
+        headings = listed_headings(doc, p)
+        if headings:
+            done.append("warning: the table of contents lists " + ", ".join(f"\"{h}\"" for h in headings)
+                        + " with a number the front matter counts but does not show, and which the main text shows "
+                          "again: write such a heading in a style of its own (docs/reference_management.md, "
+                          "\"The title page\")")
 
     # The page break that ends the front matter becomes the section break.
     for br in list(p.iter(qn("w:br"))):
