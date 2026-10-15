@@ -237,11 +237,11 @@ Title of the work
 ```{=openxml}
 <w:p><w:r><w:br w:type="page"/></w:r></w:p>
 <w:p><w:r><w:fldChar w:fldCharType="begin" w:dirty="true"/></w:r><w:r><w:instrText xml:space="preserve"> TOC \o "1-3" \h \z \u </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>Table of contents: update the fields in Word</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>
-<w:p><w:r><w:br w:type="page"/></w:r></w:p>
+<w:p><w:bookmarkStart w:id="990001" w:name="_cephalo_front_matter_end"/><w:bookmarkEnd w:id="990001"/><w:r><w:br w:type="page"/></w:r></w:p>
 ```
 ````
 
-A list of abbreviations goes into the same file, after this block, on a page of its own: end it with the same page-break paragraph, in an `{=openxml}` block of its own (`<w:p><w:r><w:br w:type="page"/></w:r></w:p>`). The main text then starts on a new page, and the front matter ends with a page break, as the steps for a section of its own below expect (step 1).
+The last paragraph of the block is the page break that ends the front matter, with the hidden bookmark `_cephalo_front_matter_end`: it tells `scripts/docx_pagination.py` where the front matter ends (below). A list of abbreviations goes into the same file, after this block, on a page of its own: the block then ends with a plain page break (`<w:p><w:r><w:br w:type="page"/></w:r></w:p>`), and the list ends with the page break that carries the bookmark, in an `{=openxml}` block of its own. The bookmark stands once, at the end of the front matter, and the main text starts on a new page.
 
 The text in `<w:t>` shows in the DOCX until Word fills the field in: write it in the language of the work, without an abbreviation (`scripts/abbreviations_extract.py` would report it).
 
@@ -254,7 +254,7 @@ The page numbers follow `pagination.title_page` in `styleguide.md`, and Pandoc t
 
 Who edits the XML of the reference document keeps the order of the section properties (`w:sectPr`), which Word expects: `w:pgNumType` follows `w:pgSz` and `w:pgMar`, and `w:titlePg` follows `w:pgNumType`. A table of contents after the title page counts like a text page: with one page of it, the first text page shows 3, or 2 if the title page is not counted, as long as the main text continues the count (`pagination.main_text`); a main text that starts at 1, or follows front matter that is not counted, needs the section below.
 
-Front matter numbered unlike the main text (`pagination.front_matter`: Roman numerals, counted but not shown, or none), and a main text that starts at 1 (`pagination.main_text`), need a section of their own, which a reference document cannot give: with the reference document alone, the table of contents page shows its number like a text page, and the main text continues the count. The user sets the section in Word in the final DOCX, after the final export (a step of the workflows' closing or submission):
+Front matter numbered unlike the main text (`pagination.front_matter`: Roman numerals, counted but not shown, or none), and a main text that starts at 1 (`pagination.main_text`), need a section of their own, which a reference document cannot give: with the reference document alone, the table of contents page shows its number like a text page, and the main text continues the count. `scripts/docx_pagination.py` sets the section right after each export, split at the bookmark that ends the front matter, with the values of `pagination.front_matter` and `pagination.main_text` (`docs/scripts.md`); then the fields are updated (Ctrl+A, then F9). Without Python, the user sets the section in Word in the final DOCX, after the final export:
 
 1. Replace the page break at the end of the front matter (after the table of contents, or after a list of abbreviations that follows it) with a section break: show the formatting marks (Home, ¶), delete the page break, and insert Layout, Breaks, "Next Page".
 2. Open the footer of the first text page, the first page of the second section. In the Header & Footer tab, clear "Different First Page", which the section took over from the title page, then turn off "Link to Previous".
@@ -262,7 +262,7 @@ Front matter numbered unlike the main text (`pagination.front_matter`: Roman num
 4. In the second section, Format Page Numbers as `pagination.main_text` says: "Continue from previous section" to continue the count, or "Start at" 1. To continue the count after front matter that is not counted (none), "Start at" the number after the title page's: 2 after a counted title page, otherwise 1.
 5. Update the fields (Ctrl+A, then F9), so that the table of contents shows the new numbers.
 
-Until then the format check lists it as an open manual step, not as a finding to fix.
+The format check reads the sections in the DOCX: an export without them, where the styleguide needs them, is a finding until the script has run.
 
 ---
 

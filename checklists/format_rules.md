@@ -45,7 +45,7 @@ For every category below: **read concrete values from `styleguide.md`**, not fro
 ### Pagination
 
 - [ ] Title page numbering (styleguide: `pagination.title_page`; a common convention: counted but not shown)
-- [ ] Front matter (styleguide: `pagination.front_matter`; a common convention: Roman numerals; numbered unlike the main text, it is a section the user sets in Word)
+- [ ] Front matter (styleguide: `pagination.front_matter`; a common convention: Roman numerals; numbered unlike the main text, it is a section of its own, which `scripts/docx_pagination.py` sets after the export)
 - [ ] Main text (styleguide: `pagination.main_text`; a common convention: Arabic from the introduction onward; starting at 1, it needs that section too)
 - [ ] Position (styleguide: `pagination.position`)
 

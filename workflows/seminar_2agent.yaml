@@ -245,9 +245,11 @@ phases:
            scripts/build_reference_docx.py from the values in styleguide.md;
            export workspace/output/document.docx with Pandoc, the title page
            first, then the chapter files in document order
-           (docs/reference_management.md, "Citation processor pipeline"); if
-           document.hyphenation is automatic, run scripts/docx_postprocess.sh
-           after every export; then the format-verifier checks it and writes
+           (docs/reference_management.md, "Citation processor pipeline"); after
+           every export, run scripts/docx_pagination.py with the values of
+           pagination.front_matter and pagination.main_text and, if
+           document.hyphenation is automatic, scripts/docx_postprocess.sh;
+           then the format-verifier checks it and writes
            workspace/output/verification/document_format_round_<n>.md (it runs
            scripts/bibliography_check.py and scripts/abbreviations_extract.py
            itself). Apply its format-only findings (chapter files with the Edit
@@ -257,11 +259,7 @@ phases:
            writer-agent, and a verification round (step 2) checks the sentences
            it changed.
         7. For the user, in Word, after the last export, listed under the open
-           issues of workspace/state.md and named in the chat: set front matter
-           numbered unlike the main text (styleguide.md pagination.front_matter
-           Roman, counted but not shown or none, or pagination.main_text
-           starting at 1) as a section of its own
-           (docs/reference_management.md, "The title page"); update the fields
+           issues of workspace/state.md and named in the chat: update the fields
            (Ctrl+A, then F9); fill in the title page's placeholders; visual
            proofreading.
         8. Before the chat closes: the "Current state" and "Open issues" of
