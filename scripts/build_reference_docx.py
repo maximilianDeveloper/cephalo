@@ -304,8 +304,9 @@ def remove_page_numbers(part_element):
             continue
         removed += 1
         if "".join(t.text or "" for t in p.iter(qn("w:t"))).strip() \
-                or any(p.find(".//" + qn(tag)) is not None for tag in ("w:drawing", "w:pict", "w:object")):
-            continue  # a running head, a logo or a link stays in its paragraph
+                or any(p.find(".//" + qn(tag)) is not None
+                       for tag in ("w:drawing", "w:pict", "w:object", "w:fldSimple", "w:instrText")):
+            continue  # a running head (also a field such as STYLEREF), a logo or a link stays in its paragraph
         parent.remove(p)
         # A table cell or text box needs at least one paragraph or table, or Word reports the file damaged.
         if parent.tag in (qn("w:tc"), qn("w:txbxContent")) and parent.find(qn("w:p")) is None \
