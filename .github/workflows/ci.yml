@@ -2017,6 +2017,10 @@ jobs:
           expect 0 python scripts/docx_pagination.py "$R/rc-counted.docx" --front-matter roman --main-text restart --back-matter roman-continue
           grep -q "a section of its own already: nothing changed" "$R/out.txt"
           cmp -s "$R/rc-counted.docx" "$R/rc-before.docx"
+          # Nor does a first number given then: the docs have it set in Word in a DOCX split already.
+          expect 0 python scripts/docx_pagination.py "$R/rc-counted.docx" --front-matter roman --main-text restart --back-matter roman-continue --back-matter-start 5
+          grep -q "a section of its own already: nothing changed" "$R/out.txt"
+          cmp -s "$R/rc-counted.docx" "$R/rc-before.docx"
           bm notcounted roman restart roman-continue rc-notcounted
           grep -q "from III, continuing" "$R/out.txt"
           bm counted roman-lower restart roman-continue rc-lower

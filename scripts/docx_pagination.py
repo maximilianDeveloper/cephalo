@@ -53,7 +53,8 @@ With roman-continue, the script counts the front matter's pages by its page
 breaks: the title page and one page for each page break up to the end of the
 front matter. A table of contents or list that fills more than one page,
 once Word updates the fields, is not counted that way: give the number with
---back-matter-start.
+--back-matter-start on a new export (a document split before is left as it
+is), or set it in Word.
 
 With --front-matter arabic, --main-text continue and --back-matter main
 nothing changes: the export already numbers it that way. A document split
@@ -426,7 +427,8 @@ def split_back(doc, q, back, front, start, computed):
         text = f"back matter in Roman numerals from {number}"
         if back == "roman-continue":
             text += (", continuing the front matter's count as its page breaks give it (a table of contents or "
-                     "list that fills more than one page once Word updates the fields: give --back-matter-start)"
+                     "list that fills more than one page once Word updates the fields: give --back-matter-start on a new "
+                     "export, or set the number in Word)"
                      if computed else f" (--back-matter-start {start})")
     drop_if_bare(pg)
     to_section_break(q, before)

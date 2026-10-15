@@ -272,9 +272,10 @@ phases:
            issues of workspace/state.md and named in the chat: update the fields
            (Ctrl+A, then F9); with Roman numerals in the back matter that
            continue the front matter's count, check that its first number
-           follows the front matter's last page (docs/scripts.md,
-           --back-matter-start); fill in the title page's placeholders; visual
-           proofreading.
+           follows the front matter's last page, and if it does not, set it in
+           Word with Format Page Numbers, "Start at"
+           (docs/reference_management.md, "The title page", step 5); fill in
+           the title page's placeholders; visual proofreading.
         8. Before the chat closes: the "Current state" and "Open issues" of
            workspace/state.md and the "Open questions" of styleguide.md agree;
            nothing is called resolved in one that is still open in another.
