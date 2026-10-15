@@ -103,7 +103,7 @@ In Phase B, the format-verifier handles:
 - Et al. rule consistency
 - Edition number consistency across the document
 - The hyphenation flag of the export, only if the styleguide's `document.hyphenation` is automatic (the orchestrator sets it with `scripts/docx_postprocess.sh` right after each export)
-- The sections of the export, only if the front matter is numbered unlike the main text (the orchestrator sets them with `scripts/docx_pagination.py` right after each export)
+- The sections of the export, only if the front matter is numbered unlike the main text (Roman, counted but not shown or none) or the main text starts at 1 (the orchestrator sets them with `scripts/docx_pagination.py` right after each export)
 
 What it does NOT do:
 - Add or remove citations
