@@ -47,6 +47,7 @@ For every category below: **read concrete values from `styleguide.md`**, not fro
 - [ ] Title page numbering (styleguide: `pagination.title_page`; a common convention: counted but not shown)
 - [ ] Front matter (styleguide: `pagination.front_matter`; a common convention: Roman numerals; numbered unlike the main text, it is a section of its own, which `scripts/docx_pagination.py` sets after the export)
 - [ ] Main text (styleguide: `pagination.main_text`; a common convention: Arabic from the introduction onward; starting at 1, it needs that section too)
+- [ ] Back matter: the reference list, an appendix and what follows them (styleguide: `pagination.back_matter`; numbered unlike the main text, it is a section of its own too, from the page break before the reference list, which `scripts/docx_pagination.py` sets after the export)
 - [ ] Position (styleguide: `pagination.position`)
 
 ### Table of contents

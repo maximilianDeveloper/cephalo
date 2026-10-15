@@ -83,7 +83,7 @@ To be performed on the exported document, after the last written chapter (introd
 
 - [ ] Page count within range (styleguide.md -> `document.page_count`)
 - [ ] Title page fully filled in (no placeholders!)
-- [ ] Pagination matches the styleguide (`pagination.front_matter` / `pagination.main_text` / `pagination.position` — see `checklists/format_rules.md`)
+- [ ] Pagination matches the styleguide (`pagination.front_matter` / `pagination.main_text` / `pagination.back_matter` / `pagination.position` — see `checklists/format_rules.md`)
 - [ ] Hyphenation as specified (styleguide: `document.hyphenation`; in Word: Layout -> Hyphenation)
 - [ ] Body alignment matches the styleguide (`body.alignment`)
 - [ ] Styleguide check complete (see `checklists/format_rules.md`)

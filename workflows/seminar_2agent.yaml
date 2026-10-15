@@ -231,7 +231,13 @@ phases:
            round (step 2).
         4. The title page with the table of contents field,
            workspace/output/title_page.md (docs/reference_management.md,
-           "The title page").
+           "The title page"). If pagination.back_matter numbers the back
+           matter unlike the main text: the bookmark
+           _cephalo_back_matter_start on a page break above the reference
+           list's heading in the last chapter file, or, with citekeys, in
+           workspace/output/bibliography.md with the heading and the empty
+           #refs div, after the chapter files (same document, "The reference
+           list").
         5. If the text uses abbreviations that styleguide.md or the guidelines
            want listed: export once as item 6 says, derive the list from that
            export with scripts/abbreviations_extract.py, and add it to
@@ -246,11 +252,13 @@ phases:
            build workspace/output/reference.docx with
            scripts/build_reference_docx.py from the values in styleguide.md;
            export workspace/output/document.docx with Pandoc, the title page
-           first, then the chapter files in document order
+           first, then the chapter files in document order, and
+           workspace/output/bibliography.md if item 4 wrote one
            (docs/reference_management.md, "Citation processor pipeline"); after
            every export, run scripts/docx_pagination.py with the values of
-           pagination.front_matter and pagination.main_text and, if
-           document.hyphenation is automatic, scripts/docx_postprocess.sh;
+           pagination.front_matter, pagination.main_text and
+           pagination.back_matter and, if document.hyphenation is automatic,
+           scripts/docx_postprocess.sh;
            then the format-verifier checks it and writes
            workspace/output/verification/document_format_round_<n>.md (it runs
            scripts/bibliography_check.py and scripts/abbreviations_extract.py
@@ -262,7 +270,10 @@ phases:
            it changed.
         7. For the user, in Word, after the last export, listed under the open
            issues of workspace/state.md and named in the chat: update the fields
-           (Ctrl+A, then F9); fill in the title page's placeholders; visual
+           (Ctrl+A, then F9); with Roman numerals in the back matter that
+           continue the front matter's count, check that its first number
+           follows the front matter's last page (docs/scripts.md,
+           --back-matter-start); fill in the title page's placeholders; visual
            proofreading.
         8. Before the chat closes: the "Current state" and "Open issues" of
            workspace/state.md and the "Open questions" of styleguide.md agree;
