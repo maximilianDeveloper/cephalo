@@ -2010,6 +2010,10 @@ jobs:
           expect 0 python scripts/docx_pagination.py "$R/back-only.docx" --front-matter arabic --main-text continue --back-matter restart
           grep -q "the back matter is a section of its own already: nothing changed" "$R/out.txt"
           cmp -s "$R/back-only.docx" "$R/back-only-before.docx"
+          # Nor does a second run that would split the front matter, with the back matter left at main.
+          expect 0 python scripts/docx_pagination.py "$R/back-only.docx" --front-matter roman --main-text restart
+          grep -q "the back matter is a section of its own already: nothing changed" "$R/out.txt"
+          cmp -s "$R/back-only.docx" "$R/back-only-before.docx"
           bm counted arabic continue roman-continue back-only-rc
           bm upper arabic continue restart back-upper
           bm nomark arabic continue none back-nomark

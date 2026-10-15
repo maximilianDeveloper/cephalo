@@ -410,6 +410,14 @@ def split(path, front, main, back="main", back_start=None):
         return None, ["the front matter is a section of its own already: nothing changed"]
     if q is not None and is_split(q):
         return None, ["the back matter is a section of its own already: nothing changed"]
+    if back == "main":
+        # A run with another --back-matter may have split the back matter before.
+        try:
+            earlier = marker_paragraph(body, BACK_MARKER, "the back matter starts once")
+        except UsageError:
+            earlier = None
+        if earlier is not None and is_split(earlier):
+            return None, ["the back matter is a section of its own already: nothing changed"]
     if back != "main" and q is None:
         raise UsageError(f"no start of the back matter marked: the page break before the reference list needs the "
                          f"bookmark {BACK_MARKER} (docs/reference_management.md, \"The reference list\")")
