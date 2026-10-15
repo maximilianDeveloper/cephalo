@@ -16,7 +16,8 @@ bookmark on the page break that ends it (docs/reference_management.md,
 
     <w:p><w:bookmarkStart w:id="990001" w:name="_cephalo_front_matter_end"/><w:bookmarkEnd w:id="990001"/><w:r><w:br w:type="page"/></w:r></w:p>
 
-That page break becomes the section break. The title page keeps the
+That page break becomes the section break; a bookmark in a paragraph of its
+own, or text after the break, stops the script. The title page keeps the
 reference document's numbering (pagination.title_page, set with
 scripts/build_reference_docx.py --title-page): whether it is counted is read
 from the document.
@@ -167,6 +168,21 @@ def marker_paragraph(body):
     return p
 
 
+def ends_with_page_break(p):
+    """Whether the paragraph holds a page break with no text or picture after it."""
+    breaks = [br for br in p.iter(qn("w:br")) if br.get(qn("w:type")) == "page"]
+    if not breaks:
+        return False
+    after = False
+    for el in p.iter():
+        if el is breaks[-1]:
+            after = True
+        elif after and (el.tag in (qn("w:drawing"), qn("w:pict"), qn("w:object"))
+                        or (el.tag == qn("w:t") and (el.text or "").strip())):
+            return False
+    return True
+
+
 def split(path, front, main):
     doc = Document(path)
     body = doc.element.body
@@ -183,6 +199,11 @@ def split(path, front, main):
     ppr = p.find(qn("w:pPr"))
     if ppr is not None and ppr.find(qn("w:sectPr")) is not None:
         return None, ["the front matter is a section of its own already: nothing changed"]
+    # After that check: in a document split before, the page break is gone.
+    if not ends_with_page_break(p):
+        raise UsageError(f"the bookmark {MARKER} is not on the page break that ends the front matter: write them "
+                         f"as one paragraph with nothing after the break (docs/reference_management.md, "
+                         f"\"The title page\")")
 
     pg = body_sect.find(qn("w:pgNumType"))
     title_counted = pg is None or pg.get(qn("w:start")) != "0"

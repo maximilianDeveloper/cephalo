@@ -271,7 +271,7 @@ python3 scripts/docx_pagination.py --help
 
 The end of the front matter is the page break that carries the hidden bookmark `_cephalo_front_matter_end`, which the title page file sets (`docs/reference_management.md`, "The title page"); that page break becomes the section break. Without the bookmark, the script stops with exit code 2 and changes nothing. A page number the front matter does not show is taken out of its header or footer; other content there, such as a running head, a logo or a link, stays. With `--front-matter arabic --main-text continue` nothing changes, since the export already numbers the pages that way, and a document split before is left as it is: run the script on every new export, before the format check. Then update the fields in Word (Ctrl+A, then F9), so that the table of contents shows the numbers of both sections.
 
-Exit code 0 = written, or nothing to change; 2 = not written (no bookmark, the bookmark twice, not a DOCX, a damaged document; one line says which).
+Exit code 0 = written, or nothing to change; 2 = not written (no bookmark, the bookmark twice or not on the page break that ends the front matter, not a DOCX, a damaged document; one line says which).
 
 ### `cross_session_audit.py`
 

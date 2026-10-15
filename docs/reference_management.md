@@ -241,7 +241,7 @@ Title of the work
 ```
 ````
 
-The last paragraph of the block is the page break that ends the front matter, with the hidden bookmark `_cephalo_front_matter_end`: it tells `scripts/docx_pagination.py` where the front matter ends (below). A list of abbreviations goes into the same file, after this block, on a page of its own: the block then ends with a plain page break (`<w:p><w:r><w:br w:type="page"/></w:r></w:p>`), and the list ends with the page break that carries the bookmark, in an `{=openxml}` block of its own. The bookmark stands once, at the end of the front matter, and the main text starts on a new page.
+The last paragraph of the block is the page break that ends the front matter, with the hidden bookmark `_cephalo_front_matter_end` in the same paragraph and nothing after the break: it tells `scripts/docx_pagination.py` where the front matter ends (below). A list of abbreviations goes into the same file, after this block, on a page of its own: the block then ends with a plain page break (`<w:p><w:r><w:br w:type="page"/></w:r></w:p>`), and the list ends with the page break that carries the bookmark, in an `{=openxml}` block of its own. The bookmark stands once, at the end of the front matter, and the main text starts on a new page.
 
 The text in `<w:t>` shows in the DOCX until Word fills the field in: write it in the language of the work, without an abbreviation (`scripts/abbreviations_extract.py` would report it).
 

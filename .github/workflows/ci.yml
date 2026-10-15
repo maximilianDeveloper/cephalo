@@ -1815,6 +1815,10 @@ jobs:
           } > "$R/title_page.md"
           sed 's/_cephalo_front_matter_end/_other/' "$R/title_page.md" > "$R/nomark.md"
           { cat "$R/title_page.md"; printf '\n```{=openxml}\n%s\n```\n' "$MARK"; } > "$R/twice.md"
+          # The bookmark in a paragraph of its own before the page break, and text after the break.
+          BM='<w:bookmarkStart w:id="990001" w:name="_cephalo_front_matter_end"/><w:bookmarkEnd w:id="990001"/>'
+          sed "s|$MARK|<w:p>$BM</w:p><w:p><w:r><w:br w:type=\"page\"/></w:r></w:p>|" "$R/title_page.md" > "$R/beside.md"
+          sed "s|$MARK|<w:p>$BM<w:r><w:br w:type=\"page\"/><w:t>Text</w:t></w:r></w:p>|" "$R/title_page.md" > "$R/after.md"
           printf '# 1 Einleitung\n\nText.\n\n# 2 Hauptteil\n\nText.\n' > "$R/ch.md"
           python scripts/build_reference_docx.py "$R/counted.docx" --page-number bottom-right --title-page counted >/dev/null
           python scripts/build_reference_docx.py "$R/notcounted.docx" --page-number bottom-right --title-page not-counted >/dev/null
@@ -1883,6 +1887,9 @@ jobs:
           done
           pandoc "$R/nomark.md" "$R/ch.md" --reference-doc "$R/counted.docx" -o "$R/nomark-export.docx"
           pandoc "$R/twice.md" "$R/ch.md" --reference-doc "$R/counted.docx" -o "$R/twice-export.docx"
+          for form in beside after; do
+            pandoc "$R/$form.md" "$R/ch.md" --reference-doc "$R/counted.docx" -o "$R/$form-export.docx"
+          done
           run() {  # run <reference> <front> <main> <name>: a fresh copy of that export, split
             cp "$R/$1-export.docx" "$R/$4.docx"
             expect 0 python scripts/docx_pagination.py "$R/$4.docx" --front-matter "$2" --main-text "$3"
@@ -1910,6 +1917,12 @@ jobs:
           one_error "no end of the front matter marked"
           expect 2 python scripts/docx_pagination.py "$R/twice-export.docx" --front-matter roman --main-text restart
           one_error "the bookmark _cephalo_front_matter_end occurs 2 times"
+          for form in beside after; do
+            cp "$R/$form-export.docx" "$R/$form.docx"
+            expect 2 python scripts/docx_pagination.py "$R/$form.docx" --front-matter roman --main-text restart
+            one_error "the bookmark _cephalo_front_matter_end is not on the page break that ends the front matter"
+            cmp -s "$R/$form.docx" "$R/$form-export.docx"
+          done
           cp "$R/counted-export.docx" "$R/wrong.txt"
           expect 2 python scripts/docx_pagination.py "$R/wrong.txt" --front-matter roman --main-text restart
           one_error ".*expected a .docx file"
