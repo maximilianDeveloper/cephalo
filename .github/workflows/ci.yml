@@ -34,7 +34,7 @@ jobs:
         run: python -m pip install -r requirements.txt pyyaml
 
       - name: Python syntax
-        run: python -m py_compile scripts/abbreviations_extract.py scripts/bibliography_check.py scripts/build_reference_docx.py scripts/cross_session_audit.py scripts/verbatim_check.py
+        run: python -m py_compile scripts/abbreviations_extract.py scripts/bibliography_check.py scripts/build_reference_docx.py scripts/cross_session_audit.py scripts/docx_pagination.py scripts/verbatim_check.py
 
       - name: Shell syntax
         # One file per call: `bash -n a b c` parses only a (b and c become its arguments).
@@ -217,6 +217,7 @@ jobs:
           python scripts/bibliography_check.py --help
           python scripts/build_reference_docx.py --help
           python scripts/cross_session_audit.py --help
+          python scripts/docx_pagination.py --help
           python scripts/verbatim_check.py --help
           bash scripts/docx_postprocess.sh --help
           bash scripts/extract_styleguide.sh --help
@@ -1783,6 +1784,138 @@ jobs:
           print("OK: Pandoc round trip")
           EOF
 
+      - name: docx_pagination.py (front matter as a section of its own; errors)
+        run: |
+          R=/tmp/ci_pagination; rm -rf "$R"; mkdir -p "$R"
+          expect() {
+            want=$1; shift
+            set +e; "$@" >"$R/out.txt" 2>&1; code=$?; set -e
+            if [ "$code" -ne "$want" ]; then cat "$R/out.txt"; echo "expected exit $want, got $code: $*"; exit 1; fi
+          }
+          one_error() {
+            if [ "$(wc -l < "$R/out.txt")" -ne 1 ] || ! grep -q "^Error: $1" "$R/out.txt"; then cat "$R/out.txt"; echo "expected one line 'Error: $1...'"; exit 1; fi
+          }
+          expect 2 python scripts/docx_pagination.py "$R/missing.docx" --front-matter roman --main-text restart
+          one_error ".*not found"
+          if ! command -v pandoc >/dev/null 2>&1 && command -v apt-get >/dev/null 2>&1; then
+            sudo apt-get update -qq >/dev/null 2>&1 && sudo apt-get install -y -qq pandoc >/dev/null 2>&1 || true
+          fi
+          if ! command -v pandoc >/dev/null 2>&1; then
+            if [ "${GITHUB_ACTIONS:-}" = "true" ]; then echo "Pandoc could not be installed"; exit 1; fi
+            echo "Pandoc not installed: docx_pagination.py checks skipped"
+            exit 0
+          fi
+          # The title page file as docs/reference_management.md gives it: the front matter ends with the
+          # page break that carries the bookmark.
+          MARK='<w:p><w:bookmarkStart w:id="990001" w:name="_cephalo_front_matter_end"/><w:bookmarkEnd w:id="990001"/><w:r><w:br w:type="page"/></w:r></w:p>'
+          {
+            printf '::: {custom-style="Title"}\nTitel\n:::\n\n```{=openxml}\n<w:p><w:r><w:br w:type="page"/></w:r></w:p>\n'
+            printf '<w:p><w:r><w:fldChar w:fldCharType="begin" w:dirty="true"/></w:r><w:r><w:instrText xml:space="preserve"> TOC \\o "1-3" \\h \\z \\u </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>Inhaltsverzeichnis</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>\n'
+            printf '<w:p><w:r><w:br w:type="page"/></w:r></w:p>\n```\n\n**Abkürzungen**\n\n```{=openxml}\n%s\n```\n' "$MARK"
+          } > "$R/title_page.md"
+          sed 's/_cephalo_front_matter_end/_other/' "$R/title_page.md" > "$R/nomark.md"
+          { cat "$R/title_page.md"; printf '\n```{=openxml}\n%s\n```\n' "$MARK"; } > "$R/twice.md"
+          printf '# 1 Einleitung\n\nText.\n\n# 2 Hauptteil\n\nText.\n' > "$R/ch.md"
+          python scripts/build_reference_docx.py "$R/counted.docx" --page-number bottom-right --title-page counted >/dev/null
+          python scripts/build_reference_docx.py "$R/notcounted.docx" --page-number bottom-right --title-page not-counted >/dev/null
+          python scripts/build_reference_docx.py "$R/top.docx" --page-number top-right --title-page counted >/dev/null
+          # A running head beside the page number: it stays in the front matter, the number goes.
+          python - "$R/top.docx" <<'EOF'
+          import sys, docx
+          d = docx.Document(sys.argv[1])
+          d.sections[-1].header.add_paragraph("Laufkopf")
+          d.save(sys.argv[1])
+          EOF
+          for ref in counted notcounted top; do
+            pandoc "$R/title_page.md" "$R/ch.md" --reference-doc "$R/$ref.docx" -o "$R/$ref-export.docx"
+          done
+          pandoc "$R/nomark.md" "$R/ch.md" --reference-doc "$R/counted.docx" -o "$R/nomark-export.docx"
+          pandoc "$R/twice.md" "$R/ch.md" --reference-doc "$R/counted.docx" -o "$R/twice-export.docx"
+          run() {  # run <reference> <front> <main> <name>: a fresh copy of that export, split
+            cp "$R/$1-export.docx" "$R/$4.docx"
+            expect 0 python scripts/docx_pagination.py "$R/$4.docx" --front-matter "$2" --main-text "$3"
+          }
+          run counted roman restart roman
+          grep -q "^Front matter set as a section of its own" "$R/out.txt"
+          cp "$R/roman.docx" "$R/roman-before.docx"
+          expect 0 python scripts/docx_pagination.py "$R/roman.docx" --front-matter hidden --main-text continue
+          grep -q "a section of its own already: nothing changed" "$R/out.txt"
+          cmp -s "$R/roman.docx" "$R/roman-before.docx"
+          run counted roman-lower continue lower
+          run counted hidden continue hidden
+          run counted none continue none-counted
+          run notcounted none continue none-notcounted
+          run notcounted hidden continue hidden-notcounted
+          run counted arabic restart arabic
+          run top hidden continue top
+          cp "$R/counted-export.docx" "$R/unchanged.docx"
+          expect 0 python scripts/docx_pagination.py "$R/unchanged.docx" --front-matter arabic --main-text continue
+          grep -q "nothing to change" "$R/out.txt"
+          cmp -s "$R/unchanged.docx" "$R/counted-export.docx"
+          expect 2 python scripts/docx_pagination.py "$R/nomark-export.docx" --front-matter roman --main-text restart
+          one_error "no end of the front matter marked"
+          expect 2 python scripts/docx_pagination.py "$R/twice-export.docx" --front-matter roman --main-text restart
+          one_error "the bookmark _cephalo_front_matter_end occurs 2 times"
+          cp "$R/counted-export.docx" "$R/wrong.txt"
+          expect 2 python scripts/docx_pagination.py "$R/wrong.txt" --front-matter roman --main-text restart
+          one_error ".*expected a .docx file"
+          expect 2 python scripts/docx_pagination.py "$R/unchanged.docx" --front-matter roman
+          python - "$R" <<'EOF'
+          import re, sys, zipfile
+          R = sys.argv[1]
+          W = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
+          def check(cond, what):
+              if not cond:
+                  raise SystemExit("docx_pagination: " + what)
+          def sections(name):
+              """(front matter, main text) section properties, and the document XML."""
+              xml = zipfile.ZipFile(f"{R}/{name}.docx").read("word/document.xml").decode("utf-8")
+              sects = re.findall(r"<w:sectPr\b.*?</w:sectPr>", xml, re.S)
+              check(len(sects) == 2, f"{name}: {len(sects)} sections, not 2")
+              return sects[0], sects[1], xml
+          def refs(sect, tag, kind="default"):
+              """The relationship ids of the section's header or footer references of that type."""
+              out = []
+              for el in re.findall(r"<w:%sReference\b[^>]*>" % tag, sect):
+                  if 'w:type="%s"' % kind in el:
+                      out += re.findall(r'r:id="([^"]+)"', el)
+              return out
+          def footers(sect):
+              return refs(sect, "footer")
+          def num(sect):
+              m = re.search(r"<w:pgNumType\b[^>]*/>", sect)
+              return m.group(0) if m else ""
+          f, m, xml = sections("roman")
+          check('w:fmt="upperRoman"' in num(f) and "w:start" not in num(f), f"roman: front matter {num(f)}")
+          check("<w:titlePg" in f and "<w:titlePg" not in m, "roman: the title page belongs to the front matter only")
+          check('w:start="1"' in num(m) and "w:fmt" not in num(m), f"roman: main text {num(m)}")
+          check(footers(f) and footers(f) == footers(m), "roman: the front matter keeps the page number footer")
+          marker = re.search(r'<w:p\b(?:(?!</w:p>).)*?_cephalo_front_matter_end.*?</w:p>', xml, re.S).group(0)
+          check("<w:sectPr" in marker and 'w:type="page"' not in marker, "roman: the page break became the section break")
+          f, m, _ = sections("lower")
+          check('w:fmt="lowerRoman"' in num(f) and num(m) == "", f"lower: {num(f)} / {num(m)}")
+          f, m, _ = sections("hidden")
+          check(not footers(f) and footers(m) and num(m) == "", f"hidden: footers {footers(f)}, main text {num(m)}")
+          f, m, _ = sections("none-counted")
+          check('w:start="2"' in num(m), f"none after a counted title page: main text {num(m)}")
+          f, m, _ = sections("none-notcounted")
+          check('w:start="1"' in num(m) and 'w:start="0"' in num(f), f"none after an uncounted title page: {num(f)} / {num(m)}")
+          f, m, _ = sections("hidden-notcounted")
+          check('w:start="0"' in num(f) and num(m) == "", f"hidden after an uncounted title page: {num(f)} / {num(m)}")
+          f, m, _ = sections("arabic")
+          check(footers(f) == footers(m) and 'w:start="1"' in num(m), f"arabic restart: {num(m)}")
+          f, m, _ = sections("top")
+          hf = lambda s: refs(s, "header")
+          check(hf(f) and hf(m) and hf(f) != hf(m), f"top: the front matter has a header of its own: {hf(f)} / {hf(m)}")
+          z = zipfile.ZipFile(f"{R}/top.docx")
+          rels = z.read("word/_rels/document.xml.rels").decode("utf-8")
+          target = re.search(r'Id="%s"[^>]*Target="([^"]+)"|Target="([^"]+)"[^>]*Id="%s"' % (hf(f)[0], hf(f)[0]), rels)
+          part = z.read("word/" + (target.group(1) or target.group(2))).decode("utf-8")
+          check("Laufkopf" in part and "PAGE" not in part, "top: the front matter's header keeps its text, not the number")
+          check("[Content_Types].xml" in z.namelist() and any(n.startswith("word/header") for n in z.namelist()), "top: package")
+          print("OK: docx_pagination.py")
+          EOF
+
   windows:
     name: PowerShell 5.1 parse & setup smoke (Windows)
     runs-on: windows-latest
@@ -1962,7 +2095,7 @@ jobs:
 
       - name: Python syntax (Windows)
         shell: powershell
-        run: python -m py_compile scripts/abbreviations_extract.py scripts/bibliography_check.py scripts/build_reference_docx.py scripts/cross_session_audit.py scripts/verbatim_check.py
+        run: python -m py_compile scripts/abbreviations_extract.py scripts/bibliography_check.py scripts/build_reference_docx.py scripts/cross_session_audit.py scripts/docx_pagination.py scripts/verbatim_check.py
 
       # Informational only: not part of the verified baseline. Remove
       # continue-on-error once a clean run is confirmed.

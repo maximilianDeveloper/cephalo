@@ -1,6 +1,6 @@
 # Scripts
 
-cephalo ships seven utility scripts in `scripts/`. They are optional — the agents can guide a project without them — but each one automates a check or transformation that would otherwise take manual effort.
+cephalo ships eight utility scripts in `scripts/`. They are optional — the agents can guide a project without them — but each one automates a check or transformation that would otherwise take manual effort.
 
 | Script | Purpose | When to run |
 |--------|---------|-------------|
@@ -10,13 +10,14 @@ cephalo ships seven utility scripts in `scripts/`. They are optional — the age
 | `bibliography_check.py` | Minus-test by author surname: every cited author is in the bibliography, every entry's lead author is cited | Phase B, final stages |
 | `build_reference_docx.py` | Build Pandoc's reference document (layout of the exported DOCX) from the styleguide's values | Phase B, before the first export and after a layout finding |
 | `docx_postprocess.sh` | Enable automatic hyphenation in a DOCX (Pandoc and python-docx don't set this) | Phase B, right after every export (orchestrator), only if `document.hyphenation` is automatic |
+| `docx_pagination.py` | Number the front matter of an exported DOCX unlike the main text: Roman numerals, counted but not shown, or not counted, and a main text from 1 or continuing the count | Phase B, right after every export (orchestrator), only if `pagination.front_matter` or `pagination.main_text` asks for it |
 | `cross_session_audit.py` | Cross-worktree audit: surfaces notes and changes from other worktrees/sessions that never reached the main worktree | Multi-worktree projects, at session start or weekly |
 
 ---
 
 ## Installation
 
-All scripts require Python 3.9 or newer. `abbreviations_extract.py`, `bibliography_check.py`, `build_reference_docx.py`, `verbatim_check.py` and `extract_styleguide.sh` have dependencies listed in `requirements.txt` (`python-docx`, and `pypdf` with its `[crypto]` extra, which installs `cryptography` for AES-encrypted PDFs). `cross_session_audit.py` uses only the Python standard library.
+All scripts require Python 3.9 or newer. `abbreviations_extract.py`, `bibliography_check.py`, `build_reference_docx.py`, `docx_pagination.py`, `verbatim_check.py` and `extract_styleguide.sh` have dependencies listed in `requirements.txt` (`python-docx`, and `pypdf` with its `[crypto]` extra, which installs `cryptography` for AES-encrypted PDFs). `cross_session_audit.py` uses only the Python standard library.
 
 ### On Linux / macOS
 
@@ -230,7 +231,7 @@ Run it before the first export of Phase B, and again after a layout finding of t
 
 Exit code 0 = reference document written, 2 = not written (bad option, Pandoc not found and no `--base`, a folder or file that does not exist, a starting document it cannot read; one line says which).
 
-Not covered: heading numbers (they come from the heading text, from Pandoc's `--number-sections`, or from numbering that a `--base` template links to its heading styles, which Pandoc keeps; the script does not set any); and front matter numbered unlike the main text (Roman, counted but not shown or none) or a main text that starts at 1, which need a section of their own (`docs/reference_management.md`, "The title page").
+Not covered: heading numbers (they come from the heading text, from Pandoc's `--number-sections`, or from numbering that a `--base` template links to its heading styles, which Pandoc keeps; the script does not set any); and front matter numbered unlike the main text (Roman, counted but not shown or none) or a main text that starts at 1, which need a section of their own: `docx_pagination.py` sets it after the export.
 
 ### `docx_postprocess.sh`
 
@@ -249,6 +250,28 @@ What it does:
 4. Replaces the original file only after the new archive was built successfully (for a symbolic link, the document it points to; the link stays)
 
 Run it on every export right after Pandoc writes it, before the format check: a new export does not carry the flag. The format-verifier only checks that the flag is there. Re-running is safe (the script detects if the flag is already set and enabled).
+
+### `docx_pagination.py`
+
+Numbers the front matter of an exported DOCX unlike the main text, as `pagination.front_matter` and `pagination.main_text` in `styleguide.md` say. A reference document gives the whole export one section, so the table of contents page shows its number like a text page; the script splits the export into two sections at the end of the front matter: the title page, the table of contents and the lists after it in the first, the main text in the second.
+
+```bash
+python3 scripts/docx_pagination.py workspace/output/document.docx --front-matter roman --main-text restart
+python3 scripts/docx_pagination.py --help
+```
+
+| `pagination.front_matter` | `--front-matter` |
+|---|---|
+| Roman numerals (I, II, …; small: i, ii, …) | `roman` (`roman-lower`) |
+| counted but not shown | `hidden` |
+| none (not counted, no number shown) | `none` |
+| Arabic, like the main text | `arabic` |
+
+`--main-text continue` lets the main text continue the count (`pagination.main_text`: continuing the count, or continuous), `--main-text restart` starts it at 1. After front matter that is not counted (`none`), "continuing" means the number after the title page's: 2 after a counted title page, otherwise 1. Whether the title page is counted (`pagination.title_page`) is read from the export, which takes it from the reference document (`build_reference_docx.py --title-page`); the title page keeps the first-page header and footer the reference document gives it, without a number.
+
+The end of the front matter is the page break that carries the hidden bookmark `_cephalo_front_matter_end`, which the title page file sets (`docs/reference_management.md`, "The title page"); that page break becomes the section break. Without the bookmark, the script stops with exit code 2 and changes nothing. A page number the front matter does not show is taken out of its header or footer; other content there, such as a running head, stays. With `--front-matter arabic --main-text continue` nothing changes, since the export already numbers the pages that way, and a document split before is left as it is: run the script on every new export, after `docx_postprocess.sh` if that runs too, and before the format check. Then update the fields in Word (Ctrl+A, then F9), so that the table of contents shows the numbers of both sections.
+
+Exit code 0 = written, or nothing to change; 2 = not written (no bookmark, the bookmark twice, not a DOCX, a damaged document; one line says which).
 
 ### `cross_session_audit.py`
 
