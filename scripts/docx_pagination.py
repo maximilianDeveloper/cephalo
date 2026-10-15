@@ -234,9 +234,11 @@ def split(path, front, main):
     for el in body_sect.findall(qn("w:titlePg")) + body_sect.findall(qn("w:type")):
         body_sect.remove(el)
     pg2 = page_number_type(body_sect)
-    for attr in ("w:start", "w:fmt"):
-        if pg2.get(qn(attr)) is not None:
-            del pg2.attrib[qn(attr)]
+    # The main text is Arabic: a template's Roman or letter numbering goes, its "- 1 -" stays.
+    if pg2.get(qn("w:start")) is not None:
+        del pg2.attrib[qn("w:start")]
+    if pg2.get(qn("w:fmt")) in ("upperRoman", "lowerRoman", "upperLetter", "lowerLetter"):
+        del pg2.attrib[qn("w:fmt")]
     if main == "restart":
         pg2.set(qn("w:start"), "1")
         done.append("main text from 1")

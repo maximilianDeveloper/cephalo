@@ -1882,7 +1882,17 @@ jobs:
           EOF
           python scripts/build_reference_docx.py "$R/table-numbered.docx" --base "$R/base-table.docx" --page-number bottom-right --title-page counted >/dev/null
           python scripts/build_reference_docx.py "$R/table.docx" --base "$R/base-table.docx" --title-page counted >/dev/null
-          for ref in counted notcounted top logo table; do
+          # A template that numbers its pages "- 1 -" keeps that format in the main text; one in Roman numerals
+          # gives the main text Arabic numerals.
+          python - "$R/notcounted.docx" "$R/dash.docx" "$R/upper.docx" <<'EOF'
+          import sys, docx
+          from docx.oxml.ns import qn
+          for fmt, out in (("numberInDash", sys.argv[2]), ("upperRoman", sys.argv[3])):
+              d = docx.Document(sys.argv[1])
+              d.sections[-1]._sectPr.find(qn("w:pgNumType")).set(qn("w:fmt"), fmt)
+              d.save(out)
+          EOF
+          for ref in counted notcounted top logo table dash upper; do
             pandoc "$R/title_page.md" "$R/ch.md" --reference-doc "$R/$ref.docx" -o "$R/$ref-export.docx"
           done
           pandoc "$R/nomark.md" "$R/ch.md" --reference-doc "$R/counted.docx" -o "$R/nomark-export.docx"
@@ -1909,6 +1919,10 @@ jobs:
           run top hidden continue top
           run logo hidden restart logo
           run table hidden continue table
+          run dash arabic restart dash-arabic
+          run dash roman continue dash-roman
+          run dash none continue dash-none
+          run upper hidden continue upper
           cp "$R/counted-export.docx" "$R/unchanged.docx"
           expect 0 python scripts/docx_pagination.py "$R/unchanged.docx" --front-matter arabic --main-text continue
           grep -q "nothing to change" "$R/out.txt"
@@ -1977,6 +1991,16 @@ jobs:
               rels = zipfile.ZipFile(f"{R}/{name}.docx").read("word/_rels/document.xml.rels").decode("utf-8")
               target = re.search(r'Id="%s"[^>]*Target="([^"]+)"|Target="([^"]+)"[^>]*Id="%s"' % (rid, rid), rels)
               return zipfile.ZipFile(f"{R}/{name}.docx").read("word/" + (target.group(1) or target.group(2))).decode("utf-8")
+          f, m, _ = sections("dash-arabic")
+          check('w:fmt="numberInDash"' in num(f) and 'w:fmt="numberInDash"' in num(m) and 'w:start="1"' in num(m),
+                f"a template's - 1 -, arabic restart: {num(f)} / {num(m)}")
+          f, m, _ = sections("dash-roman")
+          check('w:fmt="upperRoman"' in num(f) and 'w:fmt="numberInDash"' in num(m) and "w:start" not in num(m),
+                f"a template's - 1 -, roman continue: {num(f)} / {num(m)}")
+          f, m, _ = sections("dash-none")
+          check('w:fmt="numberInDash"' in num(m) and 'w:start="1"' in num(m), f"a template's - 1 -, none: {num(m)}")
+          f, m, _ = sections("upper")
+          check("w:fmt" not in num(m), f"a template in Roman numerals: the main text {num(m)}")
           f, m, _ = sections("top")
           hf = lambda s: refs(s, "header")
           check(hf(f) and hf(m) and hf(f) != hf(m), f"top: the front matter has a header of its own: {hf(f)} / {hf(m)}")
