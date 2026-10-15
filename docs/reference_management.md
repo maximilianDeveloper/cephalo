@@ -221,6 +221,35 @@ A seminar paper and the proposal have no Phase B. Without citekeys, the writer-a
 
 `scripts/bibliography_check.py` on the export then shows whether cited and listed authors match, and the format-verifier checks the patterns.
 
+Back matter numbered unlike the main text (`pagination.back_matter`: Roman numerals, a count of its own, or no number shown) starts with the reference list: the page break before it carries the hidden bookmark `_cephalo_back_matter_start`, in the same paragraph and with nothing after the break, which tells `scripts/docx_pagination.py` where the back matter starts ("The title page" below). An appendix after the reference list, and what follows them, belong to the back matter and need no bookmark of their own; the bookmark stands once. Without citekeys, `bibliography.md` starts with it, above the heading:
+
+````markdown
+```{=openxml}
+<w:p><w:bookmarkStart w:id="990002" w:name="_cephalo_back_matter_start"/><w:bookmarkEnd w:id="990002"/><w:r><w:br w:type="page"/></w:r></w:p>
+```
+
+# References
+
+::: {custom-style="Bibliography"}
+Author, Anna (2020): Title. Place: Publisher.
+:::
+````
+
+With citekeys, Pandoc puts the reference list at the end of the document, after an appendix too. `bibliography.md` (same path) then holds the bookmark, the heading `bibliography.heading` gives and an empty `::: {#refs}` div, into which Pandoc writes the entries, and every export lists it after the chapter files and before an appendix. Pandoc adds no `reference-section-title` heading to such a div, so the heading goes into the file:
+
+````markdown
+```{=openxml}
+<w:p><w:bookmarkStart w:id="990002" w:name="_cephalo_back_matter_start"/><w:bookmarkEnd w:id="990002"/><w:r><w:br w:type="page"/></w:r></w:p>
+```
+
+# References
+
+::: {#refs}
+:::
+````
+
+In a seminar paper without citekeys, whose reference list is the last section of the conclusion, the bookmark's block goes right above the reference list's heading in that file: it is markup, not wording, and added later it is a format-only change, like the `Bibliography` div. Where `pagination.back_matter` numbers the back matter like the main text, a bookmark there changes nothing.
+
 ### The title page
 
 Pandoc writes no title page of its own. Write it as a Markdown file in the project, `08_Formal_Review/title_page.md` (flat: `workspace/output/title_page.md`), and list it first, before the chapter files, when you call Pandoc. Its contents come from `styleguide.md` (`title_page.*`); what the user has not given yet stays a placeholder such as `[Name]`. Write its text in the language of the work, with quotation marks typed as the characters `in_text.format_direct` shows: Pandoc turns ASCII `"…"` into English “…” in the DOCX, whatever the language. Set its lines in the styles `Title`, `Subtitle`, `Author` and `Date` (or in styles of your own, which Pandoc adds to the document) with fenced divs, and end it with a page break. Every export of a thesis has a table of contents, whether or not the styleguide names one (`headings.toc_emphasis` sets only how its levels look): it goes into the same file, as a Word field after the title page, with the levels of `headings.max_depth` (`\o "1-3"`); Word fills it in when the user updates the fields (Ctrl+A, then F9, a step of the workflows' submission). Do not use Pandoc's `--toc`: Pandoc places its table of contents before all text, so before the title page.
@@ -256,13 +285,14 @@ The page numbers follow `pagination.title_page` in `styleguide.md`, and Pandoc t
 
 Who edits the XML of the reference document keeps the order of the section properties (`w:sectPr`), which Word expects: `w:pgNumType` follows `w:pgSz` and `w:pgMar`, and `w:titlePg` follows `w:pgNumType`. A table of contents after the title page counts like a text page: with one page of it, the first text page shows 3, or 2 if the title page is not counted, as long as the main text continues the count (`pagination.main_text`); a main text that starts at 1, or follows front matter that is not counted, needs the section below.
 
-Front matter numbered unlike the main text (`pagination.front_matter`: Roman numerals, counted but not shown, or none), and a main text that starts at 1 (`pagination.main_text`), need a section of their own, which a reference document cannot give: with the reference document alone, the table of contents page shows its number like a text page, and the main text continues the count. `scripts/docx_pagination.py` sets the section right after each export, split at the bookmark that ends the front matter, with the values of `pagination.front_matter` and `pagination.main_text` (`docs/scripts.md`); then the fields are updated (Ctrl+A, then F9). Without Python, the user sets the section in Word in the final DOCX, after the final export:
+Front matter numbered unlike the main text (`pagination.front_matter`: Roman numerals, counted but not shown, or none), and a main text that starts at 1 (`pagination.main_text`), need a section of their own, which a reference document cannot give: with the reference document alone, the table of contents page shows its number like a text page, and the main text continues the count. `scripts/docx_pagination.py` sets the section right after each export, split at the bookmark that ends the front matter, with the values of `pagination.front_matter` and `pagination.main_text` (`docs/scripts.md`); then the fields are updated (Ctrl+A, then F9). Back matter numbered unlike the main text (`pagination.back_matter`: Roman numerals that continue the front matter's count, a count of its own, or no number shown) needs a section of its own too, from the bookmark before the reference list ("The reference list"): the script sets it in the same run, with the value of `pagination.back_matter`. Roman numerals that continue the front matter's count start at the number after the front matter's last page, IV after III, which the script counts by the front matter's page breaks; a table of contents or list that fills more than one page in Word moves it (`docs/scripts.md`, `--back-matter-start`). With no number shown, the table of contents still lists the reference list with the number its page counts; if `styleguide.md` wants it listed otherwise, ask the user. Without Python, the user sets the sections in Word in the final DOCX, after the final export (steps 1 to 4 for the front matter and the main text, step 5 for the back matter, as far as the styleguide needs them):
 
 1. Replace the page break at the end of the front matter (after the table of contents, or after a list of abbreviations that follows it) with a section break: show the formatting marks (Home, ¶), delete the page break, and insert Layout, Breaks, "Next Page".
 2. Open the footer of the first text page, the first page of the second section. In the Header & Footer tab, clear "Different First Page", which the section took over from the title page, then turn off "Link to Previous".
 3. In the first section's footer (on the table of contents page), delete the page number (counted but not shown, or none) or format it in Roman numerals (Insert, Page Number, Format Page Numbers); front matter in Arabic numerals keeps it.
 4. In the second section, Format Page Numbers as `pagination.main_text` says: "Continue from previous section" to continue the count, or "Start at" 1. To continue the count after front matter that is not counted (none), "Start at" the number after the title page's: 2 after a counted title page, otherwise 1.
-5. Update the fields (Ctrl+A, then F9), so that the table of contents shows the new numbers.
+5. Back matter numbered unlike the main text: replace the page break before the reference list with a section break as in step 1, and open the footer of the reference list's first page. Clear "Different First Page" if the section took it over from the title page, then Format Page Numbers as `pagination.back_matter` says: Roman numerals with "Start at" the number after the front matter's last page (IV after III; not "Continue from previous section", which continues the main text's count), or "Start at" 1 (I, i or 1) for a count of its own. For no number shown, turn off "Link to Previous" and delete the page number there.
+6. Update the fields (Ctrl+A, then F9), so that the table of contents shows the new numbers.
 
 The format check reads the sections in the DOCX: an export without them, where the styleguide needs them, is a finding until the script has run.
 

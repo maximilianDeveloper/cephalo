@@ -103,6 +103,7 @@
 - **`title_page`:** [counted but not shown / not counted]
 - **`front_matter`:** [Roman numerals (I, II, … or i, ii, …) / counted but not shown / Arabic, like the main text / none (not counted, no number shown)]
 - **`main_text`:** [Arabic from the introduction on, continuing the count / Arabic from the introduction on, starting at 1 / continuous]
+- **`back_matter`:** [like the main text / Roman numerals, continuing the front matter's count / a count of its own from 1 (Arabic, or Roman: I or i) / no number shown] (the reference list, an appendix and what follows them)
 - **`position`:** [bottom center / bottom right / top right]
 
 ---

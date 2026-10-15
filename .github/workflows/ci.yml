@@ -1784,7 +1784,7 @@ jobs:
           print("OK: Pandoc round trip")
           EOF
 
-      - name: docx_pagination.py (front matter as a section of its own; errors)
+      - name: docx_pagination.py (front and back matter as sections of their own; errors)
         run: |
           R=/tmp/ci_pagination; rm -rf "$R"; mkdir -p "$R"
           expect() {
@@ -1903,6 +1903,21 @@ jobs:
           for form in beside after heading styled; do
             pandoc "$R/$form.md" "$R/ch.md" --reference-doc "$R/counted.docx" -o "$R/$form-export.docx"
           done
+          # The back matter (pagination.back_matter): the file after the chapters starts with the page break that
+          # carries the bookmark _cephalo_back_matter_start, before the reference list and an appendix.
+          BACK='<w:p><w:bookmarkStart w:id="990002" w:name="_cephalo_back_matter_start"/><w:bookmarkEnd w:id="990002"/><w:r><w:br w:type="page"/></w:r></w:p>'
+          printf '```{=openxml}\n%s\n```\n\n# Literaturverzeichnis {-}\n\nAutor, A. (2020): Titel.\n\n# Anhang {-}\n\nText.\n' "$BACK" > "$R/back.md"
+          { cat "$R/back.md"; printf '\n```{=openxml}\n%s\n```\n' "$BACK"; } > "$R/back-twice.md"
+          BBM='<w:bookmarkStart w:id="990002" w:name="_cephalo_back_matter_start"/><w:bookmarkEnd w:id="990002"/>'
+          sed "s|$BACK|<w:p>$BBM</w:p><w:p><w:r><w:br w:type=\"page\"/></w:r></w:p>|" "$R/back.md" > "$R/back-beside.md"
+          for ref in counted notcounted top dash upper; do
+            pandoc "$R/title_page.md" "$R/ch.md" "$R/back.md" --reference-doc "$R/$ref.docx" -o "$R/back-$ref-export.docx"
+          done
+          pandoc "$R/nomark.md" "$R/ch.md" "$R/back.md" --reference-doc "$R/counted.docx" -o "$R/back-nomark-export.docx"
+          for form in twice beside; do
+            pandoc "$R/title_page.md" "$R/ch.md" "$R/back-$form.md" --reference-doc "$R/counted.docx" -o "$R/back-$form-export.docx"
+          done
+          pandoc "$R/back.md" "$R/title_page.md" "$R/ch.md" --reference-doc "$R/counted.docx" -o "$R/back-early-export.docx"
           run() {  # run <reference> <front> <main> <name>: a fresh copy of that export, split
             cp "$R/$1-export.docx" "$R/$4.docx"
             expect 0 python scripts/docx_pagination.py "$R/$4.docx" --front-matter "$2" --main-text "$3"
@@ -1961,6 +1976,70 @@ jobs:
           expect 2 python scripts/docx_pagination.py "$R/wrong.txt" --front-matter roman --main-text restart
           one_error ".*expected a .docx file"
           expect 2 python scripts/docx_pagination.py "$R/unchanged.docx" --front-matter roman
+          bm() {  # bm <reference> <front> <main> <back> <name> [start]: a fresh copy of that export with back matter, split
+            cp "$R/back-$1-export.docx" "$R/$5.docx"
+            expect 0 python scripts/docx_pagination.py "$R/$5.docx" --front-matter "$2" --main-text "$3" --back-matter "$4" ${6:+--back-matter-start "$6"}
+          }
+          # Like the main text, the default: the bookmark changes nothing.
+          run back-counted roman restart back-default
+          bm counted roman restart main back-main
+          bm counted roman restart roman-continue rc-counted
+          grep -q "^Front matter and back matter set as sections of their own" "$R/out.txt"
+          grep -q "back matter in Roman numerals from IV, continuing the front matter's count" "$R/out.txt"
+          cp "$R/rc-counted.docx" "$R/rc-before.docx"
+          expect 0 python scripts/docx_pagination.py "$R/rc-counted.docx" --front-matter roman --main-text restart --back-matter roman-continue
+          grep -q "a section of its own already: nothing changed" "$R/out.txt"
+          cmp -s "$R/rc-counted.docx" "$R/rc-before.docx"
+          bm notcounted roman restart roman-continue rc-notcounted
+          grep -q "from III, continuing" "$R/out.txt"
+          bm counted roman-lower restart roman-continue rc-lower
+          grep -q "from iv, continuing" "$R/out.txt"
+          bm counted roman restart roman-continue rc-given 7
+          grep -q "from VII (--back-matter-start 7)" "$R/out.txt"
+          bm counted roman restart roman back-roman
+          bm counted roman restart roman-lower back-roman-lower
+          bm counted roman restart restart back-restart
+          bm dash roman restart restart back-dash
+          bm counted hidden continue none back-none
+          bm top roman restart none back-none-top
+          # Front matter numbered like the main text: only the back matter is split, also without the front
+          # matter's bookmark, unless its count is needed.
+          bm counted arabic continue restart back-only
+          grep -q "^Back matter set as a section of its own" "$R/out.txt"
+          cp "$R/back-only.docx" "$R/back-only-before.docx"
+          expect 0 python scripts/docx_pagination.py "$R/back-only.docx" --front-matter arabic --main-text continue --back-matter restart
+          grep -q "the back matter is a section of its own already: nothing changed" "$R/out.txt"
+          cmp -s "$R/back-only.docx" "$R/back-only-before.docx"
+          bm counted arabic continue roman-continue back-only-rc
+          bm upper arabic continue restart back-upper
+          bm nomark arabic continue none back-nomark
+          cp "$R/back-nomark-export.docx" "$R/back-nomark-rc.docx"
+          expect 2 python scripts/docx_pagination.py "$R/back-nomark-rc.docx" --front-matter arabic --main-text continue --back-matter roman-continue
+          one_error "no end of the front matter marked, from which --back-matter roman-continue counts"
+          cmp -s "$R/back-nomark-rc.docx" "$R/back-nomark-export.docx"
+          bm nomark arabic continue roman-continue back-nomark-given 3
+          cp "$R/back-counted-export.docx" "$R/back-err.docx"
+          expect 2 python scripts/docx_pagination.py "$R/back-err.docx" --front-matter none --main-text continue --back-matter roman-continue
+          one_error "--back-matter roman-continue continues the front matter's count, which --front-matter none"
+          expect 2 python scripts/docx_pagination.py "$R/back-err.docx" --front-matter roman --main-text restart --back-matter roman --back-matter-start 4
+          one_error "--back-matter-start goes with --back-matter roman-continue only"
+          expect 2 python scripts/docx_pagination.py "$R/back-err.docx" --front-matter roman --main-text restart --back-matter roman-continue --back-matter-start 0
+          one_error "--back-matter-start needs a number from 1 on"
+          cmp -s "$R/back-err.docx" "$R/back-counted-export.docx"
+          cp "$R/counted-export.docx" "$R/back-missing.docx"
+          expect 2 python scripts/docx_pagination.py "$R/back-missing.docx" --front-matter roman --main-text restart --back-matter roman
+          one_error "no start of the back matter marked"
+          cmp -s "$R/back-missing.docx" "$R/counted-export.docx"
+          for form in twice beside early; do
+            cp "$R/back-$form-export.docx" "$R/back-$form.docx"
+            expect 2 python scripts/docx_pagination.py "$R/back-$form.docx" --front-matter roman --main-text restart --back-matter roman
+            case $form in
+              twice) one_error "the bookmark _cephalo_back_matter_start occurs 2 times" ;;
+              beside) one_error "the bookmark _cephalo_back_matter_start is not on the page break before the back matter" ;;
+              early) one_error "the bookmark _cephalo_back_matter_start stands before the end of the front matter" ;;
+            esac
+            cmp -s "$R/back-$form.docx" "$R/back-$form-export.docx"
+          done
           python - "$R" <<'EOF'
           import re, sys, zipfile
           import xml.etree.ElementTree as ET
@@ -1969,12 +2048,12 @@ jobs:
           def check(cond, what):
               if not cond:
                   raise SystemExit("docx_pagination: " + what)
-          def sections(name):
-              """(front matter, main text) section properties, and the document XML."""
+          def sections(name, n=2):
+              """The section properties in document order (front matter, main text, back matter), and the document XML."""
               xml = zipfile.ZipFile(f"{R}/{name}.docx").read("word/document.xml").decode("utf-8")
               sects = re.findall(r"<w:sectPr\b.*?</w:sectPr>", xml, re.S)
-              check(len(sects) == 2, f"{name}: {len(sects)} sections, not 2")
-              return sects[0], sects[1], xml
+              check(len(sects) == n, f"{name}: {len(sects)} sections, not {n}")
+              return (*sects, xml)
           def refs(sect, tag, kind="default"):
               """The relationship ids of the section's header or footer references of that type."""
               out = []
@@ -2056,6 +2135,46 @@ jobs:
           check("<w:tbl" in part and "Name" in part and "PAGE" not in part, "table: the front matter's footer keeps the table, not the number")
           check("PAGE" in part_of("table", footers(m)[0]), "table: the main text keeps the number in the cell")
           check(not empty_cells(f"{R}/table.docx"), f"table: a cell without a paragraph in {empty_cells(f'{R}/table.docx')}")
+          # The back matter.
+          doc_xml = lambda name: zipfile.ZipFile(f"{R}/{name}.docx").read("word/document.xml")
+          f, m, _ = sections("back-main")
+          check(doc_xml("back-main") == doc_xml("back-default"), "back matter main: not the same as without --back-matter")
+          f, m, b, xml = sections("rc-counted", 3)
+          check('w:fmt="upperRoman"' in num(b) and 'w:start="4"' in num(b), f"roman-continue: back matter {num(b)}")
+          check('w:start="1"' in num(m) and "w:fmt" not in num(m), f"roman-continue: main text {num(m)}")
+          check(footers(b) and footers(b) == footers(m) and "<w:titlePg" not in b,
+                "roman-continue: the back matter keeps the main text's footer, without a title page")
+          marker = re.search(r'<w:p\b(?:(?!</w:p>).)*?_cephalo_back_matter_start.*?</w:p>', xml, re.S).group(0)
+          check("<w:sectPr" in marker and 'w:type="page"' not in marker,
+                "roman-continue: the page break before the back matter became the section break")
+          for name, want in (("rc-notcounted", ('w:fmt="upperRoman"', 'w:start="3"')),
+                             ("rc-lower", ('w:fmt="lowerRoman"', 'w:start="4"')),
+                             ("rc-given", ('w:fmt="upperRoman"', 'w:start="7"')),
+                             ("back-roman", ('w:fmt="upperRoman"', 'w:start="1"')),
+                             ("back-roman-lower", ('w:fmt="lowerRoman"', 'w:start="1"')),
+                             ("back-dash", ('w:fmt="numberInDash"', 'w:start="1"'))):
+              f, m, b, _ = sections(name, 3)
+              check(all(w in num(b) for w in want), f"{name}: back matter {num(b)}")
+          f, m, b, _ = sections("back-restart", 3)
+          check('w:start="1"' in num(b) and "w:fmt" not in num(b), f"back-restart: back matter {num(b)}")
+          f, m, b, _ = sections("back-none", 3)
+          check(footers(b) and footers(b) != footers(m), f"back-none: the back matter has a footer of its own: {footers(b)} / {footers(m)}")
+          check("PAGE" not in part_of("back-none", footers(b)[0]) and "PAGE" in part_of("back-none", footers(m)[0]),
+                "back-none: the back matter's footer without the number, the main text's with it")
+          f, m, b, _ = sections("back-none-top", 3)
+          check(hf(b) and hf(b) != hf(m), f"back-none-top: the back matter has a header of its own: {hf(b)} / {hf(m)}")
+          part = part_of("back-none-top", hf(b)[0])
+          check("Laufkopf" in part and "PAGE" not in part, "back-none-top: the back matter's header keeps its text, not the number")
+          for name, want in (("back-only", 'w:start="1"'), ("back-only-rc", 'w:start="4"'), ("back-nomark-given", 'w:start="3"')):
+              f, b, _ = sections(name)
+              check("<w:titlePg" in f and "<w:titlePg" not in b and want in num(b),
+                    f"{name}: the title page in the first section only, back matter {num(b)}")
+          f, b, _ = sections("back-upper")
+          check('w:fmt="upperRoman"' in num(f) and "w:fmt" not in num(b) and 'w:start="1"' in num(b),
+                f"back-upper: a template in Roman numerals, back matter from 1: {num(f)} / {num(b)}")
+          f, b, _ = sections("back-nomark")
+          check(footers(b) and footers(b) != footers(f) and "PAGE" not in part_of("back-nomark", footers(b)[0]),
+                "back-nomark: the back matter's footer without the number")
           print("OK: docx_pagination.py")
           EOF
 

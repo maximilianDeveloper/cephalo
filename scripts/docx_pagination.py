@@ -5,10 +5,12 @@ docx_pagination.py
 Numbers the front matter of an exported DOCX unlike the main text: Roman
 numerals, counted but not shown, or not counted at all, and a main text that
 continues the count or starts at 1 (pagination.front_matter and
-pagination.main_text in styleguide.md). A reference document cannot do this:
-it gives the whole export one section, so the table of contents page shows
-its number like a text page. This script splits the export into two
-sections at the end of the front matter, after each export.
+pagination.main_text in styleguide.md); and, if pagination.back_matter asks
+for it, the back matter too (the reference list, an appendix and what
+follows them). A reference document cannot do this: it gives the whole
+export one section, so the table of contents page shows its number like a
+text page. This script splits the export into sections at the end of the
+front matter and at the start of the back matter, after each export.
 
 The end of the front matter is marked in the title page file by a hidden
 bookmark on the page break that ends it (docs/reference_management.md,
@@ -16,15 +18,20 @@ bookmark on the page break that ends it (docs/reference_management.md,
 
     <w:p><w:bookmarkStart w:id="990001" w:name="_cephalo_front_matter_end"/><w:bookmarkEnd w:id="990001"/><w:r><w:br w:type="page"/></w:r></w:p>
 
-That page break becomes the section break; a bookmark in a paragraph of its
-own, or text after the break, stops the script. The title page keeps the
-reference document's numbering (pagination.title_page, set with
+The start of the back matter is marked the same way, on the page break
+before the reference list (same document, "The reference list"):
+
+    <w:p><w:bookmarkStart w:id="990002" w:name="_cephalo_back_matter_start"/><w:bookmarkEnd w:id="990002"/><w:r><w:br w:type="page"/></w:r></w:p>
+
+Each of these page breaks becomes a section break; a bookmark in a paragraph
+of its own, or text after the break, stops the script. The title page keeps
+the reference document's numbering (pagination.title_page, set with
 scripts/build_reference_docx.py --title-page): whether it is counted is read
 from the document.
 
 Usage:
     python3 scripts/docx_pagination.py workspace/output/document.docx \\
-        --front-matter roman --main-text restart
+        --front-matter roman --main-text restart --back-matter roman-continue
 
     --front-matter  roman        Roman numerals, I, II, ... (lower: roman-lower)
                     hidden       counted but not shown
@@ -32,12 +39,27 @@ Usage:
                     arabic       Arabic, like the main text
     --main-text     continue     the main text continues the count
                     restart      the main text starts at 1
+    --back-matter   main         like the main text (the default)
+                    roman-continue
+                                 Roman numerals, continuing the front matter's
+                                 count (small ones after roman-lower)
+                    roman        Roman numerals from I (lower: roman-lower)
+                    restart      Arabic from 1
+                    none         no number shown
+    --back-matter-start N        with roman-continue: the number of the back
+                                 matter's first page (4 for IV)
 
-With --front-matter arabic and --main-text continue nothing changes: the
-export already numbers it that way. A document split before is left as it
-is. On Windows, use `py` instead of `python3`. Update the fields in Word
-afterwards (Ctrl+A, then F9), so that the table of contents shows the new
-numbers.
+With roman-continue, the script counts the front matter's pages by its page
+breaks: the title page and one page for each page break up to the end of the
+front matter. A table of contents or list that fills more than one page,
+once Word updates the fields, is not counted that way: give the number with
+--back-matter-start.
+
+With --front-matter arabic, --main-text continue and --back-matter main
+nothing changes: the export already numbers it that way. A document split
+before is left as it is. On Windows, use `py` instead of `python3`. Update
+the fields in Word afterwards (Ctrl+A, then F9), so that the table of
+contents shows the new numbers.
 
 Exit codes:
     0 — document written, or nothing to change
@@ -67,8 +89,12 @@ except ImportError:
     sys.exit(2)
 
 MARKER = "_cephalo_front_matter_end"
+BACK_MARKER = "_cephalo_back_matter_start"
 FRONT = ("roman", "roman-lower", "hidden", "none", "arabic")
 MAIN = ("continue", "restart")
+BACK = ("main", "roman-continue", "roman", "roman-lower", "restart", "none")
+# Number formats that give way to Arabic numerals in the main text, and in back matter from 1.
+NOT_ARABIC = ("upperRoman", "lowerRoman", "upperLetter", "lowerLetter")
 # Children of w:sectPr that follow w:pgNumType, in schema order: a new
 # w:pgNumType goes before the first of them.
 AFTER_PGNUMTYPE = ("cols", "formProt", "vAlign", "noEndnote", "titlePg", "textDirection",
@@ -114,16 +140,17 @@ def is_empty(part_element):
     return not "".join(t.text or "" for t in part_element.iter(qn("w:t"))).strip()
 
 
-def without_page_numbers(doc, ref):
+def without_page_numbers(doc, ref, keep_empty=False):
     """The relationship id of a copy of the referenced header or footer without page numbers.
 
-    The same id if it shows none; None if nothing is left of it."""
+    The same id if it shows none; None if nothing is left of it, unless keep_empty: then that of the
+    empty copy (a later section without a reference of its own would show the previous one's)."""
     rid = ref.get(R_ID)
     part = doc.part.related_parts[rid]
     element = copy.deepcopy(part.element)
     if not remove_page_numbers(element):
         return rid
-    if is_empty(element):
+    if is_empty(element) and not keep_empty:
         return None
     if element.find(qn("w:p")) is None and element.find(qn("w:tbl")) is None:
         element.append(OxmlElement("w:p"))
@@ -154,18 +181,62 @@ def drop_if_bare(el):
         el.getparent().remove(el)
 
 
-def marker_paragraph(body):
-    starts = [b for b in body.iter(qn("w:bookmarkStart")) if b.get(qn("w:name")) == MARKER]
+def marker_paragraph(body, name, once):
+    """The paragraph that holds the bookmark name; None if there is none."""
+    starts = [b for b in body.iter(qn("w:bookmarkStart")) if b.get(qn("w:name")) == name]
     if len(starts) > 1:
-        raise UsageError(f"the bookmark {MARKER} occurs {len(starts)} times; the front matter ends once")
+        raise UsageError(f"the bookmark {name} occurs {len(starts)} times; {once}")
     if not starts:
         return None
     p = starts[0]
     while p is not None and p.tag != qn("w:p"):
         p = p.getparent()
     if p is None:
-        raise UsageError(f"the bookmark {MARKER} is not inside a paragraph")
+        raise UsageError(f"the bookmark {name} is not inside a paragraph")
     return p
+
+
+def is_split(p):
+    """Whether the paragraph ends a section already (a document split before)."""
+    ppr = p.find(qn("w:pPr"))
+    return ppr is not None and ppr.find(qn("w:sectPr")) is not None
+
+
+def to_section_break(p, sect):
+    """The page break in paragraph p becomes a section break, which ends a section with the properties sect."""
+    for br in list(p.iter(qn("w:br"))):
+        if br.get(qn("w:type")) == "page":
+            run = br.getparent()
+            run.remove(br)
+            if run.tag == qn("w:r") and all(c.tag == qn("w:rPr") for c in run):
+                run.getparent().remove(run)
+    ppr = p.find(qn("w:pPr"))
+    if ppr is None:
+        ppr = OxmlElement("w:pPr")
+        p.insert(0, ppr)
+    follower = next((c for c in ppr if c.tag in {qn("w:" + n) for n in AFTER_SECTPR}), None)
+    if follower is not None:
+        follower.addprevious(sect)
+    else:
+        ppr.append(sect)
+
+
+def roman(n):
+    out = ""
+    for value, letters in ((1000, "M"), (900, "CM"), (500, "D"), (400, "CD"), (100, "C"), (90, "XC"),
+                           (50, "L"), (40, "XL"), (10, "X"), (9, "IX"), (5, "V"), (4, "IV"), (1, "I")):
+        while n >= value:
+            out += letters
+            n -= value
+    return out
+
+
+def front_matter_last_page(body, p, first):
+    """The number of the front matter's last page: the title page's (first), plus one for each page break
+    before the one in paragraph p, which ends the front matter."""
+    breaks = [br for br in body.iter(qn("w:br")) if br.get(qn("w:type")) == "page"]
+    own = [br for br in p.iter(qn("w:br")) if br.get(qn("w:type")) == "page"]
+    return first + breaks.index(own[-1])
 
 
 def outline_level(p, styles):
@@ -217,36 +288,14 @@ def ends_with_page_break(p):
     return True
 
 
-def split(path, front, main):
-    doc = Document(path)
-    body = doc.element.body
-    body_sect = body.find(qn("w:sectPr"))
-    if body_sect is None:
-        raise UsageError("the document has no section properties; export it with a reference document "
-                         "(pandoc --reference-doc)")
-    if front == "arabic" and main == "continue":
-        return None, ["front matter numbered like the main text: one section, nothing to change"]
-    p = marker_paragraph(body)
-    if p is None:
-        raise UsageError(f"no end of the front matter marked: the page break that ends it needs the bookmark "
-                         f"{MARKER} (docs/reference_management.md, \"The title page\")")
-    ppr = p.find(qn("w:pPr"))
-    if ppr is not None and ppr.find(qn("w:sectPr")) is not None:
-        return None, ["the front matter is a section of its own already: nothing changed"]
-    # After that check: in a document split before, the page break is gone.
-    if not ends_with_page_break(p):
-        raise UsageError(f"the bookmark {MARKER} is not on the page break that ends the front matter: write them "
-                         f"as one paragraph with nothing after the break (docs/reference_management.md, "
-                         f"\"The title page\")")
-
-    pg = body_sect.find(qn("w:pgNumType"))
-    title_counted = pg is None or pg.get(qn("w:start")) != "0"
+def split_front_matter(doc, p, front, main, title_counted, done):
+    """The front matter as a section of its own, up to the page break in paragraph p."""
+    body_sect = doc.element.body.find(qn("w:sectPr"))
 
     # Section 1, the front matter: the page setup and the title page of the export.
     sect1 = copy.deepcopy(body_sect)
     for el in sect1.findall(qn("w:type")) + sect1.findall(qn("w:sectPrChange")):
         sect1.remove(el)
-    done = []
     if front in ("hidden", "none"):
         # Without its page numbers; the title page keeps its own (first-page) header and footer.
         for ref in sect1.findall(qn("w:headerReference")) + sect1.findall(qn("w:footerReference")):
@@ -271,7 +320,7 @@ def split(path, front, main):
     # The main text is Arabic: a template's Roman or letter numbering goes, its "- 1 -" stays.
     if pg2.get(qn("w:start")) is not None:
         del pg2.attrib[qn("w:start")]
-    if pg2.get(qn("w:fmt")) in ("upperRoman", "lowerRoman", "upperLetter", "lowerLetter"):
+    if pg2.get(qn("w:fmt")) in NOT_ARABIC:
         del pg2.attrib[qn("w:fmt")]
     if main == "restart":
         pg2.set(qn("w:start"), "1")
@@ -294,27 +343,118 @@ def split(path, front, main):
                           "\"The title page\")")
 
     # The page break that ends the front matter becomes the section break.
-    for br in list(p.iter(qn("w:br"))):
-        if br.get(qn("w:type")) == "page":
-            run = br.getparent()
-            run.remove(br)
-            if run.tag == qn("w:r") and all(c.tag == qn("w:rPr") for c in run):
-                run.getparent().remove(run)
-    if ppr is None:
-        ppr = OxmlElement("w:pPr")
-        p.insert(0, ppr)
-    follower = next((c for c in ppr if c.tag in {qn("w:" + n) for n in AFTER_SECTPR}), None)
-    if follower is not None:
-        follower.addprevious(sect1)
+    to_section_break(p, sect1)
+
+
+def split_back(doc, q, back, front, start, computed):
+    """The back matter as a section of its own (pagination.back_matter), from the page break in paragraph q."""
+    body_sect = doc.element.body.find(qn("w:sectPr"))
+    # The section before it, the main text (or everything before it, where the front matter is not split),
+    # ends at q with the numbering it has now.
+    before = copy.deepcopy(body_sect)
+    for el in before.findall(qn("w:type")) + before.findall(qn("w:sectPrChange")):
+        before.remove(el)
+    # The back matter: the export's section properties, without the title page, on a new page.
+    for el in body_sect.findall(qn("w:titlePg")) + body_sect.findall(qn("w:type")):
+        body_sect.remove(el)
+    pg = page_number_type(body_sect)
+    if pg.get(qn("w:start")) is not None:
+        del pg.attrib[qn("w:start")]
+    if back == "none":
+        # A section without a header or footer of its own would show the previous one's: each gets a copy
+        # without the page number, empty if nothing else was in it.
+        for ref in body_sect.findall(qn("w:headerReference")) + body_sect.findall(qn("w:footerReference")):
+            if ref.get(qn("w:type")) != "first":
+                ref.set(R_ID, without_page_numbers(doc, ref, keep_empty=True))
+        text = "back matter without a page number"
+    elif back == "restart":
+        # Arabic numerals, in the format the main text has, such as "- 1 -".
+        if pg.get(qn("w:fmt")) in NOT_ARABIC:
+            del pg.attrib[qn("w:fmt")]
+        pg.set(qn("w:start"), "1")
+        text = "back matter from 1"
     else:
-        ppr.append(sect1)
+        lower = back == "roman-lower" or (back == "roman-continue" and front == "roman-lower")
+        pg.set(qn("w:fmt"), "lowerRoman" if lower else "upperRoman")
+        if back != "roman-continue":
+            start = 1
+        # Word and LibreOffice would continue the main text's count, not the front matter's: the start is set.
+        pg.set(qn("w:start"), str(start))
+        number = roman(start).lower() if lower else roman(start)
+        text = f"back matter in Roman numerals from {number}"
+        if back == "roman-continue":
+            text += (", continuing the front matter's count as its page breaks give it (a table of contents or "
+                     "list that fills more than one page once Word updates the fields: give --back-matter-start)"
+                     if computed else f" (--back-matter-start {start})")
+    drop_if_bare(pg)
+    to_section_break(q, before)
+    return text
+
+
+def split(path, front, main, back="main", back_start=None):
+    doc = Document(path)
+    body = doc.element.body
+    body_sect = body.find(qn("w:sectPr"))
+    if body_sect is None:
+        raise UsageError("the document has no section properties; export it with a reference document "
+                         "(pandoc --reference-doc)")
+    split_front = not (front == "arabic" and main == "continue")
+    if not split_front and back == "main":
+        return None, ["front matter numbered like the main text: one section, nothing to change"]
+    p = marker_paragraph(body, MARKER, "the front matter ends once")
+    q = marker_paragraph(body, BACK_MARKER, "the back matter starts once") if back != "main" else None
+    if p is None and split_front:
+        raise UsageError(f"no end of the front matter marked: the page break that ends it needs the bookmark "
+                         f"{MARKER} (docs/reference_management.md, \"The title page\")")
+    if p is not None and is_split(p):
+        return None, ["the front matter is a section of its own already: nothing changed"]
+    if q is not None and is_split(q):
+        return None, ["the back matter is a section of its own already: nothing changed"]
+    if back != "main" and q is None:
+        raise UsageError(f"no start of the back matter marked: the page break before the reference list needs the "
+                         f"bookmark {BACK_MARKER} (docs/reference_management.md, \"The reference list\")")
+    count_front = back == "roman-continue" and back_start is None
+    if count_front and front == "none":
+        raise UsageError("--back-matter roman-continue continues the front matter's count, which --front-matter none "
+                         "does not count: give the back matter's first number with --back-matter-start")
+    if count_front and p is None:
+        raise UsageError(f"no end of the front matter marked, from which --back-matter roman-continue counts: put the "
+                         f"bookmark {MARKER} on the page break that ends it (docs/reference_management.md, \"The title "
+                         f"page\"), or give --back-matter-start")
+    # After those checks: in a document split before, the page break is gone.
+    if p is not None and (split_front or count_front) and not ends_with_page_break(p):
+        raise UsageError(f"the bookmark {MARKER} is not on the page break that ends the front matter: write them "
+                         f"as one paragraph with nothing after the break (docs/reference_management.md, "
+                         f"\"The title page\")")
+    if q is not None and not ends_with_page_break(q):
+        raise UsageError(f"the bookmark {BACK_MARKER} is not on the page break before the back matter: write them "
+                         f"as one paragraph with nothing after the break (docs/reference_management.md, "
+                         f"\"The reference list\")")
+    if p is not None and q is not None:
+        paragraphs = list(body.iter(qn("w:p")))
+        if paragraphs.index(q) <= paragraphs.index(p):
+            raise UsageError(f"the bookmark {BACK_MARKER} stands before the end of the front matter ({MARKER}): it "
+                             f"goes on the page break before the reference list (docs/reference_management.md, "
+                             f"\"The reference list\")")
+
+    pg = body_sect.find(qn("w:pgNumType"))
+    title_counted = pg is None or pg.get(qn("w:start")) != "0"
+    if count_front:
+        first = pg.get(qn("w:start")) if pg is not None else None
+        back_start = front_matter_last_page(body, p, int(first) if first and first.isdigit() else 1) + 1
+    done = []
+    if split_front:
+        split_front_matter(doc, p, front, main, title_counted, done)
+    if back != "main":
+        done.append(split_back(doc, q, back, front, back_start, count_front))
     return doc, done
 
 
 def main(argv=None):
     ap = argparse.ArgumentParser(
         description="Number the front matter of an exported DOCX unlike the main text (pagination.front_matter, "
-                    "pagination.main_text): two sections, split at the bookmark " + MARKER + ".",
+                    "pagination.main_text), and the back matter (pagination.back_matter): sections of their own, "
+                    "split at the bookmarks " + MARKER + " and " + BACK_MARKER + ".",
         epilog="Exit codes: 0 written or nothing to change, 2 not written. Update the fields in Word "
                "afterwards (Ctrl+A, then F9).")
     ap.add_argument("document", help="the exported DOCX, changed in place")
@@ -323,13 +463,26 @@ def main(argv=None):
                          "none (not counted, no number shown) or arabic (like the main text)")
     ap.add_argument("--main-text", required=True, choices=MAIN,
                     help="continue (the main text continues the count) or restart (it starts at 1)")
+    ap.add_argument("--back-matter", default="main", choices=BACK,
+                    help="main (like the main text, the default), roman-continue (Roman numerals, continuing the "
+                         "front matter's count), roman or roman-lower (Roman numerals from I or i), restart (Arabic "
+                         "from 1) or none (no number shown)")
+    ap.add_argument("--back-matter-start", type=int, metavar="N",
+                    help="with roman-continue: the number of the back matter's first page (4 for IV), where the "
+                         "front matter's page breaks do not give it, as for a table of contents or list that fills "
+                         "more than one page")
     args = ap.parse_args(argv)
     try:
         if not os.path.isfile(args.document):
             raise UsageError(f"{args.document} not found")
         if not args.document.lower().endswith(".docx"):
             raise UsageError(f"{args.document}: expected a .docx file")
-        doc, done = split(args.document, args.front_matter, args.main_text)
+        if args.back_matter_start is not None and args.back_matter != "roman-continue":
+            raise UsageError("--back-matter-start goes with --back-matter roman-continue only")
+        if args.back_matter_start is not None and args.back_matter_start < 1:
+            raise UsageError("--back-matter-start needs a number from 1 on")
+        doc, done = split(args.document, args.front_matter, args.main_text, args.back_matter,
+                          args.back_matter_start)
         if doc is not None:
             doc.save(args.document)
     except UsageError as e:
@@ -341,7 +494,10 @@ def main(argv=None):
     if doc is None:
         print(f"{args.document}: {done[0]}")
     else:
-        print(f"Front matter set as a section of its own: {args.document}")
+        front = not (args.front_matter == "arabic" and args.main_text == "continue")
+        what = ("Front matter and back matter set as sections of their own" if front and args.back_matter != "main"
+                else "Front matter set as a section of its own" if front else "Back matter set as a section of its own")
+        print(f"{what}: {args.document}")
         for line in done:
             print(f"  - {line}")
         print("  Update the fields in Word (Ctrl+A, then F9) for the table of contents' page numbers.")
