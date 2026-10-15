@@ -4,8 +4,9 @@ build_reference_docx.py
 
 Builds the reference document Pandoc takes the layout of an exported DOCX
 from (`pandoc --reference-doc`): page size, margins, the page number, the
-title page's numbering, the paragraph styles Pandoc sets the text in, and
-the styles Word sets the table of contents in.
+title page's numbering, the paragraph styles Pandoc sets the text in, the
+styles Word sets the table of contents in, and a heading style for front
+matter that the table of contents does not list.
 The values come from styleguide.md; the orchestrator reads them there and
 passes them as options. What is not given stays as in Pandoc's own reference
 document (see docs/reference_management.md, "The reference document").
@@ -446,6 +447,19 @@ def build(args):
             set_font(st, heading_font)
         if args.heading_color:
             set_color(st, args.heading_color)
+    # A heading in front matter that shows no page number (docs/reference_management.md, "The title page"): it looks
+    # like Heading 1 but has no outline level, so the table of contents does not list it, and no chapter number from
+    # a template's numbered Heading 1. A starting document's own style of that name stays as it is.
+    if existing(doc, "Front Matter Heading") is None:
+        fmh = style(doc, "Front Matter Heading", based_on=existing(doc, "Heading 1") or normal)
+        fmh.next_paragraph_style = body
+        ppr = fmh.element.get_or_add_pPr()
+        num, num_id, level = OxmlElement("w:numPr"), OxmlElement("w:numId"), OxmlElement("w:outlineLvl")
+        num_id.set(qn("w:val"), "0")
+        num.append(num_id)
+        level.set(qn("w:val"), "9")  # body text
+        ppr.append(num)  # w:numPr before w:outlineLvl, the order Word expects
+        ppr.append(level)
 
     # Table of contents: the styles Word sets its entries in when it fills the field in, named as
     # Word names them. A new one gets Word's own layout; one the starting document has keeps its

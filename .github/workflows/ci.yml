@@ -1681,6 +1681,12 @@ jobs:
               indent = f.left_indent.twips if f.left_indent is not None else 0
               check(f.space_after is not None and f.space_after.twips == 100 and indent == 220 * (level - 1),
                     f"toc {level}: not Word's layout (space after 100, left indent {220 * (level - 1)} twips)")
+          # The heading style for front matter that shows no page number: the look of Heading 1, but no outline level,
+          # so that the table of contents does not list it, and no number.
+          fmh = xml("FrontMatterHeading")
+          check("Front Matter Heading" in st and st["Front Matter Heading"].base_style.name == "Heading 1" and '<w:outlineLvl w:val="9"/>' in fmh
+                and '<w:numId w:val="0"/>' in fmh and fmh.index("<w:numPr") < fmh.index("<w:outlineLvl"),
+                f"Front Matter Heading: {fmh}")
           s0 = d.sections[-1]
           check(cm(s0.page_width, 21.0) and cm(s0.page_height, 29.7), "page size")
           check(cm(s0.top_margin, 2.5) and cm(s0.left_margin, 3), "margins")
@@ -1713,6 +1719,8 @@ jobs:
               raise SystemExit(f"build_reference_docx.py: table of contents styles after a rebuild: {weights}")
           if [s for s in toc if s.name == "toc 2"][0].paragraph_format.left_indent.twips != 220:
               raise SystemExit("build_reference_docx.py: a rebuild changed the layout of toc 2")
+          if len([s for s in docx.Document(sys.argv[1]).styles if s.name == "Front Matter Heading"]) != 1:
+              raise SystemExit("build_reference_docx.py: a rebuild does not keep one style Front Matter Heading")
           EOF
           # Errors: one line, exit 2, nothing written.
           expect 2 python scripts/build_reference_docx.py "$R/x.docx" --base "$R/base.docx" --margins 2.5,3
@@ -2191,6 +2199,13 @@ jobs:
           check("<w:tbl" in part and "Name" in part and "PAGE" not in part, "table: the front matter's footer keeps the table, not the number")
           check("PAGE" in part_of("table", footers(m)[0]), "table: the main text keeps the number in the cell")
           check(not empty_cells(f"{R}/table.docx"), f"table: a cell without a paragraph in {empty_cells(f'{R}/table.docx')}")
+          # The list's heading in the style build_reference_docx.py writes for it, which the export takes over: the
+          # look of Heading 1, outside the table of contents (and no warning, above).
+          z = zipfile.ZipFile(f"{R}/styled-export.docx")
+          fmh = re.search(r'<w:style [^>]*w:styleId="FrontMatterHeading"[^>]*>.*?</w:style>', z.read("word/styles.xml").decode("utf-8"), re.S)
+          check(fmh and 'w:basedOn w:val="Heading1"' in fmh.group(0) and 'w:outlineLvl w:val="9"' in fmh.group(0),
+                f"styled: the export's style Front Matter Heading: {fmh and fmh.group(0)}")
+          check('<w:pStyle w:val="FrontMatterHeading"' in z.read("word/document.xml").decode("utf-8"), "styled: the heading's style")
           # The back matter.
           doc_xml = lambda name: zipfile.ZipFile(f"{R}/{name}.docx").read("word/document.xml")
           # The footnotes count on through the sections: the restart in each section that Pandoc's reference

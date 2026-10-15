@@ -192,6 +192,7 @@ Pandoc sets the text in these styles, so these are the ones to adjust:
 | `Hyperlink` | links and URLs (Pandoc's own is blue) |
 | `Table Caption`, `Image Caption`, `Captioned Figure` | captions and figures (`captions.*`) |
 | `Title`, `Subtitle`, `Author`, `Date` | a title block from the metadata, if one is used |
+| `Front Matter Heading` | a heading in front matter that shows no page number ("The title page"): based on `Heading 1`, with the outline level "Body Text" and no numbering, so that the table of contents does not list it |
 
 Pandoc's own reference document takes the heading font and colour from the document theme: set both in the heading styles and in their character styles, the colour as `headings.color` gives it (Pandoc's own is blue). It has no page size, no margins and no page number: set them, and put a `PAGE` field into the footer, aligned as the styleguide says.
 
@@ -272,7 +273,7 @@ Title of the work
 
 The last paragraph of the block is the page break that ends the front matter, with the hidden bookmark `_cephalo_front_matter_end` in the same paragraph and nothing after the break: it tells `scripts/docx_pagination.py` where the front matter ends (below). A list of abbreviations goes into the same file, after this block, on a page of its own: the block then ends with a plain page break (`<w:p><w:r><w:br w:type="page"/></w:r></w:p>`), and the list ends with the page break that carries the bookmark, in an `{=openxml}` block of its own. The bookmark stands once, at the end of the front matter, and the main text starts on a new page.
 
-With `pagination.front_matter` none, or counted but not shown before a main text that starts at 1, the front matter shows no number for the table of contents to cite: a heading there, such as a list's `# List of abbreviations {-}`, would be listed with the page's count in the front matter, which the main text shows again. Write such a heading as a paragraph in a style of its own, which the table of contents does not list: its text in `::: {custom-style="Front Matter Heading"}` instead of after `#` (`scripts/docx_pagination.py` warns about a heading there). If `styleguide.md` wants the list in the table of contents, these schemes cannot give it a number: ask the user.
+With `pagination.front_matter` none, or counted but not shown before a main text that starts at 1, the front matter shows no number for the table of contents to cite: a heading there, such as a list's `# List of abbreviations {-}`, would be listed with the page's count in the front matter, which the main text shows again. Write such a heading as a paragraph in a style of its own, which the table of contents does not list: its text in `::: {custom-style="Front Matter Heading"}` instead of after `#` (`scripts/docx_pagination.py` warns about a heading there). `scripts/build_reference_docx.py` writes that style into the reference document: it looks like `Heading 1` but has no outline level, so the table of contents does not list it, and no chapter number. If `styleguide.md` wants the list in the table of contents, these schemes cannot give it a number: ask the user.
 
 The text in `<w:t>` shows in the DOCX until Word fills the field in: write it in the language of the work, without an abbreviation (`scripts/abbreviations_extract.py` would report it).
 
