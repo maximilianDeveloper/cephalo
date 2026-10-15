@@ -2137,6 +2137,12 @@ jobs:
           check(not empty_cells(f"{R}/table.docx"), f"table: a cell without a paragraph in {empty_cells(f'{R}/table.docx')}")
           # The back matter.
           doc_xml = lambda name: zipfile.ZipFile(f"{R}/{name}.docx").read("word/document.xml")
+          # The footnotes count on through the sections: the restart in each section that Pandoc's reference
+          # document sets, and the export takes over, goes when the export is split.
+          restart = b'numRestart w:val="eachSect"'
+          check(restart in doc_xml("back-counted-export"), "the export has no restart of the footnotes in each section")
+          for name in ("roman", "hidden", "rc-counted", "back-none", "back-only"):
+              check(restart not in doc_xml(name), f"{name}: the footnotes restart in each section")
           f, m, _ = sections("back-main")
           check(doc_xml("back-main") == doc_xml("back-default"), "back matter main: not the same as without --back-matter")
           f, m, b, xml = sections("rc-counted", 3)

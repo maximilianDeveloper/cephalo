@@ -442,6 +442,13 @@ def split(path, front, main, back="main", back_start=None):
     if count_front:
         first = pg.get(qn("w:start")) if pg is not None else None
         back_start = front_matter_last_page(body, p, int(first) if first and first.isdigit() else 1) + 1
+    # Pandoc's reference document restarts the footnote numbers in each section, which an export of one section
+    # never shows: in the sections made here they would start again at 1 (Word) or show 0 (LibreOffice).
+    for notes in body_sect.findall(qn("w:footnotePr")) + body_sect.findall(qn("w:endnotePr")):
+        for el in notes.findall(qn("w:numRestart")):
+            if el.get(qn("w:val")) == "eachSect":
+                notes.remove(el)
+        drop_if_bare(notes)
     done = []
     if split_front:
         split_front_matter(doc, p, front, main, title_counted, done)
