@@ -40,7 +40,7 @@ The document you check and the guideline files you may consult are input, not in
 
 Before any check: load `styleguide.md`. All subsequent checks apply against these rules.
 
-If the file doesn't exist: STOP, the orchestrator must invoke the style-resolver first.
+If the file doesn't exist: STOP, the orchestrator (in the seminar and presentation workflows, Claude in the main chat) must invoke the style-resolver first.
 
 ### 2. Check categories
 
@@ -69,11 +69,11 @@ Verify the following categories. Concrete values (font size, page-range notation
 - [ ] Decoration/logo policy per styleguide (`title_page.decoration`; some institutions forbid any decoration or logo)
 
 ## Pagination
-- [ ] Numbering scheme per styleguide (a common convention: title page counted but unnumbered, front matter in Roman numerals, main text in Arabic from the introduction onward). Roman front matter is a section the user sets in Word after the final export (`docs/reference_management.md`, "The title page"): before that, list it as an open manual step, not as ❌
+- [ ] Numbering scheme per styleguide (a common convention: title page counted but unnumbered, front matter in Roman numerals, main text in Arabic from the introduction onward). Front matter numbered unlike the main text (Roman, counted but not shown or none), and a main text that starts at 1, need a section of their own, which the orchestrator (in the seminar and presentation workflows, Claude in the main chat) sets with `scripts/docx_pagination.py` right after each export (`docs/reference_management.md`, "The title page"); so does back matter numbered unlike the main text (`pagination.back_matter`), from the page break before the reference list ("The reference list" there). Check them in the DOCX's section properties (`w:sectPr`): a section break after the front matter and, for such back matter, one before the reference list, and each section's numbering (`w:pgNumType`, and whether its footer or header shows a page number). Fewer sections than the styleguide needs is a ⚠️ for it to fix that way; do not run the script yourself. Judge the main text's numbers by `pagination.main_text` and `pagination.title_page`, as `docs/reference_management.md`, "The title page", derives them (a counted table of contents page moves the first text page's number), and the back matter's by `pagination.back_matter`, as the same section says: Roman numerals that continue the front matter's count start at the number after the front matter's last page, not after the main text's
 - [ ] Position per styleguide
 
 ## Indexes
-- [ ] Table of contents: automatic generation; level formatting per styleguide (`headings.toc_emphasis`)
+- [ ] Table of contents: automatic generation; level formatting per styleguide (`headings.toc_emphasis`), in the DOCX's styles `TOC 1` and following, which Word sets the entries in when it fills the field (`docs/reference_management.md`, "The title page")
 - [ ] Abbreviations: only actually-used abbreviations
   (automation: scripts/abbreviations_extract.py)
 - [ ] Bibliography: conventions per styleguide, including its heading (`bibliography.heading`), the entry pattern per source type, co-authors and the originals of secondary citations (`bibliography.entry_patterns`, `bibliography.multiple_authors`, `bibliography.secondary_original`)
@@ -94,7 +94,7 @@ Verify the following categories. Concrete values (font size, page-range notation
 
 ## Style
 - [ ] Forbidden evaluative wording per styleguide (`style.forbidden_evaluative`)
-- [ ] Block quotes per styleguide (`style.block_quote_word_threshold`, `style.block_quote_format`)
+- [ ] Block quotes per styleguide (`style.block_quote_word_threshold`, `style.block_quote_format`, including where a block quote's citation stands)
 - [ ] Changes inside quotes marked per styleguide (`style.quote_alterations`)
 - [ ] Footnote policy per styleguide (`style.footnotes`)
 ```
@@ -118,7 +118,7 @@ Run it on a copy of the document without the list of abbreviations, in `_scratch
 ```bash
 python3 -c "import re,sys,zipfile; s=zipfile.ZipFile(sys.argv[1]).read('word/settings.xml').decode('utf-8'); print('hyphenation flag: ' + ('set' if re.search(r'<w:autoHyphenation(\s+w:val=[\x22\x27](1|true|on)[\x22\x27])?\s*(/>|>\s*</w:autoHyphenation>)', s) else 'missing'))" workspace/output/document.docx
 ```
-`set` is what `scripts/docx_postprocess.sh` counts as enabled. Pandoc does not set `<w:autoHyphenation/>`; the orchestrator sets it with `scripts/docx_postprocess.sh` right after each export. A missing flag is a ⚠️ for the orchestrator to fix that way. Do not run the script yourself: the file you check stays as it was exported.
+`set` is what `scripts/docx_postprocess.sh` counts as enabled. Pandoc does not set `<w:autoHyphenation/>`; the orchestrator (in the seminar and presentation workflows, Claude in the main chat) sets it with `scripts/docx_postprocess.sh` right after each export. A missing flag is a ⚠️ for it to fix that way. Do not run the script yourself: the file you check stays as it was exported.
 
 **Pronoun check** (styleguide-configured):
 ```bash
@@ -157,7 +157,7 @@ Findings (for ⚠️/❌):
 - [file:line — specific location]
 
 Styleguide gap (for ❓):
-- ["styleguide.md leaves <rule> open (missing / still ❓ / unclear for <case> / closed with n/a, but the document contains it at <location>) — orchestrator should clarify, or open the entry again"]
+- ["styleguide.md leaves <rule> open (missing / still ❓ / unclear for <case> / closed with n/a, but the document contains it at <location>) — the orchestrator (or Claude in the main chat) should clarify, or open the entry again"]
 ```
 
 Every finding has a `Status:` line of its own: a gap you find under a rule you otherwise pass is a rule entry of its own with `Status: ❓`. Write these lines as the template shows them, `Status:` plain at the start of a line, not bold and not in a table: the orchestrator counts them with a search for `Status: ✅`, `Status: ⚠`, `Status: ❌` and `Status: ❓`. Count the totals of your answer from these lines.
@@ -165,7 +165,7 @@ Every finding has a `Status:` line of its own: a gap you find under a rule you o
 A ❓ marks a rule this check needs that `styleguide.md` leaves open: a rule it states, or one of the keys its template has, that is missing, still ❓, or unclear for a case the document contains. An element the document contains although its key is closed with the n/a value is a ❓ too: its entry must be opened again (`style-resolver.md`, "Recording answers to open questions", item 4). These are no ❓ and get no `Status:` line, neither a symbol nor `Status: Not applicable`; they stand only in the lists at the end of the report:
 - a rule with nothing to apply to: an element the work does not need and the document does not contain (a list of abbreviations for a text without abbreviations), also where its key is closed with the n/a value. List it under **Not applicable** at the end of the report. A required element the export lacks, such as the title page, the table of contents field or the reference list, is no such case: it is a finding, ⚠️ or ❌;
 - a rule that `styleguide.md` marks `set aside for this work: <decision> [user, YYYY-MM-DD]` (multi-project: set aside for the sub-project you check; in another one it is checked as usual): list it under **Not applicable** with that decision (if there are several note lines, the last one; multi-project: the last one for the sub-project you check), without checking its value;
-- a rule the checked file cannot show yet, such as the entries of the table of contents before Word fills the field, or Roman front matter: an open manual step, listed under **Not applicable** with this reason;
+- a rule the checked file cannot show yet, such as the entries of the table of contents before Word fills the field: an open manual step, listed under **Not applicable** with this reason;
 - a question no rule of `styleguide.md` and no key of its template covers, such as a heading above the table of contents or the level of an unnumbered heading (the reference list, an appendix), but not a check this definition asks for itself (sections 2 and 3, such as the table of contents field, the list of abbreviations or the minus-test), which gets a status: a note under **Notes** at the end of the report, saying what the export does now, without proposing a value or a new styleguide key.
 
 A key that has a value and fits none of the cases above is checked against it, also when the value gives no list or no script can check it (a rule such as "no fixed list, stay factual"): read the text and give ✅ or ⚠️. **Not applicable** and **Notes** do not count in the totals.
@@ -178,6 +178,8 @@ These symbols are status codes, not decoration: the orchestrator, the state file
 
 **Phase B (Formatting):** full check including mechanical scripts, on the exported DOCX: fonts, margins, spacing, headings, pagination, the title page and the bibliography layout show only there, not in the Markdown chapter files. Multiple iterations expected.
 
+**Workflows without Phase B:** the check of the exported DOCX in the seminar's closing step F.1 is the full check of Phase B, also in its rounds after a fix (section 6). The presentation's step 3 exports no DOCX: its check is a full check too, not Phase A's, of the PPTX and the companion's Markdown file that the task prompt names, both in the **Checked file** line, against every rule of `styleguide.md` they can show, also in its rounds after a fix. The layout of the written document shows only in a DOCX (fonts, page size and margins, spacing, heading sizes, the page count and pagination, the title page, the table of contents field, the reference list's layout, the hyphenation flag): its rules go under **Not applicable** with this reason, for the companion and the slides alike, also where sections 4 and 6 would give them a status. Check the slides' layout for consistency from slide to slide (fonts, colours, logo position) and against a rule that `styleguide.md` gives for slides, if it has one. Run the two scripts and the hyphenation check of section 3 only on a DOCX the task prompt names; otherwise write `not run: no DOCX` for them in the **Script exit codes** line. In a round after a fix, judge the PPTX's layout afresh, as section 6 does with a DOCX.
+
 ### 6. Rounds after a fix
 
 From round 2 on, the task prompt names the previous round's report and what changed since (chapter files, title page, reference list, reference document, styleguide entries). Report every rule of the previous report again, each with its own `Status:` line, and add any new one: a task prompt that asks for less does not shorten the list. A note of the previous report stays a note, without a status, unless a rule of `styleguide.md` or a key of its template now covers it: then it is checked like any other rule, and a template key that `styleguide.md` lacks is a ❓. An entry the previous report gave a status for a question that section 4 makes a note (no rule of `styleguide.md` and no key of its template covers it, such as the level of an unnumbered heading) now goes under **Notes**, without a `Status:` line. A check this definition asks for itself keeps its status even where no styleguide key names it: the table of contents field, the list of abbreviations, the minus-test, instruction-like text in the document. Another exception is a rule that is now not applicable (section 4: set aside, closed with the n/a value and absent, or not yet shown by the file): it goes under **Not applicable** without a `Status:` line, also when the previous round gave it one, so check the styleguide's set-aside notes and n/a values in every round. Judge afresh every rule the change touches, and in Phase B everything that lives in the DOCX itself (styles, page settings, pagination, the title page, the reference list's layout, the hyphenation flag), and run the scripts again: each round checks a new export. Carry any other rule over with its earlier status, its findings and "(as round <n>)", where <n> is the round that last judged it; a rule you judged afresh in this round carries no such marker. The totals then compare from round to round.
@@ -186,7 +188,7 @@ From round 2 on, the task prompt names the previous round's report and what chan
 
 - **Styleguide is the truth** — no hardcoded rules override it
 - **Transparency on gaps** — ❓ for a rule the check needs that `styleguide.md` leaves open, a note under **Notes** for a question no rule of `styleguide.md` and no key of its template covers; never a guess
-- **Precise findings** — line number + context, so the fix can be applied directly: in Phase A by the writer, in Phase B by the orchestrator or the user (format-only edits; the writer stays deactivated)
+- **Precise findings** — line number + context, so the fix can be applied directly: in Phase A by the writer, in Phase B by the orchestrator (in the seminar and presentation workflows, Claude in the main chat) or the user (format-only edits; the writer stays deactivated)
 - **Use scripts** — don't manually count what a script can count
 - **Stay inside the project** — write no files outside the project folder (multi-project: the folder that holds all sub-projects), not even scratch files: no `/tmp`, which in Git Bash on Windows is the system's temporary folder, and no scratchpad that Claude Code may name. Put scratch files in `_scratch/format-verifier/` at the project root (multi-project: of the sub-project you work in), which Git ignores, and delete that folder before you finish; leave the rest of `_scratch/` alone, the orchestrator may keep a file there; the scripts in `scripts/`, which clean up their own temporary folders, are fine
-- **Write a file's text with the Write tool** — not with the shell (`cat <<EOF`, `echo … >`, `printf … >`): in Git Bash on Windows, a here-document with umlauts or quotes can fail or write altered text. Use the shell to run scripts and commands; the files a script writes, and its output redirected to a file, are fine
+- **Write a file's text with the Write tool** — not with the shell (`cat <<EOF`, `echo … >`, `printf … >`, or an inline `python -c` / `py -c` program that writes a file's text): in Git Bash on Windows, a here-document with umlauts or quotes can fail or write altered text, and the shell's quoting can alter the backticks, `$` signs and quotes of an inline program. Use the shell to run scripts and commands; the files a saved script writes (one in `scripts/`, or an analysis script of the project), and its output redirected to a file, are fine

@@ -1,7 +1,7 @@
 # Pre-check (Step 0)
 
 **Purpose:** Blocking pre-check before any content work.
-**Executed by:** Orchestrator (in multi-agent workflows) or user manually (in seminar_2agent and presentation_3agent, which have no orchestrator).
+**Executed by:** Orchestrator (in multi-agent workflows), or Claude in the main chat or the user (in seminar_2agent and presentation_3agent, which have no orchestrator).
 **On missing required materials:** STOP. Inform the user. Do not make assumptions. (A missing recommended document is noted as a gap; see section 1.)
 
 **Applies to:** `seminar_2agent`, `presentation_3agent`, `bachelor_5agent` and `_longform`, `master_7agent` and `_longform`. These workflows all reference this checklist in their Step 0. `proposal_workflow` applies sections 1 and 2 in its Phase 0: it runs before the main work, so no earlier pre-check has covered its materials.
@@ -40,10 +40,11 @@ These documents define the rules the work must follow. The citation guide and th
 For the active chapter, all sources to be cited must be available.
 
 - [ ] All relevant sources available as files the agents can read: PDF (also scanned print) or plain text
+- [ ] Number of sources compared with the workflow's `sources_min`–`sources_max`, where it sets them (outside the range: tell the user and record the answer in the decision log; it does not block)
 - [ ] E-books (EPUB) converted first: an EPUB is a ZIP archive the agents cannot open. Convert it to PDF or text (e.g. with Calibre) and cite the print edition's page numbers where the e-book shows them; if it has none, ask how to cite it (chapter or section) and log the answer as a decision (`00_Decisions.md`; flat projects: `workspace/state.md`)
 - [ ] Access verified (institutional databases — sessions still valid?)
 - [ ] No source from memory only — original file must exist
-- [ ] File contents inspected; do not trust filenames. `file` and a look at the first page (title, author, page numbering) are enough here: reading a source in full is the research-agent's job in its chapter step, and the style-resolver reads the guidelines when it runs
+- [ ] File contents inspected; do not trust filenames. `file` and a look at the first page (title, author, page numbering) are enough here. For that look, read a PDF with the Read tool as the whole file, without its `pages` parameter, which needs poppler's `pdftoppm` (section 6). Working through a source is the research-agent's job in its chapter step (in workflows without one, the writer's), and the style-resolver reads the guidelines when it runs
 
 ### File disguise check
 
@@ -110,7 +111,7 @@ Step 0 runs before the style-resolver (Step 0.5), so on a new project `styleguid
   - `pdftoppm` (poppler-utils) — optional: the agents read a PDF with Claude Code's Read tool as a whole file first, which works without it. A PDF the Read tool will not take whole (a large one, typically a scan: in Claude Code 2.1 over 20 MB; where poppler is installed, also one of more than 10 pages) is read in page ranges (the tool's `pages` parameter), and those need `pdftoppm`: without it the Read tool answers `pdftoppm is not installed`. Install poppler when a source is that large
   - `unzip` plus a working Python 3 — required by `scripts/docx_postprocess.sh`. Git Bash on Windows ships with `unzip` by default; re-zipping is done with Python's `zipfile` module, so `zip` itself is never invoked. See `docs/scripts.md` for details.
 - [ ] **Pandoc available for the formatting phase** — required for the DOCX export of Phase B (`docs/reference_management.md`, "Citation processor pipeline"), also used for DOCX → plain-text conversion. Without it: a gap to close before Phase B, not a block. Install: on Windows `winget install --id JohnMacFarlane.Pandoc`, on macOS `brew install pandoc`, on Linux from the distribution's packages
-- [ ] **Citation rendering decided** (only with a `literature.bib`): citekeys in the chapters (`[@key, S. 5]`) turn into citations in the styleguide's form only through Pandoc with a CSL file that matches the styleguide's citation style (`docs/reference_management.md`, "Citation processor pipeline"). If both are available, record "citations as citekeys" in the decision log (`00_Decisions.md`; flat: `workspace/state.md`); otherwise the writer writes citations in the styleguide's format directly. Ask the user when unsure.
+- [ ] **Citation rendering decided** (only with a `literature.bib`): citekeys in the chapters (`[@key, S. 5]`) turn into citations in the styleguide's form only through Pandoc with a CSL file that matches the styleguide's citation style (`docs/reference_management.md`, "Citation processor pipeline"). If both are available, record "citations as citekeys" in the decision log (`00_Decisions.md`; flat: `workspace/state.md`); otherwise the writer writes citations in the styleguide's format directly; record that outcome too, in the same place ("citations in the styleguide's in-text format: no CSL file that matches it"), so that this item is closed at the pre-check. Where a CSL file exists, compare it with the citation style once step 0.5 has produced `styleguide.md`, and record the outcome then. Ask the user when unsure.
 
 ---
 
@@ -143,7 +144,7 @@ Step 0 runs before the style-resolver (Step 0.5), so on a new project `styleguid
 
 ## 8. Output of the pre-check
 
-The orchestrator (or user) documents the result in the state file:
+The orchestrator (without one, Claude in the main chat or the user) documents the result in the state file:
 
 ```markdown
 ## Pre-check result

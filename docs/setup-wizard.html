@@ -256,7 +256,7 @@
 <hr>
 <h2>Status</h2>
 <p><strong>Early stage.</strong> The system has been developed and refined through actual coursework (bachelor-level) across multiple projects and iterations. It works and is stable enough to use productively — expect the rough edges typical of an early release, and please report them via the project&#x27;s GitHub issues.</p>
-<p><strong>What the trial runs cover.</strong> Besides CI on Linux, macOS and Windows, the releases were tried out in unattended trial runs on Windows with fictional material, the student played by a second model: the bachelor workflow in the flat structure (three runs) and in the long-form structure (five runs, each through the content phase and a formatting phase on a fast model). Not yet through such a run: the master workflows with the methods-agent and data-agent, the multi-project structure with proposal and defense, seminar papers and presentations, and an agent run on macOS.</p>
+<p><strong>What the trial runs cover.</strong> Besides CI on Linux, macOS and Windows, the releases were tried out in unattended trial runs on Windows with fictional material, the student played by a second model: the bachelor workflow in the flat structure (three runs) and in the long-form structure (five runs, each through the content phase and a formatting phase on a fast model), and the seminar workflow without an orchestrator (one run, the main chat on Sonnet). Not yet through such a run: the master workflows with the methods-agent and data-agent, the multi-project structure with proposal and defense, presentations, and an agent run on macOS.</p>
 <p>If you are reading this as an early adopter: welcome. Feedback and improvements are welcome — see <code>CONTRIBUTING.md</code> for how to report issues and contribute. Changes are tracked in <code>CHANGELOG.md</code>.</p>
 <hr>
 <h2>What cephalo does</h2>
@@ -316,6 +316,7 @@
 <pre><code>Please invoke the style-resolver agent. Extract the formatting 
 and citation rules from the guidelines directory into styleguide.md. 
 List any open questions for me to resolve before we proceed.</code></pre>
+<p>For a seminar paper or a presentation, first put your sources (PDF or plain text) into <code>workspace/sources/</code>: the pre-check (step 0.0) checks them. Then send a different first message: these workflows have no orchestrator, so name the workflow file and ask for steps 0.0 and 0.5 (the pre-check and the style resolution), for example &quot;I am following <code>workflows/seminar_2agent.yaml</code>; today the preparation, steps 0.0 and 0.5&quot;. Claude in the chat then runs the pre-check, creates <code>workspace/state.md</code> and calls the style-resolver itself, as the workflow&#x27;s <code>main_session</code> block says.</p>
 <p>The resolver produces a structured <code>styleguide.md</code>. Open questions are marked <code>❓</code> and tagged: resolve the <code>[content]</code> ones (voice, citation wording, length — usually by asking your supervisor) before content work begins; the <code>[format]</code> ones (fonts, margins, pagination, ...) can wait until the formatting phase.</p>
 <h3>5. Begin writing</h3>
 <p>Use the workflow that matches your project. See <code>docs/QUICKSTART.md</code> for detailed chapter-by-chapter instructions.</p>
@@ -435,6 +436,7 @@ List any open questions for me to resolve before we proceed.</code></pre>
 <pre><code>Please invoke the style-resolver agent. Extract the formatting and 
 citation rules from the guidelines directory into styleguide.md. 
 List any open questions for me to resolve before we proceed.</code></pre>
+<p>For a seminar paper or a presentation, first put your sources (PDF or plain text) into <code>workspace/sources/</code>: the pre-check (step 0.0) checks them. Then send a different first message: these workflows have no orchestrator, so name the workflow file and ask for steps 0.0 and 0.5 (the pre-check and the style resolution), for example &quot;I am following <code>workflows/seminar_2agent.yaml</code>; today the preparation, steps 0.0 and 0.5&quot;. Claude in the chat then runs the pre-check, creates <code>workspace/state.md</code> and calls the style-resolver itself, as the workflow&#x27;s <code>main_session</code> block says.</p>
 <p>The resolver will:</p>
 <ol><li>Read your guidelines</li><li>Produce <code>styleguide.md</code> at the project root (or <code>00_Shared_Materials/styleguide.md</code>)</li><li>Flag ambiguous or missing rules as <code>❓</code></li><li>(For minimal-scaffolding setups) propose additional directories based on what your guidelines require</li></ol>
 <p>Each <code>❓</code> item is tagged. Resolve the <code>[content]</code> items (voice, evaluative wording, citation wording, length, outline depth, and the number formats, resolution and captions of tables and figures) before the first chapter is drafted: their answers change what the agents write. The <code>[format]</code> items (fonts, margins, pagination, title page, ...) only need an answer before the formatting phase. Resolving usually means asking your supervisor about the ambiguous points.</p>
@@ -444,6 +446,7 @@ List any open questions for me to resolve before we proceed.</code></pre>
 <table><thead><tr><th>Type</th><th>Workflow file</th></tr></thead><tbody><tr><td>Seminar paper</td><td><code>workflows/seminar_2agent.yaml</code></td></tr><tr><td>Presentation</td><td><code>workflows/presentation_3agent.yaml</code></td></tr><tr><td>Bachelor thesis (flat)</td><td><code>workflows/bachelor_5agent.yaml</code></td></tr><tr><td>Bachelor thesis (long-form)</td><td><code>workflows/bachelor_5agent_longform.yaml</code></td></tr><tr><td>Master thesis (flat)</td><td><code>workflows/master_7agent.yaml</code></td></tr><tr><td>Master thesis (long-form)</td><td><code>workflows/master_7agent_longform.yaml</code></td></tr><tr><td>Proposal sub-project</td><td><code>workflows/proposal_workflow.yaml</code></td></tr><tr><td>Defense sub-project</td><td><code>workflows/defense_workflow.yaml</code></td></tr></tbody></table>
 <p>Open the chosen workflow file once to understand the phase structure. Then start a chat for the first chapter.</p>
 <p>If your workflow uses an orchestrator (all except seminar paper and presentation), start each chat by asking Claude to invoke it: <code>orchestrator</code> (flat), <code>orchestrator-longform</code> (long-form, and the proposal and main-work sub-projects) or <code>orchestrator-defense</code> (defense sub-project). The orchestrator calls the specialist agents itself. In the CLI you can instead start the session as the orchestrator, e.g. <code>claude --agent orchestrator-longform</code>; use that mode if the orchestrator reports that it cannot call other agents.</p>
+<p>For a seminar paper or a presentation there is no orchestrator: name the workflow file and the step in your first message (for example &quot;I am following <code>workflows/seminar_2agent.yaml</code>; today chapter 2, steps 1 to 3&quot;). Claude in the chat then calls the agents itself, as the workflow&#x27;s <code>main_session</code> block says.</p>
 <p>For long-form projects, follow the <strong>chat closure ritual</strong> at the end of every chat: update <code>00_Status.md</code>, write the phase&#x27;s <code>handover.md</code>, suggest a Git commit. The orchestrator will guide you.</p>
 <hr>
 <h2>Step 5: Read these next</h2>
@@ -515,7 +518,7 @@ List any open questions for me to resolve before we proceed.</code></pre>
         rows.push(row("    ├── ","output/","dir")+sp(work==="Presentation"?"chapters/ , slides/":"chapters/"));
         if(work==="Presentation") rows.push(row("    ├── ","data/","dir"));
         if(emp) rows.push(row("    ├── ","methods/","dir")+"  "+row("","data/","dir"));
-        rows.push(row("    └── ","state.md","cm")+sp(work==="Seminar paper"||work==="Presentation"?"created later by you or the writer-agent":"created later by the orchestrator"));
+        rows.push(row("    └── ","state.md","cm")+sp(work==="Seminar paper"||work==="Presentation"?"created by Claude at the pre-check (step 0.0)":"created later by the orchestrator"));
       }
       return rows.join("\n");
     }

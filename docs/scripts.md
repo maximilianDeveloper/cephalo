@@ -1,22 +1,23 @@
 # Scripts
 
-cephalo ships seven utility scripts in `scripts/`. They are optional — the agents can guide a project without them — but each one automates a check or transformation that would otherwise take manual effort.
+cephalo ships eight utility scripts in `scripts/`. They are optional — the agents can guide a project without them — but each one automates a check or transformation that would otherwise take manual effort.
 
 | Script | Purpose | When to run |
 |--------|---------|-------------|
 | `extract_styleguide.sh` | Convert institutional guideline PDFs to plain text for the style-resolver | Once per project during setup |
-| `verbatim_check.py` | Count the verbatim word runs a chapter shares with its sources, rated by the plagiarism thresholds | Phase A, before each chapter verification (bachelor and master workflows: step A.4) |
+| `verbatim_check.py` | Count the verbatim word runs a chapter shares with its sources, rated by the plagiarism thresholds; with `--words`, the chapter's word count for the page budget | Phase A, before each chapter verification (bachelor and master workflows: step A.4) |
 | `abbreviations_extract.py` | Derive the list of abbreviations from a finished DOCX | Phase B, final stages |
 | `bibliography_check.py` | Minus-test by author surname: every cited author is in the bibliography, every entry's lead author is cited | Phase B, final stages |
 | `build_reference_docx.py` | Build Pandoc's reference document (layout of the exported DOCX) from the styleguide's values | Phase B, before the first export and after a layout finding |
 | `docx_postprocess.sh` | Enable automatic hyphenation in a DOCX (Pandoc and python-docx don't set this) | Phase B, right after every export (orchestrator), only if `document.hyphenation` is automatic |
+| `docx_pagination.py` | Number the front matter of an exported DOCX unlike the main text: Roman numerals, counted but not shown, or not counted, and a main text from 1 or continuing the count; and the back matter (the reference list, an appendix) unlike the main text | Phase B, right after every export (orchestrator), only if `pagination.front_matter`, `pagination.main_text` or `pagination.back_matter` asks for it |
 | `cross_session_audit.py` | Cross-worktree audit: surfaces notes and changes from other worktrees/sessions that never reached the main worktree | Multi-worktree projects, at session start or weekly |
 
 ---
 
 ## Installation
 
-All scripts require Python 3.9 or newer. `abbreviations_extract.py`, `bibliography_check.py`, `build_reference_docx.py`, `verbatim_check.py` and `extract_styleguide.sh` have dependencies listed in `requirements.txt` (`python-docx`, and `pypdf` with its `[crypto]` extra, which installs `cryptography` for AES-encrypted PDFs). `cross_session_audit.py` uses only the Python standard library.
+All scripts require Python 3.9 or newer. `abbreviations_extract.py`, `bibliography_check.py`, `build_reference_docx.py`, `docx_pagination.py`, `verbatim_check.py` and `extract_styleguide.sh` have dependencies listed in `requirements.txt` (`python-docx`, and `pypdf` with its `[crypto]` extra, which installs `cryptography` for AES-encrypted PDFs). `cross_session_audit.py` uses only the Python standard library.
 
 ### On Linux / macOS
 
@@ -110,16 +111,21 @@ python3 scripts/verbatim_check.py 03_Theory_chapters/chapter_3_theory.md 02_Lite
 
 # A Word document, against the extracts folder and a single PDF:
 python3 scripts/verbatim_check.py workspace/output/document.docx workspace/sources/extracts/ workspace/sources/smith_2020.pdf
+
+# The chapter's word count alone, for the page budget (no sources needed):
+python3 scripts/verbatim_check.py --words workspace/output/chapters/ch_2_basics.md
 ```
 
 What it does:
 
 1. Reads the chapter (`.md`, `.txt` or `.docx`) and leaves out what is a marked direct quote: a quotation of five or more words in quotation marks („…“, “…”, "…", ‚…‘, ‘…’, '…', »…«, «…»; an apostrophe as in "city’s" does not end one, and an apostrophe before a digit or after a letter, as in "'90s" or "U.S.'s", opens none), Markdown block quotes (`>`, also lines continuing one without `>`) and Word paragraphs in a quote style, including Pandoc's "Block Text" and LibreOffice's "Quotations". The words of a shorter quotation, such as a technical term in quotation marks, keep a run going, so that the term does not cut a copied sentence into pieces, but are not counted in its length: the report gives them as `(and 3 in quotation marks)`. In Markdown it also skips the YAML front matter, footnote marks and HTML comments. The chapter's bibliography is not counted, since its titles would match the sources: the section from a heading such as "Literaturverzeichnis", "Literatur", "References" or "Bibliography" to the next heading of the same level, if every entry in it has a year, as in a reference list. A body section of that name ("2.1 Literatur") with prose, an appendix after the bibliography and footnotes still count; the report names the lines or paragraphs left out
 2. Reads the sources, files or folders searched recursively (folders named `_guidelines` and `verification` inside them are skipped: guidelines are not sources, and the saved reports quote the chapter): the quotes of the research-agent's extracts (`.md`: the `**Original:**` field, quoted text in the `**Secondary citation?**` field, and `- p. 42: "…"` lines), with their page (also from a page bullet such as `- p. 87 ❓`, ❓ included) and quote ID, a quote with a `[…]` omission as separate parts; a Markdown table with an "Original quote" column, such as the source registry in `workspace/state.md` of a seminar paper; the text layer of PDFs, without running headers and footers (also those alternating between left and right pages, and in a short excerpt a head that carries the page number) and page numbers; plain-text files (UTF-8, UTF-16 with byte order mark, or Windows-1252). What it cannot read is listed under "Not checked": a path that does not exist, Word, EPUB, HTML or image files among the sources (other files, such as a `.bib` or the assets folder of a saved web page, and hidden files are passed over), a scan, the pages without text of a PDF of which half or more of the pages are scans, a ZIP archive named `.pdf`, and all PDFs while `pypdf` is not installed. An `.md` file in a folder that has no extract fields (a `handover.md`, a `README.md`) is passed over
-3. Finds every run of five or more consecutive words the chapter shares with a source, ignoring letter case and punctuation, also across sentence boundaries and across citations (Pandoc citekeys such as `[@key, S. 5]`, and author-year citations in parentheses such as `(Keller 2018, S. 44)` or `(ebd.)`, are skipped in the chapter and in the sources), and reports the longest run at each place with its rating, the line (Markdown) or paragraph (Word), and where it occurs: `Smith_2020.md Q4 (p. 45)` for an extract quote, `smith_2020.pdf (PDF page 3)` for a PDF. A source that has only part of the run is named too, with the number of words it shares (`Smith_2020.md Q4 (p. 45, 9 of these words)`), so that the quote ID is not lost when the PDF has a longer run
+3. Finds every run of five or more consecutive words the chapter shares with a source, ignoring letter case and punctuation, also across sentence boundaries and across citations (Pandoc citekeys such as `[@key, S. 5]`, and author-year citations in parentheses such as `(Keller 2018, S. 44)` or `(ebd.)`, are skipped in the chapter and in the sources), and reports the longest run at each place with its rating, the line (Markdown) or paragraph (Word), and where it occurs: `Smith_2020.md Q4 (p. 45)` for an extract quote, `smith_2020.pdf (PDF page 3)` for a PDF. A source that has only part of the run is named too, with the number of words it shares (`Smith_2020.md Q4 (p. 45, 9 of these words)`), so that the quote ID is not lost when the PDF has a longer run. A run's length is counted in words as written: a hyphenated compound (`long-term`) or a word with an apostrophe (`city’s`) counts as one, though its parts are matched one by one, and a dash between words (`surroundings—as`, also a typed `---`) separates them; step 1 counts the five words of a quotation the same way
 4. Looks up each marked direct quote of five or more words (the parts between `[…]` or `(…)` omissions) in the sources and lists one that is not found verbatim for a check by hand, since a changed word in a quotation is an error too
 
 Exit code 0 = no run of 8 or more words, 1 = at least one run of 8 or more words (⚠️ or ❌), 2 = bad arguments, a chapter that cannot be read or holds no text (one error line), a source that cannot be read (corrupt, or encrypted with a password; the report is printed all the same, with the file under "Could not be read"), or no source text at all to compare against. Exit code 1 is a finished report, not a failure. Direct quotes not found and 🟡 runs do not change the exit code.
+
+The report's header also gives the chapter's word count, `Words: N`, for the page budget, and `--words <chapter>` prints only that line, without sources (exit code 0, or 2 for a chapter it cannot read). It counts the words as written in the text the check reads, each stretch between whitespace or dashes that holds a letter or digit (so a hyphenated compound is one word): headings, block quotes and quotations count, and in Markdown footnotes, but not the YAML front matter, HTML comments, footnote marks or the bibliography. If the line says "no bibliography recognized", a reference list in the file is counted: one under a heading the script does not know, or with an entry without a year (step 1). Pandoc citekeys (`[@key, S. 5]`, the whole bracket) are not counted either, since Pandoc writes the citation only at the export: a chapter with citekeys counts a few words fewer per citation than its export, while author-year citations written into the text count. A Word chapter counts its body paragraphs only (see "Word chapters" below).
 
 The word index is built from the chapter; the source words are held in memory once. A check against a million source words takes about 50 MB when they are spread over several files, up to about 110 MB in a single text file, and a few seconds, plus the time `pypdf` needs to read the PDFs.
 
@@ -192,7 +198,7 @@ Use the output as a starting point for manual verification, not as a final verdi
 
 ### `build_reference_docx.py`
 
-Builds the reference document from which Pandoc takes the layout of an exported DOCX (`pandoc --reference-doc`, see `docs/reference_management.md`, "The reference document"): fonts, sizes, line spacing, paragraph spacing and alignment, headings, block quotes, footnotes, the reference list's hanging indent, link colour, page size, margins, the page number and the title page's numbering. The orchestrator reads the values in `styleguide.md` and passes them as options; what is not given stays as in Pandoc's own reference document.
+Builds the reference document from which Pandoc takes the layout of an exported DOCX (`pandoc --reference-doc`, see `docs/reference_management.md`, "The reference document"): fonts, sizes, line spacing, paragraph spacing and alignment, headings, block quotes, footnotes, the reference list's hanging indent, link colour, the weight of the table of contents levels, page size, margins, the page number and the title page's numbering. The orchestrator reads the values in `styleguide.md` and passes them as options; what is not given stays as in Pandoc's own reference document.
 
 ```bash
 python3 scripts/build_reference_docx.py 08_Formal_Review/reference.docx \
@@ -200,7 +206,7 @@ python3 scripts/build_reference_docx.py 08_Formal_Review/reference.docx \
     --heading-sizes 14,12,11 --heading-bold yes --heading-color 000000 \
     --quote-indent 1 --quote-size 10 --quote-line-spacing 1 \
     --footnote-size 10 --footnote-line-spacing 1 --bib-hanging 1 --bib-line-spacing 1 \
-    --page-size A4 --margins 2.5 --page-number bottom-right --title-page counted --lang de-DE
+    --page-size A4 --margins 2.5 --page-number bottom-right --title-page counted --toc-bold 1 --lang de-DE
 python3 scripts/build_reference_docx.py --help
 ```
 
@@ -212,19 +218,20 @@ Sizes are in pt, lengths in cm, also with a unit (`12mm`, `0.5in`), line spacing
 - `--quote-indent` sets the left indent and, unless `--quote-indent-right` gives one, no right indent (Pandoc's own indents block quotes on both sides).
 - `--title-page counted` leaves the first page without a number, `not-counted` also starts the numbering at 0, so that the first text page shows 1 (`pagination.title_page`).
 - `--heading-color` (from `headings.color`) and `--link-color` replace Pandoc's blue; `--footnote-font` sets a footnote font other than the text's.
+- `--toc-bold 1` (from `headings.toc_emphasis`; a comma list such as `1,2`, or `none`) writes the styles Word sets the table of contents in when it fills the field in, `TOC 1` to `TOC 3` (deeper if a listed level is deeper), with Word's own indents and spacing: the listed levels bold, the others regular. A `--base` that has these styles keeps their layout; only their weight changes. Without the option, Word uses its own.
 
 What it does:
 
 1. Starts from Pandoc's own reference document (`pandoc --print-default-data-file reference.docx`), or from a DOCX or DOTX given with `--base`, such as an institution's template; styles Pandoc uses and the starting document lacks are added, and a style Word names in lower case (`footnote text`) is found as well
-2. Sets the given values in the styles Pandoc uses (`Normal`, `Body Text`, `First Paragraph`, `Compact`, `Block Text`, `Heading 1` and following with their character styles, `Bibliography`, `Footnote Text`, `Title` and the other title styles, `Hyperlink`), with font and colour also where the document theme set them
-3. Sets page size and margins (with the header, footer and gutter distances Word needs), replaces any page number the starting document has by a `PAGE` field in the footer (or header), and for the title page sets "different first page" and, if not counted, the start of the numbering, in the order Word expects
+2. Sets the given values in the styles Pandoc uses (`Normal`, `Body Text`, `First Paragraph`, `Compact`, `Block Text`, `Heading 1` and following with their character styles, `Bibliography`, `Footnote Text`, `Title` and the other title styles, `Hyperlink`), with font and colour also where the document theme set them, and with `--toc-bold` Word's table of contents styles; it also writes the style `Front Matter Heading`, which looks like `Heading 1` but has no outline level and no number, for a heading in front matter that the table of contents does not list (`docs/reference_management.md`, "The title page"), unless the starting document has a style of that name
+3. Sets page size and margins (with the header, footer and gutter distances Word needs), replaces any page number the starting document has, with the text between the same tabs (such as "Page 3 of 9"), by a `PAGE` field in the footer (or header), while a running head, a logo or a link beside the old number stays (in its own line, above the new number), and for the title page sets "different first page" and, if not counted, the start of the numbering, in the order Word expects
 4. Writes the file and lists what it set
 
 Run it before the first export of Phase B, and again after a layout finding of the format check, with the corrected value: fix the layout there, not in the chapter files. Start each run from Pandoc's own document (no `--base` with an earlier result), so that a value left out falls back to Pandoc's.
 
 Exit code 0 = reference document written, 2 = not written (bad option, Pandoc not found and no `--base`, a folder or file that does not exist, a starting document it cannot read; one line says which).
 
-Not covered: the table of contents styles (`TOC 1` and following, which Word adds when it fills in the field); heading numbers (they come from the heading text, from Pandoc's `--number-sections`, or from numbering that a `--base` template links to its heading styles, which Pandoc keeps; the script does not set any); and front matter in Roman numerals, which needs a section of its own (`docs/reference_management.md`, "The title page").
+Not covered: heading numbers (they come from the heading text, from Pandoc's `--number-sections`, or from numbering that a `--base` template links to its heading styles, which Pandoc keeps; the script does not set any); and front matter numbered unlike the main text (Roman, counted but not shown or none), a main text that starts at 1, or back matter numbered unlike the main text, which need a section of their own: `docx_pagination.py` sets it after the export.
 
 ### `docx_postprocess.sh`
 
@@ -243,6 +250,40 @@ What it does:
 4. Replaces the original file only after the new archive was built successfully (for a symbolic link, the document it points to; the link stays)
 
 Run it on every export right after Pandoc writes it, before the format check: a new export does not carry the flag. The format-verifier only checks that the flag is there. Re-running is safe (the script detects if the flag is already set and enabled).
+
+### `docx_pagination.py`
+
+Numbers the front matter of an exported DOCX unlike the main text, as `pagination.front_matter` and `pagination.main_text` in `styleguide.md` say, and the back matter, as `pagination.back_matter` says. A reference document gives the whole export one section, so the table of contents page shows its number like a text page; the script splits the export into two sections at the end of the front matter: the title page, the table of contents and the lists after it in the first, the main text in the second. Back matter numbered unlike the main text gets a third section: the reference list, an appendix after it and what follows them.
+
+```bash
+python3 scripts/docx_pagination.py workspace/output/document.docx --front-matter roman --main-text restart
+python3 scripts/docx_pagination.py workspace/output/document.docx --front-matter roman --main-text restart --back-matter roman-continue
+python3 scripts/docx_pagination.py --help
+```
+
+| `pagination.front_matter` | `--front-matter` |
+|---|---|
+| Roman numerals (I, II, …; small: i, ii, …) | `roman` (`roman-lower`) |
+| counted but not shown | `hidden` |
+| none (not counted, no number shown) | `none` |
+| Arabic, like the main text | `arabic` |
+
+`--main-text continue` lets the main text continue the count (`pagination.main_text`: continuing the count, or continuous), `--main-text restart` starts it at 1. After front matter that is not counted (`none`), "continuing" means the number after the title page's: 2 after a counted title page, otherwise 1. Whether the title page is counted (`pagination.title_page`) is read from the export, which takes it from the reference document (`build_reference_docx.py --title-page`); the title page keeps the first-page header and footer the reference document gives it, without a number. The main text keeps the reference document's number format, such as "- 1 -" from a `--base` template; Roman numerals or letters there give way to Arabic numerals.
+
+| `pagination.back_matter` | `--back-matter` |
+|---|---|
+| like the main text | `main` (the default) |
+| Roman numerals, continuing the front matter's count | `roman-continue` |
+| a count of its own from 1: Arabic, or Roman (I, II, …; small: i, ii, …) | `restart`, or `roman` (`roman-lower`) |
+| no number shown | `none` |
+
+`--back-matter roman-continue` gives the back matter the Roman numerals of the front matter (small ones after `roman-lower`), from the number after its last page: IV after a front matter that ends on III. Word and LibreOffice would continue the main text's count instead, so the script sets that number, and counts the front matter's pages by its page breaks: the title page, and one page for each page break up to the one that ends the front matter. A table of contents or list that fills more than one page once Word updates the fields is not counted that way: then give the back matter's first number with `--back-matter-start` (5 for V) on a new export, since a DOCX split before is left as it is; in a DOCX the script has split already, such as the final one, set the number in Word instead (`docs/reference_management.md`, "The title page", step 5). The script says which number it set. After front matter that is not counted (`none`), there is no count to continue: `roman-continue` needs `--back-matter-start` there. `restart` keeps the main text's number format, such as "- 1 -"; `none` takes the page number out of the back matter's header or footer, as for the front matter.
+
+A value of `styleguide.md` that does not name one of these cases is open, not a choice for whoever runs the script. That holds for a `pagination.main_text` that says neither that the main text continues the count nor that it starts at 1: "Arabic from introduction onward" in a styleguide made before 1.3.0, or an answer recorded in other words. It also holds for a `pagination.front_matter` of "none" recorded before 1.3.0, when that value did not say whether the front matter is counted, for Roman numerals without a case, and for a styleguide without `pagination.back_matter`, which a styleguide made before 1.3.0 does not have. Do not run the script with a value you chose. Ask the user, record the answer (`.claude/agents/style-resolver.md`, "Recording answers to open questions"), and then run the script; the format check judges the numbers by the recorded answer.
+
+The end of the front matter is the page break that carries the hidden bookmark `_cephalo_front_matter_end`, which the title page file sets (`docs/reference_management.md`, "The title page"); that page break becomes the section break. Without the bookmark, the script stops with exit code 2 and changes nothing. The start of the back matter is the page break that carries the bookmark `_cephalo_back_matter_start`, before the reference list (`docs/reference_management.md`, "The reference list"); without it, a `--back-matter` other than `main` stops the script the same way. Back matter numbered unlike the main text is split also where the front matter is not (`--front-matter arabic --main-text continue`); the front matter's bookmark is then needed only for `roman-continue` without `--back-matter-start`. A page number the front matter does not show is taken out of its header or footer, with the text and fields between the same tabs or line breaks, such as "Page 3 of 9"; other content there, such as a running head, a logo or a link, stays, also in the line of the page number. The footnotes keep one count through the sections: the script takes out the restart in each section that Pandoc's reference document sets, which an export of one section never shows. With `--front-matter arabic --main-text continue` and `--back-matter main` nothing changes, since the export already numbers the pages that way, and a document split before is left as it is: run the script on every new export, before the format check. Then update the fields in Word (Ctrl+A, then F9), so that the table of contents shows the numbers of each section. With `--front-matter none`, or `hidden` before `--main-text restart`, a heading in the front matter would be listed there with a number the main text shows again: the script names it in a warning (`docs/reference_management.md`, "The title page", says how to write it).
+
+Exit code 0 = written, or nothing to change; 2 = not written (no bookmark, the bookmark twice or not on the page break that ends the front matter, the back matter's bookmark missing, twice, not on its page break or before the end of the front matter, `roman-continue` with no front matter count to continue, `--back-matter-start` without `roman-continue`, not a DOCX, a damaged document; one line says which).
 
 ### `cross_session_audit.py`
 

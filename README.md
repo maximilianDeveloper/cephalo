@@ -14,7 +14,7 @@ The name is short for *cephalopod* — one orchestrator, many specialized arms (
 
 **Early stage.** The system has been developed and refined through actual coursework (bachelor-level) across multiple projects and iterations. It works and is stable enough to use productively — expect the rough edges typical of an early release, and please report them via the project's GitHub issues.
 
-**What the trial runs cover.** Besides CI on Linux, macOS and Windows, the releases were tried out in unattended trial runs on Windows with fictional material, the student played by a second model: the bachelor workflow in the flat structure (three runs) and in the long-form structure (five runs, each through the content phase and a formatting phase on a fast model). Not yet through such a run: the master workflows with the methods-agent and data-agent, the multi-project structure with proposal and defense, seminar papers and presentations, and an agent run on macOS.
+**What the trial runs cover.** Besides CI on Linux, macOS and Windows, the releases were tried out in unattended trial runs on Windows with fictional material, the student played by a second model: the bachelor workflow in the flat structure (three runs) and in the long-form structure (five runs, each through the content phase and a formatting phase on a fast model), and the seminar workflow without an orchestrator (one run, the main chat on Sonnet). Not yet through such a run: the master workflows with the methods-agent and data-agent, the multi-project structure with proposal and defense, presentations, and an agent run on macOS.
 
 If you are reading this as an early adopter: welcome. Feedback and improvements are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for how to report issues and contribute. Changes are tracked in [CHANGELOG.md](CHANGELOG.md).
 
@@ -149,6 +149,8 @@ Please invoke the style-resolver agent. Extract the formatting
 and citation rules from the guidelines directory into styleguide.md. 
 List any open questions for me to resolve before we proceed.
 ```
+
+For a seminar paper or a presentation, first put your sources (PDF or plain text) into `workspace/sources/`: the pre-check (step 0.0) checks them. Then send a different first message: these workflows have no orchestrator, so name the workflow file and ask for steps 0.0 and 0.5 (the pre-check and the style resolution), for example "I am following `workflows/seminar_2agent.yaml`; today the preparation, steps 0.0 and 0.5". Claude in the chat then runs the pre-check, creates `workspace/state.md` and calls the style-resolver itself, as the workflow's `main_session` block says.
 
 The resolver produces a structured `styleguide.md`. Open questions are marked `❓` and tagged: resolve the `[content]` ones (voice, citation wording, length — usually by asking your supervisor) before content work begins; the `[format]` ones (fonts, margins, pagination, ...) can wait until the formatting phase.
 

@@ -76,7 +76,7 @@ Does the paraphrase go beyond what the source says?
 
 ### 8. Plagiarism check
 
-Rate verbatim word runs from the source (see `checklists/plagiarism_protection.md`):
+Rate verbatim word runs from the source (see `checklists/plagiarism_protection.md`), counted in words as written: a hyphenated compound or a word with an apostrophe is one word; a dash between words separates them.
 
 | Words | Rating |
 |---|---|
@@ -85,7 +85,7 @@ Rate verbatim word runs from the source (see `checklists/plagiarism_protection.m
 | 8–14 | ⚠️ risk |
 | ≥15 | ❌ serious |
 
-Method: the count comes from the report of `scripts/verbatim_check.py`, which the orchestrator runs before each chapter verification (in the seminar and presentation workflows, the user runs it). It lists every run of 5 or more words the chapter shares with the extracts' original quotes and the source PDFs, already rated, with its place in the chapter and where it occurs in the source (extract file, quote ID, page). Give each run's rating to the sentence it is in, and at 🟡 or higher mark the exact phrase. A run that crosses a sentence boundary counts as one run.
+Method: the count comes from the report of `scripts/verbatim_check.py`, which the orchestrator runs before each chapter verification (in the seminar and presentation workflows, which have no orchestrator, Claude in the main chat runs it, or the user does). It lists every run of 5 or more words the chapter shares with the extracts' original quotes and the source PDFs, already rated, with its place in the chapter and where it occurs in the source (extract file, quote ID, page). Give each run's rating to the sentence it is in, and at 🟡 or higher mark the exact phrase. A run that crosses a sentence boundary counts as one run.
 
 The script does not judge everything:
 - It leaves out quotations of five or more words in quotation marks, and block quotes; the words of a shorter quotation keep a run going but are not counted in its length (the report adds `and 3 in quotation marks`). A direct quote in quotation marks with its citation is not a plagiarism finding; steps 2 and 4 check its wording and page. Quotes it lists as "not found verbatim" need that check by hand: a changed word in a direct quote is ❌, a source that is missing from the check is ❓.
@@ -110,7 +110,7 @@ From the second verification of a chapter on, the orchestrator gives you the pre
 
 ## Output format
 
-Your report is your final message, and the orchestrator saves it as a file as it is, so keep it compact. Name files by their path relative to the project, never by an absolute path: that would carry the user's name into the project files.
+Your report is your final message. You cannot write files: the orchestrator (in the seminar and presentation workflows, Claude in the main chat) saves it as a file as it is, so keep it compact. Name files by their path relative to the project, never by an absolute path: that would carry the user's name into the project files.
 
 Name an extract entry by its file name and quote ID, the `### Q<n>` heading above the entry (`keller2018.md Q3`); where there is none (no extracts, as in the seminar workflow, or an extract from before quote IDs), give author and page alone.
 
@@ -123,6 +123,8 @@ Name an extract entry by its file name and quote ID, the `### Q<n>` heading abov
    |---|---|---|
    | 3 | [Author, p. X; <extract file> Q<n>] | ✅ |
    ```
+
+   A ✅ row has the sentence number, the source with its page, and the status, nothing else: no quote and no comment (a remark that matters goes under Notes). For a sentence that needs no source, such as the research question or a sentence on the chapter's outline, the source is `—`.
 
 2. A full entry per sentence with ⚠️, ❌, 🟡 or ❓:
 
@@ -165,7 +167,7 @@ Notes: [remarks on the extract's own wording, quote IDs, labels]
 | ⚠️ | mild imprecision (e.g., a grammatical variant of the source's term) |
 | ❌ | error (wrong quote, wrong page, unmarked secondary citation, a term the source does not use, a verbatim run of 15 or more words, a cited source the project does not have at all: not among the sources, without an extract, not in `literature.bib` and not in the source registry of `workspace/state.md`) |
 | 🟡 | plagiarism polish flag (5–7 verbatim words; runs of 8–14 count as ⚠️ risk per step 8) |
-| ❓ | unverifiable (the source is known to the project, for example in `literature.bib` or the source registry, but its file or the cited passage is missing or cannot be read, or the extract is incomplete): the orchestrator, or without one the user, obtains it (for a file that cannot be read, a readable copy from the user) |
+| ❓ | unverifiable (the source is known to the project, for example in `literature.bib` or the source registry, but its file or the cited passage is missing or cannot be read, or the extract is incomplete): the orchestrator, or without one Claude in the main chat with the user, obtains it (for a file that cannot be read, a readable copy from the user) |
 
 These symbols are status codes, not decoration: the orchestrator, the state file and the workflow's criteria search for them. Write them exactly as shown, also where you would otherwise avoid emojis; never replace them with words or ASCII labels such as `[OK]` or `[WARN]`.
 
@@ -203,6 +205,8 @@ After every second chapter: consistency check per `checklists/consistency.md`. C
 - Technical terms used identically across chapters?
 - Does this chapter contradict earlier statements?
 - Cross-references ("as shown in Ch. 2") accurate?
+
+A final check that a task prompt names (in a seminar paper, the closing step F.1: Part A and B.2-B.3 of the checklist) covers all chapters and the reference list, and checks each entry of the reference list against the source's title page and imprint (authors, title, year, publisher or series, pages).
 
 ## Verification style
 

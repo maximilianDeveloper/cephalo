@@ -10,20 +10,24 @@ of checklists/plagiarism_protection.md:
     8-14 words   ⚠️ plagiarism risk, must be reformulated
     15+ words    ❌ serious
 
-Runs of 1-4 words are not listed. A run counts across sentence boundaries
-and across citations, as Pandoc citekeys ([@key, p. 5]) or in author-year
-form ((Keller 2018, S. 44), (ebd.)); letter case and punctuation are
-ignored. A quotation of five or more words in quotation marks („…“, “…”,
-"…", ‚…‘, ‘…’, '…', »…«, «…»), Markdown block quotes and Word paragraphs in
-a quote style (also Pandoc's "Block Text") are marked direct quotes and are
-not counted; the words of a shorter quotation (a term in quotation marks)
-keep a run going but are not counted in its length. Each direct
-quote (its parts between […] or (…) omissions) is looked up in the sources
-instead; one that is not found verbatim is listed for a check by hand,
-without changing the exit code. The chapter's bibliography (from a heading
-such as "Literaturverzeichnis" or "References" to the next heading of its
-level) is not counted if every entry in it has a year, as in a reference
-list; a body section of that name, an appendix and footnotes count.
+Words are counted as written, each a stretch between whitespace or dashes
+(–, —, a typed -- or ---): a hyphenated compound (long-term) or a word with an
+apostrophe (city’s) is one word, although its parts are matched one by one,
+and a dash between words separates them. Runs of 1-4 words are not
+listed. A run counts across sentence boundaries and across citations, as
+Pandoc citekeys ([@key, p. 5]) or in author-year form ((Keller 2018, S. 44),
+(ebd.)); letter case and punctuation are ignored. A quotation of five or
+more words in quotation marks („…“, “…”, "…", ‚…‘, ‘…’, '…', »…«, «…»),
+Markdown block quotes and Word paragraphs in a quote style (also Pandoc's
+"Block Text") are marked direct quotes and are not counted; the words of a
+shorter quotation (a term in quotation marks) keep a run going but are not
+counted in its length. Each direct quote (its parts between […] or (…)
+omissions) is looked up in the sources instead; one that is not found
+verbatim is listed for a check by hand, without changing the exit code. The
+chapter's bibliography (from a heading such as "Literaturverzeichnis" or
+"References" to the next heading of its level) is not counted if every entry
+in it has a year, as in a reference list; a body section of that name, an
+appendix and footnotes count.
 
 Sources are files or folders, searched recursively; folders named
 _guidelines (guidelines are not sources) and verification (the saved
@@ -46,8 +50,20 @@ while pypdf is not installed) is listed under "Not checked"; other files,
 hidden files and an .md file in a folder that is no extract (a handover or
 README) are passed over.
 
+The report's header gives the chapter's word count for the page budget, as
+written: the stretches between whitespace or dashes that hold a letter or
+digit (a hyphenated compound is one word), headings and block quotes
+included. In Markdown, footnotes count too; the YAML front matter, HTML
+comments, Pandoc citekeys (the whole bracket, [@key, p. 5]: Pandoc writes
+the citation only at the export), footnote marks and the bibliography do
+not (the line says when it recognized none), while author-year citations
+written into the text do. A Word chapter counts its body paragraphs,
+without tables, footnotes, text boxes and the bibliography. --words prints
+only that line and needs no sources.
+
 Usage:
     python scripts/verbatim_check.py <chapter> <source> [<source> ...]
+    python scripts/verbatim_check.py --words <chapter>
     python scripts/verbatim_check.py workspace/output/chapters/ch_2_basics.md workspace/sources/
     python scripts/verbatim_check.py --help
 
@@ -57,8 +73,10 @@ Exit codes: 0 = no run of 8 or more words, 1 = at least one run of 8 or more
 words (⚠️ or ❌), 2 = bad arguments, a chapter that cannot be read or holds no
 text, a source that cannot be read (the report is printed all the same, with
 the file under "Could not be read"), or no source text to compare against.
+With --words: 0, or 2 for bad arguments or a chapter that cannot be read.
 """
 
+import bisect
 import os
 import re
 import sys
@@ -80,7 +98,8 @@ for stream in (sys.stdout, sys.stderr):
 # Thresholds of checklists/plagiarism_protection.md, section 1.
 POLISH, RISK, SERIOUS = 5, 8, 15
 
-USAGE = "Usage: python scripts/verbatim_check.py <chapter> <source> [<source> ...]"
+USAGE = ("Usage: python scripts/verbatim_check.py <chapter> <source> [<source> ...]\n"
+         "       python scripts/verbatim_check.py --words <chapter>")
 CHAPTER_SUFFIXES = {".md", ".markdown", ".txt", ".docx"}
 SOURCE_SUFFIXES = {".md", ".markdown", ".txt", ".pdf"}
 # Document types a source might come in that the script cannot read: listed as
@@ -131,6 +150,9 @@ ROMAN = r"(?:m{0,3}(?:cm|cd|d?c{0,3})(?:xc|xl|l?x{0,3})(?:ix|iv|v?i{0,3}))"
 PAGE_NUMBER_LINE = re.compile(r"(?i)\s*[-–—]?\s*(?:(?:seite|page|s\.|p\.)\s*)?(?:\d{1,4}|(?=[ivxlcdm])" + ROMAN + r")"
                               r"(?:\s*(?:/|of|von)\s*\d{1,4})?\s*[-–—]?\s*")
 FOOTNOTE_MARK = re.compile(r"\[\^[^\]]*\]")
+# Markup that the word count leaves out: a heading's attributes ({#sec-intro
+# .unnumbered}) and the fence lines of a code block or a Pandoc div (::: {...}).
+MARKUP = re.compile(r"(?m)^(\s{0,3}#{1,6}\s.*?)\s*\{[^{}]*\}\s*$|^\s{0,3}(?:`{3,}|~{3,}|:{3,}).*$")
 
 
 def normalize(text: str) -> str:
@@ -140,6 +162,25 @@ def normalize(text: str) -> str:
 
 def tokens(text: str) -> list:
     return [m.group(0).casefold() for m in WORD.finditer(text)]
+
+
+# A dash between words (figure, en and em dash, horizontal bar, or a typed -- or
+# ---) separates them like a space; a single hyphen joins a compound.
+DASH = re.compile(r"[\u2012-\u2015]|-{2,}")
+
+
+def spaced(text: str) -> str:
+    """The text with each dash replaced by spaces of its length, so that offsets
+    stay valid. For counting words as written only, never for matching: tokens()
+    splits at a dash already."""
+    return DASH.sub(lambda m: " " * len(m.group(0)), text)
+
+
+def as_written(text: str) -> int:
+    """The words as written: the stretches between whitespace or dashes that
+    hold a letter or digit, so that a hyphenated compound (long-term) or a word
+    with an apostrophe (city's) is one word, though tokens() splits it."""
+    return sum(1 for w in spaced(text).split() if WORD.search(w))
 
 
 def quote_parts(quote: str) -> list:
@@ -350,7 +391,7 @@ def read_chapter(path: Path) -> Chapter:
         # around it into pieces; its words are not counted in the run's length.
         quoted, short = [], []
         for m in QUOTED.finditer(piece):
-            (quoted if len(tokens(m.group(0))) >= POLISH else short).append((m.start(), m.end()))
+            (quoted if as_written(m.group(0)) >= POLISH else short).append((m.start(), m.end()))
         for s, e in quoted:
             quotes.append((first + (0 if docx else piece.count("\n", 0, s)), piece[s + 1:e - 1]))
         # a citation is skipped without breaking the run
@@ -369,6 +410,44 @@ def read_chapter(path: Path) -> Chapter:
             pos = e
     return Chapter(words, places, spans, "".join(text_parts), "paragraph" if docx else "line",
                    quotes, inside, cut)
+
+
+def word_count(chapter: Chapter) -> str:
+    """
+    The chapter's words as written, for the page budget: the stretches between
+    whitespace or dashes that hold a letter or digit (long-term, city's: one
+    word each) in what read_chapter keeps, headings, block quotes and
+    quotations included. The line names the bibliography as not counted only
+    if read_chapter recognized one, and otherwise says that a reference list
+    in the file counts.
+    """
+    n = as_written(MARKUP.sub(lambda m: m.group(1) or "", chapter.text))
+    if chapter.unit == "paragraph":
+        kept, left = "headings and block quotes", ["tables", "footnotes", "text boxes"]
+    else:
+        kept, left = ("headings, block quotes and footnotes",
+                      ["YAML header", "HTML comments", "citekeys", "footnote marks"])
+    if chapter.bibliography:
+        left.append("the bibliography")
+    what = f"{kept} included; {', '.join(left[:-1])} and {left[-1]} not counted"
+    if not chapter.bibliography:
+        # none, or one under a heading it does not know or with an entry without a year
+        what += "; no bibliography recognized: a reference list in the file counts"
+    return f"Words: {n} (as written, {what})"
+
+
+def checked_chapter(path: Path) -> Path:
+    """The chapter argument, or exit 2 if it cannot be opened or is no chapter."""
+    try:
+        with open(path, "rb"):
+            pass
+    except OSError as exc:
+        reason = "is a directory" if os.path.isdir(path) else exc.strerror or exc
+        fail(f"cannot open {path}: {reason}")
+    if path.suffix.lower() not in CHAPTER_SUFFIXES:
+        fail(f"expected a .md, .txt or .docx chapter, got "
+             f"{path.suffix or 'a file without extension'}: {path}")
+    return path
 
 
 # ---------------------------------------------------------------------------
@@ -655,7 +734,10 @@ def source_files(arg: str, unchecked: list) -> list:
 # ---------------------------------------------------------------------------
 
 def find_runs(chapter: Chapter, seqs: list) -> list:
-    """Maximal runs of at least POLISH words: [(start, length, [(seq, pos, length)])]."""
+    """
+    Maximal runs of at least POLISH words (tokens, counted as written later):
+    [(start, length, [(seq, pos, length, start)])].
+    """
     ch = chapter.words
     # The chapter's word windows are indexed, not the sources': a few thousand
     # entries instead of one per source word, however long the sources are.
@@ -679,13 +761,31 @@ def find_runs(chapter: Chapter, seqs: list) -> list:
     for (i, n), hits in sorted(runs.items(), key=lambda r: -r[0][1]):
         outer = next((k for k in kept if k[0] <= i and i + n <= k[0] + k[1]), None)
         if outer is None:
-            kept.append((i, n, [(s, p, n) for s, p in hits]))
+            kept.append((i, n, [(s, p, n, i) for s, p in hits]))
         else:
             # a shorter run inside a longer one, from another source, is named too:
             # an extract quote carries the quote ID and printed page a PDF lacks
             named = {h[0] for h in outer[2]}
-            outer[2].extend((s, p, n) for s, p in hits if s not in named)
+            outer[2].extend((s, p, n, i) for s, p in hits if s not in named)
     return sorted(kept)
+
+
+def written_ids(chapter: Chapter) -> list:
+    """For each entry of chapter.words, the number of the word as written (the
+    stretch between whitespace or dashes) it falls in, or None where a run
+    breaks."""
+    starts = [m.start() for m in re.finditer(r"\S+", spaced(chapter.text))]
+    return [None if sp is None else bisect.bisect_right(starts, sp[0]) - 1 for sp in chapter.spans]
+
+
+def run_length(chapter: Chapter, ids: list, i: int, n: int) -> tuple:
+    """
+    The length of the run chapter.words[i:i + n] in words as written: those its
+    tokens fall in outside a short quotation, and those only inside one.
+    """
+    outside = {ids[k] for k in range(i, i + n) if not chapter.quoted[k]}
+    inside = {ids[k] for k in range(i, i + n) if chapter.quoted[k]} - outside
+    return len(outside), len(inside)
 
 
 def found_quotes(parts: list, seqs: list) -> set:
@@ -703,9 +803,10 @@ def found_quotes(parts: list, seqs: list) -> set:
     return found
 
 
-def describe(seqs: list, hits: list, n: int) -> str:
+def describe(seqs: list, hits: list, n: int, written) -> str:
+    """The sources of a run of n tokens; written(start, m): m tokens as written."""
     names = []
-    for s, p, m in sorted(hits, key=lambda h: (h[2] < n, seqs[h[0]].kind != "extract")):
+    for s, p, m, i in sorted(hits, key=lambda h: (h[2] < n, seqs[h[0]].kind != "extract")):
         seq = seqs[s]
         pages = [pg for pg in seq.pages[p:p + m] if pg]
         if seq.kind == "pdf" and pages:
@@ -713,7 +814,7 @@ def describe(seqs: list, hits: list, n: int) -> str:
         else:
             where = [f"p. {pages[0]}"] if pages else []
         where += [seq.note] if seq.note else []
-        where += [f"{m} of these words"] if m < n else []
+        where += [f"{written(i, m)} of these words"] if m < n else []
         name = f"{seq.label} ({', '.join(where)})" if where else seq.label
         if name not in names:
             names.append(name)
@@ -739,21 +840,19 @@ def main() -> None:
     if any(a in ("-h", "--help") for a in args):
         print((__doc__ or USAGE).strip())
         sys.exit(0)
+    if "--words" in args:
+        # the word count alone, for the page budget: no sources needed
+        rest = [a for a in args if a != "--words"]
+        if len(rest) != 1 or args.count("--words") != 1:
+            print(USAGE, file=sys.stderr)
+            sys.exit(2)
+        print(word_count(read_chapter(checked_chapter(Path(rest[0])))))
+        sys.exit(0)
     if len(args) < 2:
         print(USAGE, file=sys.stderr)
         sys.exit(2)
 
-    chapter_path = Path(args[0])
-    try:
-        with open(chapter_path, "rb"):
-            pass
-    except OSError as exc:
-        reason = "is a directory" if os.path.isdir(chapter_path) else exc.strerror or exc
-        fail(f"cannot open {chapter_path}: {reason}")
-    if chapter_path.suffix.lower() not in CHAPTER_SUFFIXES:
-        fail(f"expected a .md, .txt or .docx chapter, got "
-             f"{chapter_path.suffix or 'a file without extension'}: {chapter_path}")
-
+    chapter_path = checked_chapter(Path(args[0]))
     chapter = read_chapter(chapter_path)
     if not any(w is not None for w in chapter.words) and not chapter.quotes:
         fail(f"no text found in {chapter_path}")
@@ -802,18 +901,21 @@ def main() -> None:
         fail("nothing to compare against: no extract quotes, PDF text or text files in "
              + ", ".join(args[1:])
              + "".join(f"; {u}" for u in unchecked + unreadable))
-    # A run is rated by its words outside quotation marks: the words of a short
-    # quotation inside it keep it going but are not counted.
+    # A run is rated by its words as written (a hyphenated compound is one word,
+    # a dash between words separates them) outside quotation marks: the words of
+    # a short quotation inside it keep it going but are not counted.
+    ids = written_ids(chapter)
     runs = []
     for i, n, hits in find_runs(chapter, seqs):
-        q = sum(chapter.quoted[i:i + n])
-        if n - q >= POLISH:
-            runs.append((i, n, n - q, q, hits))
+        c, q = run_length(chapter, ids, i, n)
+        if c >= POLISH:
+            runs.append((i, n, c, q, hits))
 
     print(f"Verbatim check for: {chapter_path.name}")
     print(f"  Sources: {counts['extract']} extract(s) with "
           f"{sum(1 for s in seqs if s.kind == 'extract' and s.first)} quotes, "
           f"{counts['pdf']} PDF(s), {counts['text']} text file(s)")
+    print(f"  {word_count(chapter)}")
     if chapter.bibliography:
         first, last = chapter.bibliography
         print(f"  Not counted: the bibliography, " + (f"{chapter.unit}s {first}-{last}" if last
@@ -825,7 +927,7 @@ def main() -> None:
         excerpt = shorten(chapter.text[start:end])
         also = f" (and {q} in quotation marks)" if q else ""
         print(f"{rating(c)} {c} words{also}, {chapter.unit} {chapter.places[i]}: \"{excerpt}\"")
-        print(f"    in {describe(seqs, hits, n)}")
+        print(f"    in {describe(seqs, hits, n, lambda i, m: sum(run_length(chapter, ids, i, m)))}")
     if runs:
         print()
 

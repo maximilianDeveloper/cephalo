@@ -74,4 +74,4 @@ macOS gets no launcher: it blocks a double-click on any script downloaded with a
 
 ## 7. Next steps
 
-Continue with `README.md`, Quick start step 3 (put your institution's guidelines into the project) and step 4 (open the project in Claude Code and invoke the style-resolver). If something goes wrong during setup, see the Troubleshooting section in `QUICKSTART.md`.
+Continue with `README.md`, Quick start step 3 (put your institution's guidelines into the project) and step 4 (open the project in Claude Code and invoke the style-resolver; for a seminar paper or a presentation, name the workflow file in your first message instead). If something goes wrong during setup, see the Troubleshooting section in `QUICKSTART.md`.

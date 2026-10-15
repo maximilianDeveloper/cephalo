@@ -101,8 +101,9 @@
 ## Pagination (`pagination.*`)
 
 - **`title_page`:** [counted but not shown / not counted]
-- **`front_matter`:** [Roman numerals / Arabic / none]
-- **`main_text`:** [Arabic from introduction onward / continuous]
+- **`front_matter`:** [Roman numerals (I, II, … or i, ii, …) / counted but not shown / Arabic, like the main text / none (not counted, no number shown)]
+- **`main_text`:** [Arabic from the introduction on, continuing the count / Arabic from the introduction on, starting at 1 / continuous]
+- **`back_matter`:** [like the main text / Roman numerals, continuing the front matter's count / a count of its own from 1 (Arabic, or Roman: I or i) / no number shown] (the reference list, an appendix and what follows them)
 - **`position`:** [bottom center / bottom right / top right]
 
 ---
@@ -129,7 +130,7 @@
 - **`forbidden_pronouns`:** [list — e.g., "I", "we", "one", "you" or local-language equivalents]
 - **`forbidden_evaluative`:** [optional list — e.g., "remarkable", "particularly noteworthy"]
 - **`block_quote_word_threshold`:** [e.g., 40 words]
-- **`block_quote_format`:** [e.g., indented 1 cm, 10 pt, single-spaced, without quotation marks]
+- **`block_quote_format`:** [e.g., indented 1 cm, 10 pt, single-spaced, without quotation marks; and where its citation stands, inside the quote after its last sentence or after the quote]
 - **`quote_alterations`:** [e.g., insertions in square brackets, omissions as `[...]`, added emphasis marked, a quote within a quote in single quotation marks]
 - **`emphasis`:** [italic only / bold allowed / underline forbidden / etc.]
 - **`footnotes`:** [allowed / discouraged / forbidden]

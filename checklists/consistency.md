@@ -1,7 +1,7 @@
 # Consistency Check
 
 **Purpose:** Verifies consistency within and between chapters.
-**Executed by:** source-verifier (cross-chapter checks), orchestrator (final check).
+**Executed by:** source-verifier (cross-chapter checks; in a seminar paper also the final check of Part A and B.2-B.3), orchestrator (final check).
 **When:** After every second chapter, plus a final check before submission.
 
 ---
@@ -50,11 +50,11 @@ To be performed by source-verifier after every second chapter.
 
 ## Part B: Full-document final check (before submission)
 
-To be performed on the exported document, after the last written chapter (introduction, written last) and the formatting phase: in the flat workflows the closing step F.1, in the long-form workflows the submission step.
+To be performed on the exported document, after the last written chapter (introduction, written last) and the formatting phase: in the flat workflows the closing step F.1, in the long-form workflows the submission step. A seminar paper (`seminar_2agent`) has no formatting phase: in its closing step F.1, the source-verifier checks Part A and B.2-B.3 on the chapter files and the reference list before the export; B.1, B.4 and B.7 come from the format rounds and the user.
 
 ### B.1 Indexes
 
-- [ ] **Table of contents** updated (in Word: Ctrl+A then F9)
+- [ ] **Table of contents** updated (in Word: Ctrl+A then F9, twice: right after opening, Word can number the entries before it has laid out every page)
 - [ ] **List of abbreviations:** ONLY abbreviations actually used in the text
   - Automation: `scripts/abbreviations_extract.py`
 - [ ] **Bibliography:**
@@ -83,7 +83,7 @@ To be performed on the exported document, after the last written chapter (introd
 
 - [ ] Page count within range (styleguide.md -> `document.page_count`)
 - [ ] Title page fully filled in (no placeholders!)
-- [ ] Pagination matches the styleguide (`pagination.front_matter` / `pagination.main_text` / `pagination.position` — see `checklists/format_rules.md`)
+- [ ] Pagination matches the styleguide (`pagination.front_matter` / `pagination.main_text` / `pagination.back_matter` / `pagination.position` — see `checklists/format_rules.md`)
 - [ ] Hyphenation as specified (styleguide: `document.hyphenation`; in Word: Layout -> Hyphenation)
 - [ ] Body alignment matches the styleguide (`body.alignment`)
 - [ ] Styleguide check complete (see `checklists/format_rules.md`)

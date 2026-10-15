@@ -13,9 +13,11 @@
 | 8-14 | ⚠️ plagiarism risk | MUST be reformulated |
 | ≥ 15 | ❌ serious | MUST reformulate, or use as direct quote in quotation marks |
 
+Words are counted as written: a hyphenated compound (long-term) or a word with an apostrophe (city’s) is one word; a dash between words separates them.
+
 ### Application by source-verifier
 
-Step 8 of verification. `scripts/verbatim_check.py` counts the runs against the extracts' original quotes and the source PDFs: the orchestrator runs it before every chapter verification (in the seminar and presentation workflows, the user does), and the source-verifier rates the sentences from its report. Without the script, the source-verifier counts by eye against the original quote in the extract. A run that crosses a sentence boundary counts as one run; a quotation of five or more words in quotation marks, or a block quote, is a direct quote and is not counted, while the words of a shorter quotation (a term in quotation marks) keep a run going without being counted in its length.
+Step 8 of verification. `scripts/verbatim_check.py` counts the runs against the extracts' original quotes and the source PDFs: the orchestrator runs it before every chapter verification (in the seminar and presentation workflows, Claude in the main chat, or the user), and the source-verifier rates the sentences from its report. Without the script, the source-verifier counts by eye against the original quote in the extract. A run that crosses a sentence boundary counts as one run; a quotation of five or more words in quotation marks, or a block quote, is a direct quote and is not counted, while the words of a shorter quotation (a term in quotation marks) keep a run going without being counted in its length.
 
 **Example:**
 

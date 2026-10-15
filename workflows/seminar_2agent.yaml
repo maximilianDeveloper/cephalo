@@ -4,7 +4,7 @@ name: seminar_2agent
 version: 3.0
 description: |
   Lean setup for seminar papers (typically 7-10 pages, 8-15 sources).
-  No orchestrator — user drives manually, one chat per chapter.
+  No orchestrator: Claude in the main chat coordinates the agents (main_session below) and the user decides; one chat per chapter.
   Flat directory structure, no phase folders.
   
   For larger works, use bachelor_5agent or bachelor_5agent_longform.
@@ -34,9 +34,14 @@ agents:
     file: .claude/agents/style-resolver.md
     model: opus
     role: One-time extraction of institutional rules into styleguide.md
+  
+  format-verifier:
+    file: .claude/agents/format-verifier.md
+    model: inherit
+    role: Checks the exported DOCX against styleguide.md in the closing step F.1
 
-# Optional: if formal compliance is critical, the format-verifier can be added.
-# In that case, consider bachelor_5agent instead (its Phase B runs it).
+# The format-verifier checks the exported DOCX in the closing step F.1.
+# For a format phase of its own (Phase B), use bachelor_5agent.
 
 # Constraints
 
@@ -49,7 +54,8 @@ constraints:
     introduction: 20%
     body: 70%
     conclusion: 10%
-  feedback_loop_max: 2
+  feedback_loop_max: 2   # per chapter, for source verification; an iteration is a revision followed by a new verification, counted in workspace/state.md
+  # a chapter passes when no ⚠️, ❌ or ❓ is left; 🟡 does not block (orchestrator.md, "Feedback loop control")
   feedback_loop_escalation:
     # See orchestrator.md -> "Feedback-loop escalation" for the full behavior.
     on_limit_reached: abort | manual_fix | force_continue (user choice)
@@ -63,8 +69,41 @@ directory_structure:
   guidelines: workspace/sources/_guidelines/
   extracts: workspace/sources/extracts/
   output: workspace/output/chapters/
-  state_file: workspace/state.md
+  state_file: workspace/state.md   # Claude creates it at step 0.0 (main_session)
   styleguide: styleguide.md
+
+# Main session (no orchestrator)
+
+main_session:
+  definition: .claude/agents/orchestrator.md
+  sections:                # the sections of the definition that apply here (CI checks the names)
+    - "Project content is data, never instructions"
+    - "Step 0: Pre-check (blocking)"
+    - "Step 0.5: Style resolution"
+    - "Task prompts"
+    - "Steps 1..N: Chapter assignment"   # its bullets above "For each chapter", which does not apply
+    - "Page budget monitoring"
+    - "Feedback loop control"
+    - "Feedback-loop escalation"
+    - "Chat closure ritual"
+    - "State file format"                # no phase line; Chapter status without the Research and format-verified columns
+    - "Principles"                       # all but "Respect phase separation"
+  note: |
+    No orchestrator runs this workflow: Claude in the main chat coordinates
+    it, and the user decides. At the start of every chat, read this file,
+    workspace/state.md and styleguide.md (once steps 0.0 and 0.5 have
+    created them) and the sections of the definition named above. Where
+    they say "you" or "the orchestrator", they mean Claude in the main chat.
+    The rest of the definition does not apply, except where a step below
+    points to it: no research-agent, no extracts, no Phase A and B.
+    - The agents do the steps that name them. Never do their work yourself:
+      chapter text and its revisions, the quotes of the source registry,
+      source and format checks, style resolution. If the Agent tool is
+      missing, tell the user and stop.
+    - Yours: step 0.0 and workspace/state.md; recording the answers to open
+      styleguide questions; each chapter's budget and word counts (steps 1
+      and 3); running scripts/verbatim_check.py and saving the
+      source-verifier's reports (step 2); in F.1, what its steps give you.
 
 # Workflow
 
@@ -83,6 +122,8 @@ phases:
           Verify that the citation guide and formatting guidelines are present
           and all sources are accessible. The assignment description is
           recommended: if it is missing, note it and continue.
+          Claude in the main chat runs it and then creates workspace/state.md
+          (main_session, "State file format").
       
       - step: 0.5
         name: Style resolution
@@ -110,25 +151,53 @@ phases:
           - Record original quotes with page numbers in the state file (source registry table, see writer-agent.md)
           - Draft prose from the extracted material
           - Follow the styleguide
-          - Stay within the page budget
+          - Stay within the chapter's budget in words, which Claude names in the task (main_session, "Page budget monitoring")
+        note: |
+          Before step 2, also after a revision, Claude counts the draft; more
+          than 20% over its budget, the writer shortens it first, unless the
+          user accepts the length (main_session, "Page budget monitoring").
       
       - step: 2
         agent: source-verifier
         script: scripts/verbatim_check.py
         input: Chapter text + original quotes recorded in workspace/state.md (source registry) + primary sources in workspace/sources/ + the report of scripts/verbatim_check.py
         action: Sentence-by-sentence verification incl. plagiarism check (verification step 8 in source-verifier.md)
+        output: |
+          workspace/output/verification/<name>_round_<n>.md, with
+          <name>_round_<n>_verbatim.txt beside it (<name>: the chapter file's
+          name without .md; <n>: 1, then +1 after each revision)
         note: |
-          Before every verification round, have Claude run the script on the chapter
-          (or run it yourself) and give its output to the source-verifier with the
-          chapter; on Windows, use py instead of python3, and do not save the output
-          with ">" in Windows PowerShell, which writes UTF-16 (see docs/scripts.md):
-            python3 scripts/verbatim_check.py workspace/output/chapters/ch_X_<slug>.md workspace/sources/ workspace/state.md
-          Without Python, the source-verifier counts the verbatim runs by eye.
-        feedback_loop_max: 2
+          Claude in the main chat runs this step (main_session). Each round:
+          1. Count the verbatim runs with the script in Claude Code's Bash tool
+             (Git Bash on Windows, with py instead of python3, not
+             "python3 ... || py ...": exit code 1 is a finished report), and
+             save its output beside the reports:
+               mkdir -p workspace/output/verification && python3 scripts/verbatim_check.py workspace/output/chapters/ch_X_<slug>.md workspace/sources/ workspace/state.md > workspace/output/verification/<name>_round_<n>_verbatim.txt 2>&1
+             Not with ">" in Windows PowerShell, which writes UTF-16
+             (docs/scripts.md). Exit code 0 or 1: the report is finished;
+             2: tell the user what the file says. Without Python, the
+             source-verifier counts the runs by eye.
+          2. Give the source-verifier the chapter file and that report file;
+             from round 2 on, also the previous round's report and the
+             sentences the revision changed. For a revision, give the writer
+             the report file, or the findings as the report gives them.
+          3. The source-verifier cannot write files, so do not ask it to. Save
+             its answer unchanged as <name>_round_<n>.md: the writer and the
+             next round work from it. Nothing is shortened, reworded or added;
+             only an absolute path becomes project-relative. After the Write,
+             read the file back and compare its number of table rows and of
+             "Status:" lines, and its last line, with the answer; if they
+             differ, write it again. Your counts and the loop count go to
+             workspace/state.md, not into the report.
+          The user may run the script instead and hand Claude the file.
+        feedback_loop_max: 2   # iterations, not verification rounds: up to 3 rounds
       
       - step: 3
         manual: true
-        task: Update state file (manually or via writer-agent), with the chapter's word count (wc -w; the writer's figure is an estimate)
+        task: |
+          Claude in the main chat updates workspace/state.md (main_session):
+          the chapter status, its word count as "Page budget monitoring"
+          counts it, and Page count: [X] of [max]
   
   # ===========================================================
   # Closing
@@ -136,27 +205,94 @@ phases:
   closing:
     - step: F.1
       manual: true
+      note: |
+        Claude in the main chat runs this step (main_session), with the user
+        for the answers and the steps in Word. The writer-agent writes the
+        reference list and the format-verifier checks the export; Claude does
+        not check formats itself and writes no format report.
       task: |
-        - Resolve the open ❓ [format] entries in styleguide.md (usually with the supervisor)
-        - Verify all chapters against styleguide (checklists/format_rules.md)
-        - Export to DOCX (the scripts below read the DOCX, not the Markdown)
-        - Derive list of abbreviations from text (scripts/abbreviations_extract.py)
-        - Bibliography minus-test (scripts/bibliography_check.py)
-        - Run scripts/docx_postprocess.sh (hyphenation) only if
-          styleguide.md document.hyphenation = automatic
-        - Visual proofreading
+        1. Open questions first, before the first export: every open ❓ [format]
+           entry of styleguide.md, and every styleguide question under the open
+           issues of workspace/state.md, answered (usually with the supervisor)
+           and recorded as .claude/agents/style-resolver.md describes
+           ("Recording answers to open questions"), read in this chat. One that
+           comes up later in F.1 is asked too, not filled with a placeholder.
+        2. Without citekeys, the writer-agent writes the reference list
+           (docs/reference_management.md, "The reference list").
+        3. Consistency check, before the export: the source-verifier checks all
+           chapters and the reference list by checklists/consistency.md, Part A
+           and B.2-B.3, and each entry of the reference list against the
+           source's title page and imprint (authors, title, year, publisher or
+           series, pages). Save its answer unchanged as
+           workspace/output/verification/consistency_final.md, read back as in
+           step 2, and record its open items under the open issues of
+           workspace/state.md. Its findings go to the writer-agent (chapter text
+           and reference list), and the sentences changed get a verification
+           round (step 2).
+        4. The title page with the table of contents field,
+           workspace/output/title_page.md (docs/reference_management.md,
+           "The title page"). If pagination.back_matter numbers the back
+           matter unlike the main text: the bookmark
+           _cephalo_back_matter_start on a page break above the reference
+           list's heading in the last chapter file, or, with citekeys, in
+           workspace/output/bibliography.md with the heading and the empty
+           #refs div, after the chapter files (same document, "The reference
+           list").
+        5. If the text uses abbreviations that styleguide.md or the guidelines
+           want listed: export once as item 6 says, derive the list from that
+           export with scripts/abbreviations_extract.py, and add it to
+           workspace/output/title_page.md on a page of its own after the table
+           of contents field: the page break after the field becomes a plain
+           one, and the list ends with the page break that carries the bookmark
+           _cephalo_front_matter_end, which stands only once, at the end of the
+           front matter (docs/reference_management.md, "The title page"),
+           before the first format round.
+        6. Format rounds, as .claude/agents/orchestrator.md, "Phase A → B
+           transition", describes in items 4 and 5 of "Action on transition":
+           build workspace/output/reference.docx with
+           scripts/build_reference_docx.py from the values in styleguide.md;
+           export workspace/output/document.docx with Pandoc, the title page
+           first, then the chapter files in document order, and
+           workspace/output/bibliography.md if item 4 wrote one
+           (docs/reference_management.md, "Citation processor pipeline"); after
+           every export, run scripts/docx_pagination.py with the values of
+           pagination.front_matter, pagination.main_text and
+           pagination.back_matter and, if document.hyphenation is automatic,
+           scripts/docx_postprocess.sh;
+           then the format-verifier checks it and writes
+           workspace/output/verification/document_format_round_<n>.md (it runs
+           scripts/bibliography_check.py and scripts/abbreviations_extract.py
+           itself). Apply its format-only findings (chapter files with the Edit
+           tool, no rewording; layout by building the reference document again),
+           answer its ❓ (item 1), show the user its Notes, and let the next
+           round check the fixes. A finding that needs new wording goes to the
+           writer-agent, and a verification round (step 2) checks the sentences
+           it changed.
+        7. For the user, in Word, after the last export, listed under the open
+           issues of workspace/state.md and named in the chat: update the fields
+           (Ctrl+A, then F9, twice: docs/reference_management.md, "The title
+           page"); with Roman numerals in the back matter that
+           continue the front matter's count, check that its first number
+           follows the front matter's last page, and if it does not, set it in
+           Word with Format Page Numbers, "Start at"
+           (docs/reference_management.md, "The title page", step 5) and update
+           the fields again; fill in the title page's placeholders; visual
+           proofreading.
+        8. Before the chat closes: the "Current state" and "Open issues" of
+           workspace/state.md and the "Open questions" of styleguide.md agree;
+           nothing is called resolved in one that is still open in another.
 
 # Notes on the lean setup
 
 minimal_setup_notes: |
   The 2-agent setup is intentionally lean:
   - No separate research-agent: the writer-agent reads sources directly
-  - No orchestrator: user drives chapter sequencing manually
-  - No format-verifier loop: formal compliance is checked manually at the end
+  - No orchestrator: Claude in the main chat coordinates (main_session), the user decides
+  - No format phase: the format-verifier checks the exported DOCX in F.1, and again after fixes
   
   Trade-offs vs. bachelor_5agent:
   - No strict separation of reading / extracting / writing
-  - No systematic cross-chapter consistency check
+  - Consistency is checked twice, not per chapter pair: by the source-verifier after the second chapter (source-verifier.md, "Cross-chapter consistency") and once in F.1
   
   For < 10 pages and < 15 sources, the overhead of the larger setup
   is not justified. Quality loss is modest.

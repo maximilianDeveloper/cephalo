@@ -1080,6 +1080,11 @@ $stepNo++
 if ($Structure -match "^Multi-project") {
     Write-Host "$stepNo. Open a sub-project (e.g. 01_Proposal\) in Claude Code - not this root -"
     Write-Host "   and invoke the style-resolver:"
+} elseif ($WorkType -in @("Seminar paper", "Presentation")) {
+    # No orchestrator: the first message names the workflow (README.md, step 4).
+    Write-Host "$stepNo. Open this directory in Claude Code; in the first message, name"
+    Write-Host "   workflows\$WorkflowHint and ask for steps 0.0 and 0.5:"
+    Write-Host "   (put your sources, PDF or plain text, into workspace\sources\ first)"
 } else {
     Write-Host "$stepNo. Open this directory in Claude Code and invoke the style-resolver:"
 }

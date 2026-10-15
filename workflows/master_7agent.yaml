@@ -243,14 +243,18 @@ phases:
           Assemble the chapters from workspace/output/chapters/ in document
           order, with the title page workspace/output/title_page.md first
           (docs/reference_management.md, "The title page") and, without
-          citekeys, the reference list workspace/output/bibliography.md after
-          them (same document, "The reference list"); export them
+          citekeys or where pagination.back_matter numbers the back matter
+          unlike the main text, workspace/output/bibliography.md after them
+          (same document, "The reference list"); export them
           to workspace/output/document.docx with Pandoc
           (docs/reference_management.md, "Citation processor pipeline"; a
-          prerequisite of Phase B, checklists/precheck.md, section 6). If
-          styleguide.md document.hyphenation is automatic, run
-          scripts/docx_postprocess.sh on it after every export: Pandoc does
-          not set the flag. B.1-B.4 read this DOCX; re-export after fixes.
+          prerequisite of Phase B, checklists/precheck.md, section 6). After
+          every export, run scripts/docx_pagination.py on it with the values
+          of styleguide.md pagination.front_matter, pagination.main_text and
+          pagination.back_matter (docs/scripts.md) and, if
+          document.hyphenation is automatic,
+          scripts/docx_postprocess.sh: Pandoc sets neither the sections nor
+          the flag. B.1-B.4 read this DOCX; re-export after fixes.
 
       - step: B.1
         agent: format-verifier
@@ -287,8 +291,9 @@ phases:
     - step: F.4
       manual: true
       task: |
-        - Roman front matter: only if styleguide.md pagination.front_matter is Roman, the user sets it as a section of its own in Word (docs/reference_management.md, "The title page")
-        - Update table of contents
+        - Front matter numbered unlike the main text: only if styleguide.md pagination.front_matter is Roman, counted but not shown or none, or pagination.main_text starts at 1, the DOCX has it as a section of its own, set by scripts/docx_pagination.py after the export (docs/reference_management.md, "The title page"; without Python, the user sets it in Word as described there)
+        - Update table of contents (in Word: Ctrl+A then F9, twice: docs/reference_management.md, "The title page")
+        - Back matter numbered unlike the main text: only if styleguide.md pagination.back_matter does not number it like the main text, the DOCX has it as a section of its own from the reference list on, set the same way; with Roman numerals that continue the front matter's count, check after updating the table of contents that its first number follows the front matter's last page; if it does not (a list or the table of contents fills more than one page), set it in Word: in the header or footer of the reference list's first page, Format Page Numbers, "Start at" the number after the front matter's last page (docs/reference_management.md, "The title page", step 5), then update the fields again (Ctrl+A, then F9); running scripts/docx_pagination.py again on this DOCX changes nothing, and a new export takes that number with --back-matter-start (docs/scripts.md)
         - Confirm the hyphenation setting matches styleguide.md (document.hyphenation)
         - Visual proofreading
         - Mentally rehearse defending each sentence

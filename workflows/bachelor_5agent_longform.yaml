@@ -307,8 +307,8 @@ phases:
     
     steps:
       - Title page as 08_Formal_Review/title_page.md, the first file of every export (docs/reference_management.md, "The title page")
-      - Without citekeys, the reference list as 08_Formal_Review/bibliography.md, after the chapter files in every export, before an appendix (docs/reference_management.md, "The reference list")
-      - Milestone export as DOCX into submissions/v_<tag>_<date>.docx with Pandoc, a new tag for each format round (v_r1_<date>.docx, v_r2_<date>.docx) (docs/reference_management.md; the steps below read this file); then scripts/docx_postprocess.sh on it, only if styleguide.md document.hyphenation = automatic (orchestrator, every round: a new export does not carry the flag)
+      - Without citekeys, the reference list as 08_Formal_Review/bibliography.md, after the chapter files in every export, before an appendix (docs/reference_management.md, "The reference list"); where pagination.back_matter numbers the back matter unlike the main text, the file starts with the bookmark that starts it, and with citekeys it holds that bookmark, the heading and the empty refs div (same section)
+      - Milestone export as DOCX into submissions/v_<tag>_<date>.docx with Pandoc, a new tag for each format round (v_r1_<date>.docx, v_r2_<date>.docx) (docs/reference_management.md; the steps below read this file); then scripts/docx_pagination.py on it with the values of styleguide.md pagination.front_matter, pagination.main_text and pagination.back_matter, and scripts/docx_postprocess.sh, only if document.hyphenation = automatic (orchestrator, every round: a new export carries neither the sections nor the flag)
       - Full styleguide check of that DOCX (format-verifier; report in format_reports/round_<n>.md)
       - scripts/bibliography_check.py (minus-test)
       - scripts/abbreviations_extract.py (derive list of abbreviations)
@@ -322,9 +322,10 @@ phases:
     task: |
       - Full-document final check: checklists/consistency.md, Part B (orchestrator-longform; B.6 is completed by the commit and tag below)
       - Final DOCX export to 08_Formal_Review/submissions/v_final_<date>.docx
-      - Run scripts/docx_postprocess.sh on this v_final file (only if styleguide.md document.hyphenation = automatic; a new export does not carry the flag)
-      - Roman front matter: only if styleguide.md pagination.front_matter is Roman, the user sets it as a section of its own in Word (docs/reference_management.md, "The title page")
-      - Update table of contents (Ctrl+A then F9)
+      - Run scripts/docx_pagination.py on this v_final file with the values of styleguide.md pagination.front_matter, pagination.main_text and pagination.back_matter, and scripts/docx_postprocess.sh (only if document.hyphenation = automatic): a new export carries neither the sections nor the flag
+      - Front matter numbered unlike the main text: only if styleguide.md pagination.front_matter is Roman, counted but not shown or none, or pagination.main_text starts at 1, the DOCX has it as a section of its own, set by scripts/docx_pagination.py after the export (docs/reference_management.md, "The title page"; without Python, the user sets it in Word as described there)
+      - Update table of contents (Ctrl+A then F9, twice: docs/reference_management.md, "The title page")
+      - Back matter numbered unlike the main text: only if styleguide.md pagination.back_matter does not number it like the main text, the DOCX has it as a section of its own from the reference list on, set the same way; with Roman numerals that continue the front matter's count, check after updating the table of contents that its first number follows the front matter's last page; if it does not (a list or the table of contents fills more than one page), set it in Word: in the header or footer of the reference list's first page, Format Page Numbers, "Start at" the number after the front matter's last page (docs/reference_management.md, "The title page", step 5), then update the fields again (Ctrl+A, then F9); running scripts/docx_pagination.py again on this DOCX changes nothing, and a new export takes that number with --back-matter-start (docs/scripts.md)
       - Confirm the hyphenation setting matches styleguide.md (document.hyphenation)
       - Visual proofreading
       - Sign declaration of academic integrity

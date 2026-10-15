@@ -34,7 +34,7 @@ jobs:
         run: python -m pip install -r requirements.txt pyyaml
 
       - name: Python syntax
-        run: python -m py_compile scripts/abbreviations_extract.py scripts/bibliography_check.py scripts/build_reference_docx.py scripts/cross_session_audit.py scripts/verbatim_check.py
+        run: python -m py_compile scripts/abbreviations_extract.py scripts/bibliography_check.py scripts/build_reference_docx.py scripts/cross_session_audit.py scripts/docx_pagination.py scripts/verbatim_check.py
 
       - name: Shell syntax
         # One file per call: `bash -n a b c` parses only a (b and c become its arguments).
@@ -144,6 +144,40 @@ jobs:
               for o in sorted(stems & calls.keys()):
                   for a in sorted(stems - calls.keys() - calls[o]):
                       errors.append(f"{f}: {o} cannot call {a} (not in the Agent(...) entry of its tools line)")
+              # A workflow without an orchestrator has a main_session block that names the
+              # sections of a definition Claude in the main chat follows: each is a heading
+              # of that file (outside code blocks), or a bold lead of a bullet under its
+              # Principles, so a renamed section cannot leave a dead pointer.
+              ms = wf.get("main_session")
+              if ms is None:
+                  if wf.get("name") in ("seminar_2agent", "presentation_3agent"):
+                      errors.append(f"{f}: no main_session block")
+                  continue
+              d = ms.get("definition") if isinstance(ms, dict) else None
+              if not isinstance(d, str) or not os.path.isfile(d):
+                  errors.append(f"{f}: main_session definition {d!r} does not exist")
+                  continue
+              names, fence, principles = set(), "", False
+              for line in open(d, encoding="utf-8").read().splitlines():
+                  m = re.match(r"\s*(`{3,}|~{3,})", line)
+                  if m and (not fence or m.group(1).startswith(fence)):
+                      fence = "" if fence else m.group(1)
+                      continue
+                  if fence:
+                      continue
+                  m = re.match(r"#{2,4} (.+?)\s*$", line)
+                  if m:
+                      names.add(m.group(1))
+                      principles = m.group(1) == "Principles"
+                      continue
+                  m = re.match(r"- \*\*(.+?):?\*\*", line)
+                  if m and principles:
+                      names.add(m.group(1))
+              if not ms.get("sections"):
+                  errors.append(f"{f}: main_session names no sections")
+              for name in ms.get("sections") or []:
+                  if name not in names:
+                      errors.append(f"{f}: main_session section '{name}' is no heading of {d}")
           # Framework files named in free text exist too (task:, note: and lists of
           # strings in workflows; agents, checklists, templates), also as ../ from a
           # sub-project.
@@ -183,6 +217,7 @@ jobs:
           python scripts/bibliography_check.py --help
           python scripts/build_reference_docx.py --help
           python scripts/cross_session_audit.py --help
+          python scripts/docx_pagination.py --help
           python scripts/verbatim_check.py --help
           bash scripts/docx_postprocess.sh --help
           bash scripts/extract_styleguide.sh --help
@@ -1222,7 +1257,7 @@ jobs:
             '- p. 42: "The central challenge is the particularly pronounced' '  uncertainty inherent to this early phase."' \
             '- **Secondary citation?** Yes — Author A cites Author B (2006):' '  "markets punish delay more than they reward caution in every downturn"' > "$V/other/author_a.md"
           printf '%s\n' '| Source | Chapter | Page | Original quote | Rating |' '|---|---|---|---|---|' \
-            '| Weber 2019 | 2 | 15 | "Stadtbäume senken die Oberflächentemperatur von Fassaden an heißen Tagen deutlich" | ✅ |' > "$V/other/state.md"
+            '| Weber 2019 | 2 | 15 | "Stadtbäume senken die Oberflächentemperatur von Fassaden an heißen Tagen deutlich" | paraphrase |' > "$V/other/state.md"
           printf 'PK\003\004not a pdf' > "$V/other/fake.pdf"
           # the worked example of checklists/plagiarism_protection.md: one run of 9 words, and
           # "The central challenge" (3 words) is not listed
@@ -1234,6 +1269,28 @@ jobs:
           grep -qF 'in author_a.md (p. 42, secondary citation)' "$V/out.txt"
           grep -qF 'in state.md: Weber 2019 (p. 15)' "$V/out.txt"
           grep -qF 'fake.pdf (a ZIP archive named .pdf' "$V/out.txt"
+          # words are counted as written: with two hyphenated compounds, a run of 9 tokens is
+          # 5 words, a 🟡 (exit 0); a quotation of 8 tokens in 4 words is a short one, which
+          # keeps the copied sentence around it one run
+          printf '%s\n' 'Planners need up-to-date maps of day-to-day heat stress in the old town.' > "$V/compound_src.txt"
+          printf '%s\n' 'Cities collect up-to-date maps of day-to-day heat in summer.' > "$V/compound.md"
+          expect 0 python scripts/verbatim_check.py "$V/compound.md" "$V/compound_src.txt"
+          grep -qF '🟡 5 words, line 1: "up-to-date maps of day-to-day heat"' "$V/out.txt"
+          grep -qxF 'Summary: ❌ 0, ⚠️ 0, 🟡 1. Runs of 1-4 words are not listed;' "$V/out.txt"
+          printf '%s\n' 'Planners need „up-to-date maps of day-to-day“ heat stress in the old town.' > "$V/compound_quoted.md"
+          expect 1 python scripts/verbatim_check.py "$V/compound_quoted.md" "$V/compound_src.txt"
+          grep -qF '⚠️  8 words (and 4 in quotation marks), line 1:' "$V/out.txt"
+          if grep -q 'not found verbatim' "$V/out.txt"; then cat "$V/out.txt"; echo "a short quotation was taken for a direct quote"; exit 1; fi
+          # a dash between words separates them, closed (an em dash, or a typed --- that
+          # Pandoc turns into one) as well as spaced: the run is 9 words as written, a ⚠️
+          printf '%s\n' 'Many authors agree that trees cool their surroundings—as planners know—through evaporation and shade.' > "$V/dash_src.txt"
+          printf '%s\n' 'Research shows that trees cool their surroundings—as planners know—through shade.' > "$V/dash.md"
+          expect 1 python scripts/verbatim_check.py "$V/dash.md" "$V/dash_src.txt"
+          grep -qF '⚠️  9 words, line 1: "that trees cool their surroundings—as planners know—through"' "$V/out.txt"
+          grep -qF 'Words: 12 (as written,' "$V/out.txt"
+          printf '%s\n' 'Research shows that trees cool their surroundings---as planners know---through shade.' > "$V/dash_typed.md"
+          expect 1 python scripts/verbatim_check.py "$V/dash_typed.md" "$V/dash_src.txt"
+          grep -qF '⚠️  9 words, line 1: "that trees cool their surroundings---as planners know---through"' "$V/out.txt"
           # the script's thresholds are those of the checklist's table
           python - <<'EOF'
           import re, sys
@@ -1327,7 +1384,8 @@ jobs:
           assert got == want, got
           EOF
           # review cases: a quoted term inside a copied sentence does not cut the run; an
-          # apostrophe does not end a quotation in single marks; a field without a bullet
+          # apostrophe does not end a quotation in single marks, and city’s is one word as
+          # written (line 14: 10 words in 11 tokens); a field without a bullet
           # ends the quote above it; a page bullet (Rule 7) and "Pages" headings; a
           # bracketed letter in a quote; lazy continuation of a block quote; a UTF-16
           # text source; other files in a source folder are listed, a .bib is not
@@ -1350,7 +1408,7 @@ jobs:
           expect 1 python scripts/verbatim_check.py "$V/review.md" "$V/review"
           grep -qF '⚠️  13 words (and 3 in quotation marks), line 1:' "$V/out.txt"
           grep -qx '    in a.md Q1 (p. 92–94)' "$V/out.txt"
-          grep -qF '⚠️  11 words, line 14:' "$V/out.txt"
+          grep -qF '⚠️  10 words, line 14:' "$V/out.txt"
           grep -qx '    in a.md Q2 (p. 87 ❓)' "$V/out.txt"
           grep -qF 'page.html (.html is not read' "$V/out.txt"
           grep -qF 'Sources: 1 extract(s) with 3 quotes, 0 PDF(s), 1 text file(s)' "$V/out.txt"
@@ -1372,7 +1430,8 @@ jobs:
           grep -qF '❌ 15 words, line 3:' "$V/out.txt"
           if grep -q 'line [579]\b\|line 1[0-2]\b\|not found verbatim' "$V/out.txt"; then cat "$V/out.txt"; echo "a short or marked quotation was counted"; exit 1; fi
           # PDFs: a soft hyphen at a line end is joined when the chapter has the word, a
-          # compound hyphen is kept; mostly scanned pages are listed; an extract quote
+          # compound hyphen is kept (long-term: one word as written, two tokens to match);
+          # mostly scanned pages are listed; an extract quote
           # inside a longer PDF run is named too
           mkdir -p "$V/pdfs" "$V/book"
           python - "$V" <<'EOF'
@@ -1405,7 +1464,7 @@ jobs:
           printf '%s\n' 'Trees cool their surroundings through evaporation on hot days, a long-term effect that planners measured.' '' \
             'Die Wirkung von Stadtgrün hängt vor allem von der Wasserversorgung der Bäume im Sommer ab und nicht vom Boden.' > "$V/pdfs.md"
           expect 1 python scripts/verbatim_check.py "$V/pdfs.md" "$V/pdfs" "$V/review/a.md"
-          grep -qF '⚠️  14 words, line 1: "Trees cool their surroundings through evaporation on hot days, a long-term effect that"' "$V/out.txt"
+          grep -qF '⚠️  13 words, line 1: "Trees cool their surroundings through evaporation on hot days, a long-term effect that"' "$V/out.txt"
           grep -qF 'scan.pdf (3 of 4 pages without a text layer' "$V/out.txt"
           if grep -v scan.pdf "$V/out.txt" | grep -q 'pages without a text layer'; then cat "$V/out.txt"; echo "a PDF with text on every page was listed"; exit 1; fi
           grep -qx '    in longer.pdf (PDF page 1); a.md Q3 (p. 92–94, 15 of these words)' "$V/out.txt"
@@ -1526,6 +1585,32 @@ jobs:
           expect 1 python scripts/verbatim_check.py "$V/review.md" "$V/folder"
           grep -qF 'ller.epub (.epub is not read' "$V/out.txt"
           if grep -q 'a.pdf\|logo.png\|handover.md\|Could not be read' "$V/out.txt"; then cat "$V/out.txt"; echo "a hidden, archive or note file was listed"; exit 1; fi
+          # the chapter's word count, as written: headings, a block quote, a footnote and an
+          # author-year citation count, a hyphenated compound once; the YAML header, an HTML
+          # comment, a citekey, a footnote mark, heading attributes and the bibliography do
+          # not; --words prints only that line and needs no sources
+          printf '%s\n' '---' 'chapter: 2' 'title: "2 Grundlagen"' '---' '' '# 2 Grundlagen {#sec-grundlagen}' '' \
+            '<!-- Notiz: dieser Kommentar zählt nicht mit -->' '' \
+            'Stadtgrün kühlt die Straßen, ein long-term effect [@keller2018, S. 44].[^1]' 'Es senkt die Temperatur (Keller 2018, S. 45).' '' \
+            '> Bäume kühlen ihre Umgebung durch Verdunstung.' '' '[^1]: Gemessen im Sommer.' '' '# Literaturverzeichnis' '' \
+            '::: {custom-style="Bibliography"}' 'Keller, Anna (2018): Stadtklima. Berlin: Verlag.' ':::' > "$V/words.md"
+          W='Words: 26 (as written, headings, block quotes and footnotes included; YAML header, HTML comments, citekeys, footnote marks and the bibliography not counted)'
+          expect 0 python scripts/verbatim_check.py --words "$V/words.md"
+          grep -qxF "$W" "$V/out.txt"
+          test "$(wc -l < "$V/out.txt")" -eq 1
+          expect 0 python scripts/verbatim_check.py "$V/words.md" "$V/src"
+          grep -qxF "  $W" "$V/out.txt"
+          # a reference list with an entry without a year is not recognized and counts
+          # (2 + 4 + 1 + 4 + 10 words): the line says so instead of naming the bibliography
+          printf '%s\n' '# 4 Fazit' '' 'Stadtgrün kühlt die Straßen.' '' '# Literatur' '' 'Keller, Anna (2018): Stadtklima.' '' 'Müller, Hans: Grün in der Stadt. Ein Handbuch für Planer.' > "$V/words_nobib.md"
+          expect 0 python scripts/verbatim_check.py --words "$V/words_nobib.md"
+          grep -qxF 'Words: 21 (as written, headings, block quotes and footnotes included; YAML header, HTML comments, citekeys and footnote marks not counted; no bibliography recognized: a reference list in the file counts)' "$V/out.txt"
+          python -c "import sys; from docx import Document; d = Document(); d.add_heading('2 Grundlagen', 1); d.add_paragraph('Ein long-term Satz.'); d.add_paragraph('Bäume kühlen ihre Umgebung.', style='Quote'); d.add_heading('Literatur', 1); d.add_paragraph('Keller, A. (2018): Stadtklima.'); d.save(sys.argv[1])" "$V/words.docx"
+          expect 0 python scripts/verbatim_check.py --words "$V/words.docx"
+          grep -qxF 'Words: 9 (as written, headings and block quotes included; tables, footnotes, text boxes and the bibliography not counted)' "$V/out.txt"
+          expect 2 python scripts/verbatim_check.py --words "$V/missing.md"
+          expect 2 python scripts/verbatim_check.py --words
+          expect 2 python scripts/verbatim_check.py --words "$V/words.md" "$V/src"
 
       - name: build_reference_docx.py (styles, page settings, errors; round trip through Pandoc)
         run: |
@@ -1543,7 +1628,7 @@ jobs:
           ARGS="--font Arial --size 11 --line-spacing 1,5 --align justify --space-after 6 --first-line-indent 0.5
                 --heading-sizes 14,12,11 --heading-bold yes --heading-color 000000 --quote-indent 1 --quote-size 10
                 --quote-line-spacing 1 --footnote-size 10 --bib-hanging 1 --bib-line-spacing 1 --link-color 000000
-                --page-size A4 --margins 2.5,3,2.5,3 --page-number bottom-right --title-page not-counted --lang de-DE"
+                --page-size A4 --margins 2.5,3,2.5,3 --page-number bottom-right --title-page not-counted --toc-bold 1 --lang de-DE"
           # Without Pandoc: from a python-docx document, which lacks Pandoc's own styles (they are added)
           # and sets its headings in theme fonts and colours, which a plain value must replace.
           # shellcheck disable=SC2086
@@ -1583,6 +1668,25 @@ jobs:
           check(cm(q.paragraph_format.left_indent, 1) and cm(q.paragraph_format.right_indent, 0) and q.font.size == Pt(10), "Block Text")
           bib = st["Bibliography"].paragraph_format
           check(cm(bib.left_indent, 1) and cm(bib.first_line_indent, -1) and bib.line_spacing == 1.0, "Bibliography")
+          # The table of contents styles, named as Word names them, with Word's own layout; only the weight is set.
+          toc = sorted(n for n in st if (n or "").startswith("toc "))
+          check(toc == ["toc 1", "toc 2", "toc 3"], f"table of contents styles: {toc}")
+          for level in (1, 2, 3):
+              t = st[f"toc {level}"]
+              f = t.paragraph_format
+              check(t.style_id == f"TOC{level}" and t.base_style.name == "Normal" and t.next_paragraph_style.name == "Normal",
+                    f"toc {level}: style ID, base or next style")
+              check("w:customStyle" not in xml(f"TOC{level}"), f"toc {level} written as a style of its own, not Word's")
+              check(bool(t.font.bold) == (level == 1), f"toc {level}: weight")
+              indent = f.left_indent.twips if f.left_indent is not None else 0
+              check(f.space_after is not None and f.space_after.twips == 100 and indent == 220 * (level - 1),
+                    f"toc {level}: not Word's layout (space after 100, left indent {220 * (level - 1)} twips)")
+          # The heading style for front matter that shows no page number: the look of Heading 1, but no outline level,
+          # so that the table of contents does not list it, and no number.
+          fmh = xml("FrontMatterHeading")
+          check("Front Matter Heading" in st and st["Front Matter Heading"].base_style.name == "Heading 1" and '<w:outlineLvl w:val="9"/>' in fmh
+                and '<w:numId w:val="0"/>' in fmh and fmh.index("<w:numPr") < fmh.index("<w:outlineLvl"),
+                f"Front Matter Heading: {fmh}")
           s0 = d.sections[-1]
           check(cm(s0.page_width, 21.0) and cm(s0.page_height, 29.7), "page size")
           check(cm(s0.top_margin, 2.5) and cm(s0.left_margin, 3), "margins")
@@ -1598,14 +1702,25 @@ jobs:
           check(sum(zipfile.ZipFile(path).read(f).decode("utf-8").count("PAGE") for f in footers) == 1, "not exactly one PAGE field")
           print("OK: reference document from a python-docx document")
           EOF
-          # A template's own page number gives way to the new one.
-          expect 0 python scripts/build_reference_docx.py "$R/again.docx" --base "$R/ref.docx" --page-number bottom-center
+          # A template's own page number gives way to the new one; its table of contents styles keep
+          # their layout and change only their weight.
+          expect 0 python scripts/build_reference_docx.py "$R/again.docx" --base "$R/ref.docx" --page-number bottom-center --toc-bold 2
+          grep -q 'table of contents: level 2 bold, levels 1 and 3 regular' "$R/out.txt" || { cat "$R/out.txt"; exit 1; }
           python - "$R/again.docx" <<'EOF'
           import sys, zipfile
+          import docx
           z = zipfile.ZipFile(sys.argv[1])
           n = sum(z.read(f).decode("utf-8").count("PAGE") for f in z.namelist() if f.startswith("word/footer"))
           if n != 1:
               raise SystemExit(f"build_reference_docx.py: {n} PAGE fields after a rebuild over a page number")
+          toc = [s for s in docx.Document(sys.argv[1]).styles if (s.name or "").startswith("toc ")]
+          weights = {s.name: bool(s.font.bold) for s in toc}
+          if len(toc) != 3 or weights != {"toc 1": False, "toc 2": True, "toc 3": False}:
+              raise SystemExit(f"build_reference_docx.py: table of contents styles after a rebuild: {weights}")
+          if [s for s in toc if s.name == "toc 2"][0].paragraph_format.left_indent.twips != 220:
+              raise SystemExit("build_reference_docx.py: a rebuild changed the layout of toc 2")
+          if len([s for s in docx.Document(sys.argv[1]).styles if s.name == "Front Matter Heading"]) != 1:
+              raise SystemExit("build_reference_docx.py: a rebuild does not keep one style Front Matter Heading")
           EOF
           # Errors: one line, exit 2, nothing written.
           expect 2 python scripts/build_reference_docx.py "$R/x.docx" --base "$R/base.docx" --margins 2.5,3
@@ -1614,6 +1729,8 @@ jobs:
           one_error "--heading-color"
           expect 2 python scripts/build_reference_docx.py "$R/x.docx" --base "$R/base.docx" --size 11cm
           one_error "--size"
+          expect 2 python scripts/build_reference_docx.py "$R/x.docx" --base "$R/base.docx" --toc-bold bold
+          one_error "--toc-bold"
           expect 2 python scripts/build_reference_docx.py "$R/x.docx" --base "$R/missing.docx"
           one_error "--base"
           expect 2 python scripts/build_reference_docx.py "$R/nofolder/x.docx" --base "$R/base.docx"
@@ -1663,11 +1780,504 @@ jobs:
           check(cm(eff(seen["Bibliography"], lambda s: s.paragraph_format.first_line_indent), -1), "hanging indent")
           cells = [c.paragraphs[0] for t in d.tables for r in t.rows for c in r.cells]
           check(cells and all(cm(eff(p.style, lambda s: s.paragraph_format.first_line_indent), 0) for p in cells), "first-line indent in table cells")
+          toc = {s.name: s for s in d.styles if (s.name or "").startswith("toc ")}
+          check(sorted(toc) == ["toc 1", "toc 2", "toc 3"] and toc["toc 1"].style_id == "TOC1", f"table of contents styles in the export: {sorted(toc)}")
+          check(toc["toc 1"].font.bold and not toc["toc 2"].font.bold, "table of contents weights in the export")
+          check(toc["toc 2"].paragraph_format.left_indent.twips == 220 and toc["toc 3"].paragraph_format.left_indent.twips == 440,
+                "table of contents indents in the export")
           xml = zipfile.ZipFile(sys.argv[1]).read("word/document.xml").decode("utf-8")
           sect = xml[xml.rfind("<w:sectPr"):]
           for part in ('<w:pgSz', 'w:start="0"', "<w:titlePg", "<w:footerReference", "w:footer="):
               check(part in sect, f"{part} not in the exported section properties")
           print("OK: Pandoc round trip")
+          EOF
+
+      - name: docx_pagination.py (front and back matter as sections of their own; errors)
+        run: |
+          R=/tmp/ci_pagination; rm -rf "$R"; mkdir -p "$R"
+          expect() {
+            want=$1; shift
+            set +e; "$@" >"$R/out.txt" 2>&1; code=$?; set -e
+            if [ "$code" -ne "$want" ]; then cat "$R/out.txt"; echo "expected exit $want, got $code: $*"; exit 1; fi
+          }
+          one_error() {
+            if [ "$(wc -l < "$R/out.txt")" -ne 1 ] || ! grep -q "^Error: $1" "$R/out.txt"; then cat "$R/out.txt"; echo "expected one line 'Error: $1...'"; exit 1; fi
+          }
+          expect 2 python scripts/docx_pagination.py "$R/missing.docx" --front-matter roman --main-text restart
+          one_error ".*not found"
+          if ! command -v pandoc >/dev/null 2>&1 && command -v apt-get >/dev/null 2>&1; then
+            sudo apt-get update -qq >/dev/null 2>&1 && sudo apt-get install -y -qq pandoc >/dev/null 2>&1 || true
+          fi
+          if ! command -v pandoc >/dev/null 2>&1; then
+            if [ "${GITHUB_ACTIONS:-}" = "true" ]; then echo "Pandoc could not be installed"; exit 1; fi
+            echo "Pandoc not installed: docx_pagination.py checks skipped"
+            exit 0
+          fi
+          # The title page file as docs/reference_management.md gives it: the front matter ends with the
+          # page break that carries the bookmark.
+          MARK='<w:p><w:bookmarkStart w:id="990001" w:name="_cephalo_front_matter_end"/><w:bookmarkEnd w:id="990001"/><w:r><w:br w:type="page"/></w:r></w:p>'
+          {
+            printf '::: {custom-style="Title"}\nTitel\n:::\n\n```{=openxml}\n<w:p><w:r><w:br w:type="page"/></w:r></w:p>\n'
+            printf '<w:p><w:r><w:fldChar w:fldCharType="begin" w:dirty="true"/></w:r><w:r><w:instrText xml:space="preserve"> TOC \\o "1-3" \\h \\z \\u </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>Inhaltsverzeichnis</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>\n'
+            printf '<w:p><w:r><w:br w:type="page"/></w:r></w:p>\n```\n\n**Abkürzungen**\n\n```{=openxml}\n%s\n```\n' "$MARK"
+          } > "$R/title_page.md"
+          sed 's/_cephalo_front_matter_end/_other/' "$R/title_page.md" > "$R/nomark.md"
+          { cat "$R/title_page.md"; printf '\n```{=openxml}\n%s\n```\n' "$MARK"; } > "$R/twice.md"
+          # The bookmark in a paragraph of its own before the page break, and text after the break.
+          BM='<w:bookmarkStart w:id="990001" w:name="_cephalo_front_matter_end"/><w:bookmarkEnd w:id="990001"/>'
+          sed "s|$MARK|<w:p>$BM</w:p><w:p><w:r><w:br w:type=\"page\"/></w:r></w:p>|" "$R/title_page.md" > "$R/beside.md"
+          sed "s|$MARK|<w:p>$BM<w:r><w:br w:type=\"page\"/><w:t>Text</w:t></w:r></w:p>|" "$R/title_page.md" > "$R/after.md"
+          # The list's heading as a heading, which the table of contents lists, and in a style of its own.
+          sed 's/^\*\*Abkürzungen\*\*$/# Abkürzungen {-}/' "$R/title_page.md" > "$R/heading.md"
+          sed 's/^\*\*Abkürzungen\*\*$/::: {custom-style="Front Matter Heading"}\nAbkürzungen\n:::/' "$R/title_page.md" > "$R/styled.md"
+          printf '# 1 Einleitung\n\nText.\n\n# 2 Hauptteil\n\nText.\n' > "$R/ch.md"
+          python scripts/build_reference_docx.py "$R/counted.docx" --page-number bottom-right --title-page counted >/dev/null
+          python scripts/build_reference_docx.py "$R/notcounted.docx" --page-number bottom-right --title-page not-counted >/dev/null
+          python scripts/build_reference_docx.py "$R/top.docx" --page-number top-right --title-page counted >/dev/null
+          # A running head beside the page number: it stays in the front matter, the number goes.
+          python - "$R/top.docx" <<'EOF'
+          import sys, docx
+          d = docx.Document(sys.argv[1])
+          d.sections[-1].header.add_paragraph("Laufkopf")
+          d.save(sys.argv[1])
+          EOF
+          # A template with a logo and a link in the header that gets the page number: the front matter's
+          # copy of that header keeps both.
+          python - "$R/base-logo.docx" <<'EOF'
+          import io, struct, sys, zlib
+          import docx
+          from docx.opc.constants import RELATIONSHIP_TYPE as RT
+          from docx.oxml import OxmlElement
+          from docx.oxml.ns import qn
+          def chunk(kind, data):
+              return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data) & 0xffffffff)
+          raw = b"".join(b"\x00" + b"\x00\x00\xff" * 8 for _ in range(8))
+          png = (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", 8, 8, 8, 2, 0, 0, 0))
+                 + chunk(b"IDAT", zlib.compress(raw)) + chunk(b"IEND", b""))
+          d = docx.Document()
+          header = d.sections[0].header
+          header.is_linked_to_previous = False
+          p = header.paragraphs[0]
+          p.add_run().add_picture(io.BytesIO(png))
+          link = OxmlElement("w:hyperlink")
+          link.set(qn("r:id"), header.part.relate_to("https://example.org/", RT.HYPERLINK, is_external=True))
+          run, text = OxmlElement("w:r"), OxmlElement("w:t")
+          text.text = "Link"
+          run.append(text)
+          link.append(run)
+          p._p.append(link)
+          d.save(sys.argv[1])
+          EOF
+          python scripts/build_reference_docx.py "$R/logo.docx" --base "$R/base-logo.docx" --page-number top-right --title-page counted >/dev/null
+          # The same template with a running head and "Seite 1 von 9" in the paragraph of the logo and the link, and a
+          # footer whose number stands before a text: only the number goes, with the text between the same tabs, in the
+          # reference document (--page-number) and in the front and back matter (the template's own number kept).
+          python - "$R/base-logo.docx" "$R/base-samepar.docx" <<'EOF'
+          import sys
+          import docx
+          from docx.oxml import parse_xml
+          from docx.oxml.ns import nsdecls
+          def runs(p, *xml):
+              for x in xml:
+                  p._p.append(parse_xml(f'<w:r {nsdecls("w")}>{x}</w:r>'))
+          def simple(p, instr):
+              p._p.append(parse_xml(f'<w:fldSimple {nsdecls("w")} w:instr=" {instr} "><w:r><w:t>1</w:t></w:r></w:fldSimple>'))
+          d = docx.Document(sys.argv[1])
+          p = d.sections[0].header.paragraphs[0]
+          runs(p, '<w:tab/><w:t>Laufkopf</w:t><w:tab/><w:t xml:space="preserve">Seite </w:t>', '<w:fldChar w:fldCharType="begin"/>',
+               '<w:instrText xml:space="preserve"> PAGE </w:instrText>', '<w:fldChar w:fldCharType="separate"/>', '<w:t>1</w:t>',
+               '<w:fldChar w:fldCharType="end"/>', '<w:t xml:space="preserve"> von </w:t>')
+          simple(p, "NUMPAGES")
+          footer = d.sections[0].footer
+          footer.is_linked_to_previous = False
+          simple(footer.paragraphs[0], "PAGE")
+          runs(footer.paragraphs[0], '<w:tab/><w:tab/><w:t>Fusszeile</w:t>')
+          d.save(sys.argv[2])
+          EOF
+          python scripts/build_reference_docx.py "$R/samepar.docx" --base "$R/base-samepar.docx" --title-page counted >/dev/null
+          python scripts/build_reference_docx.py "$R/samepar-numbered.docx" --base "$R/base-samepar.docx" --page-number bottom-right --title-page counted >/dev/null
+          # A template whose footer is a table with the page number in a cell: the cell keeps a paragraph when
+          # the number goes, in the reference document (--page-number) and in the front matter (the template's
+          # own number kept).
+          python - "$R/base-table.docx" <<'EOF'
+          import sys
+          import docx
+          from docx.oxml import OxmlElement
+          from docx.oxml.ns import qn
+          from docx.shared import Cm
+          d = docx.Document()
+          footer = d.sections[0].footer
+          footer.is_linked_to_previous = False
+          cells = footer.add_table(1, 3, Cm(15)).rows[0].cells
+          cells[0].paragraphs[0].add_run("Name")
+          field, run, text = OxmlElement("w:fldSimple"), OxmlElement("w:r"), OxmlElement("w:t")
+          field.set(qn("w:instr"), " PAGE ")
+          text.text = "1"
+          run.append(text)
+          field.append(run)
+          cells[2].paragraphs[0]._p.append(field)
+          d.save(sys.argv[1])
+          EOF
+          python scripts/build_reference_docx.py "$R/table-numbered.docx" --base "$R/base-table.docx" --page-number bottom-right --title-page counted >/dev/null
+          python scripts/build_reference_docx.py "$R/table.docx" --base "$R/base-table.docx" --title-page counted >/dev/null
+          # A template that numbers its pages "- 1 -" keeps that format in the main text; one in Roman numerals
+          # gives the main text Arabic numerals.
+          python - "$R/notcounted.docx" "$R/dash.docx" "$R/upper.docx" <<'EOF'
+          import sys, docx
+          from docx.oxml.ns import qn
+          for fmt, out in (("numberInDash", sys.argv[2]), ("upperRoman", sys.argv[3])):
+              d = docx.Document(sys.argv[1])
+              d.sections[-1]._sectPr.find(qn("w:pgNumType")).set(qn("w:fmt"), fmt)
+              d.save(out)
+          EOF
+          # Pandoc's own reference document restarts the footnotes in each section in newer Pandoc versions (3.9
+          # does), not in the one a runner may install: set it in each reference document here, so that every export
+          # carries it whatever the Pandoc version, and the checks below see the split take it out.
+          python - "$R/counted.docx" "$R/notcounted.docx" "$R/top.docx" "$R/logo.docx" "$R/table.docx" "$R/dash.docx" \
+                   "$R/upper.docx" "$R/samepar.docx" <<'EOF'
+          import sys, docx
+          from docx.oxml import OxmlElement
+          from docx.oxml.ns import qn
+          for path in sys.argv[1:]:
+              d = docx.Document(path)
+              sect = d.sections[-1]._sectPr
+              notes = sect.find(qn("w:footnotePr"))
+              if notes is None:
+                  notes = OxmlElement("w:footnotePr")
+                  refs = [c for c in sect if c.tag in (qn("w:headerReference"), qn("w:footerReference"))]
+                  if refs:
+                      refs[-1].addnext(notes)
+                  else:
+                      sect.insert(0, notes)
+              if notes.find(qn("w:numRestart")) is None:
+                  restart = OxmlElement("w:numRestart")
+                  restart.set(qn("w:val"), "eachSect")
+                  notes.append(restart)
+              d.save(path)
+          EOF
+          for ref in counted notcounted top logo table dash upper; do
+            pandoc "$R/title_page.md" "$R/ch.md" --reference-doc "$R/$ref.docx" -o "$R/$ref-export.docx"
+          done
+          pandoc "$R/nomark.md" "$R/ch.md" --reference-doc "$R/counted.docx" -o "$R/nomark-export.docx"
+          pandoc "$R/twice.md" "$R/ch.md" --reference-doc "$R/counted.docx" -o "$R/twice-export.docx"
+          for form in beside after heading styled; do
+            pandoc "$R/$form.md" "$R/ch.md" --reference-doc "$R/counted.docx" -o "$R/$form-export.docx"
+          done
+          # The back matter (pagination.back_matter): the file after the chapters starts with the page break that
+          # carries the bookmark _cephalo_back_matter_start, before the reference list and an appendix.
+          BACK='<w:p><w:bookmarkStart w:id="990002" w:name="_cephalo_back_matter_start"/><w:bookmarkEnd w:id="990002"/><w:r><w:br w:type="page"/></w:r></w:p>'
+          printf '```{=openxml}\n%s\n```\n\n# Literaturverzeichnis {-}\n\nAutor, A. (2020): Titel.\n\n# Anhang {-}\n\nText.\n' "$BACK" > "$R/back.md"
+          { cat "$R/back.md"; printf '\n```{=openxml}\n%s\n```\n' "$BACK"; } > "$R/back-twice.md"
+          BBM='<w:bookmarkStart w:id="990002" w:name="_cephalo_back_matter_start"/><w:bookmarkEnd w:id="990002"/>'
+          sed "s|$BACK|<w:p>$BBM</w:p><w:p><w:r><w:br w:type=\"page\"/></w:r></w:p>|" "$R/back.md" > "$R/back-beside.md"
+          for ref in counted notcounted top dash upper samepar; do
+            pandoc "$R/title_page.md" "$R/ch.md" "$R/back.md" --reference-doc "$R/$ref.docx" -o "$R/back-$ref-export.docx"
+          done
+          pandoc "$R/nomark.md" "$R/ch.md" "$R/back.md" --reference-doc "$R/counted.docx" -o "$R/back-nomark-export.docx"
+          for form in twice beside; do
+            pandoc "$R/title_page.md" "$R/ch.md" "$R/back-$form.md" --reference-doc "$R/counted.docx" -o "$R/back-$form-export.docx"
+          done
+          pandoc "$R/back.md" "$R/title_page.md" "$R/ch.md" --reference-doc "$R/counted.docx" -o "$R/back-early-export.docx"
+          run() {  # run <reference> <front> <main> <name>: a fresh copy of that export, split
+            cp "$R/$1-export.docx" "$R/$4.docx"
+            expect 0 python scripts/docx_pagination.py "$R/$4.docx" --front-matter "$2" --main-text "$3"
+          }
+          run counted roman restart roman
+          grep -q "^Front matter set as a section of its own" "$R/out.txt"
+          cp "$R/roman.docx" "$R/roman-before.docx"
+          expect 0 python scripts/docx_pagination.py "$R/roman.docx" --front-matter hidden --main-text continue
+          grep -q "a section of its own already: nothing changed" "$R/out.txt"
+          cmp -s "$R/roman.docx" "$R/roman-before.docx"
+          run counted roman-lower continue lower
+          run counted hidden continue hidden
+          run counted none continue none-counted
+          run notcounted none continue none-notcounted
+          run notcounted hidden continue hidden-notcounted
+          run counted arabic restart arabic
+          run top hidden continue top
+          run logo hidden restart logo
+          run table hidden continue table
+          run dash arabic restart dash-arabic
+          run dash roman continue dash-roman
+          run dash none continue dash-none
+          run upper hidden continue upper
+          # A heading in front matter whose number is not shown, before a main text that repeats the count:
+          # a warning, which a heading in a style of its own, or front matter that shows its count, does not get.
+          warned() {
+            grep -q '^  - warning: the table of contents lists "Abkürzungen"' "$R/out.txt" && return 0
+            if grep -q "warning" "$R/out.txt"; then cat "$R/out.txt"; echo "an unexpected warning"; exit 1; fi
+            return 1
+          }
+          run heading none continue heading-none
+          warned || { cat "$R/out.txt"; echo "no warning: none, continue"; exit 1; }
+          run heading hidden restart heading-hidden
+          warned || { cat "$R/out.txt"; echo "no warning: hidden, restart"; exit 1; }
+          run heading roman restart heading-roman
+          ! warned || { echo "a warning: roman, restart"; exit 1; }
+          run heading hidden continue heading-hidden
+          ! warned || { echo "a warning: hidden, continue"; exit 1; }
+          run styled none continue styled
+          ! warned || { echo "a warning for a heading in a style of its own"; exit 1; }
+          cp "$R/counted-export.docx" "$R/unchanged.docx"
+          expect 0 python scripts/docx_pagination.py "$R/unchanged.docx" --front-matter arabic --main-text continue
+          grep -q "nothing to change" "$R/out.txt"
+          cmp -s "$R/unchanged.docx" "$R/counted-export.docx"
+          expect 2 python scripts/docx_pagination.py "$R/nomark-export.docx" --front-matter roman --main-text restart
+          one_error "no end of the front matter marked"
+          expect 2 python scripts/docx_pagination.py "$R/twice-export.docx" --front-matter roman --main-text restart
+          one_error "the bookmark _cephalo_front_matter_end occurs 2 times"
+          for form in beside after; do
+            cp "$R/$form-export.docx" "$R/$form.docx"
+            expect 2 python scripts/docx_pagination.py "$R/$form.docx" --front-matter roman --main-text restart
+            one_error "the bookmark _cephalo_front_matter_end is not on the page break that ends the front matter"
+            cmp -s "$R/$form.docx" "$R/$form-export.docx"
+          done
+          cp "$R/counted-export.docx" "$R/wrong.txt"
+          expect 2 python scripts/docx_pagination.py "$R/wrong.txt" --front-matter roman --main-text restart
+          one_error ".*expected a .docx file"
+          expect 2 python scripts/docx_pagination.py "$R/unchanged.docx" --front-matter roman
+          bm() {  # bm <reference> <front> <main> <back> <name> [start]: a fresh copy of that export with back matter, split
+            cp "$R/back-$1-export.docx" "$R/$5.docx"
+            expect 0 python scripts/docx_pagination.py "$R/$5.docx" --front-matter "$2" --main-text "$3" --back-matter "$4" ${6:+--back-matter-start "$6"}
+          }
+          # Like the main text, the default: the bookmark changes nothing.
+          run back-counted roman restart back-default
+          bm counted roman restart main back-main
+          bm counted roman restart roman-continue rc-counted
+          grep -q "^Front matter and back matter set as sections of their own" "$R/out.txt"
+          grep -q "back matter in Roman numerals from IV, continuing the front matter's count" "$R/out.txt"
+          cp "$R/rc-counted.docx" "$R/rc-before.docx"
+          expect 0 python scripts/docx_pagination.py "$R/rc-counted.docx" --front-matter roman --main-text restart --back-matter roman-continue
+          grep -q "a section of its own already: nothing changed" "$R/out.txt"
+          cmp -s "$R/rc-counted.docx" "$R/rc-before.docx"
+          # Nor does a first number given then: the docs have it set in Word in a DOCX split already.
+          expect 0 python scripts/docx_pagination.py "$R/rc-counted.docx" --front-matter roman --main-text restart --back-matter roman-continue --back-matter-start 5
+          grep -q "a section of its own already: nothing changed" "$R/out.txt"
+          cmp -s "$R/rc-counted.docx" "$R/rc-before.docx"
+          bm notcounted roman restart roman-continue rc-notcounted
+          grep -q "from III, continuing" "$R/out.txt"
+          bm counted roman-lower restart roman-continue rc-lower
+          grep -q "from iv, continuing" "$R/out.txt"
+          bm counted roman restart roman-continue rc-given 7
+          grep -q "from VII (--back-matter-start 7)" "$R/out.txt"
+          bm counted roman restart roman back-roman
+          bm counted roman restart roman-lower back-roman-lower
+          bm counted roman restart restart back-restart
+          bm dash roman restart restart back-dash
+          bm counted hidden continue none back-none
+          bm top roman restart none back-none-top
+          bm samepar hidden restart none back-samepar
+          # Front matter numbered like the main text: only the back matter is split, also without the front
+          # matter's bookmark, unless its count is needed.
+          bm counted arabic continue restart back-only
+          grep -q "^Back matter set as a section of its own" "$R/out.txt"
+          cp "$R/back-only.docx" "$R/back-only-before.docx"
+          expect 0 python scripts/docx_pagination.py "$R/back-only.docx" --front-matter arabic --main-text continue --back-matter restart
+          grep -q "the back matter is a section of its own already: nothing changed" "$R/out.txt"
+          cmp -s "$R/back-only.docx" "$R/back-only-before.docx"
+          # Nor does a second run that would split the front matter, with the back matter left at main.
+          expect 0 python scripts/docx_pagination.py "$R/back-only.docx" --front-matter roman --main-text restart
+          grep -q "the back matter is a section of its own already: nothing changed" "$R/out.txt"
+          cmp -s "$R/back-only.docx" "$R/back-only-before.docx"
+          bm counted arabic continue roman-continue back-only-rc
+          bm upper arabic continue restart back-upper
+          bm nomark arabic continue none back-nomark
+          cp "$R/back-nomark-export.docx" "$R/back-nomark-rc.docx"
+          expect 2 python scripts/docx_pagination.py "$R/back-nomark-rc.docx" --front-matter arabic --main-text continue --back-matter roman-continue
+          one_error "no end of the front matter marked, from which --back-matter roman-continue counts"
+          cmp -s "$R/back-nomark-rc.docx" "$R/back-nomark-export.docx"
+          bm nomark arabic continue roman-continue back-nomark-given 3
+          cp "$R/back-counted-export.docx" "$R/back-err.docx"
+          expect 2 python scripts/docx_pagination.py "$R/back-err.docx" --front-matter none --main-text continue --back-matter roman-continue
+          one_error "--back-matter roman-continue continues the front matter's count, which --front-matter none"
+          expect 2 python scripts/docx_pagination.py "$R/back-err.docx" --front-matter roman --main-text restart --back-matter roman --back-matter-start 4
+          one_error "--back-matter-start goes with --back-matter roman-continue only"
+          expect 2 python scripts/docx_pagination.py "$R/back-err.docx" --front-matter roman --main-text restart --back-matter roman-continue --back-matter-start 0
+          one_error "--back-matter-start needs a number from 1 on"
+          cmp -s "$R/back-err.docx" "$R/back-counted-export.docx"
+          cp "$R/counted-export.docx" "$R/back-missing.docx"
+          expect 2 python scripts/docx_pagination.py "$R/back-missing.docx" --front-matter roman --main-text restart --back-matter roman
+          one_error "no start of the back matter marked"
+          cmp -s "$R/back-missing.docx" "$R/counted-export.docx"
+          for form in twice beside early; do
+            cp "$R/back-$form-export.docx" "$R/back-$form.docx"
+            expect 2 python scripts/docx_pagination.py "$R/back-$form.docx" --front-matter roman --main-text restart --back-matter roman
+            case $form in
+              twice) one_error "the bookmark _cephalo_back_matter_start occurs 2 times" ;;
+              beside) one_error "the bookmark _cephalo_back_matter_start is not on the page break before the back matter" ;;
+              early) one_error "the bookmark _cephalo_back_matter_start stands before the end of the front matter" ;;
+            esac
+            cmp -s "$R/back-$form.docx" "$R/back-$form-export.docx"
+          done
+          python - "$R" <<'EOF'
+          import re, sys, zipfile
+          import xml.etree.ElementTree as ET
+          R = sys.argv[1]
+          W = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
+          def check(cond, what):
+              if not cond:
+                  raise SystemExit("docx_pagination: " + what)
+          def sections(name, n=2):
+              """The section properties in document order (front matter, main text, back matter), and the document XML."""
+              xml = zipfile.ZipFile(f"{R}/{name}.docx").read("word/document.xml").decode("utf-8")
+              sects = re.findall(r"<w:sectPr\b.*?</w:sectPr>", xml, re.S)
+              check(len(sects) == n, f"{name}: {len(sects)} sections, not {n}")
+              return (*sects, xml)
+          def refs(sect, tag, kind="default"):
+              """The relationship ids of the section's header or footer references of that type."""
+              out = []
+              for el in re.findall(r"<w:%sReference\b[^>]*>" % tag, sect):
+                  if 'w:type="%s"' % kind in el:
+                      out += re.findall(r'r:id="([^"]+)"', el)
+              return out
+          def footers(sect):
+              return refs(sect, "footer")
+          def num(sect):
+              m = re.search(r"<w:pgNumType\b[^>]*/>", sect)
+              return m.group(0) if m else ""
+          f, m, xml = sections("roman")
+          check('w:fmt="upperRoman"' in num(f) and "w:start" not in num(f), f"roman: front matter {num(f)}")
+          check("<w:titlePg" in f and "<w:titlePg" not in m, "roman: the title page belongs to the front matter only")
+          check('w:start="1"' in num(m) and "w:fmt" not in num(m), f"roman: main text {num(m)}")
+          check(footers(f) and footers(f) == footers(m), "roman: the front matter keeps the page number footer")
+          marker = re.search(r'<w:p\b(?:(?!</w:p>).)*?_cephalo_front_matter_end.*?</w:p>', xml, re.S).group(0)
+          check("<w:sectPr" in marker and 'w:type="page"' not in marker, "roman: the page break became the section break")
+          f, m, _ = sections("lower")
+          check('w:fmt="lowerRoman"' in num(f) and num(m) == "", f"lower: {num(f)} / {num(m)}")
+          f, m, _ = sections("hidden")
+          check(not footers(f) and footers(m) and num(m) == "", f"hidden: footers {footers(f)}, main text {num(m)}")
+          f, m, _ = sections("none-counted")
+          check('w:start="2"' in num(m), f"none after a counted title page: main text {num(m)}")
+          f, m, _ = sections("none-notcounted")
+          check('w:start="1"' in num(m) and 'w:start="0"' in num(f), f"none after an uncounted title page: {num(f)} / {num(m)}")
+          f, m, _ = sections("hidden-notcounted")
+          check('w:start="0"' in num(f) and num(m) == "", f"hidden after an uncounted title page: {num(f)} / {num(m)}")
+          f, m, _ = sections("arabic")
+          check(footers(f) == footers(m) and 'w:start="1"' in num(m), f"arabic restart: {num(m)}")
+          def part_of(name, rid):
+              """The XML of the document part that relationship id of word/document.xml names."""
+              rels = zipfile.ZipFile(f"{R}/{name}.docx").read("word/_rels/document.xml.rels").decode("utf-8")
+              target = re.search(r'Id="%s"[^>]*Target="([^"]+)"|Target="([^"]+)"[^>]*Id="%s"' % (rid, rid), rels)
+              return zipfile.ZipFile(f"{R}/{name}.docx").read("word/" + (target.group(1) or target.group(2))).decode("utf-8")
+          f, m, _ = sections("dash-arabic")
+          check('w:fmt="numberInDash"' in num(f) and 'w:fmt="numberInDash"' in num(m) and 'w:start="1"' in num(m),
+                f"a template's - 1 -, arabic restart: {num(f)} / {num(m)}")
+          f, m, _ = sections("dash-roman")
+          check('w:fmt="upperRoman"' in num(f) and 'w:fmt="numberInDash"' in num(m) and "w:start" not in num(m),
+                f"a template's - 1 -, roman continue: {num(f)} / {num(m)}")
+          f, m, _ = sections("dash-none")
+          check('w:fmt="numberInDash"' in num(m) and 'w:start="1"' in num(m), f"a template's - 1 -, none: {num(m)}")
+          f, m, _ = sections("upper")
+          check("w:fmt" not in num(m), f"a template in Roman numerals: the main text {num(m)}")
+          f, m, _ = sections("top")
+          hf = lambda s: refs(s, "header")
+          check(hf(f) and hf(m) and hf(f) != hf(m), f"top: the front matter has a header of its own: {hf(f)} / {hf(m)}")
+          part = part_of("top", hf(f)[0])
+          check("Laufkopf" in part and "PAGE" not in part, "top: the front matter's header keeps its text, not the number")
+          z = zipfile.ZipFile(f"{R}/top.docx")
+          check("[Content_Types].xml" in z.namelist() and any(n.startswith("word/header") for n in z.namelist()), "top: package")
+          f, m, _ = sections("logo")
+          check(hf(f) and hf(m) and hf(f) != hf(m), f"logo: the front matter has a header of its own: {hf(f)} / {hf(m)}")
+          part = part_of("logo", hf(f)[0])
+          check("r:embed=" in part and "<w:hyperlink" in part and "PAGE" not in part,
+                "logo: the front matter's header keeps the picture and the link, not the number")
+          for doc in ("logo", "back-samepar", "samepar-numbered"):
+              z = zipfile.ZipFile(f"{R}/{doc}.docx")
+              for name in z.namelist():
+                  if re.fullmatch(r"word/(header|footer)\d+\.xml", name):
+                      used = set(re.findall(r'\br:(?:embed|id)="([^"]+)"', z.read(name).decode("utf-8")))
+                      rels = "word/_rels/" + name[len("word/"):] + ".rels"
+                      ids = set(re.findall(r'\bId="([^"]+)"', z.read(rels).decode("utf-8"))) if rels in z.namelist() else set()
+                      check(used <= ids, f"{doc}: {name} refers to {sorted(used - ids)}, which {rels} does not define")
+          # A page number in a paragraph with a logo, a link and a running head, and one before a text: only the
+          # number goes, with "Seite ... von" and the NUMPAGES field between the same tabs.
+          f, m, b, _ = sections("back-samepar", 3)
+          for where, s in (("front matter", f), ("back matter", b)):
+              check(hf(s) and footers(s), f"samepar: the {where} has no header or footer of its own")
+              head, foot = part_of("back-samepar", hf(s)[0]), part_of("back-samepar", footers(s)[0])
+              check(all(x in head for x in ("r:embed=", "<w:hyperlink", "Laufkopf")) and "Fusszeile" in foot,
+                    f"samepar: the {where} loses what stands beside the page number")
+              check("PAGE" not in head + foot and "Seite" not in head and " von " not in head,
+                    f"samepar: the {where} keeps the page number or its words")
+          head, foot = part_of("back-samepar", hf(m)[0]), part_of("back-samepar", footers(m)[0])
+          check(" PAGE " in head and "Seite" in head and " PAGE " in foot, "samepar: the main text keeps its page numbers")
+          z = zipfile.ZipFile(f"{R}/samepar-numbered.docx")
+          parts = {n: z.read(n).decode("utf-8") for n in z.namelist() if re.fullmatch(r"word/(header|footer)\d+\.xml", n)}
+          heads = "".join(x for n, x in parts.items() if "header" in n)
+          foots = "".join(x for n, x in parts.items() if "footer" in n)
+          check(all(x in heads for x in ("r:embed=", "<w:hyperlink", "Laufkopf")) and "Fusszeile" in foots
+                and "PAGE" not in heads and "Seite" not in heads and foots.count(" PAGE ") == 1,
+                "samepar: the reference document keeps the template's content beside its page number, and one PAGE field")
+          def empty_cells(path):
+              """The headers and footers of a DOCX with a table cell that holds no paragraph or table."""
+              z = zipfile.ZipFile(path)
+              return [name for name in z.namelist() if re.fullmatch(r"word/(header|footer)\d+\.xml", name)
+                      and any(tc.find(W + "p") is None and tc.find(W + "tbl") is None
+                              for tc in ET.fromstring(z.read(name)).iter(W + "tc"))]
+          z = zipfile.ZipFile(f"{R}/table-numbered.docx")
+          pages = sum(z.read(n).decode("utf-8").count("PAGE") for n in z.namelist() if n.startswith("word/footer"))
+          check(not empty_cells(f"{R}/table-numbered.docx") and pages == 1,
+                f"table: reference document: {pages} PAGE fields, empty cells in {empty_cells(f'{R}/table-numbered.docx')}")
+          f, m, _ = sections("table")
+          check(footers(f) and footers(f) != footers(m), f"table: the front matter has a footer of its own: {footers(f)} / {footers(m)}")
+          part = part_of("table", footers(f)[0])
+          check("<w:tbl" in part and "Name" in part and "PAGE" not in part, "table: the front matter's footer keeps the table, not the number")
+          check("PAGE" in part_of("table", footers(m)[0]), "table: the main text keeps the number in the cell")
+          check(not empty_cells(f"{R}/table.docx"), f"table: a cell without a paragraph in {empty_cells(f'{R}/table.docx')}")
+          # The list's heading in the style build_reference_docx.py writes for it, which the export takes over: the
+          # look of Heading 1, outside the table of contents (and no warning, above).
+          z = zipfile.ZipFile(f"{R}/styled-export.docx")
+          fmh = re.search(r'<w:style [^>]*w:styleId="FrontMatterHeading"[^>]*>.*?</w:style>', z.read("word/styles.xml").decode("utf-8"), re.S)
+          check(fmh and 'w:basedOn w:val="Heading1"' in fmh.group(0) and 'w:outlineLvl w:val="9"' in fmh.group(0),
+                f"styled: the export's style Front Matter Heading: {fmh and fmh.group(0)}")
+          check('<w:pStyle w:val="FrontMatterHeading"' in z.read("word/document.xml").decode("utf-8"), "styled: the heading's style")
+          # The back matter.
+          doc_xml = lambda name: zipfile.ZipFile(f"{R}/{name}.docx").read("word/document.xml")
+          # The footnotes count on through the sections: the restart in each section that Pandoc's reference
+          # document sets, and the export takes over, goes when the export is split.
+          restart = b'numRestart w:val="eachSect"'
+          check(restart in doc_xml("back-counted-export"), "the export has no restart of the footnotes in each section")
+          for name in ("roman", "hidden", "rc-counted", "back-none", "back-only"):
+              check(restart not in doc_xml(name), f"{name}: the footnotes restart in each section")
+          f, m, _ = sections("back-main")
+          check(doc_xml("back-main") == doc_xml("back-default"), "back matter main: not the same as without --back-matter")
+          f, m, b, xml = sections("rc-counted", 3)
+          check('w:fmt="upperRoman"' in num(b) and 'w:start="4"' in num(b), f"roman-continue: back matter {num(b)}")
+          check('w:start="1"' in num(m) and "w:fmt" not in num(m), f"roman-continue: main text {num(m)}")
+          check(footers(b) and footers(b) == footers(m) and "<w:titlePg" not in b,
+                "roman-continue: the back matter keeps the main text's footer, without a title page")
+          marker = re.search(r'<w:p\b(?:(?!</w:p>).)*?_cephalo_back_matter_start.*?</w:p>', xml, re.S).group(0)
+          check("<w:sectPr" in marker and 'w:type="page"' not in marker,
+                "roman-continue: the page break before the back matter became the section break")
+          for name, want in (("rc-notcounted", ('w:fmt="upperRoman"', 'w:start="3"')),
+                             ("rc-lower", ('w:fmt="lowerRoman"', 'w:start="4"')),
+                             ("rc-given", ('w:fmt="upperRoman"', 'w:start="7"')),
+                             ("back-roman", ('w:fmt="upperRoman"', 'w:start="1"')),
+                             ("back-roman-lower", ('w:fmt="lowerRoman"', 'w:start="1"')),
+                             ("back-dash", ('w:fmt="numberInDash"', 'w:start="1"'))):
+              f, m, b, _ = sections(name, 3)
+              check(all(w in num(b) for w in want), f"{name}: back matter {num(b)}")
+          f, m, b, _ = sections("back-restart", 3)
+          check('w:start="1"' in num(b) and "w:fmt" not in num(b), f"back-restart: back matter {num(b)}")
+          f, m, b, _ = sections("back-none", 3)
+          check(footers(b) and footers(b) != footers(m), f"back-none: the back matter has a footer of its own: {footers(b)} / {footers(m)}")
+          check("PAGE" not in part_of("back-none", footers(b)[0]) and "PAGE" in part_of("back-none", footers(m)[0]),
+                "back-none: the back matter's footer without the number, the main text's with it")
+          f, m, b, _ = sections("back-none-top", 3)
+          check(hf(b) and hf(b) != hf(m), f"back-none-top: the back matter has a header of its own: {hf(b)} / {hf(m)}")
+          part = part_of("back-none-top", hf(b)[0])
+          check("Laufkopf" in part and "PAGE" not in part, "back-none-top: the back matter's header keeps its text, not the number")
+          for name, want in (("back-only", 'w:start="1"'), ("back-only-rc", 'w:start="4"'), ("back-nomark-given", 'w:start="3"')):
+              f, b, _ = sections(name)
+              check("<w:titlePg" in f and "<w:titlePg" not in b and want in num(b),
+                    f"{name}: the title page in the first section only, back matter {num(b)}")
+          f, b, _ = sections("back-upper")
+          check('w:fmt="upperRoman"' in num(f) and "w:fmt" not in num(b) and 'w:start="1"' in num(b),
+                f"back-upper: a template in Roman numerals, back matter from 1: {num(f)} / {num(b)}")
+          f, b, _ = sections("back-nomark")
+          check(footers(b) and footers(b) != footers(f) and "PAGE" not in part_of("back-nomark", footers(b)[0]),
+                "back-nomark: the back matter's footer without the number")
+          print("OK: docx_pagination.py")
           EOF
 
   windows:
@@ -1849,7 +2459,7 @@ jobs:
 
       - name: Python syntax (Windows)
         shell: powershell
-        run: python -m py_compile scripts/abbreviations_extract.py scripts/bibliography_check.py scripts/build_reference_docx.py scripts/cross_session_audit.py scripts/verbatim_check.py
+        run: python -m py_compile scripts/abbreviations_extract.py scripts/bibliography_check.py scripts/build_reference_docx.py scripts/cross_session_audit.py scripts/docx_pagination.py scripts/verbatim_check.py
 
       # Informational only: not part of the verified baseline. Remove
       # continue-on-error once a clean run is confirmed.

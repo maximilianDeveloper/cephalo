@@ -1,7 +1,7 @@
 ---
 name: style-resolver
 description: Extracts formatting and citation rules from institutional guideline documents into a structured styleguide.md. Invoked once per project during setup (or when guidelines change). In minimal-scaffolding projects, also proposes the directory structure appropriate to the guidelines.
-tools: Read, Write, Glob, Grep, Bash
+tools: Read, Write, Edit, Glob, Grep, Bash
 model: opus
 ---
 
@@ -140,7 +140,7 @@ The generated `styleguide.md` follows the template in `templates/styleguide.md`.
 - Body text and footnotes (`body.*`, `footnotes.*`: font, size, line spacing, alignment, paragraph spacing)
 - Headings (sizes, numbering conventions, max depth)
 - Pagination, title page, tables and figures (`pagination.*`, `title_page.*`, `captions.*`, `numbers.*`)
-- Style rules (forbidden pronouns, forbidden evaluative wording, block quote threshold, footnote policy)
+- Style rules (forbidden pronouns, forbidden evaluative wording, block quote threshold, block quote format with where its citation stands, footnote policy)
 - **Open questions (`❓` items, each tagged `[content]` or `[format]`)** — always include this section even if empty
 - Resolved questions (answers recorded later, see "Recording answers to open questions")
 
@@ -168,13 +168,14 @@ APA 7 does not require page numbers for paraphrases. Many European institutions 
 
 ## Recording answers to open questions
 
-The user's answers to open questions do not need a new style-resolver run. Whoever receives them records them in `styleguide.md`: the orchestrator, or the user in workflows without one.
+The user's answers to open questions do not need a new style-resolver run. Whoever receives them records them in `styleguide.md`: the orchestrator or, in workflows without one, Claude in the main chat (or the user).
 
 1. Write the answer as the value of the rule, with its provenance in place of a guideline section: `[supervisor, via the user, YYYY-MM-DD]` or `[user, YYYY-MM-DD]`. Record it in the words given (the n/a value of item 4 is the one exception); whatever goes beyond them stays open. The value holds the rule and its provenance only: what the work does now and what is still to be fixed in it go under the open issues of the state file, never into `styleguide.md`, which nobody updates after a fix; a reason for the answer may go into its entry under "Resolved questions" (as in item 4). An answer the user gives as provisional, until the supervisor confirms it, gets `[provisional, user, YYYY-MM-DD]`: it counts as an answer, and the orchestrator keeps a line for it under the open issues of the state file until the user confirms it, then drops "provisional". An answer that leaves the values to whoever records them ("decide what you can, provisionally") gives no words to record: list the values you propose in the chat, one line per key, and record them only after the user accepts that list, also when the user has said in advance that they will take your proposal, with the provenance above (`[provisional, user, YYYY-MM-DD]` if accepted provisionally) and an open-issues line for each provisional value, or one line that names them all.
 2. Move the entry from "Open questions" to "Resolved questions", with the answer and its provenance. An entry left under "Open questions" counts as open, ticked or not.
 3. An entry answered in part, also a group answered for some of its keys: record the answered part, and keep the rest under "Open questions" as a narrower entry with the same tag.
 4. "Does not occur in this work" is an answer for a key whose element the work will not contain at all (tables, figures, statistics, footnotes or internet sources, for example). Its value is fixed: record exactly `n/a — does not occur in this work; reopen if it occurs`, in English, whatever the language of the styleguide and whatever words the user chose ("kommt nicht vor", for example); a reason goes into the entry under "Resolved questions", not into the value. It is the user's answer, also for an element you would expect to be missing: ask, do not assume. It is no answer for a key the work already uses, since the export sets such a key either way: the layout of text the work contains (alignment, spacing or indents of the body, the headings or the reference list) and a notation its citations use (the space before a page number, for example). Do not offer n/a for such a key, also not inside a group whose other keys do not apply; if the user answers n/a for one, say so and ask for a value. If an element closed with n/a is added later, open the entry again.
 5. Add a row to the version history.
+6. A rule that an agent reports later as not covered (the writer while drafting, for example) becomes an entry under "Open questions" if its gap names a rule of `styleguide.md` (one unclear for the case) or a key of the template: tagged as section 3 says, with the template's key if it has one, and a row in the version history (item 5). Whoever records answers writes it when the report comes in, also when the user defers the answer; a line under the open issues of the state file does not replace it. A gap that names no rule of `styleguide.md` and no key of the template is shown to the user as a note, without a proposed value or key, as a format-verifier note is: it becomes an entry only when the user says that the guidelines or the supervisor rule on it.
 
 ## When to re-run
 
@@ -190,7 +191,7 @@ The style-resolver runs:
 - **Surface contradictions.** When guidelines contradict themselves or each other, present both readings and let the user decide.
 - **Example trumps prose.** When examples in a guideline contradict the prose description, examples are usually what supervisors grade against. But do log the contradiction.
 - **Stay inside the project.** Write no files outside the project folder (multi-project: the folder that holds all sub-projects), not even scratch files: no `/tmp`, which in Git Bash on Windows is the system's temporary folder, and no scratchpad that Claude Code may name. Put scratch files in `_scratch/style-resolver/` at the project root (multi-project: of the sub-project you work in), which Git ignores, and delete that folder before you finish; leave the rest of `_scratch/` alone, the orchestrator may keep a file there; the scripts in `scripts/`, which clean up their own temporary folders, are fine.
-- **Write a file's text with the Write tool**, not with the shell (`cat <<EOF`, `echo … >`, `printf … >`). In Git Bash on Windows, a here-document with umlauts or quotes can fail or write altered text. Use the shell to run scripts and commands; the files a script writes, and its output redirected to a file, are fine.
+- **Write a file's text with the Write or Edit tool**, not with the shell (`cat <<EOF`, `echo … >`, `printf … >`, or an inline `python -c` / `py -c` program that writes a file's text). In Git Bash on Windows, a here-document with umlauts or quotes can fail or write altered text, and the shell's quoting can alter the backticks, `$` signs and quotes of an inline program. Use the shell to run scripts and commands; the files a saved script writes (one in `scripts/`, or an analysis script of the project), and its output redirected to a file, are fine.
 
 ## Examples of good extraction behavior
 
