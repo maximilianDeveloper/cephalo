@@ -1930,6 +1930,31 @@ jobs:
               d.sections[-1]._sectPr.find(qn("w:pgNumType")).set(qn("w:fmt"), fmt)
               d.save(out)
           EOF
+          # Pandoc's own reference document restarts the footnotes in each section in newer Pandoc versions (3.9
+          # does), not in the one a runner may install: set it in each reference document here, so that every export
+          # carries it whatever the Pandoc version, and the checks below see the split take it out.
+          python - "$R/counted.docx" "$R/notcounted.docx" "$R/top.docx" "$R/logo.docx" "$R/table.docx" "$R/dash.docx" \
+                   "$R/upper.docx" "$R/samepar.docx" <<'EOF'
+          import sys, docx
+          from docx.oxml import OxmlElement
+          from docx.oxml.ns import qn
+          for path in sys.argv[1:]:
+              d = docx.Document(path)
+              sect = d.sections[-1]._sectPr
+              notes = sect.find(qn("w:footnotePr"))
+              if notes is None:
+                  notes = OxmlElement("w:footnotePr")
+                  refs = [c for c in sect if c.tag in (qn("w:headerReference"), qn("w:footerReference"))]
+                  if refs:
+                      refs[-1].addnext(notes)
+                  else:
+                      sect.insert(0, notes)
+              if notes.find(qn("w:numRestart")) is None:
+                  restart = OxmlElement("w:numRestart")
+                  restart.set(qn("w:val"), "eachSect")
+                  notes.append(restart)
+              d.save(path)
+          EOF
           for ref in counted notcounted top logo table dash upper; do
             pandoc "$R/title_page.md" "$R/ch.md" --reference-doc "$R/$ref.docx" -o "$R/$ref-export.docx"
           done
