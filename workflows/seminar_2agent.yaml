@@ -100,10 +100,11 @@ main_session:
       chapter text and its revisions, the quotes of the source registry,
       source and format checks, style resolution. If the Agent tool is
       missing, tell the user and stop.
-    - Yours: step 0.0 and workspace/state.md; recording the answers to open
-      styleguide questions; each chapter's budget and word counts (steps 1
-      and 3); running scripts/verbatim_check.py and saving the
-      source-verifier's reports (step 2); in F.1, what its steps give you.
+    - Yours: step 0.0 and workspace/state.md, except the rows of its source
+      registry, which the writer adds, changes and removes; recording the
+      answers to open styleguide questions; each chapter's budget and word
+      counts (steps 1 and 3); running scripts/verbatim_check.py and saving
+      the source-verifier's reports (step 2); in F.1, what its steps give you.
 
 # Workflow
 

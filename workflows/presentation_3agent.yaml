@@ -91,15 +91,16 @@ main_session:
       slide text, speaker notes and companion text and their revisions, the
       quotes of the source registry, source and format checks, style
       resolution. If the Agent tool is missing, tell the user and stop.
-    - Yours: step 0.0 and workspace/state.md; recording the answers to open
-      styleguide questions; the companion's budget and word counts; building
-      the deck from the writer's files, as the user decides (step 1);
-      running scripts/verbatim_check.py on the companion and saving the
-      source-verifier's reports (step 2); naming the format-verifier's
-      report files and applying the companion's format-only findings
-      (step 3); in the three-way check, the PDF export, calling its agents
-      and saving the source-verifier's answer (three_way_check); F.1 with
-      the user.
+    - Yours: step 0.0 and workspace/state.md, except the rows of its source
+      registry, which the writer adds, changes and removes; recording the
+      answers to open styleguide questions; the companion's budget and word
+      counts; building the deck from the writer's files, as the user decides
+      (step 1); running scripts/verbatim_check.py on the companion and
+      saving the source-verifier's reports (step 2); naming the
+      format-verifier's report files and applying the companion's
+      format-only findings (step 3); in the three-way check, the PDF export,
+      calling its agents and saving the source-verifier's answer
+      (three_way_check); F.1 with the user.
 
 # Workflow
 
