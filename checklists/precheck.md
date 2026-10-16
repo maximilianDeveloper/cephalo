@@ -2,7 +2,7 @@
 
 **Purpose:** Blocking pre-check before any content work.
 **Executed by:** Orchestrator (in multi-agent workflows), or Claude in the main chat or the user (in seminar_2agent and presentation_3agent, which have no orchestrator).
-**On missing required materials:** STOP. Inform the user. Do not make assumptions. (A missing recommended document is noted as a gap; see section 1.)
+**On missing required materials:** STOP. Inform the user. Do not make assumptions. (A missing recommended document is a gap, not a block: ask whether the institution provides it; see section 1.)
 
 **Applies to:** `seminar_2agent`, `presentation_3agent`, `bachelor_5agent` and `_longform`, `master_7agent` and `_longform`. These workflows all reference this checklist in their Step 0. `proposal_workflow` applies sections 1 and 2 in its Phase 0: it runs before the main work, so no earlier pre-check has covered its materials.
 
@@ -40,7 +40,7 @@ These documents define the rules the work must follow. The citation guide and th
 For the active chapter, all sources to be cited must be available.
 
 - [ ] All relevant sources available as files the agents can read: PDF (also scanned print) or plain text
-- [ ] Number of sources compared with the workflow's `sources_min`–`sources_max`, where it sets them (outside the range: tell the user and record the answer in the decision log; it does not block)
+- [ ] Number of sources compared with the workflow's `sources_min`–`sources_max`, where it sets them (outside the range: ask the user whether the number stands for this work and record the answer in the decision log; it does not block)
 - [ ] E-books (EPUB) converted first: an EPUB is a ZIP archive the agents cannot open. Convert it to PDF or text (e.g. with Calibre) and cite the print edition's page numbers where the e-book shows them; if it has none, ask how to cite it (chapter or section) and log the answer as a decision (`00_Decisions.md`; flat projects: `workspace/state.md`)
 - [ ] Access verified (institutional databases — sessions still valid?)
 - [ ] No source from memory only — original file must exist
@@ -161,6 +161,8 @@ The orchestrator (without one, Claude in the main chat or the user) documents th
 - Work can proceed ✅
 - Work paused until the blocking gaps are closed ❌
 ```
+
+Ask the questions of sections 1 and 2 in the message that reports this result, not in a later one: each missing recommended document by name, and a source count outside the range. Until the user answers, each question stays under open issues in the state file.
 
 ---
 

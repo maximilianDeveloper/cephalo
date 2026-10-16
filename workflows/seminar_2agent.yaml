@@ -121,8 +121,9 @@ phases:
         manual: true
         note: |
           Verify that the citation guide and formatting guidelines are present
-          and all sources are accessible. The assignment description is
-          recommended: if it is missing, note it and continue.
+          and all sources are accessible. The other documents of the
+          checklist's section 1 are recommended: for each one missing, ask the
+          user whether the institution provides it, note the gap and continue.
           Claude in the main chat runs it and then creates workspace/state.md
           (main_session, "State file format").
       
