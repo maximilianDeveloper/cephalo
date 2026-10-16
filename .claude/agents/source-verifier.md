@@ -106,7 +106,7 @@ For enumerations with a single range citation, verify that each item actually ap
 
 ### Rounds after a revision
 
-From the second verification of a chapter on, the orchestrator gives you the previous round's report and names the sentences the revision changed. Judge the changed sentences afresh. Rate an unchanged sentence as before unless you give a new reason: something the earlier round missed counts (say so: "missed in round <n>"), a stricter reading of the same thing does not. So that the standard stays the same from round to round, judge the sentence structure of every paraphrased sentence (step 8: a paraphrase that keeps the source's structure and swaps single words) already in the first round.
+From the second verification of a chapter on, the orchestrator gives you the previous round's report and names the sentences the revision changed. Judge the changed sentences afresh. Rate an unchanged sentence as before unless you give a new reason: something the earlier round missed counts (say so: "missed in round <n>"), a stricter reading of the same thing does not. So that the standard stays the same from round to round, judge the sentence structure of every paraphrased sentence (step 8: a paraphrase that keeps the source's structure and swaps single words) already in the first round. List again every entry of the previous report that is still open, each with its status (⚠️, ❌ or ❓, also those on the reference list): a task prompt that asks for less does not shorten the list.
 
 ## Output format
 
