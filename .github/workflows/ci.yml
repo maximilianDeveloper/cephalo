@@ -818,6 +818,8 @@ jobs:
           # Abel), and an original that has one is not reported as uncited (Zorn)
           f.add_paragraph("(Ortlieb 2009, S. 58, zitiert nach Sander 2017, S. 114). (Abel, 1999, as cited in Kurz, 2016). "
                           "(Zorn 2001, zit. n. Sander 2017).")
+          # a repeated citation in a short form (in_text.repeated_citation) names no author
+          f.add_paragraph("(ebd., S. 58). (vgl. ebd.). (Ebd.: 4). (ibid., p. 3). (Ibid.).")
           f.add_heading("7 Literaturverzeichnis:", 1)
           for entry in ("Müller, H./Schmidt, K. (2019). A.", "Öztürk, A. (2020). B.", "Dawson, R., Ellis, S., & Fowler, T. (2018). C.",
                         "De Vries, R. (2018). D.", "Weber, E. (2020). E.", "Fischer, Hans/Wolf, Karl (2017): G.",
@@ -1323,6 +1325,10 @@ jobs:
           expect 1 python scripts/verbatim_check.py "$V/cited.md" "$V/src"
           grep -qF '❌ 15 words, line 1: "Die urbane Wärmeinsel bezeichnet den Temperaturunterschied (Keller 2018, S. 44)' "$V/out.txt"
           if grep -q 'line 2' "$V/out.txt"; then cat "$V/out.txt"; echo "a quote in single marks was counted"; exit 1; fi
+          # ... and across a repeated citation in a short form (in_text.repeated_citation)
+          sed 's/(Keller 2018, S. 44)/(vgl. ebd., S. 44)/' "$V/cited.md" > "$V/cited_ebd.md"
+          expect 1 python scripts/verbatim_check.py "$V/cited_ebd.md" "$V/src"
+          grep -qF '❌ 15 words, line 1: "Die urbane Wärmeinsel bezeichnet den Temperaturunterschied (vgl. ebd., S. 44)' "$V/out.txt"
           # Pandoc exports a Markdown block quote in the style "Block Text"
           python - "$V" <<'EOF'
           import os, sys

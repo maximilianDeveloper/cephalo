@@ -93,6 +93,7 @@ Verify the following categories. Concrete values (font size, page-range notation
 - [ ] Page range notation per styleguide
 - [ ] Several sources, two authors, same author and year, no date, no page numbers per styleguide (`in_text.multiple_sources`, `in_text.two_authors`, `in_text.same_author_year`, `in_text.no_date`, `in_text.no_page_locator`)
 - [ ] Secondary citations per styleguide (`in_text.secondary_citation`)
+- [ ] Repeated citations per styleguide (`in_text.repeated_citation`: a source cited again right after its previous citation); a short form such as `ebd.` stands only there
 
 ## Style
 - [ ] Forbidden evaluative wording per styleguide (`style.forbidden_evaluative`)

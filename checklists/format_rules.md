@@ -90,6 +90,7 @@ For every category below: **read concrete values from `styleguide.md`**, not fro
 - [ ] "cf." or "see" prefix (styleguide: `in_text.cf_prefix`)
 - [ ] Non-breaking space before page number (styleguide: `in_text.nbsp_before_page`; a chapter file writes it as Pandoc's escaped space, `S.\ 12`; with citekeys, the CSL style sets it)
 - [ ] Page-range notation (styleguide: `in_text.page_range`)
+- [ ] A source cited again right after its previous citation (styleguide: `in_text.repeated_citation`)
 
 ### Tables and figures
 
