@@ -192,9 +192,10 @@ phases:
              tool's note that you need not read it back does not apply here:
              the read-back checks your copy against the answer) and compare
              with the answer its number of table rows and of "Status:" lines,
-             its last line and, if it has any, one line with typographic
-             quotation marks; if they differ, write it again. Your counts and
-             the loop count go to workspace/state.md, not into the report.
+             its last line and, if the answer has any, one line of it with
+             typographic quotation marks; if they differ, write it again. Your
+             counts and the loop count go to workspace/state.md, not into the
+             report.
           The user may run the script instead and hand Claude the file.
         feedback_loop_max: 2   # iterations, not verification rounds: up to 3 rounds
       
