@@ -129,13 +129,14 @@ OMISSION = re.compile(r"\[[^\]]*\]|\((?:…|\.{3})\)|…|\.{3}")
 ADAPTED_LETTER = re.compile(r"(?<![^\W_])\[([^\W\d_])\](?=[^\W_])")
 PANDOC_CITATION = re.compile(r"\[[^\[\]]*@[^\[\]]*\]")
 # A citation in parentheses, author-year style: "(Keller 2018, S. 44)", "(vgl. Keller
-# & Weber 2018; Smith 2020, p. 5)", "(2018)", "(ebd., S. 45)". Like a citekey it is
-# skipped, in the chapter and in the sources, so that a run continues across it.
+# & Weber 2018; Smith 2020, p. 5)", "(2018)", "(ebd., S. 45)", "(Ebd.: 45)". Like a
+# citekey it is skipped, in the chapter and in the sources, so that a run continues
+# across it.
 CITATION = re.compile(
     r"\((?:(?:vgl|cf|see|siehe)\.?\s+)?"
     r"(?:[A-ZÄÖÜ][^()]{0,150}?(?:\b\d{4}[a-z]?\b|\bo\.\s?J\.|\bn\.\s?d\.)[^()]{0,80}"
     r"|\d{4}[a-z]?(?:\s*[,:;][^()]{0,80})?"
-    r"|(?:[Ee]bd|[Ee]benda|[Ii]bid(?:em)?)\.?(?:[,\s][^()]{0,80})?)\)")
+    r"|(?:[Ee]bd|[Ee]benda|[Ii]bid(?:em)?)\.?(?:[,:\s][^()]{0,80})?)\)")
 HTML_COMMENT = re.compile(r"<!--.*?-->", re.S)
 # The heading of a chapter's bibliography (as in bibliography_check.py, and more):
 # the titles listed under it are no runs.
