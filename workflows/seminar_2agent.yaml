@@ -100,10 +100,11 @@ main_session:
       chapter text and its revisions, the quotes of the source registry,
       source and format checks, style resolution. If the Agent tool is
       missing, tell the user and stop.
-    - Yours: step 0.0 and workspace/state.md; recording the answers to open
-      styleguide questions; each chapter's budget and word counts (steps 1
-      and 3); running scripts/verbatim_check.py and saving the
-      source-verifier's reports (step 2); in F.1, what its steps give you.
+    - Yours: step 0.0 and workspace/state.md, except the rows of its source
+      registry, which the writer adds, changes and removes; recording the
+      answers to open styleguide questions; each chapter's budget and word
+      counts (steps 1 and 3); running scripts/verbatim_check.py and saving
+      the source-verifier's reports (step 2); in F.1, what its steps give you.
 
 # Workflow
 
@@ -120,8 +121,9 @@ phases:
         manual: true
         note: |
           Verify that the citation guide and formatting guidelines are present
-          and all sources are accessible. The assignment description is
-          recommended: if it is missing, note it and continue.
+          and all sources are accessible. The other documents of the
+          checklist's section 1 are recommended: for each one missing, ask the
+          user whether the institution provides it, note the gap and continue.
           Claude in the main chat runs it and then creates workspace/state.md
           (main_session, "State file format").
       
@@ -183,12 +185,17 @@ phases:
              the report file, or the findings as the report gives them.
           3. The source-verifier cannot write files, so do not ask it to. Save
              its answer unchanged as <name>_round_<n>.md: the writer and the
-             next round work from it. Nothing is shortened, reworded or added;
-             only an absolute path becomes project-relative. After the Write,
-             read the file back and compare its number of table rows and of
-             "Status:" lines, and its last line, with the answer; if they
-             differ, write it again. Your counts and the loop count go to
-             workspace/state.md, not into the report.
+             next round work from it. Nothing is shortened, reworded,
+             translated or added, and quotation marks, labels and emphasis
+             stay as the answer has them; only an absolute path becomes
+             project-relative. After the Write, read the file back (the Write
+             tool's note that you need not read it back does not apply here:
+             the read-back checks your copy against the answer) and compare
+             with the answer its number of table rows and of "Status:" lines,
+             its last line and, if the answer has any, one line of it with
+             typographic quotation marks; if they differ, write it again. Your
+             counts and the loop count go to workspace/state.md, not into the
+             report.
           The user may run the script instead and hand Claude the file.
         feedback_loop_max: 2   # iterations, not verification rounds: up to 3 rounds
       
@@ -262,12 +269,16 @@ phases:
            then the format-verifier checks it and writes
            workspace/output/verification/document_format_round_<n>.md (it runs
            scripts/bibliography_check.py and scripts/abbreviations_extract.py
-           itself). Apply its format-only findings (chapter files with the Edit
-           tool, no rewording; layout by building the reference document again),
-           answer its ❓ (item 1), show the user its Notes, and let the next
-           round check the fixes. A finding that needs new wording goes to the
-           writer-agent, and a verification round (step 2) checks the sentences
-           it changed.
+           itself). Read the report: record its counts from its "Status:" lines
+           in workspace/state.md at once, before any fix or question to the
+           user (orchestrator.md, item 5 of "Action on transition", step (4)),
+           and show the user its Notes. Then apply its format-only findings
+           (chapter files with the Edit tool, no rewording, a non-breaking
+           space as `\ `: writer-agent.md, "Formatting rules"; layout by
+           building the reference document again), answer its ❓ (item 1),
+           and let the next round check the fixes. A finding that needs new
+           wording goes to the writer-agent, and a verification round (step 2)
+           checks the sentences it changed.
         7. For the user, in Word, after the last export, listed under the open
            issues of workspace/state.md and named in the chat: update the fields
            (Ctrl+A, then F9, twice: docs/reference_management.md, "The title

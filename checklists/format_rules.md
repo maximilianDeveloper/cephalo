@@ -40,6 +40,8 @@ For every category below: **read concrete values from `styleguide.md`**, not fro
 ### Title page (elements per styleguide)
 
 - [ ] Required elements present per styleguide (`title_page.elements`; commonly: institution name; examination type, course name, program of study; title of the work; author name, student ID; supervisor, date)
+- [ ] Each element on a line of its own, unless the styleguide puts several on one line (a paragraph, or a line of a line block: `docs/reference_management.md`, "The title page")
+- [ ] Quotation marks as `in_text.format_direct` shows them (an ASCII `"` becomes an English mark in the DOCX)
 - [ ] Decoration/logo policy per styleguide (`title_page.decoration`; some institutions forbid any decoration or logo)
 
 ### Pagination
@@ -86,8 +88,9 @@ For every category below: **read concrete values from `styleguide.md`**, not fro
 - [ ] Et al. rule (styleguide: `in_text.et_al.threshold`)
 - [ ] Page numbers for indirect citations (styleguide: `in_text.page_for_indirect`)
 - [ ] "cf." or "see" prefix (styleguide: `in_text.cf_prefix`)
-- [ ] Non-breaking space before page number (styleguide: `in_text.nbsp_before_page`)
+- [ ] Non-breaking space before page number (styleguide: `in_text.nbsp_before_page`; a chapter file writes it as Pandoc's escaped space, `S.\ 12`, except a presentation's companion that is not exported with Pandoc; with citekeys, the CSL style sets it only after the label of a citekey's locator, and a page number in plain text, such as the original's page in a secondary citation's prefix, takes the escaped space)
 - [ ] Page-range notation (styleguide: `in_text.page_range`)
+- [ ] A source cited again right after its previous citation (styleguide: `in_text.repeated_citation`; `ebd.` or `ibid.` stands only there)
 
 ### Tables and figures
 

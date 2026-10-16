@@ -818,6 +818,8 @@ jobs:
           # Abel), and an original that has one is not reported as uncited (Zorn)
           f.add_paragraph("(Ortlieb 2009, S. 58, zitiert nach Sander 2017, S. 114). (Abel, 1999, as cited in Kurz, 2016). "
                           "(Zorn 2001, zit. n. Sander 2017).")
+          # a repeated citation with ebd. or ibid. (in_text.repeated_citation) names no author
+          f.add_paragraph("(ebd., S. 58). (vgl. ebd.). (Ebd.: 4). (ibid., p. 3). (Ibid.).")
           f.add_heading("7 Literaturverzeichnis:", 1)
           for entry in ("Müller, H./Schmidt, K. (2019). A.", "Öztürk, A. (2020). B.", "Dawson, R., Ellis, S., & Fowler, T. (2018). C.",
                         "De Vries, R. (2018). D.", "Weber, E. (2020). E.", "Fischer, Hans/Wolf, Karl (2017): G.",
@@ -1323,6 +1325,13 @@ jobs:
           expect 1 python scripts/verbatim_check.py "$V/cited.md" "$V/src"
           grep -qF '❌ 15 words, line 1: "Die urbane Wärmeinsel bezeichnet den Temperaturunterschied (Keller 2018, S. 44)' "$V/out.txt"
           if grep -q 'line 2' "$V/out.txt"; then cat "$V/out.txt"; echo "a quote in single marks was counted"; exit 1; fi
+          # ... and across a repeated citation with ebd. (in_text.repeated_citation), after a comma or a colon
+          sed 's/(Keller 2018, S. 44)/(vgl. ebd., S. 44)/' "$V/cited.md" > "$V/cited_ebd.md"
+          expect 1 python scripts/verbatim_check.py "$V/cited_ebd.md" "$V/src"
+          grep -qF '❌ 15 words, line 1: "Die urbane Wärmeinsel bezeichnet den Temperaturunterschied (vgl. ebd., S. 44)' "$V/out.txt"
+          sed 's/(Keller 2018, S. 44)/(ebd.: 44)/' "$V/cited.md" > "$V/cited_ebd_colon.md"
+          expect 1 python scripts/verbatim_check.py "$V/cited_ebd_colon.md" "$V/src"
+          grep -qF '❌ 15 words, line 1: "Die urbane Wärmeinsel bezeichnet den Temperaturunterschied (ebd.: 44)' "$V/out.txt"
           # Pandoc exports a Markdown block quote in the style "Block Text"
           python - "$V" <<'EOF'
           import os, sys
@@ -1600,6 +1609,11 @@ jobs:
           test "$(wc -l < "$V/out.txt")" -eq 1
           expect 0 python scripts/verbatim_check.py "$V/words.md" "$V/src"
           grep -qxF "  $W" "$V/out.txt"
+          # a non-breaking space written as Pandoc's escaped space (S.\ 45, writer-agent.md) counts like a space
+          sed 's/S\. 45/S.\\ 45/' "$V/words.md" > "$V/words_nbsp.md"
+          grep -qF 'S.\ 45' "$V/words_nbsp.md"
+          expect 0 python scripts/verbatim_check.py --words "$V/words_nbsp.md"
+          grep -qxF "$W" "$V/out.txt"
           # a reference list with an entry without a year is not recognized and counts
           # (2 + 4 + 1 + 4 + 10 words): the line says so instead of naming the bibliography
           printf '%s\n' '# 4 Fazit' '' 'Stadtgrün kühlt die Straßen.' '' '# Literatur' '' 'Keller, Anna (2018): Stadtklima.' '' 'Müller, Hans: Grün in der Stadt. Ein Handbuch für Planer.' > "$V/words_nobib.md"

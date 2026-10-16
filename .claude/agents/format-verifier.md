@@ -66,6 +66,8 @@ Verify the following categories. Concrete values (font size, page-range notation
 
 ## Title page (elements per styleguide)
 - [ ] Required elements present per styleguide (`title_page.elements`; commonly: institution, course/degree/exam type, title, author, student ID, supervisor, date)
+- [ ] Each element on a line of its own, a paragraph or a line of a line block, unless the styleguide puts several on one line: lines of a fenced div in `title_page.md` without a blank line between them come out as one paragraph, joined by spaces (`docs/reference_management.md`, "The title page")
+- [ ] Quotation marks in its text as `in_text.format_direct` shows them: an ASCII `"` in `title_page.md` comes out as an English mark in the DOCX
 - [ ] Decoration/logo policy per styleguide (`title_page.decoration`; some institutions forbid any decoration or logo)
 
 ## Pagination
@@ -87,10 +89,11 @@ Verify the following categories. Concrete values (font size, page-range notation
 - [ ] format per styleguide
 - [ ] et-al. rule per styleguide
 - [ ] Page number requirement per styleguide
-- [ ] Non-breaking space before page number per styleguide
+- [ ] Non-breaking space before page number per styleguide (`in_text.nbsp_before_page`); in a chapter file it is written as Pandoc's escaped space, a backslash before the space (`S.\ 12`), and a finding there names the fix in that notation (`writer-agent.md`, "Formatting rules"), except in a presentation's companion that is not exported with Pandoc, which takes no backslash; with citekeys, the CSL style sets the space only after the label of a citekey's locator, and a page number in plain text, such as the original's page in a secondary citation's prefix, takes the escaped space
 - [ ] Page range notation per styleguide
 - [ ] Several sources, two authors, same author and year, no date, no page numbers per styleguide (`in_text.multiple_sources`, `in_text.two_authors`, `in_text.same_author_year`, `in_text.no_date`, `in_text.no_page_locator`)
 - [ ] Secondary citations per styleguide (`in_text.secondary_citation`)
+- [ ] Repeated citations per styleguide (`in_text.repeated_citation`: a source cited again right after its previous citation); `ebd.` or `ibid.` stands only there
 
 ## Style
 - [ ] Forbidden evaluative wording per styleguide (`style.forbidden_evaluative`)
