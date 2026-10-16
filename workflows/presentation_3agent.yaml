@@ -227,6 +227,10 @@ phases:
           round's report and what changed since; the format-verifier writes
           the report itself (orchestrator.md, "Steps 1..N: Chapter
           assignment"; format-verifier.md, "Workflows without Phase B").
+          After each round Claude first reads the report, records its counts
+          from its "Status:" lines in workspace/state.md at once, before any
+          fix or question to the user, and shows the user its Notes (the same
+          section of orchestrator.md).
           Claude applies the companion's format-only findings with the Edit
           tool, without rewording (a non-breaking space as `\ `:
           writer-agent.md, "Formatting rules"). A finding in the slide text
