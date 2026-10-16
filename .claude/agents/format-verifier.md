@@ -66,6 +66,8 @@ Verify the following categories. Concrete values (font size, page-range notation
 
 ## Title page (elements per styleguide)
 - [ ] Required elements present per styleguide (`title_page.elements`; commonly: institution, course/degree/exam type, title, author, student ID, supervisor, date)
+- [ ] Each element on a line of its own, a paragraph or a line of a line block, unless the styleguide puts several on one line: lines of a fenced div in `title_page.md` without a blank line between them come out as one paragraph, joined by spaces (`docs/reference_management.md`, "The title page")
+- [ ] Quotation marks in its text as `in_text.format_direct` shows them: an ASCII `"` in `title_page.md` comes out as an English mark in the DOCX
 - [ ] Decoration/logo policy per styleguide (`title_page.decoration`; some institutions forbid any decoration or logo)
 
 ## Pagination

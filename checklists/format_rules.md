@@ -40,6 +40,8 @@ For every category below: **read concrete values from `styleguide.md`**, not fro
 ### Title page (elements per styleguide)
 
 - [ ] Required elements present per styleguide (`title_page.elements`; commonly: institution name; examination type, course name, program of study; title of the work; author name, student ID; supervisor, date)
+- [ ] Each element on a line of its own, unless the styleguide puts several on one line (a paragraph, or a line of a line block: `docs/reference_management.md`, "The title page")
+- [ ] Quotation marks as `in_text.format_direct` shows them (an ASCII `"` becomes an English mark in the DOCX)
 - [ ] Decoration/logo policy per styleguide (`title_page.decoration`; some institutions forbid any decoration or logo)
 
 ### Pagination

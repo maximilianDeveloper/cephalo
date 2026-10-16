@@ -253,7 +253,7 @@ In a seminar paper without citekeys, whose reference list is the last section of
 
 ### The title page
 
-Pandoc writes no title page of its own. Write it as a Markdown file in the project, `08_Formal_Review/title_page.md` (flat: `workspace/output/title_page.md`), and list it first, before the chapter files, when you call Pandoc. Its contents come from `styleguide.md` (`title_page.*`); what the user has not given yet stays a placeholder such as `[Name]`. Write its text in the language of the work, with quotation marks typed as the characters `in_text.format_direct` shows: Pandoc turns ASCII `"…"` into English “…” in the DOCX, whatever the language. Set its lines in the styles `Title`, `Subtitle`, `Author` and `Date` (or in styles of your own, which Pandoc adds to the document) with fenced divs, and end it with a page break. Every export of a thesis has a table of contents, whether or not the styleguide names one (`headings.toc_emphasis` sets only how its levels look): it goes into the same file, as a Word field after the title page, with the levels of `headings.max_depth` (`\o "1-3"`); Word fills it in when the user updates the fields (Ctrl+A, then F9, a step of the workflows' submission). Right after opening, Word can number the entries before it has laid out every page: in a test with a main text that starts at 1, every main text entry showed 1 after the first update and the right page after the second. So update the fields twice, and compare a few entries with the pages they name. Do not use Pandoc's `--toc`: Pandoc places its table of contents before all text, so before the title page.
+Pandoc writes no title page of its own. Write it as a Markdown file in the project, `08_Formal_Review/title_page.md` (flat: `workspace/output/title_page.md`), and list it first, before the chapter files, when you call Pandoc. Its contents come from `styleguide.md` (`title_page.*`); what the user has not given yet stays a placeholder such as `[Name]`. Write its text in the language of the work, with quotation marks typed as the characters `in_text.format_direct` shows: Pandoc turns ASCII `"…"` into English “…” in the DOCX, whatever the language. Set its lines in the styles `Title`, `Subtitle`, `Author` and `Date` (or in styles of your own, which Pandoc adds to the document) with fenced divs, and end it with a page break. Each line stands on its own: separate the lines in a div by a blank line, which makes each a paragraph of its own, or write them as a line block, each line starting with `| `, which keeps them in one paragraph with a line break after each; lines with neither run together into one paragraph, joined by spaces. Every export of a thesis has a table of contents, whether or not the styleguide names one (`headings.toc_emphasis` sets only how its levels look): it goes into the same file, as a Word field after the title page, with the levels of `headings.max_depth` (`\o "1-3"`); Word fills it in when the user updates the fields (Ctrl+A, then F9, a step of the workflows' submission). Right after opening, Word can number the entries before it has laid out every page: in a test with a main text that starts at 1, every main text entry showed 1 after the first update and the right page after the second. So update the fields twice, and compare a few entries with the pages they name. Do not use Pandoc's `--toc`: Pandoc places its table of contents before all text, so before the title page.
 
 ````markdown
 ::: {custom-style="Title"}
@@ -261,7 +261,9 @@ Title of the work
 :::
 
 ::: {custom-style="Author"}
-[Name], [Matrikelnummer]
+[Name]
+
+[Matrikelnummer]
 :::
 
 ```{=openxml}
