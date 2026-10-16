@@ -263,7 +263,8 @@ phases:
            workspace/output/verification/document_format_round_<n>.md (it runs
            scripts/bibliography_check.py and scripts/abbreviations_extract.py
            itself). Apply its format-only findings (chapter files with the Edit
-           tool, no rewording; layout by building the reference document again),
+           tool, no rewording, a non-breaking space as `\ `: writer-agent.md,
+           "Formatting rules"; layout by building the reference document again),
            answer its ❓ (item 1), show the user its Notes, and let the next
            round check the fixes. A finding that needs new wording goes to the
            writer-agent, and a verification round (step 2) checks the sentences

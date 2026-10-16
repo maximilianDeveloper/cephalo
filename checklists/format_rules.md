@@ -86,7 +86,7 @@ For every category below: **read concrete values from `styleguide.md`**, not fro
 - [ ] Et al. rule (styleguide: `in_text.et_al.threshold`)
 - [ ] Page numbers for indirect citations (styleguide: `in_text.page_for_indirect`)
 - [ ] "cf." or "see" prefix (styleguide: `in_text.cf_prefix`)
-- [ ] Non-breaking space before page number (styleguide: `in_text.nbsp_before_page`)
+- [ ] Non-breaking space before page number (styleguide: `in_text.nbsp_before_page`; a chapter file writes it as Pandoc's escaped space, `S.\ 12`; with citekeys, the CSL style sets it)
 - [ ] Page-range notation (styleguide: `in_text.page_range`)
 
 ### Tables and figures

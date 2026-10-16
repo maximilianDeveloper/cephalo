@@ -1600,6 +1600,11 @@ jobs:
           test "$(wc -l < "$V/out.txt")" -eq 1
           expect 0 python scripts/verbatim_check.py "$V/words.md" "$V/src"
           grep -qxF "  $W" "$V/out.txt"
+          # a non-breaking space written as Pandoc's escaped space (S.\ 45, writer-agent.md) counts like a space
+          sed 's/S\. 45/S.\\ 45/' "$V/words.md" > "$V/words_nbsp.md"
+          grep -qF 'S.\ 45' "$V/words_nbsp.md"
+          expect 0 python scripts/verbatim_check.py --words "$V/words_nbsp.md"
+          grep -qxF "$W" "$V/out.txt"
           # a reference list with an entry without a year is not recognized and counts
           # (2 + 4 + 1 + 4 + 10 words): the line says so instead of naming the bibliography
           printf '%s\n' '# 4 Fazit' '' 'Stadtgrün kühlt die Straßen.' '' '# Literatur' '' 'Keller, Anna (2018): Stadtklima.' '' 'Müller, Hans: Grün in der Stadt. Ein Handbuch für Planer.' > "$V/words_nobib.md"

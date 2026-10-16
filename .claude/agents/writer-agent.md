@@ -82,6 +82,8 @@ A count by eye misses runs, so do not report one as a check result ("no run of f
 
 **Citations with a reference manager:** write in-text citations as Pandoc citekeys only when the decision log (`00_Decisions.md`; flat: `workspace/state.md`) records that the project renders them: a `literature.bib` (`02_Literature/literature.bib`; flat: `workspace/sources/literature.bib`) plus Pandoc with a CSL file that matches the styleguide's citation style (`checklists/precheck.md`, section 6). The citation processor then renders them in the styleguide's format at export (see `docs/reference_management.md`). Write prefix and locator as the styleguide does: `[@smith2020, p. 975]`, `[vgl. @mueller2019, S. 44]`, several sources `[vgl. @mueller2019, S. 44; @keller2018, S. 5]`. For a secondary citation whose original stays out of the bibliography, put the original as plain text into the prefix: `[Weber 1922, S. 31, zit. nach @keller2018, S. 5]`. In every other case (no `literature.bib`, no such decision, no matching CSL file), write citations in the styleguide's in-text format.
 
+**A non-breaking space before the page number:** where `in_text.nbsp_before_page` asks for one, write it in a chapter file as Pandoc's escaped space, a backslash before the space (`S.\ 12`), which the export turns into a non-breaking space; never type the invisible character itself, which cannot be told from a space. With citekeys, the CSL style sets the space. Slide text and speaker notes take no backslash: the deck takes them as written, without Pandoc.
+
 The styleguide is extracted per-project from the institution's guidelines. It may differ between projects.
 
 ## Chapter structure
