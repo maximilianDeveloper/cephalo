@@ -89,7 +89,7 @@ Verify the following categories. Concrete values (font size, page-range notation
 - [ ] format per styleguide
 - [ ] et-al. rule per styleguide
 - [ ] Page number requirement per styleguide
-- [ ] Non-breaking space before page number per styleguide (`in_text.nbsp_before_page`); in a chapter file it is written as Pandoc's escaped space, a backslash before the space (`S.\ 12`), and a finding there names the fix in that notation (`writer-agent.md`, "Formatting rules"); with citekeys, the CSL style sets the space
+- [ ] Non-breaking space before page number per styleguide (`in_text.nbsp_before_page`); in a chapter file it is written as Pandoc's escaped space, a backslash before the space (`S.\ 12`), and a finding there names the fix in that notation (`writer-agent.md`, "Formatting rules"), except in a presentation's companion that is not exported with Pandoc, which takes no backslash; with citekeys, the CSL style sets the space
 - [ ] Page range notation per styleguide
 - [ ] Several sources, two authors, same author and year, no date, no page numbers per styleguide (`in_text.multiple_sources`, `in_text.two_authors`, `in_text.same_author_year`, `in_text.no_date`, `in_text.no_page_locator`)
 - [ ] Secondary citations per styleguide (`in_text.secondary_citation`)

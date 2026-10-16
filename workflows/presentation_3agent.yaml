@@ -233,12 +233,11 @@ phases:
           fix or question to the user, and shows the user its Notes (the same
           section of orchestrator.md).
           Claude applies the companion's format-only findings with the Edit
-          tool, without rewording (a non-breaking space as `\ `:
-          writer-agent.md, "Formatting rules"). A finding in the slide text
-          or speaker notes, or one that needs new wording, goes to the
-          writer, and a round of step 2 checks what it changed; a finding in
-          the PPTX's layout is fixed where the deck is built (step 1). Then
-          the next round checks the fixes.
+          tool, without rewording. A finding in the slide text or speaker
+          notes, or one that needs new wording, goes to the writer, and a
+          round of step 2 checks what it changed; a finding in the PPTX's
+          layout is fixed where the deck is built (step 1). Then the next
+          round checks the fixes.
   
   # ===========================================================
   # Three-way consistency check
