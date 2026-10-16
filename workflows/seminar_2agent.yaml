@@ -183,12 +183,16 @@ phases:
              the report file, or the findings as the report gives them.
           3. The source-verifier cannot write files, so do not ask it to. Save
              its answer unchanged as <name>_round_<n>.md: the writer and the
-             next round work from it. Nothing is shortened, reworded or added;
-             only an absolute path becomes project-relative. After the Write,
-             read the file back and compare its number of table rows and of
-             "Status:" lines, and its last line, with the answer; if they
-             differ, write it again. Your counts and the loop count go to
-             workspace/state.md, not into the report.
+             next round work from it. Nothing is shortened, reworded,
+             translated or added, and quotation marks, labels and emphasis
+             stay as the answer has them; only an absolute path becomes
+             project-relative. After the Write, read the file back (the Write
+             tool's note that you need not read it back does not apply here:
+             the read-back checks your copy against the answer) and compare
+             with the answer its number of table rows and of "Status:" lines,
+             its last line and, if it has any, one line with typographic
+             quotation marks; if they differ, write it again. Your counts and
+             the loop count go to workspace/state.md, not into the report.
           The user may run the script instead and hand Claude the file.
         feedback_loop_max: 2   # iterations, not verification rounds: up to 3 rounds
       
