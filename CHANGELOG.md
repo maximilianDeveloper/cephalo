@@ -8,7 +8,9 @@ Dates follow ISO 8601 (`YYYY-MM-DD`).
 
 ---
 
-## [1.3.1] — unreleased
+## [1.3.1] — 2026-10-16
+
+**A second seminar trial run.** A second seminar paper went through `seminar_2agent.yaml` on Windows and confirmed the 1.3.0 changes: every chat started from the workflow, the state file and the styleguide, all registry quotes stood verbatim on the printed page, the chapters stayed within 20 % of their budgets, the saved reports kept their table rows and `Status:` lines, and `scripts/docx_pagination.py` numbered three sections as the guideline asked. Its findings are fixed where a definition caused them: a non-breaking space is written as Pandoc's escaped space (`S.\ 12`), so that the Edit tool can set it; each line of the title page is a paragraph of its own; a saved report is read back, with its quotation marks, labels and emphasis as the answer has them; a follow-up round lists every open entry; the writer keeps its rows of the source registry; the closing check covers the provenance written into the styleguide; the pre-check asks about missing documents and the source count; and the seminar's closing step reads the format report before it fixes anything. The new key `in_text.repeated_citation` sets how a source cited again right after itself is cited (`ebd.`, `ibid.`, or the full citation).
 
 ### Changed
 
