@@ -85,9 +85,9 @@ main_session:
     workspace/state.md and styleguide.md (once steps 0.0 and 0.5 have
     created them) and the sections of the definition named above, each
     whole and with the Read tool: a Grep result leaves out every line over
-    about 500 characters, and most rules stand on such lines ("Principles",
-    "Read a rule with the Read tool"). Where they say "you" or "the
-    orchestrator", they mean Claude in the main chat.
+    about 500 characters, and many rules, the longest among them, stand on
+    such lines ("Principles", "Read a rule with the Read tool"). Where they
+    say "you" or "the orchestrator", they mean Claude in the main chat.
     The rest of the definition does not apply, except where a step below
     points to it: no research-agent, no extracts, no Phase A and B.
     - The agents do the steps that name them. Never do their work yourself:
