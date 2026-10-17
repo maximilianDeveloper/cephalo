@@ -1625,6 +1625,22 @@ jobs:
           expect 2 python scripts/verbatim_check.py --words "$V/missing.md"
           expect 2 python scripts/verbatim_check.py --words
           expect 2 python scripts/verbatim_check.py --words "$V/words.md" "$V/src"
+          # a raw block for the export, such as the bookmark that starts the back matter
+          # above the reference list (docs/reference_management.md), is markup: it is not
+          # counted and joins no run, also with ~~~ and a longer fence; a plain code block
+          # still counts
+          BACK='<w:p><w:bookmarkStart w:id="990002" w:name="_cephalo_back_matter_start"/><w:bookmarkEnd w:id="990002"/><w:r><w:br w:type="page"/></w:r></w:p>'
+          awk -v b="$BACK" '/^# Literaturverzeichnis$/ { print "```{=openxml}"; print b; print "```"; print ""; print "~~~~ {=openxml}"; print b; print "~~~~~"; print "" } { print }' "$V/words.md" > "$V/words_raw.md"
+          grep -qF '_cephalo_back_matter_start' "$V/words_raw.md"
+          expect 0 python scripts/verbatim_check.py --words "$V/words_raw.md"
+          grep -qxF "$W" "$V/out.txt"
+          printf '%s\n' "$BACK" > "$V/raw_src.txt"
+          expect 0 python scripts/verbatim_check.py "$V/words_raw.md" "$V/raw_src.txt"
+          grep -qxF "  $W" "$V/out.txt"
+          if grep -q 'words, line' "$V/out.txt"; then cat "$V/out.txt"; echo "a raw block was matched as a run"; exit 1; fi
+          awk '/^# Literaturverzeichnis$/ { print "```text"; print "drei Wörter hier"; print "```"; print "" } { print }' "$V/words.md" > "$V/words_code.md"
+          expect 0 python scripts/verbatim_check.py --words "$V/words_code.md"
+          grep -qF 'Words: 29 ' "$V/out.txt"
 
       - name: build_reference_docx.py (styles, page settings, errors; round trip through Pandoc)
         run: |

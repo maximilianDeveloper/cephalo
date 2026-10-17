@@ -54,9 +54,9 @@ The report's header gives the chapter's word count for the page budget, as
 written: the stretches between whitespace or dashes that hold a letter or
 digit (a hyphenated compound is one word), headings and block quotes
 included. In Markdown, footnotes count too; the YAML front matter, HTML
-comments, Pandoc citekeys (the whole bracket, [@key, p. 5]: Pandoc writes
-the citation only at the export), footnote marks and the bibliography do
-not (the line says when it recognized none), while author-year citations
+comments, raw blocks for the export (```{=openxml}), Pandoc citekeys (the
+whole bracket, [@key, p. 5]: Pandoc writes the citation only at the
+export), footnote marks and the bibliography do not (the line says when it recognized none), while author-year citations
 written into the text do. A Word chapter counts its body paragraphs,
 without tables, footnotes, text boxes and the bibliography. --words prints
 only that line and needs no sources.
@@ -138,6 +138,13 @@ CITATION = re.compile(
     r"|\d{4}[a-z]?(?:\s*[,:;][^()]{0,80})?"
     r"|(?:[Ee]bd|[Ee]benda|[Ii]bid(?:em)?)\.?(?:[,:\s][^()]{0,80})?)\)")
 HTML_COMMENT = re.compile(r"<!--.*?-->", re.S)
+# A raw block for one output format (```{=openxml}, also with ~~~ and a longer
+# fence): markup that Pandoc passes to the export, such as the bookmark that
+# starts the back matter (docs/reference_management.md), not text. Like an HTML
+# comment it is blanked, so it neither counts nor joins a run. It closes with a
+# fence of the same character, at least as long.
+RAW_BLOCK = re.compile(r"(?ms)^ {0,3}(?P<fence>(?P<char>[`~])(?P=char){2,})[ \t]*\{=[^{}\s]+\}[ \t]*\n"
+                       r".*?^ {0,3}(?P=fence)(?P=char)*[ \t]*$")
 # The heading of a chapter's bibliography (as in bibliography_check.py, and more):
 # the titles listed under it are no runs.
 BIBLIOGRAPHY_HEADINGS = {"bibliography", "references", "reference list", "works cited", "literature",
@@ -283,7 +290,7 @@ def read_markdown(path: Path) -> tuple:
         inside = bool(re.match(r"\[\^[^\]]+\]:", line)) or (inside and bool(re.match(r"\s{2,}\S|\t", line)))
         if inside:
             footnotes.add(n)
-    for pattern in (HTML_COMMENT, PANDOC_CITATION, FOOTNOTE_MARK):
+    for pattern in (RAW_BLOCK, HTML_COMMENT, PANDOC_CITATION, FOOTNOTE_MARK):
         for m in reversed(list(pattern.finditer(text))):
             text = blank(text, m.start(), m.end())
     pieces = []
