@@ -1386,7 +1386,7 @@ def _state_file(ctx):
     if not d:
         import tempfile
         d = os.path.join(tempfile.gettempdir(), 'cephalo-guard')
-    sid = hashlib.sha1(ctx.session.encode('utf-8', 'replace')).hexdigest()[:16]
+    sid = hashlib.sha256(ctx.session.encode('utf-8', 'replace')).hexdigest()[:16]
     return d, os.path.join(d, 'p1-%s.txt' % sid)
 
 
@@ -1433,7 +1433,7 @@ def check_prompt(tool, tin, ctx):
     found = p1_findings(text, str(tin.get('subagent_type') or ''))
     if not found:
         return None
-    key = hashlib.sha1((tool + '\0' + text).encode('utf-8', 'replace')).hexdigest()
+    key = hashlib.sha256((tool + '\0' + text).encode('utf-8', 'replace')).hexdigest()
     if _seen(ctx, key):
         return None                       # sent again unchanged after a deny: passes
     parts = ['%s: "...%s..."' % (_P1_WHAT[k], s) for k, s in found[:3]]
@@ -1585,7 +1585,7 @@ def note(text, data=None, env=None):
     if not d:
         import tempfile
         d = os.path.join(tempfile.gettempdir(), 'cephalo-guard')
-    path = os.path.join(d, 'note-%s.txt' % hashlib.sha1(session.encode('utf-8', 'replace')).hexdigest()[:16])
+    path = os.path.join(d, 'note-%s.txt' % hashlib.sha256(session.encode('utf-8', 'replace')).hexdigest()[:16])
     try:
         if os.path.exists(path):
             return None
