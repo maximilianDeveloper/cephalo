@@ -286,8 +286,9 @@ phases:
            then the format-verifier checks it and writes
            workspace/output/verification/document_format_round_<n>.md (it runs
            scripts/bibliography_check.py and scripts/abbreviations_extract.py
-           itself). On Windows every script runs with py, also where its
-           help text or docs/scripts.md writes python3. Read the report:
+           itself). On Windows every Python script (.py) runs with py, also
+           where its help text or docs/scripts.md writes python3. Read the
+           report:
            record its counts from its "Status:" lines
            in workspace/state.md at once, before any fix or question to the
            user (orchestrator.md, item 5 of "Action on transition", step (4)),
