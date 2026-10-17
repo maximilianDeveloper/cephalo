@@ -250,6 +250,18 @@ jobs:
             if [ -e "/tmp/ci_multi/$sub/shared" ] || [ -L "/tmp/ci_multi/$sub/shared" ]; then echo "$sub/shared was created"; exit 1; fi
           done
           if grep -q 'No longer used' /tmp/ci_multi.out; then echo "old shared/ note in a new project"; exit 1; fi
+          # The hook settings of the cephalo guard, a byte copy of the template, in the project
+          # and in each sub-project, which Claude Code opens as a project of its own.
+          for d in /tmp/ci_flat /tmp/ci_long /tmp/ci_multi /tmp/ci_multi/01_Proposal /tmp/ci_multi/02_Main_Work /tmp/ci_multi/03_Defense; do
+            cmp templates/claude_settings.json "$d/.claude/settings.json"
+          done
+          # A settings file of the user's is kept; one without the guard is named in "Next steps".
+          printf '{"permissions": {"allow": []}}\n' > /tmp/ci_long/.claude/settings.json
+          (cd /tmp/ci_long && bash setup.sh "Bachelor thesis" "Long-form" full </dev/null >/tmp/ci_long2.out)
+          grep -qxF '{"permissions": {"allow": []}}' /tmp/ci_long/.claude/settings.json
+          grep -q 'do not run the cephalo guard' /tmp/ci_long2.out
+          grep -q 'templates/claude_settings.json' /tmp/ci_long2.out
+          if grep -q 'do not run the cephalo guard' /tmp/ci_multi.out; then echo "merge note in a new project"; exit 1; fi
           # Git LFS is set up for the project only: the user's global config stays untouched.
           if command -v git-lfs >/dev/null; then
             H=$(mktemp -d)
@@ -554,10 +566,14 @@ jobs:
           sed -i '/^\*\.swp$/d' "$U/base/.gitignore"
           printf 'interviews/\r\nsecret.txt' >> "$U/base/.gitignore"
           printf '*.csv text eol=lf\n' >> "$U/base/.gitattributes"
+          # a project from before the cephalo guard: the update installs its hook settings
+          rm "$U/base/.claude/settings.json" "$U/base/01_Proposal/.claude/settings.json"
           cp -a "$U/base" "$U/sh"; cp -a "$U/base" "$U/ps"
           printf '4\n3\n1\ny\ny\nn\n' | script -qec "bash setup.sh --target $U/sh" /dev/null >/dev/null
           printf 'y\ny\nn\n' | pwsh -NoProfile -File ./setup.ps1 -WorkType "Master thesis" -Structure "Multi-project" -Scaffolding full -Target "$U/ps" >/dev/null
           diff -r --no-dereference -x .git "$U/sh" "$U/ps"
+          cmp templates/claude_settings.json "$U/sh/.claude/settings.json"
+          cmp templates/claude_settings.json "$U/sh/01_Proposal/.claude/settings.json"
           grep -q '^interviews/' "$U/sh/.gitignore"
           grep -qx 'secret.txt' "$U/sh/.gitignore"
           test "$(grep -cx '\*\.swp' "$U/sh/.gitignore")" -eq 1

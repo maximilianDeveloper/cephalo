@@ -262,6 +262,29 @@ function Copy-TemplateIfExists($Template, $Destination, $FallbackContent) {
     }
 }
 
+function Install-GuardSettings([string]$Dir) {
+    # .claude\settings.json runs the cephalo guard (docs\scripts.md, "cephalo
+    # guard"). Copied only where it is missing (a byte copy, no BOM): a user's
+    # own settings are kept, and "Next steps" names the template to merge when
+    # they lack the guard. Mirrors install_guard_settings in setup.sh.
+    $Template = Resolve-ProjectPath "templates\claude_settings.json"
+    if (-not [System.IO.File]::Exists($Template)) { return }
+    if ($Dir -eq ".") { $Rel = ".claude\settings.json" } else { $Rel = "$Dir\.claude\settings.json" }
+    $Dest = Resolve-ProjectPath $Rel
+    if ([System.IO.File]::Exists($Dest)) {
+        if ([System.IO.File]::ReadAllText($Dest) -match 'cephalo_guard') {
+            Write-Host "  . $Rel (exists, kept)" -ForegroundColor Gray
+        } else {
+            Write-Host "  . $Rel (exists, kept: it does not run the cephalo guard)" -ForegroundColor Yellow
+            $script:GuardMerge += $Rel
+        }
+        return
+    }
+    [void][System.IO.Directory]::CreateDirectory([System.IO.Path]::GetDirectoryName($Dest))
+    [System.IO.File]::Copy($Template, $Dest)
+    Write-Host "  + $Rel" -ForegroundColor Green
+}
+
 function Resolve-CephaloConfiguration {
     # Normalize + validate WorkType/Structure/Scaffolding (script scope).
     # Accept both the interactive menu strings (e.g. "Flat (single directory,
@@ -734,6 +757,8 @@ if (-not $script:ProjectRoot) { $script:ProjectRoot = $StartDir }
 $IsMinimal = $Scaffolding -match "^Minimal"
 # Multi-project: shared\ entries left from an earlier cephalo version.
 $OldShared = @()
+# Claude Code settings kept without the cephalo guard (Install-GuardSettings).
+$GuardMerge = @()
 Write-Verbose "Resolved configuration: WorkType='$WorkType', Structure='$Structure', Scaffolding='$Scaffolding' (minimal=$IsMinimal)."
 Write-Verbose "Working location: $((Get-Location).Path)"
 
@@ -911,6 +936,18 @@ elseif ($Structure -match "^Multi-project") {
     }
     
     $WorkflowHint = "proposal_workflow.yaml, bachelor/master_*_longform.yaml, defense_workflow.yaml (per sub-project)"
+}
+
+# ==========================================================
+# Claude Code hooks (cephalo guard)
+# ==========================================================
+
+Write-Step "Claude Code hooks (cephalo guard)"
+Install-GuardSettings "."
+if ($Structure -match "^Multi-project") {
+    # Claude Code opens each sub-project as a project of its own and does not
+    # read the settings of the folder above it.
+    foreach ($p in @("01_Proposal", $MainName, "03_Defense")) { Install-GuardSettings $p }
 }
 
 # ==========================================================
@@ -1095,6 +1132,15 @@ if ($IsMinimal) {
     $stepNo++
     Write-Host "$stepNo. The style-resolver will propose additional subdirectories" -ForegroundColor Yellow
     Write-Host "   based on your guidelines. Review and confirm before creation." -ForegroundColor Yellow
+    Write-Host ""
+}
+
+if ($GuardMerge.Count -gt 0) {
+    $stepNo++
+    Write-Host "$stepNo. These Claude Code settings were kept and do not run the cephalo guard:" -ForegroundColor Yellow
+    Write-Host "   $($GuardMerge -join ' ')" -ForegroundColor Yellow
+    Write-Host "   To use it, merge the hooks of templates\claude_settings.json into them" -ForegroundColor Yellow
+    Write-Host "   (docs\scripts.md, `"cephalo guard`")." -ForegroundColor Yellow
     Write-Host ""
 }
 

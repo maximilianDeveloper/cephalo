@@ -1,6 +1,6 @@
 # Scripts
 
-cephalo ships eight utility scripts in `scripts/`, and the cephalo guard, a Claude Code hook (see [cephalo guard](#cephalo-guard)). The utility scripts are optional — the agents can guide a project without them — but each one automates a check or transformation that would otherwise take manual effort.
+cephalo ships eight utility scripts in `scripts/`, and the cephalo guard, a Claude Code hook that setup installs (see [cephalo guard](#cephalo-guard)). The utility scripts are optional — the agents can guide a project without them — but each one automates a check or transformation that would otherwise take manual effort.
 
 | Script | Purpose | When to run |
 |--------|---------|-------------|
@@ -317,7 +317,7 @@ A bare repository (`git clone --bare` with linked worktrees) has no main worktre
 
 `cephalo_guard.py` is no script to run yourself: it is a [Claude Code hook](https://code.claude.com/docs/en/hooks) that sees some of Claude's tool calls before they run and stops a few slips that the agent definitions forbid but models repeat. The definitions stay the rule: the guard checks a few of them, and a project without it works the same.
 
-It runs from `.claude/settings.json`: copy `templates/claude_settings.json` there, or merge its two hook entries into a file you have. The hook command runs `cephalo_guard.sh`, which starts the guard with `py` on Windows and with `python3` elsewhere. Without Python, without the two scripts, or on Windows without Git Bash, every call passes unchecked.
+Setup installs it: it copies `templates/claude_settings.json` to `.claude/settings.json` where that file is missing, in a multi-project setup also into each sub-project, which Claude Code opens as a project of its own. An existing `.claude/settings.json` is kept; if it does not run the guard, setup's "Next steps" names it, and you merge the template's two hook entries into it by hand. The hook command runs `cephalo_guard.sh`, which starts the guard with `py` on Windows and with `python3` elsewhere. Without Python, without the two scripts, or on Windows without Git Bash, every call passes unchecked.
 
 | Rule | Stops | Instead |
 |---|---|---|
