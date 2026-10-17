@@ -189,7 +189,12 @@ phases:
              report's notes on the chapter's rows of the source registry go
              to the writer as an edit of those rows, also when the chapter
              passed and when a note calls itself optional (orchestrator.md,
-             "Feedback loop control").
+             "Feedback loop control"). In the first round of the second
+             chapter written, the task prompt also names the cross-chapter
+             consistency check (source-verifier.md, "Cross-chapter
+             consistency") and gives the first chapter's file; a finding on
+             the first chapter goes to the writer too, and the sentences it
+             changes there get a round of their own.
           3. The source-verifier cannot write files, so do not ask it to. Save
              its answer unchanged as <name>_round_<n>.md: the writer and the
              next round work from it. Nothing is shortened, reworded,
@@ -315,7 +320,7 @@ minimal_setup_notes: |
   
   Trade-offs vs. bachelor_5agent:
   - No strict separation of reading / extracting / writing
-  - Consistency is checked twice, not per chapter pair: by the source-verifier after the second chapter (source-verifier.md, "Cross-chapter consistency") and once in F.1
+  - Consistency is checked twice, not per chapter pair: by the source-verifier in the first round of the second chapter written (step 2; source-verifier.md, "Cross-chapter consistency") and once in F.1
   
   For < 10 pages and < 15 sources, the overhead of the larger setup
   is not justified. Quality loss is modest.
