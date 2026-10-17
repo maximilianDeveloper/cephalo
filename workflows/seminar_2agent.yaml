@@ -192,9 +192,9 @@ phases:
              "Feedback loop control"). In the first round of the second
              chapter written, the task prompt also names the cross-chapter
              consistency check (source-verifier.md, "Cross-chapter
-             consistency") and gives the first chapter's file; a finding on
-             the first chapter goes to the writer too, and the sentences it
-             changes there get a round of their own.
+             consistency") and gives the file of the chapter written first;
+             a finding on that chapter goes to the writer too, and the
+             sentences it changes there get a round of their own.
           3. The source-verifier cannot write files, so do not ask it to. Save
              its answer unchanged as <name>_round_<n>.md: the writer and the
              next round work from it. Nothing is shortened, reworded,
