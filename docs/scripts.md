@@ -1,6 +1,6 @@
 # Scripts
 
-cephalo ships eight utility scripts in `scripts/`. They are optional — the agents can guide a project without them — but each one automates a check or transformation that would otherwise take manual effort.
+cephalo ships eight utility scripts in `scripts/`, and the cephalo guard, a Claude Code hook (see [cephalo guard](#cephalo-guard)). The utility scripts are optional — the agents can guide a project without them — but each one automates a check or transformation that would otherwise take manual effort.
 
 | Script | Purpose | When to run |
 |--------|---------|-------------|
@@ -51,7 +51,7 @@ If `pdftotext` is available (optional fallback for `extract_styleguide.sh`):
 py -m pip install -r requirements.txt
 ```
 
-**Commands on Windows:** the examples in this file and in the agent definitions write `python3`; on Windows, run them with `py` in its place, in Git Bash as in PowerShell.
+**Commands on Windows:** the examples in this file and in the agent definitions write `python3`; on Windows, run them with `py` in its place, in Git Bash as in PowerShell. Save a command's output to a file in Git Bash: in Windows PowerShell 5.1, `>` writes the file in UTF-16.
 
 **Shell scripts on Windows:** the two `.sh` scripts run under Git Bash (included with Git for Windows). If Git Bash is not installed, download Git for Windows and select the "Use Git Bash" option during installation. PowerShell alone cannot run `.sh` files directly.
 
@@ -312,6 +312,35 @@ Like the other checks, this is a heuristic aid, not a guarantee — it only catc
 A bare repository (`git clone --bare` with linked worktrees) has no main worktree to compare against: run from the bare repository itself, the audit stops with exit 2; run from one of its worktrees, it compares against the bare entry, so every `_*.md` note counts as missing from the main worktree, and Layer 2 is skipped.
 
 ---
+
+### cephalo guard
+
+`cephalo_guard.py` is no script to run yourself: it is a [Claude Code hook](https://code.claude.com/docs/en/hooks) that sees some of Claude's tool calls before they run and stops a few slips that the agent definitions forbid but models repeat. The definitions stay the rule: the guard checks a few of them, and a project without it works the same.
+
+It runs from `.claude/settings.json`: copy `templates/claude_settings.json` there, or merge its two hook entries into a file you have. The hook command runs `cephalo_guard.sh`, which starts the guard with `py` on Windows and with `python3` elsewhere. Without Python, without the two scripts, or on Windows without Git Bash, every call passes unchecked.
+
+| Rule | Stops | Instead |
+|---|---|---|
+| S1 | A shell command that writes a file's text: an inline `py -c` or `python3 -c` program that writes a file, a here-document, `echo` or `printf` into a file, `sed -i` and the like, a PowerShell content cmdlet, or a saved program that does so and is neither one of cephalo's scripts nor an analysis script under `data/scripts/` | The Write or Edit tool |
+| S2 | A write outside the project folder: `/tmp`, the system's temporary folder, the home folder, Claude Code's scratchpad | `_scratch/<role>/` in the project |
+| S3 | `python3 … \|\| py …`, which runs a finished report again, and `python3` on Windows where `py` exists | The command once, with `py` on Windows |
+| S4 | A redirect into a file in the PowerShell tool, which writes UTF-16 | The redirect in the Bash tool (Git Bash) |
+| S5 | A change to `.claude/settings.json` or `.claude/settings.local.json` (the project's or yours in `~/.claude/`) or to `scripts/`, by a tool or the shell | You change these by hand |
+| R5 | The main chat's or an orchestrator's Edit of a saved source-verifier report; after a Write of one, it asks for the read-back and gives the saved file's counts | The report written again from the agent's answer |
+| R6 | The main chat's or an orchestrator's Write or Edit of a report that the format-verifier writes itself | The format-verifier's report as it wrote it |
+| P1 | Off unless you switch it on. A task prompt that narrows a check, tells an agent to leave out a finding or rates in advance what it will find: denied once, and the same prompt sent again passes | |
+
+A denied call shows Claude a message that starts with `cephalo guard`, names the rule, the definition that holds it and what to do instead. Claude then goes on with the tool the message names; you see the message in the chat.
+
+**Switching it off.** The guard reads two variables, which you set in `.claude/settings.local.json` (Git leaves this file out; create it if it is missing). They take effect in the next chat:
+
+```json
+{ "env": { "CEPHALO_GUARD_OFF": "all" } }
+```
+
+`"all"` switches every rule off, a list such as `"S1,S2"` the rules it names; `"CEPHALO_GUARD_ON": "P1"` switches P1 on. To remove the guard from a project, delete its two hook entries from `.claude/settings.json`, or the file if it holds nothing else. Claude does not change these files or `scripts/` (rule S5): when a change is needed, it tells you.
+
+The guard reads only the tool call that Claude Code passes to it and uses no network. It writes nothing but a small file per chat in `cephalo-guard/` in the system's temporary folder, for P1 when it is on and to show a note once when it cannot read a call. A check takes about 50 ms on Linux and, in a first measurement on Windows, about 0.3 s.
 
 ## Troubleshooting
 

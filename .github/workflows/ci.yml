@@ -34,14 +34,25 @@ jobs:
         run: python -m pip install -r requirements.txt pyyaml
 
       - name: Python syntax
-        run: python -m py_compile scripts/abbreviations_extract.py scripts/bibliography_check.py scripts/build_reference_docx.py scripts/cross_session_audit.py scripts/docx_pagination.py scripts/verbatim_check.py
+        run: python -m py_compile scripts/abbreviations_extract.py scripts/bibliography_check.py scripts/build_reference_docx.py scripts/cephalo_guard.py scripts/cross_session_audit.py scripts/docx_pagination.py scripts/verbatim_check.py
 
       - name: Shell syntax
         # One file per call: `bash -n a b c` parses only a (b and c become its arguments).
-        run: for f in setup.sh scripts/docx_postprocess.sh scripts/extract_styleguide.sh; do bash -n "$f"; done
+        # cephalo_guard.sh runs under sh (dash on Ubuntu), the shell of a hook command.
+        run: |
+          for f in setup.sh scripts/docx_postprocess.sh scripts/extract_styleguide.sh; do bash -n "$f"; done
+          sh -n scripts/cephalo_guard.sh
 
       - name: shellcheck
-        run: shellcheck setup.sh scripts/docx_postprocess.sh scripts/extract_styleguide.sh
+        run: shellcheck setup.sh scripts/cephalo_guard.sh scripts/docx_postprocess.sh scripts/extract_styleguide.sh
+
+      - name: cephalo guard (rules, hook command, prescribed commands, messages)
+        run: |
+          python -I .github/tests/test_cephalo_guard.py
+          # The hook settings belong in templates/: a .claude/settings.json here would
+          # guard cephalo's own development sessions, which use the shell freely.
+          test ! -e .claude/settings.json
+          test ! -e .claude/settings.local.json
 
       - name: Workflow YAML parse (all 8 must load)
         run: |
@@ -2489,7 +2500,7 @@ jobs:
 
       - name: Python syntax (Windows)
         shell: powershell
-        run: python -m py_compile scripts/abbreviations_extract.py scripts/bibliography_check.py scripts/build_reference_docx.py scripts/cross_session_audit.py scripts/docx_pagination.py scripts/verbatim_check.py
+        run: python -m py_compile scripts/abbreviations_extract.py scripts/bibliography_check.py scripts/build_reference_docx.py scripts/cephalo_guard.py scripts/cross_session_audit.py scripts/docx_pagination.py scripts/verbatim_check.py
 
       # Informational only: not part of the verified baseline. Remove
       # continue-on-error once a clean run is confirmed.
@@ -2746,3 +2757,30 @@ jobs:
           # A ZIP disguised as a PDF is unpacked by the script's own safe extractor.
           "$SH" "$R/scripts/extract_styleguide.sh" "$W/good" "$W/out_good"
           grep -q "Example rule text" "$W/out_good/guide.txt"
+
+      - name: cephalo guard hook command under this shell (a path with a space and an umlaut)
+        run: |
+          P="$RUNNER_TEMP/guard proj ü"; rm -rf "$P"; mkdir -p "$P/scripts" "$P/workspace"
+          cp scripts/cephalo_guard.py scripts/cephalo_guard.sh "$P/scripts/"
+          CMD="$(python -c "import json; print(json.load(open('templates/claude_settings.json'))['hooks']['PreToolUse'][0]['hooks'][0]['command'])")"
+          # the hook's input, from a file: a command that does not read it must not break a pipe
+          slip() { python -c "import json, sys; print(json.dumps({'session_id': 'ci', 'hook_event_name': 'PreToolUse', 'tool_name': 'Bash', 'tool_input': {'command': 'echo x >> workspace/state.md'}, 'cwd': sys.argv[1]}))" "$1" > "$1.json"; }
+          # cephalo_guard.sh starts the guard with py on Windows, otherwise with python3, and without them not at all
+          if { [ "$RUNNER_OS" = Windows ] && command -v py >/dev/null; } || command -v python3 >/dev/null; then want=deny; else want=none; fi
+          echo "expected: $want"
+          slip "$P"
+          for shell in "$SH" sh; do
+            out="$(CLAUDE_PROJECT_DIR="$P" "$shell" -c "$CMD" < "$P.json")"
+            echo "$shell: ${out:0:120}"
+            if [ "$want" = deny ]; then
+              echo "$out" | grep -q '"permissionDecision": "deny"'
+              echo "$out" | grep -q 'cephalo guard S1'
+            else
+              test -z "$out"
+            fi
+          done
+          # Without the scripts the command passes silently.
+          E="$RUNNER_TEMP/guard empty"; rm -rf "$E"; mkdir -p "$E"
+          slip "$E"
+          out="$(CLAUDE_PROJECT_DIR="$E" "$SH" -c "$CMD" < "$E.json")"
+          test -z "$out"
