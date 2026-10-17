@@ -51,6 +51,8 @@ If `pdftotext` is available (optional fallback for `extract_styleguide.sh`):
 py -m pip install -r requirements.txt
 ```
 
+**Commands on Windows:** the examples in this file and in the agent definitions write `python3`; on Windows, run them with `py` in its place, in Git Bash as in PowerShell.
+
 **Shell scripts on Windows:** the two `.sh` scripts run under Git Bash (included with Git for Windows). If Git Bash is not installed, download Git for Windows and select the "Use Git Bash" option during installation. PowerShell alone cannot run `.sh` files directly.
 
 **Note on `zip` on Windows:** Git Bash ships with `unzip` but NOT with `zip`. This is no longer a problem: `docx_postprocess.sh` only needs `unzip` plus Python 3 (`python3`, `python` or `py` on PATH) — re-zipping is done with Python's `zipfile` module, so `zip` itself is never invoked.
