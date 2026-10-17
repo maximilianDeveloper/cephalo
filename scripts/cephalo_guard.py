@@ -60,6 +60,7 @@ temporary folder, for P1 when it is on and for that note, and uses no
 network.  Python 3.9 or later, standard library only.
 """
 
+import fnmatch
 import hashlib
 import json
 import os
@@ -248,7 +249,7 @@ def strip_heredocs(cmd):
     out, bodies = [], []
     plain = set(x.rstrip('\r') for x in lines)
     tabbed = set(x.lstrip('\t').rstrip('\r') for x in lines)
-    i = 0
+    i, first_rest = 0, None
     while i < len(lines):
         line = lines[i]
         pending = []
@@ -285,8 +286,9 @@ def strip_heredocs(cmd):
             # line with spaces around it does not end it).  Register the rest as
             # its body but keep the lines, so nothing is hidden from the checks;
             # a '<<' inside quotes stays text for the tokenizer and has no effect.
-            rest = '\n'.join(lines[i + 1:])
-            bodies.extend([rest] * len(pending))
+            if first_rest is None:                # later ones: the same text holds theirs
+                first_rest = '\n'.join(lines[i + 1:])
+            bodies.extend([first_rest] * len(pending))
             out.append(new)
             i += 1
             continue
@@ -432,12 +434,13 @@ class Seg:
     """One simple command: its words, redirects (fd, op, target), here-document
     numbers, here-strings, the operator after it, and the segments it groups
     when it is the redirect part after '( ... )' or '{ ... }'."""
-    __slots__ = ('words', 'redirs', 'heredocs', 'herestrings', 'sep', 'group')
+    __slots__ = ('words', 'redirs', 'heredocs', 'herestrings', 'sep', 'group', 'subshell_end')
 
     def __init__(self):
         self.words, self.redirs, self.heredocs, self.herestrings = [], [], [], []
         self.sep = ''
         self.group = None
+        self.subshell_end = None    # on the first segment of a '( ... )': the index after it
 
     def empty(self):
         return not (self.words or self.redirs or self.heredocs or self.herestrings)
@@ -474,10 +477,10 @@ def parse(cmd, ps=False, pre=None):
             w = t[1]
             if not cur.words and not ps and w == '{':
                 finish('')
-                stack.append(len(segs))
+                stack.append(('{', len(segs)))
             elif not cur.words and not ps and w == '}' and stack:
                 finish(';')
-                pending_group = (stack.pop(), len(segs))
+                pending_group = (stack.pop()[1], len(segs))
             else:
                 cur.words.append(w)
         elif t[0] == 'r':
@@ -498,11 +501,14 @@ def parse(cmd, ps=False, pre=None):
             op = t[1]
             if op == '(':
                 finish('')
-                stack.append(len(segs))
+                stack.append(('(', len(segs)))
             elif op == ')':
                 finish(';')
                 if stack:
-                    pending_group = (stack.pop(), len(segs))
+                    kind, start = stack.pop()
+                    pending_group = (start, len(segs))
+                    if kind == '(' and start < len(segs):
+                        segs[start].subshell_end = len(segs)
             else:
                 finish(op)
         i += 1
@@ -608,10 +614,11 @@ _PY_WRITE = re.compile(
 _PATH_LIT = re.compile(r"""['"]([^'"\n]{1,300})['"]""")
 _PY_TARGET = re.compile(r"""\.save\s*\(\s*r?['"]([^'"\n]+)['"]"""
                         r"""|\bopen\s*\(\s*r?['"]([^'"\n]+)['"]\s*,\s*(?:mode\s*=\s*)?['"][rbt]*(?:[wax]|\+)"""
-                        r"""|Path\s*\(\s*r?['"]([^'"\n]+)['"]\s*\)\s*\.(?:write_(?:text|bytes)|open\s*\(\s*['"][rbt]*[wax+])""")
+                        r"""|Path\s*\(\s*r?['"]([^'"\n]+)['"]\s*\)\s*\.(?:write_(?:text|bytes)|open\s*\(\s*['"][rbt]*[wax+])"""
+                        r"""|ZipFile\s*\(\s*r?['"]([^'"\n]+)['"]\s*,\s*(?:mode\s*=\s*)?['"][wax]""")
 
 
-def py_write(code):
+def py_write(code, ctx=None, base=None):
     """The first write operation in a Python program, or None."""
     m = _PY_WRITE.search(code or '')
     if not m:
@@ -619,6 +626,8 @@ def py_write(code):
     lits = [x for x in _PATH_LIT.findall(code)
             if ('/' in x or '\\' in x or re.search(r'\.\w{1,5}$', x)) and not re.match(r'^\.\w{1,5}$', x)]
     def in_scratch(x):
+        if ctx is not None:
+            return under_scratch(x, ctx, base)
         n = posixpath.normpath(x.replace('\\', '/'))
         return not n.startswith('../') and bool(re.search(r'(?:^|/)_scratch/', n))
     if lits and all(in_scratch(x) for x in lits):
@@ -759,21 +768,33 @@ def protected(n, ctx):
 
 def holds_protected(n, ctx):
     """A folder whose removal or move takes the hook settings or scripts/
-    with it (the project folder, .claude/, scripts/ itself)."""
+    with it (the project folder, a .claude/ folder, scripts/ itself, in a
+    multi-project setup also a sibling sub-project)."""
     if not n or n in (DEVICE, TEMPVAR):
         return None
+    if n.rsplit('/', 1)[-1] == '.claude':
+        return 'a folder that holds hook settings'
     anchors = [ctx.project + '/scripts', ctx.root + '/scripts']
-    for base in {ctx.project, ctx.root, ctx.home}:
+    bases = {ctx.project, ctx.root, ctx.home}
+    if ctx.root != ctx.project:
+        try:
+            bases.update(ctx.root + '/' + (d.lower() if ctx.windows else d) for d in os.listdir(ctx.root)
+                         if os.path.isdir(os.path.join(ctx.root, d)))
+        except OSError:
+            pass
+    for base in bases:
         if base:
             anchors += [base + x for x in _SETTINGS]
     for a in anchors:
         if inside(a, n):
-            return protected(a, ctx) or "cephalo's scripts/ folder"
+            why = protected(a, ctx) or "cephalo's scripts/ folder"
+            return why if a == n else 'a folder that holds ' + why
     return None
 
 
 _PY_REMOVE = re.compile(r'\bos\.(?:remove|unlink|rmdir|removedirs|rename|replace)\s*\(|\bshutil\.(?:rmtree|move|copy\w*)\s*\('
-                        r'|\.(?:unlink|rmdir|rename|replace|write_text|write_bytes|touch)\s*\(')
+                        r'|\.(?:unlink|rmdir|rename|write_text|write_bytes|touch)\s*\(')
+_PY_MOVES = re.compile(r'\bshutil\.(?:rmtree|move)\s*\(|\bos\.(?:rename|replace|rmdir|removedirs)\s*\(|\.(?:rmdir|rename)\s*\(|\brmtree\s*\(')
 
 
 def py_protected(code, ctx, base):
@@ -782,7 +803,7 @@ def py_protected(code, ctx, base):
         return None
     for lit in _PATH_LIT.findall(code):
         n = norm_path(lit, ctx, base)
-        why = protected(n, ctx) or holds_protected(n, ctx)
+        why = protected(n, ctx) or (holds_protected(n, ctx) if _PY_MOVES.search(code) else None)
         if why:
             return lit, why
     return None
@@ -794,12 +815,18 @@ def check_shell(cmd, tool, ctx, depth=0, pre=None):
     ps = tool == 'PowerShell'
     hits = []
     segs, pipes, bodies = parse(cmd, ps, pre)
+    pipe_of = {k: pp for pp in pipes for k in pp}
     base = ctx.cwd
     bases = []                 # the folder relative paths of each segment start from
     prev_script = False        # the previous segment ran a Python script and ended in '||'
     assigns = {}               # name=value words seen so far (for python3 -c "$code")
     scratch_made = set()       # _scratch files this command fills by an exempt producer
+    restore = []               # (end, folder) of the ( ... ) subshells the loop is in
     for si, seg in enumerate(segs):
+        while restore and restore[-1][0] <= si:
+            base = restore.pop()[1]               # a cd inside ( ... ) ends with it
+        if seg.subshell_end is not None:
+            restore.append((seg.subshell_end, base))
         for w in seg.words:
             m = re.match(r'^([A-Za-z_]\w*)=(.*)$', w, re.S)
             if not m:
@@ -809,7 +836,9 @@ def check_shell(cmd, tool, ctx, depth=0, pre=None):
         lc = c.lower()
         bases.append(base)
         # follow cd / pushd / Set-Location for the segments after this one
-        if lc in ('cd', 'pushd', 'set-location', 'sl', 'chdir'):
+        if lc in ('popd', 'pop-location') or (lc in ('cd', 'chdir') and args[:1] == ['-']):
+            base = None                             # where it goes back to is not known here
+        elif lc in ('cd', 'pushd', 'set-location', 'sl', 'chdir'):
             dest = [a for a in args if not a.startswith('-')]
             if not dest:
                 base = ctx.home if not ps else base
@@ -817,7 +846,7 @@ def check_shell(cmd, tool, ctx, depth=0, pre=None):
                 n = norm_path(dest[0], ctx, base)
                 base = TEMPVAR if n == TEMPVAR else (n if n and n != DEVICE else None)
         is_script = False
-        p = next((pp for pp in pipes if si in pp), [si])
+        p = pipe_of.get(si, [si])
         pos = p.index(si)
         pseg = segs[p[pos - 1]] if pos > 0 else None
         # S1 (a)/(b): inline Python programs that write a file
@@ -827,11 +856,13 @@ def check_shell(cmd, tool, ctx, depth=0, pre=None):
             if mode == 'script' and val in ('/dev/stdin', '-'):
                 mode = 'stdin'
             if mode == 'c':
-                code = val + ''.join('\n' + bodies[int(k)] for k in re.findall(r'__HD(\d+)__', val)
-                                     if int(k) < len(bodies))
+                code = val + ''.join('\n' + b for b in {id(bodies[int(k)]): bodies[int(k)] for k in
+                                     re.findall(r'__HD(\d+)__', val) if int(k) < len(bodies)}.values())
                 code = re.sub(r'\$\{?([A-Za-z_]\w*)\}?', lambda mm: assigns.get(mm.group(1), mm.group(0)), code)
                 for f in re.findall(r"""exec\s*\(\s*open\s*\(\s*['"]([^'"]+)['"]""", code):
                     code += '\n' + (_read_small(norm_path(f, ctx, bases[si]) or f) or '')
+                for f in re.findall(r"""\brun_path\s*\(\s*r?['"]([^'"]+)['"]""", code):
+                    hits += _script_hits(f, 'py', ctx, bases[si], depth)
             elif mode == 'stdin':
                 parts = [bodies[k] for k in seg.heredocs if k < len(bodies)] + seg.herestrings
                 parts += [_read_small(norm_path(t, ctx, bases[si]) or '') or '' for fd, op, t in seg.redirs
@@ -845,7 +876,7 @@ def check_shell(cmd, tool, ctx, depth=0, pre=None):
                         parts += [_read_small(norm_path(a, ctx, bases[si]) or '') or ''
                                   for a in pargs if not a.startswith('-')]
                 code = '\n'.join(parts)
-            what = py_write(code) if code else None
+            what = py_write(code, ctx, bases[si]) if code else None
             if what:
                 hits.append(('S1', 'an inline Python program that writes a file: %s' % what))
             prot = py_protected(code, ctx, bases[si]) if code else None
@@ -857,6 +888,10 @@ def check_shell(cmd, tool, ctx, depth=0, pre=None):
             # S1b: a Python script that is not cephalo's or an analysis script and writes a file
             if mode == 'script':
                 hits += _script_hits(val, 'py', ctx, bases[si], depth)
+            if mode == 'm' and val == 'runpy':
+                rest = args[args.index('runpy') + 1:] if 'runpy' in args else []
+                if rest and not rest[0].startswith('-'):
+                    hits += _script_hits(rest[0], 'py', ctx, bases[si], depth)
             # S3 (a): a Python script run, '||', and the same script again
             if prev_script and mode == 'script' and val == prev_script[1]:
                 hits.append(('S3', "'%s ... || %s ...' runs the script a second time" % (prev_script[0], c)))
@@ -870,6 +905,23 @@ def check_shell(cmd, tool, ctx, depth=0, pre=None):
                 '--stat' not in args and (seg.heredocs or seg.herestrings or
                                           (pseg is not None and producer(segs, p, pos - 1, bodies))):
             hits.append(('S1', '%s with a patch typed into the command' % ('git apply' if c == 'git' else c)))
+        # S1 (g2), S5: a saved patch file applied (git apply f, patch -i f, patch < f)
+        if (c == 'patch' or (c == 'git' and args[:1] == ['apply'])) and '--check' not in args and \
+                '--stat' not in args:
+            if c == 'git':
+                pfiles = [a for a in args[1:] if not a.startswith('-')]
+            else:
+                pfiles = [args[k + 1] for k, a in enumerate(args) if a in ('-i', '--input') and k + 1 < len(args)]
+                pfiles += [t for fd, op, t in seg.redirs if op == '<' and fd in (None, '0')]
+            for pf in pfiles:
+                body = _read_small(norm_path(pf, ctx, bases[si]) or '')
+                if body is None:
+                    continue
+                hits.append(('S1', '%s with the saved patch %s' % ('git apply' if c == 'git' else c, pf)))
+                for t in re.findall(r'^(?:\+\+\+|---) (?:[ab]/)?([^\t\n]+)', body, re.M):
+                    why = protected(norm_path(t.strip(), ctx, bases[si]), ctx)
+                    if why:
+                        hits.append(('S5', '%s (%s), by the patch %s' % (t.strip(), why, pf)))
         # S1 (h): a file filled in _scratch/ by this command copied or moved over a project file
         for fd, op, t in seg.redirs:
             if op in _STDOUT_OPS and fd in (None, '1', '&') and _target_ok(t) and \
@@ -899,9 +951,19 @@ def check_shell(cmd, tool, ctx, depth=0, pre=None):
                 files = [a for a in args if not a.startswith('-') and not a.startswith('+')]
                 if files:
                     hits += _script_hits(files[0], 'sh', ctx, bases[si], depth)
-        # a script run by its path (./fix.py, _scratch/fix.sh)
+                else:                               # the script on stdin: 'bash < f', 'cat f | sh'
+                    src = [t for fd, op, t in seg.redirs if op == '<' and fd in (None, '0')]
+                    if pseg is not None and cmd_args(pseg.words)[0] == 'cat':
+                        src += [a for a in cmd_args(pseg.words)[1] if not a.startswith('-')]
+                    for f in src:
+                        hits += _script_hits(f, 'sh', ctx, bases[si], depth)
+        if depth < 2 and lc in ('source', '.') and args and not ps:
+            hits += _script_hits(args[0], 'sh', ctx, bases[si], depth)
+        # a script run by its path (./fix.py, _scratch/fix.sh, a .ps1 in the PowerShell tool)
         if ('/' in raw or '\\' in raw) and re.search(r'\.(?:py|sh|bash)$', raw, re.I):
             hits += _script_hits(raw, 'py' if raw.lower().endswith('.py') else 'sh', ctx, bases[si], depth)
+        if ps and raw.lower().endswith('.ps1'):
+            hits += _script_hits(raw, 'ps', ctx, bases[si], depth)
         if depth < 2 and c == 'cmd':
             k = next((j for j, a in enumerate(args) if a.lower() in ('/c', '//c', '/k', '//k')), None)
             if k is not None and k + 1 < len(args):
@@ -910,6 +972,9 @@ def check_shell(cmd, tool, ctx, depth=0, pre=None):
             for k, a in enumerate(args):
                 if a.lower() in ('-command', '-c') and k + 1 < len(args):
                     hits += check_shell(' '.join(args[k + 1:]), 'PowerShell', ctx, depth + 1)
+                    break
+                if a.lower() in ('-file', '-f') and k + 1 < len(args):
+                    hits += _script_hits(args[k + 1], 'ps', ctx, bases[si], depth)
                     break
         # S1 (f): PowerShell content cmdlets
         if ps and (lc in _PS_WRITERS or (lc == 'new-item' and any(a.lower() == '-value' for a in args))):
@@ -922,6 +987,16 @@ def check_shell(cmd, tool, ctx, depth=0, pre=None):
             why = protected(norm_path(t, ctx, bases[si]), ctx)
             if why:
                 hits.append(('S5', '%s (%s)' % (t, why)))
+        if c in ('cp', 'mv', 'install', 'ln', 'rsync') or (ps and lc in ('copy-item', 'copy', 'cpi', 'move-item', 'move', 'mi')):
+            pa = [a for a in args if not a.startswith('-')]
+            if '-t' in args and args.index('-t') + 1 < len(args):
+                dst = args[args.index('-t') + 1]; srcs = [a for a in pa if a != dst]
+            else:
+                dst, srcs = (pa[-1], pa[:-1]) if len(pa) >= 2 else ('', [])
+            for src in srcs:
+                why = protected(norm_path(dst.rstrip('/\\') + '/' + base_name(src), ctx, bases[si]), ctx) if dst else None
+                if why:
+                    hits.append(('S5', '%s (%s)' % (dst, why)))
         for t, kind in _change_targets(c, args, ps):
             n = norm_path(t, ctx, bases[si])
             why = protected(n, ctx) or (holds_protected(n, ctx) if kind == 'remove' else None)
@@ -1076,7 +1151,24 @@ def _change_targets(c, args, ps):
     if lc == 'find' and pos and ('-delete' in args or any(
             a in ('-exec', '-execdir') and k + 1 < len(args) and base_name(args[k + 1]) in _REMOVERS + ('mv',)
             for k, a in enumerate(args))):
+        # a -name filter that can match none of the protected names only touches other files
+        names = [args[k + 1] for k, a in enumerate(args) if a in ('-name', '-iname') and k + 1 < len(args)]
+        wide = any(a in ('-path', '-ipath', '-regex', '-iregex', '-wholename', '-iwholename') for a in args)
+        keys = ('.claude', 'scripts') + tuple(x.rsplit('/', 1)[-1] for x in _SETTINGS) + SHIPPED_SCRIPTS
+        if names and not wide and not any(fnmatch.fnmatchcase(k.lower(), p.lower()) for p in names for k in keys):
+            return [(pos[0], 'edit')]
         return [(pos[0], 'remove')]
+    if lc == 'git' and args:
+        sub, rest = args[0], args[1:]
+        paths = [a for a in rest if not a.startswith('-')]
+        if sub == 'rm' and '--cached' not in rest or sub == 'mv':
+            return [(a, 'remove') for a in paths]
+        if sub in ('checkout', 'restore'):
+            if '--' in rest:
+                paths = rest[rest.index('--') + 1:]
+            elif sub == 'checkout':
+                return []                           # a branch switch
+            return [(a, 'edit') for a in paths]
     if _inplace(lc, args):
         return [(a, 'edit') for a in pos]
     return []
@@ -1089,19 +1181,21 @@ def _script_hits(path, kind, ctx, base, depth):
     n = norm_path(path, ctx, base)
     if not n or n in (DEVICE, TEMPVAR) or _trusted_script(n, ctx):
         return []
+    if base_name(path) in ('setup.sh', 'setup.ps1'):
+        return [('S1', 'SETUP:%s' % path)]          # cephalo's setup, outside this project
     body = _read_small(n)
     if not body:
         return []
     hits = []
     if kind == 'py':
-        what = py_write(body)
+        what = py_write(body, ctx, base)
         if what:
             hits.append(('S1', "the script %s, which is not one of cephalo's, writes a file: %s" % (path, what)))
         prot = py_protected(body, ctx, base)
         if prot:
             hits.append(('S5', '%s (%s), by the script %s' % (prot[0], prot[1], path)))
     elif depth < 2:
-        for rule, detail in check_shell(body, 'Bash', ctx, depth + 1):
+        for rule, detail in check_shell(body, 'PowerShell' if kind == 'ps' else 'Bash', ctx, depth + 1):
             if rule in ('S1', 'S2', 'S5'):
                 hits.append((rule, '%s, in the script %s' % (detail, path)))
     return hits
@@ -1161,7 +1255,10 @@ def readback(tin, ctx):
     if not isinstance(path, str) or not ctx.coordinator:
         return None
     n = norm_path(path, ctx, ctx.cwd) or ''
-    if not (_VERIFIER_REPORT.search(n) and '_format_round_' not in n) and not _FORMAT_REPORT.search(n):
+    fmt = bool(_FORMAT_REPORT.search(n))
+    if not fmt and not _VERIFIER_REPORT.search(n):
+        return None
+    if not ctx.enabled('R6' if fmt else 'R5'):
         return None
     try:
         with open(path, 'rb') as fh:
@@ -1178,15 +1275,22 @@ def readback(tin, ctx):
     if len(last) > 160:
         last = last[:157] + '...'
     rel = _rel(n, ctx)
+    counts = ('Lines in the saved file: %d table rows (starting with "|"), %d with "Status:", %d with '
+              'typographic quotation marks; its last line is: %s.' % (rows, status, quotes, last or '(empty)'))
+    if fmt:
+        return ('cephalo guard R6: %s is saved as the format-verifier\'s answer, the fallback when it writes no '
+                'report (%s, "The format-verifier writes its report itself"). Read it back with the Read tool '
+                'and compare it with the answer. %s If it differs, tell the user: the guard does not let a '
+                'format report be written over.' % (rel, report_definition(ctx), counts))
     msg = ('cephalo guard R5: %s is saved. Now read it back with the Read tool and compare it with the '
            'agent\'s answer, as %s says ("Save every source-verifier report as a file"; the Write tool\'s note '
-           'that you need not read it back does not apply here). Lines in the saved file: %d table rows (starting with "|"), %d with "Status:", %d with '
-           'typographic quotation marks; its last line is: %s. If any of this differs from '
-           'the answer, write the file again with the answer unchanged; only an absolute path becomes '
-           'project-relative.') % (rel, report_definition(ctx), rows, status, quotes, last or '(empty)')
+           'that you need not read it back does not apply here). %s If any of this differs from the answer, '
+           'write the file again with the Write tool, the answer unchanged; only an absolute path becomes '
+           'project-relative.') % (rel, report_definition(ctx), counts)
     absolute = [x for x in {ctx.project_raw, ctx.project_raw.replace('\\', '/'), ctx.home_raw} if len(x) > 3]
     if any(x in text for x in absolute):
-        msg += ' It still contains an absolute path of this machine: make it project-relative.'
+        msg += (' It still contains an absolute path of this machine: write the file again with the Write tool, '
+                'the path made project-relative (an Edit of the saved report is denied).')
     return msg
 
 
@@ -1350,6 +1454,13 @@ def shell_reason(hits, ctx, cmd=''):
     for rule, detail in hits:
         by.setdefault(rule, []).append(detail)
     out = []
+    setup = [x[6:] for x in by.get('S1', []) if x.startswith('SETUP:')]
+    if setup:
+        out.append('cephalo guard S1: not run. %s is cephalo\'s setup script, outside this project: the user runs '
+                   'it in a terminal (README.md, "Quick start"). Tell the user the command instead.' % setup[0])
+        by['S1'] = [x for x in by['S1'] if not x.startswith('SETUP:')]
+        if not by['S1']:
+            del by['S1']
     if 'S1' in by:
         d = ctx.definition('S1')
         tool_words = 'Write tool' if ctx.agent_type == 'format-verifier' else 'Write or Edit tool'
@@ -1358,9 +1469,9 @@ def shell_reason(hits, ctx, cmd=''):
                % ('; '.join(by['S1'][:3]), d, tool_words, 'Write' if ctx.agent_type == 'format-verifier'
                   else 'Edit or Write'))
         joined = ' '.join(by['S1'])
-        if '.save' in joined:
+        if '.save' in joined and re.search(r'docx|reference', cmd + joined, re.I):
             msg += ' A layout change in the reference document goes through scripts/build_reference_docx.py.'
-        if 'in place' in joined:
+        if 'in place' in joined and ctx.agent_type != 'format-verifier':
             msg += (' For a string that repeats, use Edit with replace_all, one call per file; do not rewrite '
                     'a whole chapter with Write.')
         msg += (" Running one of cephalo's scripts and redirecting its output is fine. If the tool cannot make "
@@ -1434,7 +1545,7 @@ def evaluate(data, env=None):
         return note('hook input not understood (tool_input of %s)' % tool, data, env)
     ctx = Ctx(data, env)
     if event == 'PostToolUse':
-        if tool != 'Write' or not ctx.enabled('R5'):
+        if tool != 'Write':
             return None
         msg = readback(tin, ctx)
         return {'decision': 'block', 'reason': msg} if msg else None

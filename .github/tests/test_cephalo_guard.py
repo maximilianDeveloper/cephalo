@@ -747,7 +747,11 @@ class TestSettingsCommand(Base):
 
     def test_missing_script_or_python_passes_silently(self):
         self.assertEqual(self.sh(self.project('noscript', with_script=False)), (0, ''))
-        self.assertEqual(self.sh(self.project('nopython'), path='/nonexistent'), (0, ''))
+        # no Python, but sh is there: the wrapper itself runs and stays silent
+        onlysh = os.path.join(self.top, 'onlysh')
+        os.makedirs(onlysh)
+        os.symlink('/bin/sh', os.path.join(onlysh, 'sh'))
+        self.assertEqual(self.sh(self.project('nopython'), path=onlysh), (0, ''))
         self.assertEqual(self.sh(None), (0, ''))                     # no variable, no scripts/ in cwd
         code, out = self.sh(None, cwd=self.project('cwdonly'))        # no variable: the cwd is the project
         self.assertIn('deny', out)
@@ -1025,10 +1029,163 @@ class TestPrescribedCommands(Base):
             cmd = re.sub(r'<[^<>\n]+>', 'x', cmd)              # placeholders such as <chapter file>
             for agent in (None, 'format-verifier'):
                 with self.subTest(file=name, cmd=cmd[:70], agent=agent):
-                    hit = rules_of(bash(cmd, agent=agent)) & {'S1', 'S2', 'S5'}
-                    self.assertFalse(hit, '%s: %s' % (name, cmd))
+                    self.assertFalse(rules_of(bash(cmd, agent=agent)), '%s: %s' % (name, cmd))
+                # on Windows, as the definitions say: py in place of python3
+                wcmd = re.sub(r'\bpython3\b', 'py', cmd)
+                with self.subTest(file=name, cmd=wcmd[:70], agent=agent, plat='windows'):
+                    self.assertFalse(rules_of(bash(wcmd, agent=agent, plat='windows')), '%s: %s' % (name, wcmd))
             seen += 1
         self.assertGreater(seen, 100)
+
+
+class TestReviewFindings(Base):
+    """Cases from the review of the guard before 1.4.0: false hits it must not
+    make, and ways around S1, S5 and R5 it must close."""
+
+    def setUp(self):
+        self.root = tempfile.mkdtemp(prefix='guard-review-')
+        for d in ('scripts', '_scratch/orchestrator', '.claude', 'workspace/output/verification'):
+            os.makedirs(os.path.join(self.root, d))
+
+    def tearDown(self):
+        shutil.rmtree(self.root)
+
+    def put(self, rel, text):
+        p = os.path.join(self.root, rel)
+        Path(p).write_text(text, encoding='utf-8')
+        return p
+
+    def b(self, cmd, **kw):
+        return bash(cmd, root=self.root, cwd=self.root, **kw)
+
+    def test_read_only_python_passes(self):
+        for cmd in ('py -c "from pathlib import Path; print(sum(len(p.read_text(encoding=\'utf-8\').replace(\'\\n\', \' \')'
+                    '.split()) for p in Path(\'.\').glob(\'workspace/output/chapters/*.md\')))"',
+                    'py -c "t = open(\'ch.md\').read(); print(t.replace(\'~\', \' \').count(\'.\'))"',
+                    'py -c "import os; n=sum(1 for _ in os.walk(\'.\')); open(\'_scratch/orchestrator/n.txt\',\'w\').write(str(n))"'):
+            for plat in ('posix', 'windows'):
+                with self.subTest(cmd=cmd[:60], plat=plat):
+                    self.passes(bash(cmd, plat=plat))
+        for cmd in ('py -c "import shutil; shutil.rmtree(\'.claude\')"', 'py -c "import shutil; shutil.rmtree(\'.\')"',
+                    'py -c "from pathlib import Path; Path(\'.claude\').rename(\'x\')"'):
+            with self.subTest(cmd=cmd):
+                self.assertIn('S5', rules_of(bash(cmd)))
+
+    def test_copy_into_claude_folder_denied(self):
+        for cmd in ('cp _scratch/orchestrator/settings.local.json .claude/', 'cp _scratch/orchestrator/settings.local.json .claude',
+                    'mv _scratch/orchestrator/settings.local.json .claude/', 'cp -t .claude _scratch/orchestrator/settings.local.json',
+                    'cp _scratch/orchestrator/settings.json ~/.claude/'):
+            with self.subTest(cmd=cmd):
+                self.assertIn('S5', rules_of(bash(cmd)))
+        for cmd in ('Copy-Item _scratch\\orchestrator\\settings.local.json .claude\\',
+                    'Copy-Item -Path _scratch\\orchestrator\\settings.local.json -Destination .claude'):
+            with self.subTest(cmd=cmd):
+                self.assertIn('S5', rules_of(ps(cmd)))
+        self.passes(bash('cp paper.pdf workspace/sources/'))
+        self.passes(ps('Copy-Item a.pdf workspace\\sources\\'))
+
+    def test_find_delete(self):
+        for cmd in ('find . -name .DS_Store -delete', 'find . -name __pycache__ -type d -exec rm -rf {} +'):
+            with self.subTest(cmd=cmd):
+                self.passes(bash(cmd))
+        for cmd in ('find . -name settings.local.json -delete', 'find . -name cephalo_guard.py -delete',
+                    'find . -name .claude -exec rm -rf {} +', 'find . -name "*.json" -delete',
+                    'find . -path "./_scratch/*" -delete', 'find . -delete'):
+            with self.subTest(cmd=cmd):
+                self.assertIn('S5', rules_of(bash(cmd)))
+        reason = bash('find . -delete')['hookSpecificOutput']['permissionDecisionReason']
+        self.assertIn('a folder that holds', reason)
+
+    def test_format_report_fallback_readback(self):
+        rep = self.put('workspace/output/verification/document_format_round_1.md', '| a |\nStatus: x\n')
+        out = run('Write', {'file_path': rep, 'content': 'x'}, event='PostToolUse', root=self.root)
+        self.assertIn('cephalo guard R6', out['reason'])
+        self.assertIn('tell the user', out['reason'])
+        self.assertNotIn('write the file again', out['reason'])
+
+    def test_r5_absolute_path_names_write(self):
+        rep = self.put('workspace/output/verification/ch_1_round_1.md', 'Quelle: %s/workspace/sources/a.pdf\n' % self.root)
+        out = run('Write', {'file_path': rep, 'content': 'x'}, event='PostToolUse', root=self.root)
+        self.assertIn('write the file again with the Write tool, the path made project-relative', out['reason'])
+
+    def test_git_and_patches(self):
+        for cmd in ('git rm scripts/cephalo_guard.py', 'git mv scripts/cephalo_guard.sh scripts/off.sh',
+                    'git checkout HEAD~1 -- scripts/cephalo_guard.py', 'git restore --source HEAD~3 scripts/'):
+            with self.subTest(cmd=cmd):
+                self.assertIn('S5', rules_of(self.b(cmd)))
+        for cmd in ('git checkout main', 'git rm --cached notes.md', 'git status', 'git apply --check x.patch'):
+            with self.subTest(cmd=cmd):
+                self.passes(self.b(cmd))
+        self.put('_scratch/orchestrator/ch.patch', '--- a/workspace/state.md\n+++ b/workspace/state.md\n@@ -1 +1 @@\n-a\n+b\n')
+        self.put('_scratch/orchestrator/guard.patch', '--- a/scripts/cephalo_guard.py\n+++ b/scripts/cephalo_guard.py\n')
+        for cmd in ('git apply _scratch/orchestrator/ch.patch', 'patch -p1 < _scratch/orchestrator/ch.patch',
+                    'patch -p1 -i _scratch/orchestrator/ch.patch'):
+            with self.subTest(cmd=cmd):
+                self.assertIn('S1', rules_of(self.b(cmd)))
+        self.assertIn('S5', rules_of(self.b('git apply _scratch/orchestrator/guard.patch')))
+
+    def test_saved_scripts_run_other_ways(self):
+        self.put('_scratch/orchestrator/fix.sh', "sed -i 's/a/b/' workspace/output/chapters/ch_1.md\n")
+        self.put('_scratch/orchestrator/fix.py', "from pathlib import Path\nPath('workspace/state.md').write_text('x')\n")
+        self.put('_scratch/orchestrator/fix.ps1', 'Set-Content -Path workspace/state.md -Value x\n')
+        for cmd in ('source _scratch/orchestrator/fix.sh', '. _scratch/orchestrator/fix.sh',
+                    'bash < _scratch/orchestrator/fix.sh', 'sh -s < _scratch/orchestrator/fix.sh',
+                    'cat _scratch/orchestrator/fix.sh | bash',
+                    'py -c "import runpy; runpy.run_path(\'_scratch/orchestrator/fix.py\')"',
+                    'py -m runpy _scratch/orchestrator/fix.py',
+                    'powershell -ExecutionPolicy Bypass -File _scratch/orchestrator/fix.ps1'):
+            with self.subTest(cmd=cmd):
+                self.assertIn('S1', rules_of(self.b(cmd)))
+        for cmd in ('& .\\_scratch\\orchestrator\\fix.ps1', '.\\_scratch\\orchestrator\\fix.ps1'):
+            with self.subTest(cmd=cmd):
+                self.assertIn('S1', rules_of(ps(cmd, plat='posix', root=self.root, cwd=self.root)))
+        self.passes(self.b('. .venv/bin/activate'))
+
+    def test_many_unterminated_heredoc_markers_fast(self):
+        import time
+        t = time.perf_counter()
+        self.passes(bash('py -c "' + '\n'.join('x%d = 1 << k' % i for i in range(3000)) + '"'))
+        self.assertLess(time.perf_counter() - t, 2.0)
+        self.assertIn('S1', rules_of(bash('echo "a << k"\ncat <<EOF > workspace/state.md\ntext\nEOF')))
+
+    def test_cd_in_subshell_and_back(self):
+        self.passes(bash('(cd ~/Downloads && ls) && cp paper.pdf workspace/sources/'))
+        self.passes(bash('cd workspace/output && ls && cd - && pandoc a.md -o workspace/output/b.docx'))
+        self.assertIn('S2', rules_of(bash('(cd /tmp && touch x)')))
+
+    def test_setup_outside_project(self):
+        tpl = tempfile.mkdtemp(prefix='guard-template-')
+        Path(tpl, 'setup.sh').write_text('echo x > "$dest"\n', encoding='utf-8')
+        out = self.b('bash %s/setup.sh "Seminar paper" Flat full --target %s' % (tpl, self.root))
+        reason = out['hookSpecificOutput']['permissionDecisionReason']
+        self.assertIn("cephalo's setup script", reason)
+        self.assertNotIn('Edit or Write', reason)
+        self.passes(self.b('bash setup.sh --help'))       # the project's own setup
+        shutil.rmtree(tpl)
+
+    def test_sibling_sub_project(self):
+        top = tempfile.mkdtemp(prefix='guard-multi6-')
+        for d in ('00_Shared_Materials', '01_Proposal', '02_Main_Work/.claude'):
+            os.makedirs(os.path.join(top, d))
+        sub = os.path.join(top, '01_Proposal')
+        for cmd in ('rm -rf ../02_Main_Work/.claude', 'mv ../02_Main_Work/.claude ../02_Main_Work/off',
+                    'rm -rf ../02_Main_Work'):
+            with self.subTest(cmd=cmd):
+                self.assertIn('S5', rules_of(bash(cmd, root=sub, cwd=sub)))
+        self.passes(bash('rm -rf ../02_Main_Work/_scratch', root=sub, cwd=sub))
+        shutil.rmtree(top)
+
+    def test_scratch_zip_and_outside_scratch(self):
+        self.passes(bash('py -c "import zipfile; zipfile.ZipFile(\'_scratch/format-verifier/noabbr.docx\', \'w\').close()"',
+                         agent='format-verifier'))
+        self.assertIn('S1', rules_of(bash('py -c "import zipfile; zipfile.ZipFile(\'workspace/output/document.docx\', \'w\')"')))
+        self.assertIn('S1', rules_of(bash('py -c "open(\'/var/tmp/_scratch/x.txt\', \'w\').write(\'a\')"')))
+
+    def test_format_verifier_message(self):
+        out = bash("sed -i 's/a/b/' workspace/output/verification/document_format_round_1.md", agent='format-verifier')
+        reason = out['hookSpecificOutput']['permissionDecisionReason']
+        self.assertNotIn('Edit with replace_all', reason)
+        self.assertIn('Make the change with Write', reason)
 
 
 if __name__ == '__main__':
