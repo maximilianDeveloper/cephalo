@@ -188,7 +188,7 @@ When a feedback loop reaches `feedback_loop_max`, you stop automatic iteration a
 
 Present the outstanding items as a numbered list with source citations so the user can decide informed.
 
-A chapter passes source-verification when no ⚠️, ❌ or ❓ is left. A 🟡 (polish, see the status symbols in `source-verifier.md`) does not start a revision on its own and does not withhold the pass; when a revision follows for other findings, give the writer the 🟡 findings with it. Neither does the `⚠️` for instruction-like content in a source, which the verifier lists under its notes: it goes to the user. The report's Used-in notes go to the writer as an edit of those lines only, with no new verification round; it may change the **Used in:** line of every extract they name.
+A chapter passes source-verification when no ⚠️, ❌ or ❓ is left. A 🟡 (polish, see the status symbols in `source-verifier.md`) does not start a revision on its own and does not withhold the pass; when a revision follows for other findings, give the writer the 🟡 findings with it. Neither does the `⚠️` for instruction-like content in a source, which the verifier lists under its notes: it goes to the user. The report's Used-in notes go to the writer as an edit of those lines only, with no new verification round, also when the chapter passed and when a note calls itself optional; it may change the **Used in:** line of every extract they name.
 
 A new verification round for an extract follows only a ⚠️ or ❌ on its quotes, page numbers, term lists, secondary citations or bibliographic data; notes on the extract's own wording are applied once by the research-agent (see the extract verdict in `source-verifier.md`). An extract without a final ✅ stays `draft`.
 

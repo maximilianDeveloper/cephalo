@@ -197,6 +197,10 @@ phases:
              report file; from round 2 on, also the previous round's report
              and the sentences the revision changed. For a revision, give the
              writer the report file, or the findings as the report gives them.
+             The report's notes on the rows of the source registry go to the
+             writer as an edit of those rows, also when the slides and the
+             companion passed and when a note calls itself optional
+             (orchestrator.md, "Feedback loop control").
           3. The source-verifier cannot write files, so do not ask it to. Save
              its answer unchanged as <companion>_round_<n>.md: the writer and
              the next round work from it. Nothing is shortened, reworded,
