@@ -92,8 +92,11 @@ main_session:
     No orchestrator runs this workflow: Claude in the main chat coordinates
     it, and the user decides. At the start of every chat, read this file,
     workspace/state.md and styleguide.md (once steps 0.0 and 0.5 have
-    created them) and the sections of the definition named above. Where
-    they say "you" or "the orchestrator", they mean Claude in the main chat.
+    created them) and the sections of the definition named above, each
+    whole and with the Read tool: a Grep result leaves out every line over
+    about 500 characters, and most rules stand on such lines ("Principles",
+    "Read a rule with the Read tool"). Where they say "you" or "the
+    orchestrator", they mean Claude in the main chat.
     The rest of the definition does not apply, except where a step below
     points to it: no research-agent, no extracts, no Phase A and B.
     - The agents do the steps that name them. Never do their work yourself:
@@ -216,14 +219,19 @@ phases:
         Claude in the main chat runs this step (main_session), with the user
         for the answers and the steps in Word. The writer-agent writes the
         reference list and the format-verifier checks the export; Claude does
-        not check formats itself and writes no format report.
+        not check formats itself and writes no format report. As in every
+        chat, read the sections that main_session names before item 1, and
+        .claude/agents/style-resolver.md, "Recording answers to open
+        questions", each whole and with the Read tool: the items below rest
+        on them.
       task: |
         1. Open questions first, before the first export: every open ❓ [format]
            entry of styleguide.md, and every styleguide question under the open
            issues of workspace/state.md, answered (usually with the supervisor)
            and recorded as .claude/agents/style-resolver.md describes
-           ("Recording answers to open questions"), read in this chat. One that
-           comes up later in F.1 is asked too, not filled with a placeholder.
+           ("Recording answers to open questions"), read before item 1. One
+           that comes up later in F.1 is asked too, not filled with a
+           placeholder.
         2. Without citekeys, the writer-agent writes the reference list
            (docs/reference_management.md, "The reference list").
         3. Consistency check, before the export: the source-verifier checks all
