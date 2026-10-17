@@ -1181,6 +1181,19 @@ class TestReviewFindings(Base):
         self.assertIn('S1', rules_of(bash('py -c "import zipfile; zipfile.ZipFile(\'workspace/output/document.docx\', \'w\')"')))
         self.assertIn('S1', rules_of(bash('py -c "open(\'/var/tmp/_scratch/x.txt\', \'w\').write(\'a\')"')))
 
+    def test_presentation_deck_script(self):
+        deck = "from pptx import Presentation\np = Presentation()\np.save('workspace/output/slides/deck.pptx')\n"
+        os.makedirs(os.path.join(self.root, 'workspace/data/scripts'))
+        os.makedirs(os.path.join(self.root, 'workspace/output/slides'))
+        self.put('workspace/data/scripts/build_deck.py', deck)          # where presentation_3agent.yaml saves it
+        self.put('workspace/output/slides/build_deck.py', deck)
+        for plat, py in (('posix', 'python3'), ('windows', 'py')):
+            with self.subTest(plat=plat):
+                self.passes(bash('%s workspace/data/scripts/build_deck.py' % py, root=self.root, cwd=self.root, plat=plat))
+        out = self.b('python3 workspace/output/slides/build_deck.py')
+        self.assertIn('S1', rules_of(out))
+        self.assertNotIn('build_reference_docx', out['hookSpecificOutput']['permissionDecisionReason'])
+
     def test_format_verifier_message(self):
         out = bash("sed -i 's/a/b/' workspace/output/verification/document_format_round_1.md", agent='format-verifier')
         reason = out['hookSpecificOutput']['permissionDecisionReason']

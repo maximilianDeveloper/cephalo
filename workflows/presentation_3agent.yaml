@@ -161,7 +161,7 @@ phases:
           workspace/output/slides/; it cannot build a PPTX. Before step 3,
           workspace/output/slides/<deck>.pptx is built from them, as the user
           decides: by the user in PowerPoint, or by Claude in the main chat
-          with a python-pptx script it saves in workspace/output/slides/ and
+          with a python-pptx script it saves in workspace/data/scripts/ and
           runs (pptx_notes below; without python-pptx, ask the user). Either
           way the deck keeps the writer's wording unchanged and takes its
           layout from the institution's slide template, if the guidelines
