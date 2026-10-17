@@ -272,7 +272,7 @@ function Install-GuardSettings([string]$Dir) {
     if ($Dir -eq ".") { $Rel = ".claude\settings.json" } else { $Rel = "$Dir\.claude\settings.json" }
     $Dest = Resolve-ProjectPath $Rel
     if ([System.IO.File]::Exists($Dest)) {
-        if ([System.IO.File]::ReadAllText($Dest) -match 'cephalo_guard') {
+        if ([System.IO.File]::ReadAllText($Dest) -cmatch 'cephalo_guard') {
             Write-Host "  . $Rel (exists, kept)" -ForegroundColor Gray
         } else {
             Write-Host "  . $Rel (exists, kept: it does not run the cephalo guard)" -ForegroundColor Yellow
