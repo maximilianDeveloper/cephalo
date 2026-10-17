@@ -1630,7 +1630,7 @@ jobs:
             'Stadtgrün kühlt die Straßen, ein long-term effect [@keller2018, S. 44].[^1]' 'Es senkt die Temperatur (Keller 2018, S. 45).' '' \
             '> Bäume kühlen ihre Umgebung durch Verdunstung.' '' '[^1]: Gemessen im Sommer.' '' '# Literaturverzeichnis' '' \
             '::: {custom-style="Bibliography"}' 'Keller, Anna (2018): Stadtklima. Berlin: Verlag.' ':::' > "$V/words.md"
-          W='Words: 26 (as written, headings, block quotes and footnotes included; YAML header, HTML comments, citekeys, footnote marks and the bibliography not counted)'
+          W='Words: 26 (as written, headings, block quotes and footnotes included; YAML header, HTML comments, raw blocks, citekeys, footnote marks and the bibliography not counted)'
           expect 0 python scripts/verbatim_check.py --words "$V/words.md"
           grep -qxF "$W" "$V/out.txt"
           test "$(wc -l < "$V/out.txt")" -eq 1
@@ -1645,7 +1645,7 @@ jobs:
           # (2 + 4 + 1 + 4 + 10 words): the line says so instead of naming the bibliography
           printf '%s\n' '# 4 Fazit' '' 'Stadtgrün kühlt die Straßen.' '' '# Literatur' '' 'Keller, Anna (2018): Stadtklima.' '' 'Müller, Hans: Grün in der Stadt. Ein Handbuch für Planer.' > "$V/words_nobib.md"
           expect 0 python scripts/verbatim_check.py --words "$V/words_nobib.md"
-          grep -qxF 'Words: 21 (as written, headings, block quotes and footnotes included; YAML header, HTML comments, citekeys and footnote marks not counted; no bibliography recognized: a reference list in the file counts)' "$V/out.txt"
+          grep -qxF 'Words: 21 (as written, headings, block quotes and footnotes included; YAML header, HTML comments, raw blocks, citekeys and footnote marks not counted; no bibliography recognized: a reference list in the file counts)' "$V/out.txt"
           python -c "import sys; from docx import Document; d = Document(); d.add_heading('2 Grundlagen', 1); d.add_paragraph('Ein long-term Satz.'); d.add_paragraph('Bäume kühlen ihre Umgebung.', style='Quote'); d.add_heading('Literatur', 1); d.add_paragraph('Keller, A. (2018): Stadtklima.'); d.save(sys.argv[1])" "$V/words.docx"
           expect 0 python scripts/verbatim_check.py --words "$V/words.docx"
           grep -qxF 'Words: 9 (as written, headings and block quotes included; tables, footnotes, text boxes and the bibliography not counted)' "$V/out.txt"

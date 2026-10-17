@@ -56,8 +56,9 @@ digit (a hyphenated compound is one word), headings and block quotes
 included. In Markdown, footnotes count too; the YAML front matter, HTML
 comments, raw blocks for the export (```{=openxml}), Pandoc citekeys (the
 whole bracket, [@key, p. 5]: Pandoc writes the citation only at the
-export), footnote marks and the bibliography do not (the line says when it recognized none), while author-year citations
-written into the text do. A Word chapter counts its body paragraphs,
+export), footnote marks and the bibliography do not (the line says when
+it recognized none), while author-year citations written into the text
+do. A Word chapter counts its body paragraphs,
 without tables, footnotes, text boxes and the bibliography. --words prints
 only that line and needs no sources.
 
@@ -434,7 +435,7 @@ def word_count(chapter: Chapter) -> str:
         kept, left = "headings and block quotes", ["tables", "footnotes", "text boxes"]
     else:
         kept, left = ("headings, block quotes and footnotes",
-                      ["YAML header", "HTML comments", "citekeys", "footnote marks"])
+                      ["YAML header", "HTML comments", "raw blocks", "citekeys", "footnote marks"])
     if chapter.bibliography:
         left.append("the bibliography")
     what = f"{kept} included; {', '.join(left[:-1])} and {left[-1]} not counted"
