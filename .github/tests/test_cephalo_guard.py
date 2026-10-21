@@ -1474,12 +1474,14 @@ class TestNoNetworkOrDeviceAccess(Base):
                                                       'windows', event=event))
 
     def test_devices_and_pseudo_files_are_not_opened(self):
-        for cmd in ('py COM1', 'cat COM1 | py -', 'py aux.py', 'py -c "exec(open(\'LPT1\').read())"'):
+        for cmd in ('py COM1', 'cat COM1 | py -', 'py aux.py', 'py -c "exec(open(\'LPT1\').read())"',
+                    'py COM1:', 'sh COM0', 'py LPT0.py', 'py COM\u00b9'):
+            with self.subTest(cmd=ascii(cmd)):
+                self.assert_untouched(lambda: bash(cmd, plat='windows'), '/com', '/aux', '/lpt')
+        for cmd in ('cat /proc/kmsg | py -', 'py /proc/self/fd/0', 'sh /sys/kernel/tracing/trace_pipe',
+                    'cat /dev/watchdog | python3 -', 'python3 /dev/sda1', 'sh /dev/ttyS0', 'git apply /dev/st0'):
             with self.subTest(cmd=cmd):
-                self.assert_untouched(lambda: bash(cmd, plat='windows'), '/com1', '/aux', '/lpt1')
-        for cmd in ('cat /proc/kmsg | py -', 'py /proc/self/fd/0', 'sh /sys/kernel/tracing/trace_pipe'):
-            with self.subTest(cmd=cmd):
-                self.assert_untouched(lambda: bash(cmd), '/sys/')
+                self.assert_untouched(lambda: bash(cmd), '/sys/', '/dev/')
 
     def test_a_project_on_a_share_is_still_checked(self):
         root = '//server/home/u/proj'
