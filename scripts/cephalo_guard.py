@@ -807,8 +807,9 @@ def _fs_ok(n, ctx):
     s = n.replace('\\', '/').lower()
     if s.startswith('//') or s.startswith('/net/'):      # UNC, //?/ , //./ , WebDAV, automount
         return inside(n, ctx.root) or bool(ctx.claude_home and inside(n, ctx.claude_home))
-    if any(s == x or s.startswith(x + '/') for x in ('/proc', '/sys', '/dev')):
-        return False                                     # pseudo-files and devices: opening one can block or act
+    for x in ('/proc', '/sys', '/dev'):
+        if s == x or s.startswith(x + '/'):              # pseudo-files and devices: opening one can block or act,
+            return ctx.root.startswith(x + '/') and inside(n, ctx.root)   # but not a project there (/dev/shm)
     if ctx.windows and _DEVNAME.fullmatch(s.rsplit('/', 1)[-1].split('.', 1)[0].rstrip(': ')):
         return False                                     # COM1.., AUX, PRN resolve to a device in any dir
     return True

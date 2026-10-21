@@ -168,6 +168,8 @@ class TestS1ShellWrites(Base):
         'printf x | tee -a workspace/state.md > /dev/null',
         '(echo a; echo b) > f.md',
         '{ echo a; echo b; } > f.md',
+        '{ echo a; ls; } > f.md',
+        '( printf x; ls ) > f.md',
         'cat <<< "text" > f.md',
         # in-place editors and stream-editor rewrites
         "sed -i 's/S\\. /S.\\\\ /g' workspace/output/chapters/ch_1.md",
@@ -1540,6 +1542,28 @@ class TestNoNetworkOrDeviceAccess(Base):
                     self.assert_untouched(lambda: run('Write', {'file_path': unc + name, 'content': 'x\n'},
                                                       'windows', event=event))
 
+    def test_device_names_only_as_whole_names(self):
+        # on Windows a name is a device only as a whole (before its extension): a script whose name
+        # only starts like one is read as any other
+        root = tempfile.mkdtemp(prefix='guard-devnames-')
+        os.makedirs(os.path.join(root, '_scratch', 'orchestrator'))
+        for name in ('console.py', 'aux_data.py', 'contents.py', 'nullify.py', 'prn_fix.py', 'com10.py'):
+            with self.subTest(name=name):
+                Path(root, '_scratch', 'orchestrator', name).write_text(
+                    "open('workspace/output/chapters/ch_1.md', 'w').write('x')\n", encoding='utf-8')
+                self.assertIn('S1', rules_of(bash('py _scratch/orchestrator/' + name, plat='windows',
+                                                  root=root, cwd=root)))
+        shutil.rmtree(root)
+        # a folder whose name only starts with /dev is no device folder; a project under /dev/shm
+        # reads its own files, not those beside it
+        ctx = g.Ctx(payload('Bash', {'command': 'x'}, cwd='/dev/shm/proj'), env(root='/dev/shm/proj'))
+        self.assertTrue(g._fs_ok('/devel/proj/x.py', ctx))
+        self.assertTrue(g._fs_ok('/dev/shm/proj/_scratch/x.sh', ctx))
+        for n in ('/dev/shm/other/x.sh', '/dev/sda', '/dev', '/proc/self/fd/0'):
+            self.assertFalse(g._fs_ok(n, ctx), n)
+        ctx = g.Ctx(payload('Bash', {'command': 'x'}), env())
+        self.assertFalse(g._fs_ok('/dev/shm/proj/_scratch/x.sh', ctx))
+
     def test_devices_and_pseudo_files_are_not_opened(self):
         for cmd in ('py COM1', 'cat COM1 | py -', 'py aux.py', 'py -c "exec(open(\'LPT1\').read())"',
                     'py COM1:', 'sh COM0', 'py LPT0.py', 'py COM\u00b9'):
@@ -1669,6 +1693,23 @@ class TestWorkLimits(Base):
             g._PY_MOVES = orig
         self.passes(out)
         self.assertLessEqual(len(calls), 2)
+
+    def test_long_loops_tick_the_deadline(self):
+        # the loops over a command's pipelines and over a program's strings check the time as they go
+        ticks, orig = [], g.Budget.tick
+        g.Budget.tick = lambda b: ticks.append(1) or orig(b)
+        try:
+            self.call('Bash', {'command': 'true; ' * 2560}, 'lim-4')
+            pipes = len(ticks)
+            del ticks[:]
+            self.put('_scratch/many.py', "open('_scratch/out.txt', 'w')\nx = [%s]\n"
+                     % ', '.join("'s%d'" % i for i in range(10240)))
+            self.call('Bash', {'command': 'python3 _scratch/many.py'}, 'lim-5')
+            strings = len(ticks)
+        finally:
+            g.Budget.tick = orig
+        self.assertGreaterEqual(pipes, 2 * 2560 // 256)           # segments and pipelines, every 256 each
+        self.assertGreaterEqual(strings, 10240 // 1024)           # strings, every 1024
 
     def test_unclosed_heredocs_and_long_pipelines_are_linear(self):
         import time
