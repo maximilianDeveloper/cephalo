@@ -724,9 +724,34 @@ def _substitutions(s):
     return out
 
 
-def _read_small(path, limit=262144):
+_DEVNAME = re.compile(r'com[1-9]|lpt[1-9]|con|nul|prn|aux', re.I)
+
+
+def _fs_ok(n, ctx):
+    """False when a filesystem call on the normalized path n would reach the
+    network (a UNC or WebDAV share, a macOS /net automount), a Windows device or
+    pipe namespace or a reserved device name, or a kernel pseudo-file whose read
+    can block (procfs, sysfs).  Callers then skip the stat/open and let the call
+    pass unchecked (fail open), so no slip is turned into an allow.  A network
+    path inside the project's own root is kept, so a thesis on a UNC home share
+    is still checked.  Pure string test: it never touches the filesystem, so it
+    runs before os.path.isfile/exists (which would themselves open the share or
+    device) and before any read that could hang."""
+    if not n or n in (DEVICE, TEMPVAR):
+        return False
+    s = n.replace('\\', '/').lower()
+    if s.startswith('//') or s.startswith('/net/'):      # UNC, //?/ , //./ , WebDAV, automount
+        return inside(n, ctx.root) or bool(ctx.claude_home and inside(n, ctx.claude_home))
+    if s == '/proc' or s == '/sys' or s.startswith('/proc/') or s.startswith('/sys/'):
+        return False                                     # pseudo-files: a read can block with no timeout
+    if ctx.windows and _DEVNAME.fullmatch(s.rsplit('/', 1)[-1].split('.', 1)[0]):
+        return False                                     # COM1.., AUX, PRN resolve to a device in any dir
+    return True
+
+
+def _read_small(path, ctx, limit=262144):
     try:
-        if not os.path.isfile(path):                 # not a FIFO or a device: never block the hook
+        if not _fs_ok(path, ctx) or not os.path.isfile(path):  # not UNC/device/pseudo; not a FIFO
             return None
         with open(path, 'rb') as fh:
             return fh.read(limit).decode('utf-8', 'replace')
@@ -860,12 +885,12 @@ def check_shell(cmd, tool, ctx, depth=0, pre=None):
                                      re.findall(r'__HD(\d+)__', val) if int(k) < len(bodies)}.values())
                 code = re.sub(r'\$\{?([A-Za-z_]\w*)\}?', lambda mm: assigns.get(mm.group(1), mm.group(0)), code)
                 for f in re.findall(r"""exec\s*\(\s*open\s*\(\s*['"]([^'"]+)['"]""", code):
-                    code += '\n' + (_read_small(norm_path(f, ctx, bases[si]) or f) or '')
+                    code += '\n' + (_read_small(norm_path(f, ctx, bases[si]) or '', ctx) or '')
                 for f in re.findall(r"""\brun_path\s*\(\s*r?['"]([^'"]+)['"]""", code):
                     hits += _script_hits(f, 'py', ctx, bases[si], depth)
             elif mode == 'stdin':
                 parts = [bodies[k] for k in seg.heredocs if k < len(bodies)] + seg.herestrings
-                parts += [_read_small(norm_path(t, ctx, bases[si]) or '') or '' for fd, op, t in seg.redirs
+                parts += [_read_small(norm_path(t, ctx, bases[si]) or '', ctx) or '' for fd, op, t in seg.redirs
                           if op == '<' and fd in (None, '0')]
                 if pseg is not None:
                     parts += [bodies[k] for k in pseg.heredocs if k < len(bodies)] + pseg.herestrings
@@ -873,7 +898,7 @@ def check_shell(cmd, tool, ctx, depth=0, pre=None):
                     if pc in ('echo', 'printf'):
                         parts += pargs                       # echo "program" | python3
                     elif pc == 'cat':
-                        parts += [_read_small(norm_path(a, ctx, bases[si]) or '') or ''
+                        parts += [_read_small(norm_path(a, ctx, bases[si]) or '', ctx) or ''
                                   for a in pargs if not a.startswith('-')]
                 code = '\n'.join(parts)
             what = py_write(code, ctx, bases[si]) if code else None
@@ -914,7 +939,7 @@ def check_shell(cmd, tool, ctx, depth=0, pre=None):
                 pfiles = [args[k + 1] for k, a in enumerate(args) if a in ('-i', '--input') and k + 1 < len(args)]
                 pfiles += [t for fd, op, t in seg.redirs if op == '<' and fd in (None, '0')]
             for pf in pfiles:
-                body = _read_small(norm_path(pf, ctx, bases[si]) or '')
+                body = _read_small(norm_path(pf, ctx, bases[si]) or '', ctx)
                 if body is None:
                     continue
                 hits.append(('S1', '%s with the saved patch %s' % ('git apply' if c == 'git' else c, pf)))
@@ -1183,7 +1208,7 @@ def _script_hits(path, kind, ctx, base, depth):
         return []
     if base_name(path) in ('setup.sh', 'setup.ps1'):
         return [('S1', 'SETUP:%s' % path)]          # cephalo's setup, outside this project
-    body = _read_small(n)
+    body = _read_small(n, ctx)
     if not body:
         return []
     hits = []
@@ -1232,7 +1257,7 @@ def check_file_write(tool, tin, ctx):
     if ctx.coordinator and _FORMAT_REPORT.search(n):
         if tool != 'Write':
             hits.append(('R6', 'an Edit of the format report %s' % _rel(n, ctx)))
-        elif os.path.exists(path):
+        elif _fs_ok(n, ctx) and os.path.exists(n):
             hits.append(('R6', 'a Write over the existing format report %s' % _rel(n, ctx)))
     elif ctx.coordinator and tool in ('Edit', 'MultiEdit') and _VERIFIER_REPORT.search(n):
         hits.append(('R5', 'an Edit of the saved report %s' % _rel(n, ctx)))
@@ -1260,10 +1285,10 @@ def readback(tin, ctx):
         return None
     if not ctx.enabled('R6' if fmt else 'R5'):
         return None
-    try:
-        with open(path, 'rb') as fh:
-            text = fh.read().decode('utf-8', 'replace')
-    except OSError:
+    body = _read_small(n, ctx, limit=1 << 20)        # gate UNC/device/pseudo; also caps the read
+    if body is not None:
+        text = body
+    else:
         text = tin.get('content') if isinstance(tin.get('content'), str) else ''
     lines = text.replace('\r\n', '\n').split('\n')
     while lines and not lines[-1].strip():
