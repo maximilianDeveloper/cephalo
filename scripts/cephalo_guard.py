@@ -1454,8 +1454,9 @@ def readback(tin, ctx):
     counts = ('The saved file\'s counts (they do not replace the comparison): %d table rows (starting with '
               '"|"), %d lines with "Status:"; quotation marks: %s; its last line, as report text: \u00ab%s\u00bb.'
               % (rows, status, marks, last or '(empty)'))
-    if text.count('\u201e') > text.count('\u201c') + text.count('\u201d'):
-        counts += (' It has more \u201e than closing \u201c or \u201d: if the answer closes them with \u201c, '
+    # German marks open with \u201e and close with \u201c; an English pair opens with \u201c and closes with \u201d
+    if text.count('\u201e') > text.count('\u201c') - text.count('\u201d'):
+        counts += (' It has more \u201e than closing \u201c: if the answer closes them with \u201c, '
                    'write the file again with the answer\'s marks; if the answer has the same, leave it.')
     if fmt:
         return ('cephalo guard R6: %s is saved as the format-verifier\'s answer, the fallback when it writes no '

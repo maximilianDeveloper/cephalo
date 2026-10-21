@@ -495,7 +495,15 @@ class TestReports(Base):
         Path(rep).write_text(text.replace('\u201c', '"'), encoding='utf-8')
         r = run('Write', {'file_path': rep, 'content': 'x'}, event='PostToolUse', root=self.root)['reason']
         self.assertIn('quotation marks: 1 \u201e, 1 ";', r)
-        self.assertIn('more \u201e than closing \u201c or \u201d', r)
+        self.assertIn('more \u201e than closing \u201c', r)
+        # German and English quotations in one report: only a lost German closing mark warns
+        mixed = text + 'Ein \u201eZitat\u201c und ein \u201cquote\u201d.\n'
+        for saved, warns in ((mixed, False), (mixed.replace('\u201c', '"'), True),
+                             (mixed.replace('\u201eZitat\u201c', '\u201eZitat"'), True)):
+            with self.subTest(saved=ascii(saved[-40:])):
+                Path(rep).write_text(saved, encoding='utf-8')
+                r = run('Write', {'file_path': rep, 'content': 'x'}, event='PostToolUse', root=self.root)['reason']
+                self.assertEqual('more \u201e than closing' in r, warns, r)
         Path(rep).write_text(text.replace('\u201e', '').replace('\u201c', ''), encoding='utf-8')
         r = run('Write', {'file_path': rep, 'content': 'x'}, event='PostToolUse', root=self.root)['reason']
         self.assertIn('quotation marks: none;', r)
