@@ -6,6 +6,9 @@
 # the hook's JSON from stdin and prints its answer; this script always exits 0.
 g="${0%/*}/cephalo_guard.py"
 [ -f "$g" ] || exit 0
+# Every rule off (CEPHALO_GUARD_OFF=all): no Python start. Any other value,
+# such as a list of rules, is read by the guard.
+case "${CEPHALO_GUARD_OFF:-}" in [Aa][Ll][Ll]) exit 0 ;; esac
 if [ "$OS" = Windows_NT ] && command -v py >/dev/null 2>&1; then
     py -3 -I -S "$g"
 elif command -v python3 >/dev/null 2>&1; then

@@ -818,6 +818,21 @@ class TestSettingsCommand(Base):
         self.assertEqual(self.sh(None, cwd=self.project('cwdonly')), (0, ''))
         self.assertEqual(self.sh('', cwd=self.project('cwdempty')), (0, ''))
 
+    def test_off_all_starts_no_python(self):
+        fake = os.path.join(self.top, 'logbin')
+        os.makedirs(fake)
+        log = os.path.join(self.top, 'started.log')
+        Path(fake, 'python3').write_text('#!/bin/sh\necho started >> "%s"\nexec "%s" "$@"\n' % (log, sys.executable),
+                                         encoding='ascii')
+        os.chmod(os.path.join(fake, 'python3'), 0o755)
+        d = self.project('offall')
+        for value in ('all', 'ALL'):
+            self.assertEqual(self.sh(d, path=fake + ':/usr/bin:/bin', extra={'CEPHALO_GUARD_OFF': value}), (0, ''))
+        self.assertFalse(os.path.exists(log))
+        code, out = self.sh(d, path=fake + ':/usr/bin:/bin', extra={'CEPHALO_GUARD_OFF': 'S2'})
+        self.assertIn('cephalo guard S1', out)                       # a list of rules: Python reads it
+        self.assertTrue(os.path.exists(log))
+
     def test_crashing_interpreter_passes(self):
         fake = os.path.join(self.top, 'badbin')
         os.makedirs(fake)
