@@ -80,6 +80,42 @@ def ps(cmd, plat='windows', **kw):
     return run('PowerShell', {'command': cmd, 'description': 'x'}, plat, **kw)
 
 
+def check_shape(out):
+    """Every answer of the guard has one of four exact shapes: a deny, a note to
+    the model (additionalContext), a PostToolUse block, a note to the user.  An
+    allow, ask or defer, updatedInput, continue/stopReason, suppressOutput or a
+    legacy decision would skip or change Claude Code's own checks."""
+    if out is None:
+        return
+    keys = set(out)
+    if keys == {'hookSpecificOutput'}:
+        hso = out['hookSpecificOutput']
+        if hso.get('hookEventName') != 'PreToolUse':
+            raise AssertionError('hookEventName: %r' % (out,))
+        if set(hso) == {'hookEventName', 'permissionDecision', 'permissionDecisionReason'}:
+            if hso['permissionDecision'] != 'deny':
+                raise AssertionError('not a deny: %r' % (out,))
+        elif set(hso) != {'hookEventName', 'additionalContext'}:
+            raise AssertionError('hookSpecificOutput keys: %r' % (out,))
+    elif keys == {'decision', 'reason'}:
+        if out['decision'] != 'block':
+            raise AssertionError('decision: %r' % (out,))
+    elif keys != {'systemMessage'}:
+        raise AssertionError('answer keys: %r' % (out,))
+
+
+_evaluate = g.evaluate
+
+
+def _checked_evaluate(*a, **k):
+    out = _evaluate(*a, **k)
+    check_shape(out)
+    return out
+
+
+g.evaluate = _checked_evaluate          # every call in these tests checks the answer's shape
+
+
 def rules_of(out):
     hso = (out or {}).get('hookSpecificOutput') or {}
     if hso.get('permissionDecision') != 'deny':
@@ -695,8 +731,18 @@ class TestRobustness(Base):
     def test_never_allow(self):
         import re
         code = re.sub(r'"""[\s\S]*?"""', '', GUARD.read_text(encoding='utf-8'))   # without docstrings
-        self.assertNotRegex(code, r'[\'"](?:allow|ask)[\'"]')
+        self.assertNotRegex(code, r'[\'"](?:allow|ask|defer|approve|updatedInput|continue|stopReason|'
+                                  r'suppressOutput)[\'"]')
         self.assertNotRegex(code, r'exit\(\s*[12]\s*\)')
+        for bad in ({'hookSpecificOutput': {'hookEventName': 'PreToolUse', 'permissionDecision': 'allow',
+                                            'permissionDecisionReason': 'x'}},
+                    {'hookSpecificOutput': {'hookEventName': 'PreToolUse', 'permissionDecision': 'deny',
+                                            'permissionDecisionReason': 'x', 'updatedInput': {'command': 'true'}}},
+                    {'hookSpecificOutput': {'hookEventName': 'PreToolUse', 'additionalContext': 'x'},
+                     'continue': False, 'stopReason': 'x'},
+                    {'decision': 'approve', 'reason': 'x'}, {'systemMessage': 'x', 'suppressOutput': True}):
+            with self.subTest(bad=bad):
+                self.assertRaises(AssertionError, check_shape, bad)
 
 
 class TestSettingsCommand(Base):
