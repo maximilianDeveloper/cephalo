@@ -105,7 +105,10 @@ main_session:
       missing, tell the user and stop.
     - Yours: step 0.0 and workspace/state.md, except the rows of its source
       registry, which the writer adds, changes and removes; recording the
-      answers to open styleguide questions; each chapter's budget and word
+      answers to open styleguide questions and, for a rule an agent names as
+      missing, its entry under "Open questions" or a note to the user
+      (style-resolver.md, "Recording answers to open questions", item 6);
+      each chapter's budget and word
       counts (steps 1 and 3); running scripts/verbatim_check.py and saving
       the source-verifier's reports (step 2); in F.1, what its steps give you.
 
@@ -161,7 +164,10 @@ phases:
           - Follow the styleguide
           - Stay within the chapter's budget in words, which Claude names in the task (main_session, "Page budget monitoring")
         note: |
-          Before step 2, also after a revision, Claude counts the draft; more
+          When the writer's answer comes in, a line in workspace/state.md
+          first, before a question to the user or the next call
+          (orchestrator.md, "Steps 1..N: Chapter assignment", after every
+          agent call). Before step 2, also after a revision, Claude counts the draft; more
           than 20% over its budget, the writer shortens it first, unless the
           user accepts the length (main_session, "Page budget monitoring").
       
