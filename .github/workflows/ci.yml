@@ -1681,6 +1681,14 @@ jobs:
           awk '/^# Literaturverzeichnis$/ { print "```text"; print "drei Wörter hier"; print "```"; print "" } { print }' "$V/words.md" > "$V/words_code.md"
           expect 0 python scripts/verbatim_check.py --words "$V/words_code.md"
           grep -qF 'Words: 29 ' "$V/out.txt"
+          # the text of a Word raw block (its w:t elements) goes into the export: it is compared
+          # with the sources, but not counted
+          printf '# 1 Einleitung\n\nEin kurzer eigener Satz steht hier.\n\n```{=openxml}\n<w:p><w:r><w:t xml:space="preserve">Die Bäume kühlen ihre Umgebung durch Verdunstung und senken die Temperatur in dicht bebauten Vierteln deutlich.</w:t></w:r></w:p>\n```\n' > "$V/raw_text.md"
+          printf 'Die Bäume kühlen ihre Umgebung durch Verdunstung und senken die Temperatur in dicht bebauten Vierteln deutlich.\n' > "$V/raw_text_src.txt"
+          expect 0 python scripts/verbatim_check.py --words "$V/raw_text.md"
+          grep -qF 'Words: 8 ' "$V/out.txt"
+          expect 1 python scripts/verbatim_check.py "$V/raw_text.md" "$V/raw_text_src.txt"
+          grep -qF '16 words, line 5' "$V/out.txt"
 
       - name: build_reference_docx.py (styles, page settings, errors; round trip through Pandoc)
         run: |

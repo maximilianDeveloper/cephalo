@@ -54,7 +54,8 @@ The report's header gives the chapter's word count for the page budget, as
 written: the stretches between whitespace or dashes that hold a letter or
 digit (a hyphenated compound is one word), headings and block quotes
 included. In Markdown, footnotes count too; the YAML front matter, HTML
-comments, raw blocks for the export (```{=openxml}), Pandoc citekeys (the
+comments, raw blocks for the export (```{=openxml}; the text of their w:t
+elements is still compared with the sources), Pandoc citekeys (the
 whole bracket, [@key, p. 5]: Pandoc writes the citation only at the
 export), footnote marks and the bibliography do not (the line says when
 it recognized none), while author-year citations written into the text
@@ -78,6 +79,7 @@ With --words: 0, or 2 for bad arguments or a chapter that cannot be read.
 """
 
 import bisect
+import html
 import os
 import re
 import sys
@@ -144,6 +146,11 @@ HTML_COMMENT = re.compile(r"<!--.*?-->", re.S)
 # starts the back matter (docs/reference_management.md), not text. Like an HTML
 # comment it is blanked, so it neither counts nor joins a run. It closes with a
 # fence of the same character, at least as long.
+# The text of a Word raw block (the w:t elements of ```{=openxml} or {=docx}):
+# the export writes it into the document, so it is compared with the sources,
+# though not counted for the page budget.
+WORD_TEXT = re.compile(r"<w:t(?:\s[^>]*)?>([^<]*)</w:t>")
+RAW_FORMAT = re.compile(r"\{=([^{}\s]+)\}")
 RAW_BLOCK = re.compile(r"(?ms)^ {0,3}(?P<fence>(?P<char>[`~])(?P=char){2,})[ \t]*\{=[^{}\s]+\}[ \t]*\n"
                        r".*?^ {0,3}(?P=fence)(?P=char)*[ \t]*$")
 # The heading of a chapter's bibliography (as in bibliography_check.py, and more):
@@ -230,6 +237,7 @@ class Chapter(NamedTuple):
     quotes: list           # (place, quotation text) of the marked direct quotes
     quoted: list           # for each entry of words: True inside a short quotation
     bibliography: Optional[tuple] = None  # its first and last line or paragraph (None: to the end)
+    counted: Optional[int] = None  # text[:counted] is what the word count counts (None: all of it)
 
 
 def blank(text: str, start: int, end: int) -> str:
@@ -291,6 +299,13 @@ def read_markdown(path: Path) -> tuple:
         inside = bool(re.match(r"\[\^[^\]]+\]:", line)) or (inside and bool(re.match(r"\s{2,}\S|\t", line)))
         if inside:
             footnotes.add(n)
+    raw_text = []
+    for m in RAW_BLOCK.finditer(text):
+        fmt = RAW_FORMAT.search(m.group(0))
+        if fmt and fmt.group(1).lower() in ("openxml", "docx"):
+            words = " ".join(html.unescape(t) for t in WORD_TEXT.findall(m.group(0))).strip()
+            if words:
+                raw_text.append((normalize(words), text.count("\n", 0, m.start()) + 1, False, True))
     for pattern in (RAW_BLOCK, HTML_COMMENT, PANDOC_CITATION, FOOTNOTE_MARK):
         for m in reversed(list(pattern.finditer(text))):
             text = blank(text, m.start(), m.end())
@@ -330,8 +345,9 @@ def read_markdown(path: Path) -> tuple:
         buf.append(re.sub(r"^\s{0,3}>\s?", "", line) if is_quote else line)
     if buf:
         pieces.append(("\n".join(buf), first, quote))
-    # 1-based first and last line, the last None when it runs to the end
-    return pieces, (cut and (cut[0] + 1, cut[1] if cut[1] < len(lines) else None))
+    # 1-based first and last line, the last None when it runs to the end; the
+    # text of Word raw blocks comes last, marked as not counted
+    return pieces + raw_text, (cut and (cut[0] + 1, cut[1] if cut[1] < len(lines) else None))
 
 
 def read_docx(path: Path) -> tuple:
@@ -378,7 +394,7 @@ def read_chapter(path: Path) -> Chapter:
     docx = path.suffix.lower() == ".docx"
     pieces, cut = read_docx(path) if docx else read_markdown(path)
     words, places, spans, quotes, inside = [], [], [], [], []
-    text_parts, offset = [], 0
+    text_parts, offset, counted = [], 0, None
 
     def brk():
         if words and words[-1] is not None:
@@ -387,7 +403,9 @@ def read_chapter(path: Path) -> Chapter:
             spans.append(None)
             inside.append(False)
 
-    for piece, first, is_quote in pieces:
+    for piece, first, is_quote, *raw in pieces:
+        if raw and counted is None:
+            counted = offset             # from here on: the text of raw blocks, not counted
         base = offset
         text_parts.append(piece + "\n\n")
         offset += len(piece) + 2
@@ -418,7 +436,7 @@ def read_chapter(path: Path) -> Chapter:
             brk()
             pos = e
     return Chapter(words, places, spans, "".join(text_parts), "paragraph" if docx else "line",
-                   quotes, inside, cut)
+                   quotes, inside, cut, counted)
 
 
 def word_count(chapter: Chapter) -> str:
@@ -430,7 +448,8 @@ def word_count(chapter: Chapter) -> str:
     if read_chapter recognized one, and otherwise says that a reference list
     in the file counts.
     """
-    n = as_written(MARKUP.sub(lambda m: m.group(1) or "", chapter.text))
+    text = chapter.text if chapter.counted is None else chapter.text[:chapter.counted]
+    n = as_written(MARKUP.sub(lambda m: m.group(1) or "", text))
     if chapter.unit == "paragraph":
         kept, left = "headings and block quotes", ["tables", "footnotes", "text boxes"]
     else:
