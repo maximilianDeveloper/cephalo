@@ -15,8 +15,9 @@ Rules (on, except P1)
       output into a project file, sed -i / perl -i / awk -i inplace, a
       PowerShell content cmdlet, or a script that is not cephalo's and does
       one of these.  Denied: Write or Edit is the tool for it.  Running one
-      of cephalo's scripts in scripts/ or an analysis script under
-      data/scripts/ and redirecting its output, git, pip and pandoc pass.
+      of cephalo's scripts in scripts/ or a script of the project in a
+      data/scripts/ folder of the project (an analysis or deck script) and
+      redirecting its output, git, pip and pandoc pass.
   S2  A write outside the project folder: a Write/Edit path, or a shell
       redirect, tee, cp/mv/mkdir/touch destination, -o of pandoc/curl/sort,
       into /tmp, the system's temporary folder, the home folder, Claude
@@ -79,7 +80,8 @@ import unicodedata
 DEFAULT_OFF = ('P1',)
 
 # cephalo's own scripts (CI checks the list against scripts/): the guard
-# trusts these, and an analysis script under data/scripts/, to write files.
+# trusts these, and a script of the project in its data/scripts/ (except for
+# S5), to write files.
 SHIPPED_SCRIPTS = ('abbreviations_extract.py', 'bibliography_check.py', 'build_reference_docx.py',
                    'cephalo_guard.py', 'cephalo_guard.sh', 'cross_session_audit.py', 'docx_pagination.py',
                    'docx_postprocess.sh', 'extract_styleguide.sh', 'verbatim_check.py')
@@ -833,10 +835,9 @@ def _read_small(path, ctx, limit=262144):
 
 
 def _trusted_script(n, ctx):
-    """A saved script the definitions run: one of cephalo's in scripts/ of the
-    project (or the multi-project root), its setup script, or an analysis
-    script under */data/scripts/.  Another file saved in scripts/ is not
-    trusted."""
+    """One of cephalo's scripts in scripts/ of the project (or the
+    multi-project root), or its setup script.  Another file saved in scripts/
+    is not trusted."""
     if not n:
         return False
     for d in (ctx.project, ctx.root):
@@ -844,7 +845,21 @@ def _trusted_script(n, ctx):
             return True
         if n.startswith(d + '/scripts/'):
             return n[len(d) + 9:] in SHIPPED_SCRIPTS
-    return '/data/scripts/' in n
+    return False
+
+
+def _data_script(n, ctx):
+    """A script of the project that the definitions run, an analysis script or
+    a presentation's deck script: in a data/scripts/ folder of the project
+    (workspace/data/scripts/, 05_Empirical/data/scripts/, also in a sibling
+    sub-project), not under _scratch/ and not outside the project."""
+    if not n or not inside(n, ctx.root):
+        return False
+    parts = n[len(ctx.root.rstrip('/')) + 1:].split('/')
+    for i in range(len(parts) - 2):
+        if parts[i] == 'data' and parts[i + 1] == 'scripts':
+            return '_scratch' not in parts[:i]
+    return False
 
 
 _SETTINGS = ('/.claude/settings.json', '/.claude/settings.local.json')
@@ -1306,12 +1321,14 @@ def _change_targets(c, args, ps):
 
 
 def _script_hits(path, kind, ctx, base, depth):
-    """S1 and S5 for a script that is run by the command: cephalo's own and an
-    analysis script pass; another one is read, and what it writes counts as
-    the command's."""
+    """S1 and S5 for a script that is run by the command: cephalo's own pass;
+    another one is read, and what it writes counts as the command's.  A
+    script of the project in data/scripts/ may write files (S1, S2), but not
+    the hook settings or scripts/ (S5)."""
     n = norm_path(path, ctx, base)
     if not n or n in (DEVICE, TEMPVAR) or _trusted_script(n, ctx):
         return []
+    data = _data_script(n, ctx)
     if base_name(path) in ('setup.sh', 'setup.ps1'):
         return [('S1', 'SETUP:%s' % path)]          # cephalo's setup, outside this project
     key = (n, kind, base, depth)
@@ -1324,7 +1341,7 @@ def _script_hits(path, kind, ctx, base, depth):
         return []
     hits = []
     if kind == 'py':
-        what = py_write(body, ctx, base)
+        what = None if data else py_write(body, ctx, base)
         if what:
             hits.append(('S1', "the script %s, which is not one of cephalo's, writes a file: %s" % (path, what)))
         prot = py_protected(body, ctx, base)
@@ -1332,7 +1349,7 @@ def _script_hits(path, kind, ctx, base, depth):
             hits.append(('S5', '%s (%s), by the script %s' % (prot[0], prot[1], path)))
     elif depth < 2:
         for rule, detail in check_shell(body, 'PowerShell' if kind == 'ps' else 'Bash', ctx, depth + 1):
-            if rule in ('S1', 'S2', 'S5'):
+            if rule in (('S5',) if data else ('S1', 'S2', 'S5')):
                 hits.append((rule, '%s, in the script %s' % (detail, path)))
     return hits
 

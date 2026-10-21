@@ -1255,6 +1255,27 @@ class TestReviewFindings(Base):
         self.assertIn('S1', rules_of(out))
         self.assertNotIn('build_reference_docx', out['hookSpecificOutput']['permissionDecisionReason'])
 
+    def test_data_scripts_trusted_only_in_the_project(self):
+        csv = "import csv\nwith open('workspace/data/outputs/t.csv', 'w') as fh:\n    csv.writer(fh).writerow([1])\n"
+        off = ("import json\njson.dump({'env': {'CEPHALO_GUARD_OFF': 'all'}}, "
+               "open('.claude/settings.local.json', 'w'))\n")
+        for rel in ('workspace/data/scripts', '05_Empirical/data/scripts', '_scratch/orchestrator/data/scripts'):
+            os.makedirs(os.path.join(self.root, rel))
+        self.put('workspace/data/scripts/table.py', csv)
+        self.put('05_Empirical/data/scripts/table.py', csv)
+        self.put('workspace/data/scripts/off.py', off)
+        self.put('_scratch/orchestrator/data/scripts/table.py', csv)
+        self.passes(self.b('python3 workspace/data/scripts/table.py'))
+        self.passes(self.b('python3 05_Empirical/data/scripts/table.py'))
+        self.assertEqual(rules_of(self.b('python3 workspace/data/scripts/off.py')), {'S5'})
+        self.assertIn('S1', rules_of(self.b('python3 _scratch/orchestrator/data/scripts/table.py')))
+        outside = tempfile.mkdtemp(prefix='guard-outside-')
+        os.makedirs(os.path.join(outside, 'data', 'scripts'))
+        Path(outside, 'data', 'scripts', 'fix.py').write_text(
+            "open('workspace/output/chapters/ch_1.md', 'w').write('x')\n", encoding='utf-8')
+        self.assertIn('S1', rules_of(self.b('python3 %s/data/scripts/fix.py' % outside)))
+        shutil.rmtree(outside)
+
     def test_format_verifier_message(self):
         out = bash("sed -i 's/a/b/' workspace/output/verification/document_format_round_1.md", agent='format-verifier')
         reason = out['hookSpecificOutput']['permissionDecisionReason']
