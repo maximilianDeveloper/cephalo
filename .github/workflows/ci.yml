@@ -2828,3 +2828,13 @@ jobs:
           slip "$E"
           out="$(CLAUDE_PROJECT_DIR="$E" "$SH" -c "$CMD" < "$E.json")"
           test -z "$out"
+          # A sub-project of a multi-project setup uses the scripts of the folder above; another project
+          # without its own never does.
+          M="$RUNNER_TEMP/guard multi ü"; rm -rf "$M"; mkdir -p "$M/scripts" "$M/00_Shared_Materials" "$M/02_Main_Work/workspace"
+          cp scripts/cephalo_guard.py scripts/cephalo_guard.sh "$M/scripts/"
+          slip "$M/02_Main_Work"
+          out="$(CLAUDE_PROJECT_DIR="$M/02_Main_Work" "$SH" -c "$CMD" < "$M/02_Main_Work.json")"
+          if [ "$want" = deny ]; then echo "$out" | grep -q 'cephalo guard S1'; else test -z "$out"; fi
+          rm -r "$M/00_Shared_Materials"
+          out="$(CLAUDE_PROJECT_DIR="$M/02_Main_Work" "$SH" -c "$CMD" < "$M/02_Main_Work.json")"
+          test -z "$out"
