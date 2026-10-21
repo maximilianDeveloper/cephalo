@@ -138,7 +138,10 @@ phases:
         note: |
           Once per project. If the resolver leaves open ❓ [content] items,
           clarify them before starting chapter work; open ❓ [format] items
-          before the closing step F.1.
+          before the closing step F.1. The chat that creates styleguide.md
+          ends with the Chat closure ritual (main_session): for its item 5,
+          git status --short -- styleguide.md shows the file untracked ("??"),
+          so check every provenance in it that names the user.
   
   # ===========================================================
   # Per-chapter work (one chat per chapter)
@@ -217,7 +220,9 @@ phases:
         task: |
           Claude in the main chat updates workspace/state.md (main_session):
           the chapter status, its word count as "Page budget monitoring"
-          counts it, and Page count: [X] of [max]
+          counts it, and Page count: [X] of [max]; then the Chat closure
+          ritual (main_session), item 5 with the commands of F.1 item 8 if
+          this chat wrote to styleguide.md.
   
   # ===========================================================
   # Closing
@@ -313,6 +318,12 @@ phases:
         8. Before the chat closes: the "Current state" and "Open issues" of
            workspace/state.md and the "Open questions" of styleguide.md agree;
            nothing is called resolved in one that is still open in another.
+           Then the Chat closure ritual (main_session). For its item 5, run in
+           the Bash tool:
+             git status --short -- styleguide.md && git diff HEAD -- styleguide.md
+           Each provenance that names the user on a line the diff adds (while
+           git status shows the file untracked, "??": each one in the file)
+           rests on the user's words or on a proposal the user accepted.
 
 # Notes on the lean setup
 
