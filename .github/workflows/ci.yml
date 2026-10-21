@@ -1696,6 +1696,25 @@ jobs:
           grep -qF '16 words, line 6' "$V/out.txt"
           printf '# 1 Einleitung\n\nEin kurzer eigener Satz steht hier.\n\n<!--\n```{=openxml}\n<w:p><w:r><w:t>Die Bäume kühlen ihre Umgebung durch Verdunstung und senken die Temperatur in dicht bebauten Vierteln deutlich.</w:t></w:r></w:p>\n```\n-->\n' > "$V/raw_comment.md"
           expect 0 python scripts/verbatim_check.py "$V/raw_comment.md" "$V/raw_text_src.txt"
+          # a line break or tab between two runs is a space; an empty <w:p/> ends no other paragraph;
+          # a raw paragraph in a quote style is a quote
+          printf '# 1 Einleitung\n\nEin kurzer eigener Satz steht hier.\n\n```{=openxml}\n<w:p><w:r><w:t xml:space="preserve">Die Bäume kühlen ihre Umgebung durch Verdunstung und</w:t></w:r><w:r><w:br/></w:r><w:r><w:t>senken die Temperatur</w:t></w:r><w:r><w:tab/><w:t>in dicht bebauten Vierteln deutlich.</w:t></w:r></w:p>\n```\n' > "$V/raw_br.md"
+          expect 1 python scripts/verbatim_check.py "$V/raw_br.md" "$V/raw_text_src.txt"
+          grep -qF '16 words, line 6' "$V/out.txt"
+          printf '# 1 Einleitung\n\nEin kurzer eigener Satz steht hier.\n\n```{=openxml}\n<w:p/>\n<w:p w:rsidR="00A1"/>\n<w:p><w:r><w:t>Die Bäume kühlen ihre Umgebung durch Verdunstung und senken die Temperatur in dicht bebauten Vierteln deutlich.</w:t></w:r></w:p>\n```\n' > "$V/raw_empty.md"
+          expect 1 python scripts/verbatim_check.py "$V/raw_empty.md" "$V/raw_text_src.txt"
+          grep -qF '16 words, line 8' "$V/out.txt"
+          printf '# 1 Einleitung\n\nEin kurzer eigener Satz steht hier.\n\n```{=openxml}\n<w:p><w:pPr><w:pStyle w:val="BlockText"/></w:pPr><w:r><w:t>Die Bäume kühlen ihre Umgebung durch Verdunstung und senken die Temperatur in dicht bebauten Vierteln deutlich.</w:t></w:r></w:p>\n```\n' > "$V/raw_quote.md"
+          expect 0 python scripts/verbatim_check.py "$V/raw_quote.md" "$V/raw_text_src.txt"
+          # a raw paragraph in the bibliography is one of its entries: with a year it stays out with
+          # the reference list; without one the section is no reference list and is compared
+          printf '# 1 Einleitung\n\nEin kurzer eigener Satz steht hier.\n\n# Literaturverzeichnis\n\nMuster, A. (2019): Ein Buch. Berlin.\n\n```{=openxml}\n<w:p><w:r><w:t>Keller, A. (2018): Die Bäume kühlen ihre Umgebung durch Verdunstung und senken die Temperatur in dicht bebauten Vierteln deutlich.</w:t></w:r></w:p>\n```\n' > "$V/raw_bib.md"
+          expect 0 python scripts/verbatim_check.py "$V/raw_bib.md" "$V/raw_text_src.txt"
+          grep -qF 'the bibliography, from line 5 on' "$V/out.txt"
+          if grep -q 'words, line' "$V/out.txt"; then cat "$V/out.txt"; echo "an entry of the reference list was matched as a run"; exit 1; fi
+          sed 's/Keller, A. (2018): //' "$V/raw_bib.md" > "$V/raw_bib_noyear.md"
+          expect 1 python scripts/verbatim_check.py "$V/raw_bib_noyear.md" "$V/raw_text_src.txt"
+          grep -qF '16 words, line 10' "$V/out.txt"
 
       - name: build_reference_docx.py (styles, page settings, errors; round trip through Pandoc)
         run: |

@@ -148,8 +148,14 @@ HTML_COMMENT = re.compile(r"<!--.*?-->", re.S)
 # fence of the same character, at least as long.
 # The text of a Word raw block (the w:t elements of ```{=openxml} or {=docx}):
 # the export writes it into the document, so it is compared with the sources,
-# though not counted for the page budget.
-WORD_TEXT = re.compile(r"<w:t(?:\s[^>]*)?>([^<]*)</w:t>")
+# though not counted for the page budget. A paragraph ends at </w:p> or is an
+# empty <w:p/>; in it, a tab or line break shows as a space and a
+# non-breaking hyphen as a hyphen. A quote style makes it a quote, as in
+# read_docx.
+WORD_PARAGRAPH_END = re.compile(r"</w:p>|<w:p(?:\s[^>]*)?/>")
+WORD_RUN_TEXT = re.compile(r"<w:t(?:\s[^>]*)?>([^<]*)</w:t>|<w:(?:tab|ptab|br|cr)\b[^>]*/>|<w:noBreakHyphen\b[^>]*/>")
+WORD_STYLE = re.compile(r"<w:pStyle\s[^>]*?w:val=\"([^\"]*)\"")
+QUOTE_STYLE = re.compile(r"(?i)quot|zitat|block ?text")
 RAW_FORMAT = re.compile(r"\{=([^{}\s]+)\}")
 RAW_BLOCK = re.compile(r"(?ms)^ {0,3}(?P<fence>(?P<char>[`~])(?P=char){2,})[ \t]*\{=[^{}\s]+\}[ \t]*\n"
                        r".*?^ {0,3}(?P=fence)(?P=char)*[ \t]*$")
@@ -300,8 +306,10 @@ def read_markdown(path: Path) -> tuple:
         if inside:
             footnotes.add(n)
     # the text of Word raw blocks that the export writes: one piece per w:p
-    # paragraph, at its own line, its runs joined as Word shows them; not in
-    # an HTML comment, which the export drops
+    # paragraph, at the line of its first text, its runs joined as Word shows
+    # them (a tab or line break between runs as a space); a paragraph in a
+    # quote style is a quote, as in a .docx; not in an HTML comment, which the
+    # export drops
     comments = [(m.start(), m.end()) for m in HTML_COMMENT.finditer(text)]
     raw_text = []
     for m in RAW_BLOCK.finditer(text):
@@ -310,12 +318,23 @@ def read_markdown(path: Path) -> tuple:
             continue
         if any(a <= m.start() < b for a, b in comments):
             continue
-        pos = m.start()
-        for para in re.finditer(r"<w:p[\s>][\s\S]*?</w:p>|<w:p/>", m.group(0)):
-            words = "".join(html.unescape(t) for t in WORD_TEXT.findall(para.group(0))).strip()
-            if words:
-                line = text.count("\n", 0, pos + para.start()) + 1
-                raw_text.append((normalize(words), line, False, True))
+        block, start = m.group(0), 0
+        for end in [e.start() for e in WORD_PARAGRAPH_END.finditer(block)] + [len(block)]:
+            part = block[start:end]
+            chars, at = [], None
+            for r in WORD_RUN_TEXT.finditer(part):
+                if r.group(1) is not None:
+                    at = r.start() if at is None else at
+                    chars.append(html.unescape(r.group(1)))
+                else:
+                    chars.append("-" if r.group(0).startswith("<w:noBreakHyphen") else " ")
+            words = "".join(chars).strip()
+            if words and at is not None:
+                line = text.count("\n", 0, m.start() + start + at) + 1
+                style = WORD_STYLE.search(part)
+                is_quote = bool(style and QUOTE_STYLE.search(style.group(1)))
+                raw_text.append((normalize(words), line, is_quote, True))
+            start = end
     for pattern in (RAW_BLOCK, HTML_COMMENT, PANDOC_CITATION, FOOTNOTE_MARK):
         for m in reversed(list(pattern.finditer(text))):
             text = blank(text, m.start(), m.end())
@@ -332,6 +351,8 @@ def read_markdown(path: Path) -> tuple:
     if cut:
         body = [n for n in range(cut[0] + 1, cut[1]) if n not in footnotes]
         paragraphs = "\n".join(lines[n] if n in body else "" for n in range(cut[0] + 1, cut[1])).split("\n\n")
+        # a raw paragraph in the section is one of its entries, as in the export
+        paragraphs += [r[0] for r in raw_text if cut[0] + 1 <= r[1] <= cut[1]]
         if reference_list(paragraphs):
             for n in [cut[0]] + body:
                 lines[n] = ""
@@ -382,7 +403,7 @@ def read_docx(path: Path) -> tuple:
             style = (p.style.name if p.style is not None else "") or ""
             # Quote, Intense Quote, Zitat; Pandoc's "Block Text"; LibreOffice's
             # "Quotations" / "Block Quotation"
-            is_quote = bool(re.search(r"(?i)quot|zitat|block ?text", style))
+            is_quote = bool(QUOTE_STYLE.search(style))
             if p.text.strip():
                 pieces.append((normalize(p.text), n, is_quote))
                 # heading level from the style ("Heading 2", "Überschrift 2", "Title");
