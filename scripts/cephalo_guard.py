@@ -1519,6 +1519,8 @@ def report_definition(ctx):
 
 
 _QUOTE_MARKS = '\u201e\u201c\u201d\u201a\u2018\u2019\u00ab\u00bb"'
+# a German quotation closed the German way: \u201e, then no other mark but ASCII quotes in pairs, then \u201c
+_GERMAN_QUOTE = re.compile('\u201e[^\u201e\u201c\u201d"]*(?:"[^\u201e\u201c\u201d"]*"[^\u201e\u201c\u201d"]*)*\u201c')
 
 
 def readback(tin, ctx):
@@ -1550,9 +1552,10 @@ def readback(tin, ctx):
               '"|"), %d lines with "Status:"; quotation marks: %s; its last line, as report text: \u00ab%s\u00bb.'
               % (rows, status, marks, last or '(empty)'))
     # German marks open with \u201e and close with \u201c (an English pair opens with \u201c and closes with
-    # \u201d): a \u201e whose next quotation mark is not \u201c was not closed the German way
-    seq = re.findall('[\u201e\u201c\u201d"]', text)
-    open_ = sum(1 for k, c in enumerate(seq) if c == '\u201e' and seq[k + 1:k + 2] != ['\u201c'])
+    # \u201d): a \u201e whose next quotation mark is not \u201c was not closed the German way; ASCII quotes
+    # in pairs inside it ("Plan B") are a quotation of their own
+    head = text[:1 << 20]                 # a report is far smaller; this bounds the time on any file
+    open_ = head.count('\u201e') - len(_GERMAN_QUOTE.findall(head))
     if open_:
         counts += (' %d \u201e in it %s not closed by \u201c (the next quotation mark after it): if the answer '
                    'closes %s with \u201c, write the file again with the answer\'s marks; if the answer has the '

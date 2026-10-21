@@ -507,7 +507,10 @@ class TestReports(Base):
                              (text + 'Ein Bildschirm, 12\u201d breit.\n', False),
                              (text.replace('\u201e', '').replace('\u201c', '') + 'Ein quote\u201d.\n', False),
                              (text + 'Han sa \u201dja\u201d.\n', False),
-                             (text + '\u201eeins\u201c \u201ezwei\u201c \u201edrei\u201d\n', True)):
+                             (text + '\u201eeins\u201c \u201ezwei\u201c \u201edrei\u201d\n', True),
+                             (text + '| 2 | \u201eEr nannte es "Plan B".\u201c | ok |\n', False),
+                             (text + '\u201eZitat" und \u201cquote\u201d\n', True),
+                             (text + '\u201eA "B" "C\u201c\n', True)):
             with self.subTest(saved=ascii(saved[-40:])):
                 Path(rep).write_text(saved, encoding='utf-8')
                 r = run('Write', {'file_path': rep, 'content': 'x'}, event='PostToolUse', root=self.root)['reason']
