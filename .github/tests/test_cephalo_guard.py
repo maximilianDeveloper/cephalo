@@ -1353,6 +1353,20 @@ class TestReviewFindings(Base):
         self.passes(bash('rm -rf ../02_Main_Work/_scratch', root=sub, cwd=sub))
         shutil.rmtree(top)
 
+    def test_data_script_in_a_sub_project(self):
+        top = tempfile.mkdtemp(prefix='guard-multi7-')
+        for d in ('00_Shared_Materials', 'scripts', '02_Main_Work/05_Empirical/data/scripts'):
+            os.makedirs(os.path.join(top, d))
+        sub = os.path.join(top, '02_Main_Work')
+        here = os.path.join(sub, '05_Empirical', 'data', 'scripts')
+        Path(here, 'up.py').write_text("import os\nos.remove(os.path.join('..', 'scripts', 'cephalo_guard.py'))\n",
+                                       encoding='utf-8')
+        Path(here, 'fig.py').write_text("import os\nopen(os.path.join('05_Empirical', 'data', 'outputs', 't.csv'), "
+                                        "'w').write('a')\n", encoding='utf-8')
+        self.assertEqual(rules_of(bash('python3 05_Empirical/data/scripts/up.py', root=sub, cwd=sub)), {'S5'})
+        self.passes(bash('python3 05_Empirical/data/scripts/fig.py', root=sub, cwd=sub, agent='data-agent'))
+        shutil.rmtree(top)
+
     def test_scratch_zip_and_outside_scratch(self):
         self.passes(bash('py -c "import zipfile; zipfile.ZipFile(\'_scratch/format-verifier/noabbr.docx\', \'w\').close()"',
                          agent='format-verifier'))
@@ -1407,6 +1421,39 @@ class TestReviewFindings(Base):
                 self.passes(self.b('python3 workspace/data/scripts/' + name, agent='data-agent'))
         self.put('workspace/data/scripts/tidy.py', "import shutil\nshutil.rmtree('scripts/old')\n")
         self.assertEqual(rules_of(self.b('python3 workspace/data/scripts/tidy.py')), {'S5'})
+        # a path it builds from string literals, the folder itself, or a folder it copies to still counts
+        for name, code in (
+                ('join_write.py', "import os\nopen(os.path.join('scripts', 'verbatim_check.py'), 'w').write('x')\n"),
+                ('path_write.py', "from pathlib import Path\n(Path('scripts') / 'verbatim_check.py').write_text('x')\n"),
+                ('concat_write.py', "n = 'verbatim_check.py'\nopen('scripts/' + n, 'w').write('x')\n"),
+                ('rm_join.py', "import os\nos.remove(os.path.join('scripts', 'cephalo_guard.py'))\n"),
+                ('copy_dir.py', "import shutil\nshutil.copy('workspace/data/x.py', 'scripts')\n"),
+                ('rm_dot.py', "import shutil\nshutil.rmtree('./scripts')\n"),
+                ('rm_slash.py', "import shutil\nshutil.rmtree('scripts/')\n"),
+                ('settings_concat.py', "open('.claude/' + 'settings.local.json', 'w').write('{}')\n"),
+                ('settings_path.py', "from pathlib import Path\nPath('.claude', 'settings.json').write_text('{}')\n")):
+            with self.subTest(name=name):
+                self.put('workspace/data/scripts/' + name, code)
+                self.assertEqual(rules_of(self.b('python3 workspace/data/scripts/' + name)), {'S5'})
+        # an inline Python program in a shell script there is read as that script's own code
+        self.put('workspace/data/scripts/inline.sh',
+                 'python3 -c "import pandas as pd; pd.read_csv(\'workspace/data/raw/a.csv\', thousands=\'.\')'
+                 '.rename(columns=str.lower).to_csv(\'workspace/data/outputs/a.csv\')"\n')
+        self.put('workspace/data/scripts/heredoc.sh',
+                 "python3 - <<'EOF'\nimport os\nBASE = os.path.join(os.getcwd(), '..')\n"
+                 "open(os.path.join(BASE, 'outputs', 'tmp.csv'), 'w').write('a;b')\n"
+                 "os.replace(os.path.join(BASE, 'outputs', 'tmp.csv'), os.path.join(BASE, 'outputs', 'a.csv'))\nEOF\n")
+        self.put('workspace/data/scripts/inline_off.sh',
+                 'echo "$(python3 -c "import json; json.dump({}, open(\'.claude/settings.local.json\', \'w\'))")"\n')
+        self.put('workspace/data/scripts/subst.sh',
+                 'n="$(python3 -c "import os; os.replace(\'workspace/data/outputs/a.tmp\', '
+                 '\'workspace/data/outputs/a.csv\'); print(os.path.join(\'..\', \'x\'))")"\necho "$n"\n')
+        for name in ('inline.sh', 'heredoc.sh', 'subst.sh'):
+            with self.subTest(name=name):
+                self.passes(self.b('sh workspace/data/scripts/' + name, agent='data-agent'))
+        self.assertEqual(rules_of(self.b('sh workspace/data/scripts/inline_off.sh')), {'S5'})
+        self.assertIn('S1', rules_of(self.b('python3 -c "import pandas as pd; pd.read_csv(\'a.csv\')'
+                                            '.to_csv(\'workspace/data/outputs/a.csv\')"')))
         # shell scripts there: writing files passes, the hook settings or scripts/ do not
         self.put('workspace/data/scripts/run.sh', "mkdir -p workspace/data/outputs\necho done > workspace/data/outputs/log.txt\n")
         self.put('workspace/data/scripts/off.sh', "echo '{}' > .claude/settings.local.json\n")

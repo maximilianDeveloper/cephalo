@@ -927,22 +927,50 @@ def holds_protected(n, ctx):
 _PY_REMOVE = re.compile(r'\bos\.(?:remove|unlink|rmdir|removedirs|rename|replace)\s*\(|\bshutil\.(?:rmtree|move|copy\w*)\s*\('
                         r'|\.(?:unlink|rmdir|rename|write_text|write_bytes|touch)\s*\(')
 _PY_MOVES = re.compile(r'\bshutil\.(?:rmtree|move)\s*\(|\bos\.(?:rename|replace|rmdir|removedirs)\s*\(|\.(?:rmdir|rename)\s*\(|\brmtree\s*\(')
+_LIT = r"""[rRuUbB]{0,2}(?:'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*")"""
+# a path built from string literals: os.path.join('a', 'b'), Path('a', 'b') / 'c', 'a/' + 'b'
+_PY_JOINED = re.compile(r"""\b(?:os\.path|posixpath|ntpath)\.join\s*\(\s*(%s(?:\s*,\s*%s)*)\s*,?\s*\)"""
+                        r"""|\b(?:Pure)?(?:Posix|Windows)?Path\s*\(\s*(%s(?:\s*,\s*%s)*)\s*,?\s*\)((?:\s*/\s*%s)+)?"""
+                        r"""|(%s(?:\s*\+\s*%s)+)""" % ((_LIT,) * 7))
+# where shutil copies or moves a file to: a folder named by a bare word counts as a path
+_PY_DEST = re.compile(r"""\bshutil\.(?:copy\w*|move)\s*\([^,()]*,\s*(?:dst\s*=\s*)?(%s)""" % _LIT)
+
+
+def _lit_text(lit):
+    """The text of a Python string literal (its prefix and quotes off)."""
+    q = min(i for i in (lit.find("'"), lit.find('"')) if i >= 0)
+    body = lit[q + 1:-1]
+    return body if 'r' in lit[:q].lower() else body.replace('\\\\', '\\')
+
+
+def _named_paths(code):
+    """The paths a data script names: each string with a separator in it,
+    each path it joins from string literals, and each folder shutil copies or
+    moves to.  A bare word ('scripts', '.claude', a column name) is data."""
+    out = [lit for lit in _PATH_LIT.findall(code) if '/' in lit or '\\' in lit]
+    for m in _PY_JOINED.finditer(code):
+        if m.group(4):
+            out.append(''.join(_lit_text(x) for x in re.findall(_LIT, m.group(4))))
+        else:
+            parts = re.findall(_LIT, m.group(1) or m.group(2)) + re.findall(_LIT, m.group(3) or '')
+            out.append('/'.join(_lit_text(x) for x in parts))
+    out += [_lit_text(m.group(1)) for m in _PY_DEST.finditer(code)]
+    return out
 
 
 def py_protected(code, ctx, base, names_only=False):
     """A Python program that writes, moves or deletes a protected path.  With
     names_only (a script of the project in data/scripts/, whose strings are
-    data: column names, separators, folder names), only a string that names a
-    protected file or folder by a path counts ('.claude/settings.local.json',
-    'scripts/x.py'), not a bare word or a folder that holds one."""
+    data: column names, separators, folder names), only a path it names counts
+    (_named_paths: '.claude/settings.local.json', './scripts', os.path.join(
+    'scripts', 'x.py')) and only if it is the hook settings or in scripts/, not
+    a bare word or a folder that holds one."""
     if not code or not (_PY_WRITE.search(code) or _PY_REMOVE.search(code)):
         return None
     moves = bool(_PY_MOVES.search(code)) and not names_only
-    for k, lit in enumerate(dict.fromkeys(_PATH_LIT.findall(code))):
+    for k, lit in enumerate(dict.fromkeys(_named_paths(code) if names_only else _PATH_LIT.findall(code))):
         if not k % 1024:
             ctx.budget.tick()
-        if names_only and not re.search(r'\w[\\/]+[.\w]', lit):
-            continue
         n = norm_path(lit, ctx, base)
         why = protected(n, ctx) or (holds_protected(n, ctx) if moves else None)
         if why:
@@ -950,9 +978,11 @@ def py_protected(code, ctx, base, names_only=False):
     return None
 
 
-def check_shell(cmd, tool, ctx, depth=0, pre=None):
+def check_shell(cmd, tool, ctx, depth=0, pre=None, data=False):
     """Hits [(rule, detail)] for a Bash or PowerShell command.  pre: the
-    here-document bodies of an enclosing command (for a $( ) inside it)."""
+    here-document bodies of an enclosing command (for a $( ) inside it).
+    data: the command is the body of a script in data/scripts/, whose inline
+    Python programs are read as such a script is (py_protected names_only)."""
     ps = tool == 'PowerShell'
     hits = []
     ctx.budget.scan(cmd)
@@ -1031,7 +1061,7 @@ def check_shell(cmd, tool, ctx, depth=0, pre=None):
             what = py_write(code, ctx, bases[si]) if code else None
             if what:
                 hits.append(('S1', 'an inline Python program that writes a file: %s' % what))
-            prot = py_protected(code, ctx, bases[si]) if code else None
+            prot = py_protected(code, ctx, bases[si], names_only=data) if code else None
             if prot:
                 hits.append(('S5', '%s (%s), by an inline Python program' % prot))
             elif code:
@@ -1098,7 +1128,7 @@ def check_shell(cmd, tool, ctx, depth=0, pre=None):
         if depth < 2 and c in ('bash', 'sh', 'zsh', 'dash'):
             k = next((j for j, a in enumerate(args) if re.match(r'^-[A-Za-z]*c[A-Za-z]*$', a)), None)
             if k is not None and k + 1 < len(args):
-                hits += check_shell(args[k + 1], 'Bash', ctx, depth + 1)
+                hits += check_shell(args[k + 1], 'Bash', ctx, depth + 1, data=data)
             elif k is None:
                 files = [a for a in args if not a.startswith('-') and not a.startswith('+')]
                 if files:
@@ -1119,11 +1149,11 @@ def check_shell(cmd, tool, ctx, depth=0, pre=None):
         if depth < 2 and c == 'cmd':
             k = next((j for j, a in enumerate(args) if a.lower() in ('/c', '//c', '/k', '//k')), None)
             if k is not None and k + 1 < len(args):
-                hits += check_shell(' '.join(args[k + 1:]), 'Bash', ctx, depth + 1)
+                hits += check_shell(' '.join(args[k + 1:]), 'Bash', ctx, depth + 1, data=data)
         if depth < 2 and c in ('powershell', 'pwsh'):
             for k, a in enumerate(args):
                 if a.lower() in ('-command', '-c') and k + 1 < len(args):
-                    hits += check_shell(' '.join(args[k + 1:]), 'PowerShell', ctx, depth + 1)
+                    hits += check_shell(' '.join(args[k + 1:]), 'PowerShell', ctx, depth + 1, data=data)
                     break
                 if a.lower() in ('-file', '-f') and k + 1 < len(args):
                     hits += _script_hits(args[k + 1], 'ps', ctx, bases[si], depth)
@@ -1186,7 +1216,7 @@ def check_shell(cmd, tool, ctx, depth=0, pre=None):
     if not ps and depth < 2:
         text = cmd if pre is not None else strip_heredocs(cmd)[0]
         for sub in _substitutions(text):
-            hits += check_shell(sub, 'Bash', ctx, depth + 1, pre=bodies)
+            hits += check_shell(sub, 'Bash', ctx, depth + 1, pre=bodies, data=data)
     return _dedupe(hits)
 
 
@@ -1381,7 +1411,7 @@ def _script_body_hits(n, path, kind, ctx, base, depth, data):
         if prot:
             hits.append(('S5', '%s (%s), by the script %s' % (prot[0], prot[1], path)))
     elif depth < 2:
-        for rule, detail in check_shell(body, 'PowerShell' if kind == 'ps' else 'Bash', ctx, depth + 1):
+        for rule, detail in check_shell(body, 'PowerShell' if kind == 'ps' else 'Bash', ctx, depth + 1, data=data):
             if rule in ('S1', 'S2', 'S5'):
                 hits.append((rule, '%s, in the script %s' % (detail, path)))
     return hits
