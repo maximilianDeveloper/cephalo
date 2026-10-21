@@ -490,20 +490,29 @@ class TestReports(Base):
                      'quotation marks: 1 \u201e, 1 \u201c;', '\u00abGesamt: 1 \u2705\u00bb'):
             self.assertIn(part, r)
         self.assertNotIn('still contains an absolute path', r)
-        self.assertNotIn('more \u201e than closing', r)
+        self.assertNotIn('not closed by', r)
         # the copy closed the German quotation marks with ASCII quotes, as in the fourth seminar run
         Path(rep).write_text(text.replace('\u201c', '"'), encoding='utf-8')
         r = run('Write', {'file_path': rep, 'content': 'x'}, event='PostToolUse', root=self.root)['reason']
         self.assertIn('quotation marks: 1 \u201e, 1 ";', r)
-        self.assertIn('more \u201e than closing \u201c', r)
-        # German and English quotations in one report: only a lost German closing mark warns
+        self.assertIn('1 \u201e in it is not closed by \u201c (the next quotation mark after it)', r)
+        # German and English quotations in one report: only a lost German closing mark warns, each
+        # opening mark paired with the next quotation mark; a stray \u201d or a pair of \u201d warns not
         mixed = text + 'Ein \u201eZitat\u201c und ein \u201cquote\u201d.\n'
         for saved, warns in ((mixed, False), (mixed.replace('\u201c', '"'), True),
-                             (mixed.replace('\u201eZitat\u201c', '\u201eZitat"'), True)):
+                             (mixed.replace('\u201eZitat\u201c', '\u201eZitat"'), True),
+                             (mixed.replace('\u201eZitat\u201c', '\u201eZitat\u201d'), True),
+                             (text + 'Ein Bildschirm, 12\u201d breit.\n', False),
+                             (text.replace('\u201e', '').replace('\u201c', '') + 'Ein quote\u201d.\n', False),
+                             (text + 'Han sa \u201dja\u201d.\n', False),
+                             (text + '\u201eeins\u201c \u201ezwei\u201c \u201edrei\u201d\n', True)):
             with self.subTest(saved=ascii(saved[-40:])):
                 Path(rep).write_text(saved, encoding='utf-8')
                 r = run('Write', {'file_path': rep, 'content': 'x'}, event='PostToolUse', root=self.root)['reason']
-                self.assertEqual('more \u201e than closing' in r, warns, r)
+                self.assertEqual('not closed by \u201c' in r, warns, r)
+        Path(rep).write_text(text.replace('\u201c', '"') + '\u201eB" \u201eC"\n', encoding='utf-8')
+        r = run('Write', {'file_path': rep, 'content': 'x'}, event='PostToolUse', root=self.root)['reason']
+        self.assertIn('3 \u201e in it are not closed by \u201c', r)
         Path(rep).write_text(text.replace('\u201e', '').replace('\u201c', ''), encoding='utf-8')
         r = run('Write', {'file_path': rep, 'content': 'x'}, event='PostToolUse', root=self.root)['reason']
         self.assertIn('quotation marks: none;', r)
