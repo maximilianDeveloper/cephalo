@@ -933,24 +933,26 @@ _PY_MOVES = re.compile(r'\bshutil\.(?:rmtree|move)\s*\(|\bos\.(?:rename|replace|
 # runs to the end of its line (a triple-quoted one to the end), so that no
 # text is scanned twice.
 _PY_TOKEN = re.compile(r"""#[^\n]*"""
-                       r"""|[rRuUbBfF]{0,2}(?:'''(?:[^'\\]|\\[\s\S]|'(?!''))*(?:''')?"""
-                       r"""|\"\"\"(?:[^"\\]|\\[\s\S]|"(?!""))*(?:\"\"\")?"""
-                       r"""|'(?:[^'\\\n]|\\.)*'?|"(?:[^"\\\n]|\\.)*"?)""")
+                       r"""|[rRuUbBfF]{0,2}(?:'''[^'\\]*(?:(?:\\[\s\S]|'(?!''))[^'\\]*)*(?:''')?"""
+                       r"""|\"\"\"[^"\\]*(?:(?:\\[\s\S]|"(?!""))[^"\\]*)*(?:\"\"\")?"""
+                       r"""|'[^'\\\n]*(?:\\.[^'\\\n]*)*'?|"[^"\\\n]*(?:\\.[^"\\\n]*)*"?)""")
 _LP = r'\x00\d+\x00'                    # a string literal, after _py_strings
-# (no two \s* side by side with only an optional part between them: each pattern stays linear)
+# (no two \s* side by side with only an optional part between them, and at most 32 repeats of a
+# group, each kept on the stack: each pattern stays linear and small on any input)
 # a path built from string literals: os.path.join('a', 'b'), Path('a', 'b') / 'c',
 # Path('a').joinpath('b'), Path.cwd() / 'a', 'a/' + 'b', 'a' + os.sep + 'b'; a part that
 # is not a literal after them stands for a name in that folder
-_PY_JOIN = re.compile(r'\b(?:os\.path|posixpath|ntpath)\.join\s*\(\s*(%s(?:\s*,\s*%s)*)\s*([,)])' % (_LP, _LP))
-_PY_PATH = re.compile(r'\b(?:(?:Pure)?(?:Posix|Windows)?Path\s*\(\s*(?:(%s(?:\s*,\s*%s)*)(?:\s*,)?\s*)?\)'
+_PY_JOIN = re.compile(r'\b(?:os\.path|posixpath|ntpath)\.join\s*\(\s*(%s(?:\s*,\s*%s){0,32})\s*(,(?!\s*\))|,\s*\)|\))'
+                      % (_LP, _LP))
+_PY_PATH = re.compile(r'\b(?:(?:Pure)?(?:Posix|Windows)?Path\s*\(\s*(?:(%s(?:\s*,\s*%s){0,32})(?:\s*,)?\s*)?\)'
                       r'|Path\s*\.\s*cwd\s*\(\s*\))'
-                      r'((?:\s*/\s*%s|\s*\.\s*joinpath\s*\(\s*%s(?:\s*,\s*%s)*\s*\))*)'
+                      r'((?:\s*/\s*%s|\s*\.\s*joinpath\s*\(\s*%s(?:\s*,\s*%s){0,32}\s*\)){0,32})'
                       r'(\s*(?:/|\.\s*joinpath\b))?' % ((_LP,) * 5))
-_PY_CONCAT = re.compile(r'%s(?:\s*(?:\+\s*)?(?:%s|os\.sep\b))+' % (_LP, _LP))
+_PY_CONCAT = re.compile(r'%s(?:\s*(?:\+\s*)?(?:%s|os\.sep\b)){1,32}' % (_LP, _LP))
 # a string a file call takes as the path it removes, moves or copies to
 _PY_PATH_ARG = re.compile(r'\b(?:shutil\.(?:rmtree|move)|os\.(?:rmdir|removedirs|remove|unlink|renames?|replace))'
                           r'\s*\(\s*(?:\w+\s*=\s*)?(%s)' % _LP)
-_PY_DEST = re.compile(r'\b(?:shutil\.(?:copy\w*|move)|os\.(?:renames?|replace))\s*\((?:[^,()]|\([^()]*\))*,'
+_PY_DEST = re.compile(r'\b(?:shutil\.(?:copy\w*|move)|os\.(?:renames?|replace))\s*\([^,()]*(?:\([^()]*\)[^,()]*)*,'
                       r'\s*(?:\w+\s*=\s*)?(%s)' % _LP)
 
 
@@ -966,15 +968,19 @@ def _lit_text(tok):
     body = body[:-n]
     if (len(body) - len(body.rstrip('\\'))) % 2:
         return None                             # its last quote is escaped
-    return body if 'r' in tok[:q].lower() else body.replace('\\\\', '\\')
+    if 'r' in tok[:q].lower():
+        return body
+    return re.sub(r'\\([\\nrt])', lambda e: {'n': '\n', 'r': '\r', 't': '\t'}.get(e.group(1), '\\'), body)
 
 
-def _py_strings(code):
+def _py_strings(code, tick):
     """The program with each string literal replaced by \\x00<n>\\x00 and each
     comment by a space, and the literals' texts (one pass, linear)."""
-    code = code.replace('\x00', ' ')
+    code = code.replace('\x00', ' ').replace('\r\n', '\n').replace('\r', '\n')
     out, lits, last = [], [], 0
-    for m in _PY_TOKEN.finditer(code):
+    for k, m in enumerate(_PY_TOKEN.finditer(code)):
+        if not k % 4096:
+            tick()
         out.append(code[last:m.start()])
         last = m.end()
         text = None if m.group(0).startswith('#') else _lit_text(m.group(0))
@@ -987,24 +993,27 @@ def _py_strings(code):
     return ''.join(out), lits
 
 
-def _named_paths(code):
+def _named_paths(code, tick):
     """The paths a data script names: each string with a separator in it, each
     path it builds from strings, and each string a file call takes as the path
     it removes, moves or copies to.  Another bare word ('scripts', '.claude', a
-    column name) is data."""
-    t, lits = _py_strings(code)
+    column name) is data, and so is a string with a line break in it (a
+    docstring, a line it writes)."""
+    t, lits = _py_strings(code, tick)
 
     def texts(s):
         return [lits[int(i)] for i in re.findall(r'\x00(\d+)\x00', s or '')]
     out = [x for x in lits if '/' in x or '\\' in x]
+    tick()
     for m in _PY_JOIN.finditer(t):
         out.append('/'.join(texts(m.group(1)) + (['<name>'] if m.group(2) == ',' else [])))
     for m in _PY_PATH.finditer(t):
         out.append('/'.join((texts(m.group(1)) or ['.']) + texts(m.group(2)) + (['<name>'] if m.group(3) else [])))
+    tick()
     for m in _PY_CONCAT.finditer(t):
         out.append(''.join(lits[int(i)] if i else '/' for i in re.findall(r'\x00(\d+)\x00|os\.sep', m.group(0))))
     out += [lits[int(m.group(1)[1:-1])] for p in (_PY_PATH_ARG, _PY_DEST) for m in p.finditer(t)]
-    return [x for x in out if len(x) <= 4096]           # a longer string is no path
+    return [x for x in out if len(x) <= 4096 and '\n' not in x and '\r' not in x]   # no path
 
 
 def py_protected(code, ctx, base, names_only=False):
@@ -1017,7 +1026,8 @@ def py_protected(code, ctx, base, names_only=False):
     if not code or not (_PY_WRITE.search(code) or _PY_REMOVE.search(code)):
         return None
     moves = bool(_PY_MOVES.search(code)) and not names_only
-    for k, lit in enumerate(dict.fromkeys(_named_paths(code) if names_only else _PATH_LIT.findall(code))):
+    lits = _named_paths(code, ctx.budget.tick) if names_only else _PATH_LIT.findall(code)
+    for k, lit in enumerate(dict.fromkeys(lits)):
         if not k % 1024:
             ctx.budget.tick()
         n = norm_path(lit, ctx, base)

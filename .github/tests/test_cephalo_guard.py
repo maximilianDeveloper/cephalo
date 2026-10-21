@@ -1430,6 +1430,9 @@ class TestReviewFindings(Base):
                              "df.to_csv('workspace/data/processed/a.csv')\n"),
                 ('tab.py', "import pandas as pd\nt = pd.read_csv('x.csv').rename(index=str.title)\n"
                            "t.to_csv('workspace/data/outputs/t.csv', decimal=',')\nprint(t.to_string().replace('.', ','))\n"),
+                ('doc.py', '"""\nscripts/verbatim_check.py is cephalo\'s; this one reads workspace/data/raw.\n"""\n'
+                           '"""The guard lives in ~/.claude/settings.json\n"""\n'
+                           "open('workspace/data/outputs/t.tsv', 'w').write('scripts\\tdata\\n')\n"),
                 ('deck.py', "import os\nfrom pptx import Presentation\np = Presentation()\n"
                             "p.save(os.path.join('workspace', 'output', 'slides', 'deck.pptx'))\n"
                             "print(os.path.join('workspace', 'data', 'scripts'), os.replace)\n")):
@@ -1457,7 +1460,10 @@ class TestReviewFindings(Base):
                 ('copy_call.py', "import shutil\nshutil.copy(str(src), 'scripts')\n"),
                 ('rmtree_bare.py', "import shutil\nshutil.rmtree('scripts')\n"),
                 ('move_bare.py', "import shutil\nshutil.move('scripts', 'old')\n"),
-                ('triple.py', "open('''scripts/x.py''', 'w')\n")):
+                ('triple.py', "open('''scripts/x.py''', 'w')\n"),
+                ('black.py', "import json, os\nSETTINGS = os.path.join(\n    '.claude',\n    'settings.local.json',\n)\n"
+                             "json.dump({}, open(SETTINGS, 'w'))\n"),
+                ('cr_only.py', "import os\r# write the helper\ropen('scripts/x.py', 'w').write('x')\r")):
             with self.subTest(name=name):
                 self.put('workspace/data/scripts/' + name, code)
                 self.assertEqual(rules_of(self.b('python3 workspace/data/scripts/' + name)), {'S5'})
