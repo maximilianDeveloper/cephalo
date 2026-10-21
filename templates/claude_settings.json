@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "d=\"${CLAUDE_PROJECT_DIR:-.}\"; f=\"$d/scripts/cephalo_guard.sh\"; [ -f \"$f\" ] || f=\"$d/../scripts/cephalo_guard.sh\"; [ -f \"$f\" ] && sh \"$f\"; exit 0",
+            "command": "d=\"$CLAUDE_PROJECT_DIR\"; [ -n \"$d\" ] || exit 0; f=\"$d/scripts/cephalo_guard.sh\"; [ -f \"$f\" ] || { [ -d \"$d/../00_Shared_Materials\" ] && f=\"$d/../scripts/cephalo_guard.sh\"; }; [ -f \"$f\" ] && sh \"$f\"; exit 0",
             "timeout": 10,
             "onFailure": "continue"
           }
@@ -19,7 +19,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "d=\"${CLAUDE_PROJECT_DIR:-.}\"; f=\"$d/scripts/cephalo_guard.sh\"; [ -f \"$f\" ] || f=\"$d/../scripts/cephalo_guard.sh\"; [ -f \"$f\" ] && sh \"$f\"; exit 0",
+            "command": "d=\"$CLAUDE_PROJECT_DIR\"; [ -n \"$d\" ] || exit 0; f=\"$d/scripts/cephalo_guard.sh\"; [ -f \"$f\" ] || { [ -d \"$d/../00_Shared_Materials\" ] && f=\"$d/../scripts/cephalo_guard.sh\"; }; [ -f \"$f\" ] && sh \"$f\"; exit 0",
             "timeout": 10,
             "onFailure": "continue"
           }

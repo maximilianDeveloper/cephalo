@@ -791,11 +791,20 @@ class TestSettingsCommand(Base):
 
     def test_sub_project_uses_parent_scripts(self):
         top = self.project('multi')
+        os.makedirs(os.path.join(top, '00_Shared_Materials'))
         sub = os.path.join(top, '02_Main_Work')
         os.makedirs(sub)
         code, out = self.sh(sub)
         self.assertEqual(code, 0)
         self.assertIn('deny', out)
+
+    def test_other_projects_never_use_the_folder_above(self):
+        # a project without its own scripts (deleted, or a folder in Downloads) runs no script of the
+        # folder above it, which may be anyone's: only a multi-project sub-project does
+        top = self.project('outer')
+        inner = os.path.join(top, 'thesis')
+        os.makedirs(inner)
+        self.assertEqual(self.sh(inner), (0, ''))
 
     def test_missing_script_or_python_passes_silently(self):
         self.assertEqual(self.sh(self.project('noscript', with_script=False)), (0, ''))
@@ -805,8 +814,9 @@ class TestSettingsCommand(Base):
         os.symlink('/bin/sh', os.path.join(onlysh, 'sh'))
         self.assertEqual(self.sh(self.project('nopython'), path=onlysh), (0, ''))
         self.assertEqual(self.sh(None), (0, ''))                     # no variable, no scripts/ in cwd
-        code, out = self.sh(None, cwd=self.project('cwdonly'))        # no variable: the cwd is the project
-        self.assertIn('deny', out)
+        # no variable: nothing runs, also not a scripts/ folder the current folder happens to have
+        self.assertEqual(self.sh(None, cwd=self.project('cwdonly')), (0, ''))
+        self.assertEqual(self.sh('', cwd=self.project('cwdempty')), (0, ''))
 
     def test_crashing_interpreter_passes(self):
         fake = os.path.join(self.top, 'badbin')
