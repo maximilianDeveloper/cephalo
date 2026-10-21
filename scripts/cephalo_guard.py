@@ -107,7 +107,7 @@ class Budget:
         self.deadline = time.monotonic() + DEADLINE_S
         self.read = self.scanned = 0
         self.files = {}             # normalized path -> text read (each file is read once)
-        self.scripts = set()        # scripts already checked for this call
+        self.scripts = {}           # script key -> its hits, for this call (None while checking)
 
     def tick(self):
         if time.monotonic() > self.deadline:
@@ -919,14 +919,20 @@ _PY_REMOVE = re.compile(r'\bos\.(?:remove|unlink|rmdir|removedirs|rename|replace
 _PY_MOVES = re.compile(r'\bshutil\.(?:rmtree|move)\s*\(|\bos\.(?:rename|replace|rmdir|removedirs)\s*\(|\.(?:rmdir|rename)\s*\(|\brmtree\s*\(')
 
 
-def py_protected(code, ctx, base):
-    """A Python program that writes, moves or deletes a protected path."""
+def py_protected(code, ctx, base, names_only=False):
+    """A Python program that writes, moves or deletes a protected path.  With
+    names_only (a script of the project in data/scripts/, whose strings are
+    data: column names, separators, folder names), only a string that names a
+    protected file or folder by a path counts ('.claude/settings.local.json',
+    'scripts/x.py'), not a bare word or a folder that holds one."""
     if not code or not (_PY_WRITE.search(code) or _PY_REMOVE.search(code)):
         return None
-    moves = bool(_PY_MOVES.search(code))
+    moves = bool(_PY_MOVES.search(code)) and not names_only
     for k, lit in enumerate(dict.fromkeys(_PATH_LIT.findall(code))):
         if not k % 1024:
             ctx.budget.tick()
+        if names_only and not re.search(r'\w[\\/]+[.\w]', lit):
+            continue
         n = norm_path(lit, ctx, base)
         why = protected(n, ctx) or (holds_protected(n, ctx) if moves else None)
         if why:
@@ -1336,13 +1342,20 @@ def _script_hits(path, kind, ctx, base, depth):
     if not n or n in (DEVICE, TEMPVAR) or _trusted_script(n, ctx):
         return []
     data = _data_script(n, ctx)
-    if base_name(path) in ('setup.sh', 'setup.ps1'):
+    if not data and base_name(path) in ('setup.sh', 'setup.ps1'):
         return [('S1', 'SETUP:%s' % path)]          # cephalo's setup, outside this project
     key = (n, kind, base, depth)
     if key in ctx.budget.scripts:
-        return []                                   # checked already for this call: same hits
-    ctx.budget.scripts.add(key)
-    ctx.budget.tick()
+        found = ctx.budget.scripts[key] or []       # checked already for this call (or being checked)
+    else:
+        ctx.budget.scripts[key] = None              # a script that runs itself stops here
+        ctx.budget.tick()
+        found = _script_body_hits(n, path, kind, ctx, base, depth, data)
+        ctx.budget.scripts[key] = found
+    return [h for h in found if h[0] == 'S5'] if data else found
+
+
+def _script_body_hits(n, path, kind, ctx, base, depth, data):
     body = _read_small(n, ctx)
     if not body:
         return []
@@ -1351,12 +1364,12 @@ def _script_hits(path, kind, ctx, base, depth):
         what = None if data else py_write(body, ctx, base)
         if what:
             hits.append(('S1', "the script %s, which is not one of cephalo's, writes a file: %s" % (path, what)))
-        prot = py_protected(body, ctx, base)
+        prot = py_protected(body, ctx, base, names_only=data)
         if prot:
             hits.append(('S5', '%s (%s), by the script %s' % (prot[0], prot[1], path)))
     elif depth < 2:
         for rule, detail in check_shell(body, 'PowerShell' if kind == 'ps' else 'Bash', ctx, depth + 1):
-            if rule in (('S5',) if data else ('S1', 'S2', 'S5')):
+            if rule in ('S1', 'S2', 'S5'):
                 hits.append((rule, '%s, in the script %s' % (detail, path)))
     return hits
 

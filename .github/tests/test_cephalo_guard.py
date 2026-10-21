@@ -1373,6 +1373,33 @@ class TestReviewFindings(Base):
             "open('workspace/output/chapters/ch_1.md', 'w').write('x')\n", encoding='utf-8')
         self.assertIn('S1', rules_of(self.b('python3 %s/data/scripts/fix.py' % outside)))
         shutil.rmtree(outside)
+        # an analysis or deck script's strings are data: column names, separators, folder names
+        for name, code in (
+                ('clean.py', "import pandas as pd\ndf = pd.read_csv('workspace/data/raw/a.csv', sep=';')\n"
+                             "df = df.rename(columns={'Q1': 'age'})\ndf['d'] = df['d'].str.replace('/', '-')\n"
+                             "df.to_csv('workspace/data/processed/a.csv')\n"),
+                ('tab.py', "import pandas as pd\nt = pd.read_csv('x.csv').rename(index=str.title)\n"
+                           "t.to_csv('workspace/data/outputs/t.csv', decimal=',')\nprint(t.to_string().replace('.', ','))\n"),
+                ('deck.py', "import os\nfrom pptx import Presentation\np = Presentation()\n"
+                            "p.save(os.path.join('workspace', 'output', 'slides', 'deck.pptx'))\n"
+                            "print(os.path.join('workspace', 'data', 'scripts'), os.replace)\n")):
+            with self.subTest(name=name):
+                self.put('workspace/data/scripts/' + name, code)
+                self.passes(self.b('python3 workspace/data/scripts/' + name, agent='data-agent'))
+        self.put('workspace/data/scripts/tidy.py', "import shutil\nshutil.rmtree('scripts/old')\n")
+        self.assertEqual(rules_of(self.b('python3 workspace/data/scripts/tidy.py')), {'S5'})
+        # shell scripts there: writing files passes, the hook settings or scripts/ do not
+        self.put('workspace/data/scripts/run.sh', "mkdir -p workspace/data/outputs\necho done > workspace/data/outputs/log.txt\n")
+        self.put('workspace/data/scripts/off.sh', "echo '{}' > .claude/settings.local.json\n")
+        self.put('workspace/data/scripts/setup.sh', "pip install -r workspace/data/scripts/requirements.txt\n")
+        self.passes(self.b('sh workspace/data/scripts/run.sh'))
+        self.assertEqual(rules_of(self.b('bash workspace/data/scripts/off.sh')), {'S5'})
+        self.passes(self.b('bash workspace/data/scripts/setup.sh'))        # a project's own, not cephalo's setup
+        # a script seen first through a data script keeps its own S1 when the command runs it directly
+        self.put('_scratch/orchestrator/x.sh', "echo x >> workspace/output/chapters/ch.md\n")
+        self.put('workspace/data/scripts/chain.sh', "sh _scratch/orchestrator/x.sh\n")
+        self.passes(self.b('sh workspace/data/scripts/chain.sh'))
+        self.assertIn('S1', rules_of(self.b('sh workspace/data/scripts/chain.sh && echo $(sh _scratch/orchestrator/x.sh)')))
 
     def test_format_verifier_message(self):
         out = bash("sed -i 's/a/b/' workspace/output/verification/document_format_round_1.md", agent='format-verifier')
