@@ -1333,6 +1333,71 @@ class TestNoNetworkOrDeviceAccess(Base):
         self.assertIn('//server/home/u/proj/_scratch/x.sh', [p.replace('\\', '/').lower() for p in paths])
 
 
+@unittest.skipIf(os.name == 'nt', 'POSIX permissions')
+class TestStateFolder(Base):
+    """In a shared temporary folder the guard keeps its state in a folder of
+    the user's own, never in one another user made, and follows no link."""
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix='guard-statedir-')
+        self.saved, tempfile.tempdir = tempfile.tempdir, self.tmp
+        self.d = os.path.join(self.tmp, 'cephalo-guard-%d' % os.getuid())
+
+    def tearDown(self):
+        tempfile.tempdir = self.saved
+        shutil.rmtree(self.tmp, True)
+
+    def e(self):
+        x = env(on='P1')
+        del x['CEPHALO_GUARD_STATE_DIR']
+        return x
+
+    def note_twice(self):
+        bad = payload('Bash', {'description': 'no command'})
+        return g.evaluate(bad, self.e()), g.evaluate(bad, self.e())
+
+    def test_own_folder_mode_0700(self):
+        first, second = self.note_twice()
+        self.assertIn('systemMessage', first)
+        self.assertIsNone(second)                      # the note once per session
+        st = os.lstat(self.d)
+        self.assertEqual(st.st_mode & 0o777, 0o700)
+        self.assertEqual(st.st_uid, os.getuid())
+
+    def test_foreign_or_open_folder_is_not_used(self):
+        target = os.path.join(self.tmp, 'victim.txt')
+        Path(target).write_text('keep\n')
+        for make in ('open', 'link'):
+            with self.subTest(make=make):
+                shutil.rmtree(self.d, True)
+                if os.path.lexists(self.d):
+                    os.remove(self.d)
+                if make == 'open':
+                    os.mkdir(self.d)
+                    os.chmod(self.d, 0o777)                # as if another user had made it
+                else:
+                    os.symlink(self.tmp, self.d)
+                first, second = self.note_twice()
+                self.assertIn('systemMessage', first)
+                self.assertIn('systemMessage', second)     # nothing remembered, nothing written
+                self.assertEqual([n for n in os.listdir(self.tmp) if n.startswith('note-')], [])
+                self.assertEqual(Path(target).read_text(), 'keep\n')
+                if make == 'link':
+                    os.remove(self.d)
+
+    def test_no_link_is_followed(self):
+        target = os.path.join(self.tmp, 'victim.txt')
+        Path(target).write_text('keep\n')
+        os.mkdir(self.d, 0o700)
+        sid = g.hashlib.sha256(b'sess-1').hexdigest()[:16]
+        os.symlink(target, os.path.join(self.d, 'p1-%s.txt' % sid))
+        out = run('Agent', {'description': 'v', 'subagent_type': 'source-verifier',
+                            'prompt': 'Verify chapter 1. Only check the changed sentences.'}, on='P1',
+                  state=self.d)
+        self.assertIsNotNone(out)
+        self.assertEqual(Path(target).read_text(), 'keep\n')
+
+
 class TestWorkLimits(Base):
     """The guard's work for one call is bounded: what it cannot check within
     the limits passes with its note, and a planted FIFO or device never blocks it."""

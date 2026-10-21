@@ -55,9 +55,9 @@ permissionDecision "deny" (PreToolUse) or decision "block" (PostToolUse) and
 never answers "allow", which would skip the user's permission prompts.  Input
 it does not understand, and any error of its own, let the call pass with a
 one-line note to the user (systemMessage), once per session.  It writes
-nothing but a small file per session in cephalo-guard/ in the system's
-temporary folder, for P1 when it is on and for that note, and uses no
-network.  Python 3.9 or later, standard library only.
+nothing but a small file per session in a folder of its own in the system's
+temporary folder (cephalo-guard-<user id>/, on Windows cephalo-guard/), for
+P1 when it is on and for that note, and uses no network.  Python 3.9 or later, standard library only.
 """
 
 import bisect
@@ -1519,27 +1519,63 @@ def p1_findings(text, target=''):
     return found
 
 
-def _state_file(ctx):
-    d = ctx.env.get('CEPHALO_GUARD_STATE_DIR')
+_NOFOLLOW = getattr(os, 'O_NOFOLLOW', 0)
+
+
+def _state_dir(env):
+    """The folder of the guard's state files, or '' when there is none it can
+    use safely.  In a shared temporary folder (Linux, and macOS where TMPDIR is
+    unset) another local user could create the folder first and plant links in
+    it: the folder carries the user id, is made with mode 0700 and is used only
+    when it is a real folder of this user that no one else can write.  On
+    Windows %TEMP% is the user's own."""
+    d = env.get('CEPHALO_GUARD_STATE_DIR')
+    if d:
+        return d
+    import tempfile
+    base = tempfile.gettempdir()
+    if os.name == 'nt' or not hasattr(os, 'getuid'):
+        return os.path.join(base, 'cephalo-guard')
+    d = os.path.join(base, 'cephalo-guard-%d' % os.getuid())
+    try:
+        os.mkdir(d, 0o700)
+    except FileExistsError:
+        pass
+    except OSError:
+        return ''
+    try:
+        st = os.lstat(d)
+    except OSError:
+        return ''
+    if not stat.S_ISDIR(st.st_mode) or st.st_uid != os.getuid() or st.st_mode & 0o022:
+        return ''
+    return d
+
+
+def _state_file(ctx, prefix='p1'):
+    d = _state_dir(ctx.env)
     if not d:
-        import tempfile
-        d = os.path.join(tempfile.gettempdir(), 'cephalo-guard')
+        return '', ''
     sid = hashlib.sha256(ctx.session.encode('utf-8', 'replace')).hexdigest()[:16]
-    return d, os.path.join(d, 'p1-%s.txt' % sid)
+    return d, os.path.join(d, '%s-%s.txt' % (prefix, sid))
 
 
 def _seen(ctx, key):
-    data = _read_regular(_state_file(ctx)[1], 1 << 20)   # 65 bytes a deny: 16000 denies
+    path = _state_file(ctx)[1]
+    data = _read_regular(path, 1 << 20) if path else None   # 65 bytes a deny: 16000 denies
     return data is not None and key in data.decode('ascii', 'replace').split()
 
 
 def _remember(ctx, key):
     d, path = _state_file(ctx)
+    if not d:
+        return False
     try:
         os.makedirs(d, exist_ok=True)
         if not os.path.exists(path):
             _prune(d)
-        fd = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT | getattr(os, 'O_NONBLOCK', 0), 0o600)
+        fd = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT | getattr(os, 'O_NONBLOCK', 0) | _NOFOLLOW,
+                     0o600)
         try:
             if not stat.S_ISREG(os.fstat(fd).st_mode):
                 return False
@@ -1726,20 +1762,18 @@ def note(text, data=None, env=None):
     session (a later Claude Code may send input the guard does not know)."""
     env = os.environ if env is None else env
     session = str(data.get('session_id') or 'nosession') if isinstance(data, dict) else 'nosession'
-    d = env.get('CEPHALO_GUARD_STATE_DIR')
-    if not d:
-        import tempfile
-        d = os.path.join(tempfile.gettempdir(), 'cephalo-guard')
-    path = os.path.join(d, 'note-%s.txt' % hashlib.sha256(session.encode('utf-8', 'replace')).hexdigest()[:16])
-    try:
-        if os.path.exists(path):
-            return None
-        os.makedirs(d, exist_ok=True)
-        _prune(d)
-        with open(path, 'w', encoding='ascii') as fh:
-            fh.write('1\n')
-    except OSError:
-        pass
+    d = _state_dir(env)
+    if d:
+        path = os.path.join(d, 'note-%s.txt' % hashlib.sha256(session.encode('utf-8', 'replace')).hexdigest()[:16])
+        try:
+            os.makedirs(d, exist_ok=True)
+            if not os.path.lexists(path):
+                _prune(d)
+            os.close(os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | _NOFOLLOW, 0o600))
+        except FileExistsError:
+            return None                   # shown already in this session
+        except OSError:
+            pass
     return {'systemMessage': 'cephalo guard: %s; nothing was checked.' % text}
 
 
