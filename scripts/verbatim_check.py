@@ -299,13 +299,23 @@ def read_markdown(path: Path) -> tuple:
         inside = bool(re.match(r"\[\^[^\]]+\]:", line)) or (inside and bool(re.match(r"\s{2,}\S|\t", line)))
         if inside:
             footnotes.add(n)
+    # the text of Word raw blocks that the export writes: one piece per w:p
+    # paragraph, at its own line, its runs joined as Word shows them; not in
+    # an HTML comment, which the export drops
+    comments = [(m.start(), m.end()) for m in HTML_COMMENT.finditer(text)]
     raw_text = []
     for m in RAW_BLOCK.finditer(text):
         fmt = RAW_FORMAT.search(m.group(0))
-        if fmt and fmt.group(1).lower() in ("openxml", "docx"):
-            words = " ".join(html.unescape(t) for t in WORD_TEXT.findall(m.group(0))).strip()
+        if not fmt or fmt.group(1).lower() not in ("openxml", "docx"):
+            continue
+        if any(a <= m.start() < b for a, b in comments):
+            continue
+        pos = m.start()
+        for para in re.finditer(r"<w:p[\s>][\s\S]*?</w:p>|<w:p/>", m.group(0)):
+            words = "".join(html.unescape(t) for t in WORD_TEXT.findall(para.group(0))).strip()
             if words:
-                raw_text.append((normalize(words), text.count("\n", 0, m.start()) + 1, False, True))
+                line = text.count("\n", 0, pos + para.start()) + 1
+                raw_text.append((normalize(words), line, False, True))
     for pattern in (RAW_BLOCK, HTML_COMMENT, PANDOC_CITATION, FOOTNOTE_MARK):
         for m in reversed(list(pattern.finditer(text))):
             text = blank(text, m.start(), m.end())
@@ -346,7 +356,10 @@ def read_markdown(path: Path) -> tuple:
     if buf:
         pieces.append(("\n".join(buf), first, quote))
     # 1-based first and last line, the last None when it runs to the end; the
-    # text of Word raw blocks comes last, marked as not counted
+    # text of Word raw blocks comes last, marked as not counted, and not from
+    # the bibliography
+    if cut:
+        raw_text = [r for r in raw_text if not cut[0] + 1 <= r[1] <= cut[1]]
     return pieces + raw_text, (cut and (cut[0] + 1, cut[1] if cut[1] < len(lines) else None))
 
 

@@ -1688,7 +1688,14 @@ jobs:
           expect 0 python scripts/verbatim_check.py --words "$V/raw_text.md"
           grep -qF 'Words: 8 ' "$V/out.txt"
           expect 1 python scripts/verbatim_check.py "$V/raw_text.md" "$V/raw_text_src.txt"
-          grep -qF '16 words, line 5' "$V/out.txt"
+          grep -qF '16 words, line 6' "$V/out.txt"
+          # a word split over two runs is one word, as Word shows it; a raw block inside an HTML comment
+          # does not reach the export
+          printf '# 1 Einleitung\n\nEin kurzer eigener Satz steht hier.\n\n```{=openxml}\n<w:p><w:r><w:t xml:space="preserve">Die Bäume kühlen ihre Umgebung durch Verdun</w:t></w:r><w:r><w:t>stung und senken die Temperatur in dicht bebauten Vierteln deutlich.</w:t></w:r></w:p>\n```\n' > "$V/raw_split.md"
+          expect 1 python scripts/verbatim_check.py "$V/raw_split.md" "$V/raw_text_src.txt"
+          grep -qF '16 words, line 6' "$V/out.txt"
+          printf '# 1 Einleitung\n\nEin kurzer eigener Satz steht hier.\n\n<!--\n```{=openxml}\n<w:p><w:r><w:t>Die Bäume kühlen ihre Umgebung durch Verdunstung und senken die Temperatur in dicht bebauten Vierteln deutlich.</w:t></w:r></w:p>\n```\n-->\n' > "$V/raw_comment.md"
+          expect 0 python scripts/verbatim_check.py "$V/raw_comment.md" "$V/raw_text_src.txt"
 
       - name: build_reference_docx.py (styles, page settings, errors; round trip through Pandoc)
         run: |
