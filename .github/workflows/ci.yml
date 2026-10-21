@@ -1706,6 +1706,22 @@ jobs:
           grep -qF '16 words, line 8' "$V/out.txt"
           printf '# 1 Einleitung\n\nEin kurzer eigener Satz steht hier.\n\n```{=openxml}\n<w:p><w:pPr><w:pStyle w:val="BlockText"/></w:pPr><w:r><w:t>Die Bäume kühlen ihre Umgebung durch Verdunstung und senken die Temperatur in dicht bebauten Vierteln deutlich.</w:t></w:r></w:p>\n```\n' > "$V/raw_quote.md"
           expect 0 python scripts/verbatim_check.py "$V/raw_quote.md" "$V/raw_text_src.txt"
+          # a style the reference document lacks is plain text in the export; a closed <w:br></w:br>
+          # is a line break too; a {=docx} block, which Pandoc drops, is not compared
+          sed 's/BlockText/Quote/' "$V/raw_quote.md" > "$V/raw_quote_id.md"
+          expect 1 python scripts/verbatim_check.py "$V/raw_quote_id.md" "$V/raw_text_src.txt"
+          grep -qF '16 words, line 6' "$V/out.txt"
+          sed 's|<w:br/>|<w:br></w:br>|' "$V/raw_br.md" > "$V/raw_br_pair.md"
+          expect 1 python scripts/verbatim_check.py "$V/raw_br_pair.md" "$V/raw_text_src.txt"
+          grep -qF '16 words, line 6' "$V/out.txt"
+          sed 's/{=openxml}/{=docx}/' "$V/raw_text.md" > "$V/raw_docx.md"
+          expect 0 python scripts/verbatim_check.py "$V/raw_docx.md" "$V/raw_text_src.txt"
+          # a text box in a quoted paragraph: the paragraph's text after the box stays in the quote
+          printf '# 1 Einleitung\n\nEin kurzer eigener Satz steht hier.\n\n```{=openxml}\n<w:p><w:pPr><w:pStyle w:val="BlockText"/></w:pPr><w:r><w:t xml:space="preserve">Vor dem Kasten. </w:t></w:r><w:r><mc:AlternateContent><mc:Choice Requires="wps"><w:txbxContent><w:p><w:r><w:t>Notiz.</w:t></w:r></w:p></w:txbxContent></mc:Choice><mc:Fallback><w:txbxContent><w:p><w:r><w:t>Notiz.</w:t></w:r></w:p></w:txbxContent></mc:Fallback></mc:AlternateContent></w:r><w:r><w:t>Die Bäume kühlen ihre Umgebung durch Verdunstung und senken die Temperatur in dicht bebauten Vierteln deutlich.</w:t></w:r></w:p>\n```\n' > "$V/raw_box.md"
+          expect 0 python scripts/verbatim_check.py "$V/raw_box.md" "$V/raw_text_src.txt"
+          sed 's|<w:pPr><w:pStyle w:val="BlockText"/></w:pPr>||' "$V/raw_box.md" > "$V/raw_box_plain.md"
+          expect 1 python scripts/verbatim_check.py "$V/raw_box_plain.md" "$V/raw_text_src.txt"
+          grep -qF '16 words, line 6' "$V/out.txt"
           # a raw paragraph in the bibliography is one of its entries: with a year it stays out with
           # the reference list; without one the section is no reference list and is compared
           printf '# 1 Einleitung\n\nEin kurzer eigener Satz steht hier.\n\n# Literaturverzeichnis\n\nMuster, A. (2019): Ein Buch. Berlin.\n\n```{=openxml}\n<w:p><w:r><w:t>Keller, A. (2018): Die Bäume kühlen ihre Umgebung durch Verdunstung und senken die Temperatur in dicht bebauten Vierteln deutlich.</w:t></w:r></w:p>\n```\n' > "$V/raw_bib.md"

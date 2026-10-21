@@ -146,15 +146,21 @@ HTML_COMMENT = re.compile(r"<!--.*?-->", re.S)
 # starts the back matter (docs/reference_management.md), not text. Like an HTML
 # comment it is blanked, so it neither counts nor joins a run. It closes with a
 # fence of the same character, at least as long.
-# The text of a Word raw block (the w:t elements of ```{=openxml} or {=docx}):
-# the export writes it into the document, so it is compared with the sources,
-# though not counted for the page budget. A paragraph ends at </w:p> or is an
-# empty <w:p/>; in it, a tab or line break shows as a space and a
-# non-breaking hyphen as a hyphen. A quote style makes it a quote, as in
-# read_docx.
-WORD_PARAGRAPH_END = re.compile(r"</w:p>|<w:p(?:\s[^>]*)?/>")
-WORD_RUN_TEXT = re.compile(r"<w:t(?:\s[^>]*)?>([^<]*)</w:t>|<w:(?:tab|ptab|br|cr)\b[^>]*/>|<w:noBreakHyphen\b[^>]*/>")
-WORD_STYLE = re.compile(r"<w:pStyle\s[^>]*?w:val=\"([^\"]*)\"")
+# The text of a Word raw block (the w:t elements of ```{=openxml}; Pandoc drops
+# a {=docx} block): the export writes it into the document, so it is compared
+# with the sources, though not counted for the page budget. A paragraph ends at
+# </w:p> or is an empty <w:p/>; in it, a tab or line break shows as a space and
+# a non-breaking hyphen as a hyphen. A text box's paragraphs are paragraphs of
+# their own, and the copy of it for older readers (mc:Fallback) is left out.
+# Pandoc's block-quote style (BlockText, the one quote style of its reference
+# document and of scripts/build_reference_docx.py) makes a paragraph a quote; a
+# style the reference document lacks is plain text in the export. Attribute
+# scans stop at the next tag, so that malformed markup takes no extra time.
+WORD_PARAGRAPH_END = re.compile(r"</w:p>|<w:p(?:\s[^<>]*)?/>")
+WORD_RUN_TEXT = re.compile(r"<w:t(?:\s[^<>]*)?>([^<]*)</w:t>"
+                           r"|<w:(tab|ptab|br|cr|noBreakHyphen)\b[^<>]*(?:/>|>\s*</w:\2>)")
+WORD_STYLE = re.compile(r"<w:pStyle\s[^<>]*?w:val=\"([^\"<>]*)\"")
+RAW_QUOTE_STYLE = re.compile(r"(?i)(?:footnote)?blocktext")
 QUOTE_STYLE = re.compile(r"(?i)quot|zitat|block ?text")
 RAW_FORMAT = re.compile(r"\{=([^{}\s]+)\}")
 RAW_BLOCK = re.compile(r"(?ms)^ {0,3}(?P<fence>(?P<char>[`~])(?P=char){2,})[ \t]*\{=[^{}\s]+\}[ \t]*\n"
@@ -289,6 +295,51 @@ def bibliography_section(headings: list, count: int) -> Optional[tuple]:
     return start, end
 
 
+def element_spans(block: str, start_tag: str, end_tag: str) -> list:
+    """(start, end) of each element from start_tag to end_tag in block, one after
+    another (an element without its end tag runs to the end): one pass."""
+    out, i = [], block.find(start_tag)
+    while i >= 0:
+        j = block.find(end_tag, i)
+        j = len(block) if j < 0 else j + len(end_tag)
+        out.append((i, j))
+        i = block.find(start_tag, j)
+    return out
+
+
+def raw_paragraphs(block: str) -> list:
+    """
+    (text, offset of its first text, is_quote) of each paragraph of a Word raw
+    block. A text box's paragraphs (w:txbxContent) are taken on their own, so
+    that the paragraph around it keeps its text before and after the box and
+    its own style; the copy of a box for older readers (mc:Fallback) is left out.
+    """
+    for a, b in element_spans(block, "<mc:Fallback", "</mc:Fallback>"):
+        block = blank(block, a, b)
+    boxes = []
+    for a, b in element_spans(block, "<w:txbxContent", "</w:txbxContent>"):
+        boxes.append((a, block[a:b]))
+        block = blank(block, a, b)
+    out = []
+    for base, part_of in [(0, block)] + boxes:
+        start = 0
+        for end in [e.start() for e in WORD_PARAGRAPH_END.finditer(part_of)] + [len(part_of)]:
+            part = part_of[start:end]
+            chars, at = [], None
+            for r in WORD_RUN_TEXT.finditer(part):
+                if r.group(1) is not None:
+                    at = r.start() if at is None else at
+                    chars.append(html.unescape(r.group(1)))
+                else:
+                    chars.append("-" if r.group(2) == "noBreakHyphen" else " ")
+            words = "".join(chars).strip()
+            if words and at is not None:
+                style = WORD_STYLE.search(part)
+                out.append((words, base + start + at, bool(style and RAW_QUOTE_STYLE.fullmatch(style.group(1)))))
+            start = end
+    return out
+
+
 def read_markdown(path: Path) -> tuple:
     """
     Paragraph-sized pieces of a Markdown or text chapter, (text, first line,
@@ -307,34 +358,20 @@ def read_markdown(path: Path) -> tuple:
             footnotes.add(n)
     # the text of Word raw blocks that the export writes: one piece per w:p
     # paragraph, at the line of its first text, its runs joined as Word shows
-    # them (a tab or line break between runs as a space); a paragraph in a
-    # quote style is a quote, as in a .docx; not in an HTML comment, which the
-    # export drops
+    # them (a tab or line break between runs as a space); a paragraph in
+    # Pandoc's block-quote style is a quote, as in the export; not in an HTML
+    # comment, which the export drops
     comments = [(m.start(), m.end()) for m in HTML_COMMENT.finditer(text)]
     raw_text = []
     for m in RAW_BLOCK.finditer(text):
         fmt = RAW_FORMAT.search(m.group(0))
-        if not fmt or fmt.group(1).lower() not in ("openxml", "docx"):
+        if not fmt or fmt.group(1).lower() != "openxml":
             continue
         if any(a <= m.start() < b for a, b in comments):
             continue
-        block, start = m.group(0), 0
-        for end in [e.start() for e in WORD_PARAGRAPH_END.finditer(block)] + [len(block)]:
-            part = block[start:end]
-            chars, at = [], None
-            for r in WORD_RUN_TEXT.finditer(part):
-                if r.group(1) is not None:
-                    at = r.start() if at is None else at
-                    chars.append(html.unescape(r.group(1)))
-                else:
-                    chars.append("-" if r.group(0).startswith("<w:noBreakHyphen") else " ")
-            words = "".join(chars).strip()
-            if words and at is not None:
-                line = text.count("\n", 0, m.start() + start + at) + 1
-                style = WORD_STYLE.search(part)
-                is_quote = bool(style and QUOTE_STYLE.search(style.group(1)))
-                raw_text.append((normalize(words), line, is_quote, True))
-            start = end
+        for words, at, is_quote in raw_paragraphs(m.group(0)):
+            line = text.count("\n", 0, m.start() + at) + 1
+            raw_text.append((normalize(words), line, is_quote, True))
     for pattern in (RAW_BLOCK, HTML_COMMENT, PANDOC_CITATION, FOOTNOTE_MARK):
         for m in reversed(list(pattern.finditer(text))):
             text = blank(text, m.start(), m.end())
