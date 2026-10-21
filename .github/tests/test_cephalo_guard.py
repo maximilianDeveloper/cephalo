@@ -1445,7 +1445,16 @@ class TestReviewFindings(Base):
                 ('rm_dot.py', "import shutil\nshutil.rmtree('./scripts')\n"),
                 ('rm_slash.py', "import shutil\nshutil.rmtree('scripts/')\n"),
                 ('settings_concat.py', "open('.claude/' + 'settings.local.json', 'w').write('{}')\n"),
-                ('settings_path.py', "from pathlib import Path\nPath('.claude', 'settings.json').write_text('{}')\n")):
+                ('settings_path.py', "from pathlib import Path\nPath('.claude', 'settings.json').write_text('{}')\n"),
+                ('join_name.py', "import os\nos.remove(os.path.join('scripts', name))\n"),
+                ('cwd_path.py', "from pathlib import Path\n(Path.cwd() / 'scripts' / 'x.py').write_text('x')\n"),
+                ('joinpath.py', "from pathlib import Path\nPath('.').joinpath('scripts', 'x.py').write_text('x')\n"),
+                ('sep.py', "import os\nopen('scripts' + os.sep + n, 'w')\n"),
+                ('implicit.py', "open('scripts' '/x.py', 'w')\n"),
+                ('copy_call.py', "import shutil\nshutil.copy(str(src), 'scripts')\n"),
+                ('rmtree_bare.py', "import shutil\nshutil.rmtree('scripts')\n"),
+                ('move_bare.py', "import shutil\nshutil.move('scripts', 'old')\n"),
+                ('triple.py', "open('''scripts/x.py''', 'w')\n")):
             with self.subTest(name=name):
                 self.put('workspace/data/scripts/' + name, code)
                 self.assertEqual(rules_of(self.b('python3 workspace/data/scripts/' + name)), {'S5'})
@@ -1462,10 +1471,31 @@ class TestReviewFindings(Base):
         self.put('workspace/data/scripts/subst.sh',
                  'n="$(python3 -c "import os; os.replace(\'workspace/data/outputs/a.tmp\', '
                  '\'workspace/data/outputs/a.csv\'); print(os.path.join(\'..\', \'x\'))")"\necho "$n"\n')
-        for name in ('inline.sh', 'heredoc.sh', 'subst.sh'):
+        program = "import os; os.replace('workspace/data/outputs/a.tmp', 'workspace/data/outputs/a.csv'); print(os.path.join('..', 'x'))"
+        self.put('workspace/data/scripts/nested.sh', 'bash -c "python3 -c \\"%s\\""\n' % program)
+        for name in ('inline.sh', 'heredoc.sh', 'subst.sh', 'nested.sh'):
             with self.subTest(name=name):
                 self.passes(self.b('sh workspace/data/scripts/' + name, agent='data-agent'))
+        typed = Path(self.root, 'workspace/data/scripts/nested.sh').read_text(encoding='utf-8')
+        self.assertIn('S5', rules_of(self.b(typed)))                       # the program is seen there
+        # on Windows also through cmd /c and powershell -Command
+        self.put('workspace/data/scripts/cmd.sh', 'cmd /c "py -c \\"%s\\""\n' % program)
+        self.put('workspace/data/scripts/pwsh.sh', 'powershell -Command "py -c \\"%s\\""\n' % program)
+        for name in ('cmd.sh', 'pwsh.sh'):
+            with self.subTest(name=name):
+                self.passes(self.b('sh workspace/data/scripts/' + name, agent='data-agent', plat='windows'))
+                typed = Path(self.root, 'workspace/data/scripts', name).read_text(encoding='utf-8')
+                self.assertIn('S5', rules_of(self.b(typed, plat='windows')))   # the program is seen there
         self.assertEqual(rules_of(self.b('sh workspace/data/scripts/inline_off.sh')), {'S5'})
+        # a program it feeds Python from another file is that file's, checked in full
+        self.put('_scratch/orchestrator/off.py', "import shutil\nshutil.move('.claude', 'off')\n")
+        self.put('workspace/data/scripts/stdin.sh', 'python3 - < _scratch/orchestrator/off.py\n')
+        self.put('workspace/data/scripts/exec.sh',
+                 'python3 -c "exec(open(\'_scratch/orchestrator/off.py\').read())"\n')
+        self.put('workspace/data/scripts/cat.sh', 'cat _scratch/orchestrator/off.py | python3 -\n')
+        for name in ('stdin.sh', 'exec.sh', 'cat.sh'):
+            with self.subTest(name=name):
+                self.assertEqual(rules_of(self.b('sh workspace/data/scripts/' + name)), {'S5'})
         self.assertIn('S1', rules_of(self.b('python3 -c "import pandas as pd; pd.read_csv(\'a.csv\')'
                                             '.to_csv(\'workspace/data/outputs/a.csv\')"')))
         # shell scripts there: writing files passes, the hook settings or scripts/ do not
@@ -1696,6 +1726,24 @@ class TestWorkLimits(Base):
             g._PY_MOVES = orig
         self.passes(out)
         self.assertLessEqual(len(calls), 2)
+
+    def test_data_script_strings_are_read_in_one_pass(self):
+        # a chart spec as one JSON string with escaped quotes, and lines that never close a string,
+        # took 8 to 42 s when each quote started a search of its own
+        import time
+        os.makedirs(os.path.join(self.root, 'workspace', 'data', 'scripts'))
+        head = "import pandas as pd\npd.DataFrame().to_csv('workspace/data/outputs/a.csv')\n"
+        for name, body in (('spec.py', 'SPEC = "' + '\\"' * 131072 + '"\n'), ('bare.py', '\\"' * 131072 + '\n'),
+                           ('open.py', 'x = "abc\n' * 20000), ('quotes.py', "'" * 200001 + '\n'),
+                           ('joins.py', ''.join("os.path.join('a', 'b%d', x)\n" % i for i in range(20000))),
+                           ('spaces.py', "os.path.join('a'" + ' ' * 65536 + "+ NAME))\n"),
+                           ('lines.py', "Path('a'" + '\n' * 65536 + "+ NAME))\n"),
+                           ('concat.py', "'a'" + ' ' * 65536 + "x\n")):
+            with self.subTest(name=name):
+                self.put('workspace/data/scripts/' + name, head + body)
+                t = time.monotonic()
+                self.assertIsNone(self.call('Bash', {'command': 'python3 workspace/data/scripts/' + name}, 'lim-6'))
+                self.assertLess(time.monotonic() - t, 2.0)
 
     def test_long_loops_tick_the_deadline(self):
         # the loops over a command's pipelines and over a program's strings check the time as they go

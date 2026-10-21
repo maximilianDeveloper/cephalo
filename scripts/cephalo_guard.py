@@ -928,35 +928,83 @@ def holds_protected(n, ctx):
 _PY_REMOVE = re.compile(r'\bos\.(?:remove|unlink|rmdir|removedirs|rename|replace)\s*\(|\bshutil\.(?:rmtree|move|copy\w*)\s*\('
                         r'|\.(?:unlink|rmdir|rename|write_text|write_bytes|touch)\s*\(')
 _PY_MOVES = re.compile(r'\bshutil\.(?:rmtree|move)\s*\(|\bos\.(?:rename|replace|rmdir|removedirs)\s*\(|\.(?:rmdir|rename)\s*\(|\brmtree\s*\(')
-_LIT = r"""[rRuUbB]{0,2}(?:'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*")"""
-# a path built from string literals: os.path.join('a', 'b'), Path('a', 'b') / 'c', 'a/' + 'b'
-_PY_JOINED = re.compile(r"""\b(?:os\.path|posixpath|ntpath)\.join\s*\(\s*(%s(?:\s*,\s*%s)*)\s*,?\s*\)"""
-                        r"""|\b(?:Pure)?(?:Posix|Windows)?Path\s*\(\s*(%s(?:\s*,\s*%s)*)\s*,?\s*\)((?:\s*/\s*%s)+)?"""
-                        r"""|(%s(?:\s*\+\s*%s)+)""" % ((_LIT,) * 7))
-# where shutil copies or moves a file to: a folder named by a bare word counts as a path
-_PY_DEST = re.compile(r"""\bshutil\.(?:copy\w*|move)\s*\([^,()]*,\s*(?:dst\s*=\s*)?(%s)""" % _LIT)
+# A Python program's comments and string literals, left to right, so that a
+# quote inside a string or a comment starts no literal; an unclosed string
+# runs to the end of its line (a triple-quoted one to the end), so that no
+# text is scanned twice.
+_PY_TOKEN = re.compile(r"""#[^\n]*"""
+                       r"""|[rRuUbBfF]{0,2}(?:'''(?:[^'\\]|\\[\s\S]|'(?!''))*(?:''')?"""
+                       r"""|\"\"\"(?:[^"\\]|\\[\s\S]|"(?!""))*(?:\"\"\")?"""
+                       r"""|'(?:[^'\\\n]|\\.)*'?|"(?:[^"\\\n]|\\.)*"?)""")
+_LP = r'\x00\d+\x00'                    # a string literal, after _py_strings
+# (no two \s* side by side with only an optional part between them: each pattern stays linear)
+# a path built from string literals: os.path.join('a', 'b'), Path('a', 'b') / 'c',
+# Path('a').joinpath('b'), Path.cwd() / 'a', 'a/' + 'b', 'a' + os.sep + 'b'; a part that
+# is not a literal after them stands for a name in that folder
+_PY_JOIN = re.compile(r'\b(?:os\.path|posixpath|ntpath)\.join\s*\(\s*(%s(?:\s*,\s*%s)*)\s*([,)])' % (_LP, _LP))
+_PY_PATH = re.compile(r'\b(?:(?:Pure)?(?:Posix|Windows)?Path\s*\(\s*(?:(%s(?:\s*,\s*%s)*)(?:\s*,)?\s*)?\)'
+                      r'|Path\s*\.\s*cwd\s*\(\s*\))'
+                      r'((?:\s*/\s*%s|\s*\.\s*joinpath\s*\(\s*%s(?:\s*,\s*%s)*\s*\))*)'
+                      r'(\s*(?:/|\.\s*joinpath\b))?' % ((_LP,) * 5))
+_PY_CONCAT = re.compile(r'%s(?:\s*(?:\+\s*)?(?:%s|os\.sep\b))+' % (_LP, _LP))
+# a string a file call takes as the path it removes, moves or copies to
+_PY_PATH_ARG = re.compile(r'\b(?:shutil\.(?:rmtree|move)|os\.(?:rmdir|removedirs|remove|unlink|renames?|replace))'
+                          r'\s*\(\s*(?:\w+\s*=\s*)?(%s)' % _LP)
+_PY_DEST = re.compile(r'\b(?:shutil\.(?:copy\w*|move)|os\.(?:renames?|replace))\s*\((?:[^,()]|\([^()]*\))*,'
+                      r'\s*(?:\w+\s*=\s*)?(%s)' % _LP)
 
 
-def _lit_text(lit):
-    """The text of a Python string literal (its prefix and quotes off)."""
-    q = min(i for i in (lit.find("'"), lit.find('"')) if i >= 0)
-    body = lit[q + 1:-1]
-    return body if 'r' in lit[:q].lower() else body.replace('\\\\', '\\')
+def _lit_text(tok):
+    """The text of a Python string literal (its prefix and quotes off), or
+    None for one that is not closed."""
+    q = min(i for i in (tok.find("'"), tok.find('"')) if i >= 0)
+    mark = tok[q]
+    n = 3 if tok[q:q + 3] == mark * 3 else 1
+    body = tok[q + n:]
+    if len(body) < n or not body.endswith(mark * n):
+        return None
+    body = body[:-n]
+    if (len(body) - len(body.rstrip('\\'))) % 2:
+        return None                             # its last quote is escaped
+    return body if 'r' in tok[:q].lower() else body.replace('\\\\', '\\')
+
+
+def _py_strings(code):
+    """The program with each string literal replaced by \\x00<n>\\x00 and each
+    comment by a space, and the literals' texts (one pass, linear)."""
+    code = code.replace('\x00', ' ')
+    out, lits, last = [], [], 0
+    for m in _PY_TOKEN.finditer(code):
+        out.append(code[last:m.start()])
+        last = m.end()
+        text = None if m.group(0).startswith('#') else _lit_text(m.group(0))
+        if text is None:
+            out.append(' ')
+        else:
+            out.append('\x00%d\x00' % len(lits))
+            lits.append(text)
+    out.append(code[last:])
+    return ''.join(out), lits
 
 
 def _named_paths(code):
-    """The paths a data script names: each string with a separator in it,
-    each path it joins from string literals, and each folder shutil copies or
-    moves to.  A bare word ('scripts', '.claude', a column name) is data."""
-    out = [lit for lit in _PATH_LIT.findall(code) if '/' in lit or '\\' in lit]
-    for m in _PY_JOINED.finditer(code):
-        if m.group(4):
-            out.append(''.join(_lit_text(x) for x in re.findall(_LIT, m.group(4))))
-        else:
-            parts = re.findall(_LIT, m.group(1) or m.group(2)) + re.findall(_LIT, m.group(3) or '')
-            out.append('/'.join(_lit_text(x) for x in parts))
-    out += [_lit_text(m.group(1)) for m in _PY_DEST.finditer(code)]
-    return out
+    """The paths a data script names: each string with a separator in it, each
+    path it builds from strings, and each string a file call takes as the path
+    it removes, moves or copies to.  Another bare word ('scripts', '.claude', a
+    column name) is data."""
+    t, lits = _py_strings(code)
+
+    def texts(s):
+        return [lits[int(i)] for i in re.findall(r'\x00(\d+)\x00', s or '')]
+    out = [x for x in lits if '/' in x or '\\' in x]
+    for m in _PY_JOIN.finditer(t):
+        out.append('/'.join(texts(m.group(1)) + (['<name>'] if m.group(2) == ',' else [])))
+    for m in _PY_PATH.finditer(t):
+        out.append('/'.join((texts(m.group(1)) or ['.']) + texts(m.group(2)) + (['<name>'] if m.group(3) else [])))
+    for m in _PY_CONCAT.finditer(t):
+        out.append(''.join(lits[int(i)] if i else '/' for i in re.findall(r'\x00(\d+)\x00|os\.sep', m.group(0))))
+    out += [lits[int(m.group(1)[1:-1])] for p in (_PY_PATH_ARG, _PY_DEST) for m in p.finditer(t)]
+    return [x for x in out if len(x) <= 4096]           # a longer string is no path
 
 
 def py_protected(code, ctx, base, names_only=False):
@@ -964,8 +1012,8 @@ def py_protected(code, ctx, base, names_only=False):
     names_only (a script of the project in data/scripts/, whose strings are
     data: column names, separators, folder names), only a path it names counts
     (_named_paths: '.claude/settings.local.json', './scripts', os.path.join(
-    'scripts', 'x.py')) and only if it is the hook settings or in scripts/, not
-    a bare word or a folder that holds one."""
+    'scripts', name), shutil.rmtree('scripts')) and only if it is the hook
+    settings or in scripts/, not another bare word or a folder that holds one."""
     if not code or not (_PY_WRITE.search(code) or _PY_REMOVE.search(code)):
         return None
     moves = bool(_PY_MOVES.search(code)) and not names_only
@@ -1030,6 +1078,7 @@ def check_shell(cmd, tool, ctx, depth=0, pre=None, data=False):
         if _PYNAME.match(c):
             mode, val = py_mode(args)
             code = None
+            read = []                                # the files whose text the program holds
             if mode == 'script' and val in ('/dev/stdin', '-'):
                 mode = 'stdin'
             if mode == 'c':
@@ -1041,28 +1090,30 @@ def check_shell(cmd, tool, ctx, depth=0, pre=None, data=False):
                     n = norm_path(f, ctx, bases[si]) or ''
                     if n not in added:
                         added.add(n)
+                        read.append(n)
                         code += '\n' + (_read_small(n, ctx) or '')
                 for f in dict.fromkeys(re.findall(r"""\brun_path\s*\(\s*r?['"]([^'"]+)['"]""", code)):
                     hits += _script_hits(f, 'py', ctx, bases[si], depth)
             elif mode == 'stdin':
                 parts = [bodies[k] for k in seg.heredocs if k < len(bodies)] + seg.herestrings
-                parts += [_read_small(norm_path(t, ctx, bases[si]) or '', ctx) or '' for fd, op, t in seg.redirs
-                          if op == '<' and fd in (None, '0')]
+                read += [norm_path(t, ctx, bases[si]) or '' for fd, op, t in seg.redirs
+                         if op == '<' and fd in (None, '0')]
                 if pseg is not None:
                     parts += [bodies[k] for k in pseg.heredocs if k < len(bodies)] + pseg.herestrings
                     pc, pargs = cmd_args(pseg.words)
                     if pc in ('echo', 'printf'):
                         parts += pargs                       # echo "program" | python3
                     elif pc == 'cat':
-                        parts += [_read_small(norm_path(a, ctx, bases[si]) or '', ctx) or ''
-                                  for a in pargs if not a.startswith('-')]
-                code = '\n'.join(parts)
+                        read += [norm_path(a, ctx, bases[si]) or '' for a in pargs if not a.startswith('-')]
+                code = '\n'.join(parts + [_read_small(n, ctx) or '' for n in read])
             if code:
                 ctx.budget.scan(code)
             what = py_write(code, ctx, bases[si]) if code else None
             if what:
                 hits.append(('S1', 'an inline Python program that writes a file: %s' % what))
-            prot = py_protected(code, ctx, bases[si], names_only=data) if code else None
+            # a data script's own program is read as its code; text from another file is not
+            own = data and all(_data_script(n, ctx) for n in read)
+            prot = py_protected(code, ctx, bases[si], names_only=own) if code else None
             if prot:
                 hits.append(('S5', '%s (%s), by an inline Python program' % prot))
             elif code:
