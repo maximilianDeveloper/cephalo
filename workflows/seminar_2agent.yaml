@@ -320,18 +320,20 @@ phases:
            wording goes to the writer-agent, and a verification round (step 2)
            checks the sentences it changed.
         7. For the user, in Word, after the last export, listed under the open
-           issues of workspace/state.md and named in the chat: update the fields
-           (Ctrl+A, then F9, twice: docs/reference_management.md, "The title
-           page"); with Roman numerals in the back matter that
-           continue the front matter's count, check that its first number
-           follows the front matter's last page, and if it does not, set it in
-           Word with Format Page Numbers, "Start at"
-           (docs/reference_management.md, "The title page", step 5) and update
-           the fields again; fill in the title page's placeholders; visual
-           proofreading.
+           issues of workspace/state.md and named in the chat, each step as
+           its own point: (a) update the fields (Ctrl+A, then F9, twice:
+           docs/reference_management.md, "The title page"); (b) with Roman
+           numerals in the back matter that continue the front matter's
+           count, check that its first number follows the front matter's
+           last page, and if it does not, set it in Word with Format Page
+           Numbers, "Start at" (docs/reference_management.md, "The title
+           page", step 5) and update the fields again; (c) fill in the title
+           page's placeholders; (d) visual proofreading.
         8. Before the chat closes: the "Current state" and "Open issues" of
            workspace/state.md and the "Open questions" of styleguide.md agree;
-           nothing is called resolved in one that is still open in another.
+           nothing is called resolved in one that is still open in another,
+           and the word counts and the Page count line match the chapter
+           files as they now are.
            Then the Chat closure ritual (main_session). For its item 5, run in
            the Bash tool:
              git status --short -- styleguide.md && git diff HEAD -- styleguide.md
