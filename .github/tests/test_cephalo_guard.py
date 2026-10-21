@@ -14,6 +14,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import unicodedata
 import unittest
 from pathlib import Path
 
@@ -332,6 +333,30 @@ class TestS2Outside(Base):
                                  cwd=sub), e)
         self.deny(out, 'S2')
         shutil.rmtree(top)
+
+    def test_macos_unicode_form(self):
+        # macOS: a folder named in Finder is decomposed (NFD), a typed path precomposed (NFC): both name the
+        # project folder
+        nfd, nfc = (unicodedata.normalize(f, '/Users/u/Masterarbeit Übung') for f in ('NFD', 'NFC'))
+        self.assertNotEqual(nfd, nfc)
+        for root, path in ((nfd, nfc), (nfc, nfd)):
+            f = path + '/workspace/output/chapters/01_Einleitung.md'
+            with self.subTest(root=ascii(root), path=ascii(path)):
+                self.passes(run('Write', {'file_path': f, 'content': 'x'}, plat='macos', root=root))
+                self.passes(run('Edit', {'file_path': f, 'old_string': 'a', 'new_string': 'b'}, plat='macos', root=root))
+                for cmd in ('cat > "%s"' % f, 'pandoc ch.md -o "%s/workspace/output/document.docx"' % path,
+                            'mkdir -p "%s/workspace/output/verification"' % path,
+                            'sed s/a/b/ ch.md > "%s/_scratch/orchestrator/x.md"' % path,
+                            'python3 "%s/scripts/build_reference_docx.py" a.docx b.docx' % path):
+                    self.passes(bash(cmd, plat='macos', root=root))
+                self.deny(run('Write', {'file_path': '/tmp/x.md', 'content': 'x'}, plat='macos', root=root), 'S2')
+                self.deny(run('Write', {'file_path': path + ' 2/x.md', 'content': 'x'}, plat='macos', root=root), 'S2')
+        # Linux and Windows (NTFS) keep the two forms apart: such a write makes a second folder
+        for plat, root, path in (('posix', nfd, nfc), ('posix', nfc, nfd), ('windows', 'C:' + nfd, 'C:' + nfc)):
+            with self.subTest(plat=plat, root=ascii(root)):
+                self.deny(run('Write', {'file_path': path + '/workspace/x.md', 'content': 'x'}, plat=plat, root=root),
+                          'S2')
+        self.deny(run('Write', {'file_path': '/home/u/Proj/x.md', 'content': 'x'}), 'S2')    # Linux: case counts
 
 
 # ------------------------------------------------------------------ S3, S4
@@ -873,6 +898,26 @@ class TestS5Protected(Base):
         self.passes(bash('cp ../00_Shared_Materials/styleguide.md _scratch/orchestrator/', root=sub, cwd=sub))
         shutil.rmtree(top)
 
+    def test_macos_unicode_form(self):
+        nfd, nfc = (unicodedata.normalize(f, '/Users/u/Masterarbeit Übung') for f in ('NFD', 'NFC'))
+        for cmd in ('rm -rf "%s/scripts"' % nfc, 'rm "%s/scripts/cephalo_guard.py"' % nfc,
+                    'mv "%s" ../alt' % nfc):
+            with self.subTest(cmd=ascii(cmd)):
+                self.assertIn('S5', rules_of(bash(cmd, plat='macos', root=nfd)))
+        for path in (nfc + '/scripts/cephalo_guard.py', nfc + '/.claude/settings.json'):
+            with self.subTest(path=ascii(path)):
+                self.assertEqual(rules_of(run('Write', {'file_path': path, 'content': '{}'}, plat='macos', root=nfd)),
+                                 {'S5'})
+        # a sibling sub-project whose folder Finder named (NFD), removed by a typed (NFC) name
+        top = tempfile.mkdtemp(prefix='guard-multi7-')
+        sib = unicodedata.normalize('NFD', '02_Hauptarbeit Übung')
+        for d in ('00_Shared_Materials', '01_Expose', sib + '/.claude'):
+            os.makedirs(os.path.join(top, d))
+        sub = os.path.join(top, '01_Expose')
+        self.assertIn('S5', rules_of(bash('rm -rf "../%s"' % unicodedata.normalize('NFC', sib), plat='macos',
+                                          root=sub, cwd=sub)))
+        shutil.rmtree(top)
+
 
 class TestR5Edit(Base):
     def test_coordinator_edit_denied(self):
@@ -902,6 +947,22 @@ class TestR5Edit(Base):
                                  'new_string': 'b'}))
         self.deny(run('Edit', {'file_path': ver + 'document_format_round_1.md', 'old_string': 'a',
                                'new_string': 'b'}), 'R6')
+
+    def test_macos_unicode_form(self):
+        root = tempfile.mkdtemp(prefix='guard-r5-')
+        nfd = os.path.join(root, unicodedata.normalize('NFD', 'Masterarbeit Übung'))
+        nfc = os.path.join(root, unicodedata.normalize('NFC', 'Masterarbeit Übung'))
+        os.makedirs(os.path.join(nfd, 'workspace', 'output', 'verification'))
+        rep = nfc + '/workspace/output/verification/ch_1_round_1.md'
+        self.assertEqual(rules_of(run('Edit', {'file_path': rep, 'old_string': 'a', 'new_string': 'b'},
+                                      plat='macos', root=nfd)), {'R5'})
+        Path(nfd, 'workspace/output/verification/ch_1_round_1.md').write_text(
+            '| a |\nQuelle: %s/workspace/sources/a.pdf\n' % nfc, encoding='utf-8')
+        out = run('Write', {'file_path': nfd + '/workspace/output/verification/ch_1_round_1.md', 'content': 'x'},
+                  event='PostToolUse', plat='macos', root=nfd)
+        self.assertIn('R5: workspace/output/verification/ch_1_round_1.md is saved', out['reason'])
+        self.assertIn('still contains an absolute path', out['reason'])
+        shutil.rmtree(root)
 
 
 class TestScripts(Base):

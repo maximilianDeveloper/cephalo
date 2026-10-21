@@ -70,8 +70,9 @@ import re
 import stat
 import sys
 import time
+import unicodedata
 
-# Overrides for tests only: CEPHALO_GUARD_OS=windows|posix,
+# Overrides for tests only: CEPHALO_GUARD_OS=windows|macos|posix,
 # CEPHALO_GUARD_HAS_PY=1|0, CEPHALO_GUARD_STATE_DIR=<dir>.
 
 # Rules that are off unless CEPHALO_GUARD_ON names them.
@@ -128,6 +129,7 @@ class Ctx:
     def __init__(self, data, env):
         forced = env.get('CEPHALO_GUARD_OS', '')
         self.windows = forced == 'windows' if forced else os.name == 'nt'
+        self.macos = forced == 'macos' if forced else sys.platform == 'darwin'
         self.env = env
         self.session = str(data.get('session_id') or 'nosession')
         self.agent_type = str(data.get('agent_type') or '')
@@ -191,10 +193,26 @@ _DEVICES = {'/dev/null', '/dev/stdout', '/dev/stderr', '/dev/tty', '/dev/fd/1', 
 _VAR = re.compile(r'^(?:\$\{(\w+)\}|\$(\w+)|%(\w+)%|\$env:(\w+))(?=[\\/]|$)', re.I)
 
 
+def _fold(p, ctx):
+    """A name as the rules compare it.  Windows (NTFS) ignores letter case.
+    macOS (APFS, HFS+) ignores the Unicode form: a folder named in Finder
+    (decomposed 'U' + U+0308, NFD) is the folder a typed path names with a
+    precomposed 'Ü' (NFC), so both become NFC; the form stays valid for
+    opening the file.  Letter case stays on macOS, where a volume can be
+    case-sensitive.  Linux and NTFS keep the two forms apart: there they are
+    two folders."""
+    if ctx.windows:
+        return p.lower()
+    if ctx.macos:
+        return unicodedata.normalize('NFC', p)
+    return p
+
+
 def norm_path(p, ctx, base):
-    """Normalize a path to an absolute, '/'-separated string (lower case on
-    Windows).  Returns DEVICE for /dev/null and the like, TEMPVAR for a path
-    in a temporary-folder variable, None when it cannot be resolved."""
+    """Normalize a path to an absolute, '/'-separated string (compared as the
+    file system does, see _fold).  Returns DEVICE for /dev/null and the like,
+    TEMPVAR for a path in a temporary-folder variable, None when it cannot be
+    resolved."""
     p = (p or '').strip()
     if len(p) >= 2 and p[0] == p[-1] and p[0] in '"\'':
         p = p[1:-1]
@@ -239,9 +257,7 @@ def norm_path(p, ctx, base):
     else:
         lead = '//' if p.startswith('//') and not p.startswith('///') else ''
         p = lead + posixpath.normpath(p).lstrip('/') if lead else posixpath.normpath(p)
-    if ctx.windows:
-        p = p.lower()
-    return p
+    return _fold(p, ctx)
 
 
 def inside(p, folder):
@@ -861,7 +877,7 @@ def holds_protected(n, ctx):
     if ctx.root != ctx.project:
         if ctx._sub_projects is None:
             try:
-                ctx._sub_projects = [ctx.root + '/' + (d.lower() if ctx.windows else d) for d in os.listdir(ctx.root)
+                ctx._sub_projects = [ctx.root + '/' + _fold(d, ctx) for d in os.listdir(ctx.root)
                                      if os.path.isdir(os.path.join(ctx.root, d))]
             except OSError:
                 ctx._sub_projects = []
@@ -1380,7 +1396,7 @@ def readback(tin, ctx):
         return None
     if not ctx.enabled('R6' if fmt else 'R5'):
         return None
-    data = _read_regular(n, 1 << 22) if _fs_ok(n, ctx) else None   # a report is far smaller than 4 MiB
+    data = _read_regular(path, 1 << 22) if _fs_ok(n, ctx) else None   # a report is far smaller than 4 MiB
     if data is not None:
         text = data.decode('utf-8', 'replace')
     else:
@@ -1407,8 +1423,10 @@ def readback(tin, ctx):
            'that you need not read it back does not apply here). %s If any of this differs from the answer, '
            'write the file again with the Write tool, the answer unchanged; only an absolute path becomes '
            'project-relative.') % (rel, report_definition(ctx), counts)
-    absolute = [x for x in {ctx.project_raw, ctx.project_raw.replace('\\', '/'), ctx.home_raw} if len(x) > 3]
-    if any(x in text for x in absolute):
+    nfc = unicodedata.normalize('NFC', text)
+    absolute = [unicodedata.normalize('NFC', x) for x in {ctx.project_raw, ctx.project_raw.replace('\\', '/'),
+                                                          ctx.home_raw} if len(x) > 3]
+    if any(x in nfc for x in absolute):
         msg += (' It still contains an absolute path of this machine: write the file again with the Write tool, '
                 'the path made project-relative (an Edit of the saved report is denied).')
     return msg
