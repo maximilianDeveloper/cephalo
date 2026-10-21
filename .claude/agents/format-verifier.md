@@ -104,7 +104,7 @@ Verify the following categories. Concrete values (font size, page-range notation
 
 ### 3. Automated mechanical checks
 
-These run deterministically (on Windows, use `py` instead of `python3`). Run the two scripts below as given, without piping their output through `head` or another command, so that the last line shows the exit code, and put each exit code into your report:
+These run deterministically (on Windows, use `py` instead of `python3`, and keep the paths' forward slashes: Git Bash drops an unquoted backslash). Run the two scripts below as given, without piping their output through `head` or another command, so that the last line shows the exit code, and put each exit code into your report:
 
 **Bibliography minus-test:**
 ```bash
