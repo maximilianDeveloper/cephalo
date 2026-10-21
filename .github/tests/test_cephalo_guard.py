@@ -353,7 +353,7 @@ class TestS2Outside(Base):
 
     def test_claude_folder(self):
         # the main chat and an orchestrator write plans, memory or a global CLAUDE.md the user asks for;
-        # another agent only its own memory
+        # another agent only the agents' memory folder
         for f in ('/home/u/.claude/CLAUDE.md', '/home/u/.claude/projects/-home-u-proj/memory/MEMORY.md',
                   '/home/u/.claude/plans/plan.md'):
             with self.subTest(f=f):
