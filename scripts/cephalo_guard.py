@@ -1529,8 +1529,9 @@ def report_definition(ctx):
 
 
 _QUOTE_MARKS = '\u201e\u201c\u201d\u201a\u2018\u2019\u00ab\u00bb"'
-# a German quotation closed the German way: \u201e, then no other mark but ASCII quotes in pairs, then \u201c
-_GERMAN_QUOTE = re.compile('\u201e[^\u201e\u201c\u201d"]*(?:"[^\u201e\u201c\u201d"]*"[^\u201e\u201c\u201d"]*)*\u201c')
+# a German quotation closed the German way: \u201e, then no other mark but ASCII quotes in pairs (each pair
+# on one line), then \u201c
+_GERMAN_QUOTE = re.compile('\u201e[^\u201e\u201c\u201d"]*(?:"[^\u201e\u201c\u201d"\n]*"[^\u201e\u201c\u201d"]*)*\u201c')
 
 
 def readback(tin, ctx):
