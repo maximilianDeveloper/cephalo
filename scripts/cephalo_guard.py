@@ -698,18 +698,28 @@ def py_write(code, ctx=None, base=None):
 _TEXT_EDITORS = ('sed', 'awk', 'gawk', 'perl', 'tr', 'node', 'ruby', 'iconv')
 
 
-def producer(segs, pipe, pos, bodies, depth=0):
+def _typed_in_group(seg):
+    c, a = cmd_args(seg.words)
+    if c in ('echo', 'printf') or (c in ('cat', 'tee') and (seg.heredocs or seg.herestrings)):
+        return c
+    return None
+
+
+def producer(segs, pipe, pos, bodies, depth=0, typed=None):
     """What writes the text that reaches a file at segment pipe[pos]:
     ('typed', label) for text Claude typed (echo, printf, here-document,
-    inline program), ('editor', label) for a stream editor, or None."""
+    inline program), ('editor', label) for a stream editor, or None.
+    typed: the sorted indices of segs whose own command types text, so that
+    a group (nested ones too) is checked without a scan of its range."""
     if pos < 0 or depth > 6:
         return None
     seg = segs[pipe[pos]]
     if seg.group:
-        for k in range(seg.group[0], seg.group[1]):
-            c, a = cmd_args(segs[k].words)
-            if c in ('echo', 'printf') or (c in ('cat', 'tee') and (segs[k].heredocs or segs[k].herestrings)):
-                return 'typed', c + ' in a ( ) or { } group'
+        if typed is None:
+            typed = [k for k, sg in enumerate(segs) if _typed_in_group(sg)]
+        i = bisect.bisect_left(typed, seg.group[0])
+        if i < len(typed) and typed[i] < seg.group[1]:
+            return 'typed', _typed_in_group(segs[typed[i]]) + ' in a ( ) or { } group'
         return None
     c, args = cmd_args(seg.words)
     if c in ('echo', 'printf'):
@@ -717,7 +727,7 @@ def producer(segs, pipe, pos, bodies, depth=0):
     if c in ('cat', 'tee', '') and (seg.heredocs or seg.herestrings):
         return 'typed', 'a here-document' if seg.heredocs else 'a here-string'
     if c in ('cat', 'tee') and all(a == '-' or (c == 'tee' and a.startswith('-')) for a in args) or c == 'tee':
-        return producer(segs, pipe, pos - 1, bodies, depth + 1)
+        return producer(segs, pipe, pos - 1, bodies, depth + 1, typed)
     if _PYNAME.match(c):
         mode, _ = py_mode(args)
         if mode in ('c', 'stdin'):
@@ -728,7 +738,7 @@ def producer(segs, pipe, pos, bodies, depth=0):
     if c in _TEXT_EDITORS:
         return 'editor', c
     if c in _FILTERS and pos > 0:
-        return producer(segs, pipe, pos - 1, bodies, depth + 1)   # typed text through a filter
+        return producer(segs, pipe, pos - 1, bodies, depth + 1, typed)   # typed text through a filter
     return None
 
 
@@ -947,6 +957,7 @@ def check_shell(cmd, tool, ctx, depth=0, pre=None):
     hits = []
     ctx.budget.scan(cmd)
     segs, pipes, bodies = parse(cmd, ps, pre)
+    typed = [k for k, sg in enumerate(segs) if _typed_in_group(sg)]
     pipe_of = {k: pp for pp in pipes for k in pp}
     pos_of = {k: i for pp in pipes for i, k in enumerate(pp)}
     base = ctx.cwd
@@ -1044,7 +1055,7 @@ def check_shell(cmd, tool, ctx, depth=0, pre=None):
         # S1 (g): a patch typed into git apply / patch
         if (c == 'patch' or (c == 'git' and args[:1] == ['apply'])) and '--check' not in args and \
                 '--stat' not in args and (seg.heredocs or seg.herestrings or
-                                          (pseg is not None and producer(segs, p, pos - 1, bodies))):
+                                          (pseg is not None and producer(segs, p, pos - 1, bodies, typed=typed))):
             hits.append(('S1', '%s with a patch typed into the command' % ('git apply' if c == 'git' else c)))
         # S1 (g2), S5: a saved patch file applied (git apply f, patch -i f, patch < f)
         if (c == 'patch' or (c == 'git' and args[:1] == ['apply'])) and '--check' not in args and \
@@ -1066,7 +1077,7 @@ def check_shell(cmd, tool, ctx, depth=0, pre=None):
         # S1 (h): a file filled in _scratch/ by this command copied or moved over a project file
         for fd, op, t in seg.redirs:
             if op in _STDOUT_OPS and fd in (None, '1', '&') and _target_ok(t) and \
-                    under_scratch(t, ctx, bases[si]) and producer(segs, p, pos, bodies):
+                    under_scratch(t, ctx, bases[si]) and producer(segs, p, pos, bodies, typed=typed):
                 scratch_made.add(norm_path(t, ctx, bases[si]))
         if c in ('cp', 'mv', 'install', 'rsync') and scratch_made:
             pos_args = [a for a in args if not a.startswith('-')]
@@ -1149,14 +1160,16 @@ def check_shell(cmd, tool, ctx, depth=0, pre=None):
                 if op in _STDOUT_OPS and _target_ok(t):
                     hits.append(('S4', "'%s %s' in PowerShell" % (op if fd is None else fd + op, t)))
     # S1 (c)/(d): typed text or a stream editor's output into a file
-    for p in pipes:
+    for pi, p in enumerate(pipes):
+        if not pi % 256:
+            ctx.budget.tick()
         for pos, si in enumerate(p):
             seg = segs[si]
             c, args = cmd_args(seg.words)
             sinks = [t for fd, op, t in seg.redirs
                      if op in _STDOUT_OPS and fd in (None, '1', '&', '*') and _target_ok(t)]
             for t in sinks:
-                kind = producer(segs, p, pos, bodies)
+                kind = producer(segs, p, pos, bodies, typed=typed)
                 _sink_hit(hits, kind, t, ctx, bases[si])
             if c == 'tee' or (ps and c.lower() == 'tee-object'):
                 files = [a for a in args if not a.startswith('-') and _target_ok(a)]
@@ -1164,7 +1177,7 @@ def check_shell(cmd, tool, ctx, depth=0, pre=None):
                     if seg.heredocs or seg.herestrings:
                         kind = ('typed', 'a here-document')
                     else:
-                        kind = producer(segs, p, pos - 1, bodies)
+                        kind = producer(segs, p, pos - 1, bodies, typed=typed)
                     for t in files:
                         _sink_hit(hits, kind, t, ctx, bases[si])
     if ps and _PS_FILE_API.search(cmd):

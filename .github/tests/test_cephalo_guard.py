@@ -1605,7 +1605,7 @@ class TestWorkLimits(Base):
 
     def test_unclosed_heredocs_and_long_pipelines_are_linear(self):
         import time
-        for cmd in ('EOF\n' + 'cat <<EOF\n' * 20000, 'echo a' + ' | cat' * 30000):
+        for cmd in ('EOF\n' + 'cat <<EOF\n' * 20000, 'echo a' + ' | cat' * 30000, '{ ' * 8000 + 'ls' + '; } > f' * 8000):
             t = time.monotonic()
             self.call('Bash', {'command': cmd}, 'lim-3')
             self.assertLess(time.monotonic() - t, 3.0)          # 20 s and more before
@@ -1638,6 +1638,11 @@ class TestWorkLimits(Base):
             with self.subTest(name):
                 out = self.call('Bash', {'command': cmd}, 'lim-5-' + name)
                 self.assertIn('too large to check', out['systemMessage'])
+        # more than MAX_READ of scripts in one call (each script read is at most 256 KiB)
+        for k in range(9):
+            self.put('_scratch/s%d.sh' % k, '# ' + 'x' * (256 * 1024) + '\n')
+        out = self.call('Bash', {'command': '; '.join('sh _scratch/s%d.sh' % k for k in range(9))}, 'lim-5-read')
+        self.assertIn('bytes of scripts to read', out['systemMessage'])
         orig = g.DEADLINE_S
         g.DEADLINE_S = -1.0
         try:
