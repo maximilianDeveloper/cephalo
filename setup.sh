@@ -227,8 +227,9 @@ install_guard_settings() {
     if [ ! -f "templates/claude_settings.json" ]; then
         return 0
     fi
-    if [ -f "$dest" ]; then
-        if grep -q 'cephalo_guard' "$dest"; then
+    if [ -e "$dest" ] || [ -L "$dest" ]; then
+        # also a link (one that points nowhere too) or a folder: kept, never copied into
+        if [ -f "$dest" ] && grep -q 'cephalo_guard' "$dest" 2>/dev/null; then
             echo -e "  ${GRAY}. $dest (exists)${NC}"
         else
             echo -e "  ${YELLOW}. $dest (exists, kept: it does not run the cephalo guard)${NC}"

@@ -261,6 +261,19 @@ jobs:
           grep -qxF '{"permissions": {"allow": []}}' /tmp/ci_long/.claude/settings.json
           grep -q 'do not run the cephalo guard' /tmp/ci_long2.out
           grep -q 'templates/claude_settings.json' /tmp/ci_long2.out
+          # A settings entry that is a link to nowhere or a folder is kept and named, never copied into.
+          M=/tmp/ci_missing_settings; rm -rf "$M"
+          for kind in link folder; do
+            rm -rf /tmp/ci_long/.claude/settings.json
+            if [ "$kind" = link ]; then ln -s "$M/settings.json" /tmp/ci_long/.claude/settings.json; else mkdir /tmp/ci_long/.claude/settings.json; fi
+            (cd /tmp/ci_long && bash setup.sh "Bachelor thesis" "Long-form" full </dev/null >/tmp/ci_long3.out)
+            grep -q 'do not run the cephalo guard' /tmp/ci_long3.out
+            (cd /tmp/ci_long && pwsh -NoProfile -File ./setup.ps1 -WorkType "Bachelor thesis" -Structure "Long-form" -Scaffolding full -NonInteractive >/tmp/ci_long3_ps.out)
+            grep -q 'do not run the cephalo guard' /tmp/ci_long3_ps.out
+            test ! -e "$M"
+            if [ "$kind" = folder ]; then test -z "$(ls -A /tmp/ci_long/.claude/settings.json)"; else test -L /tmp/ci_long/.claude/settings.json; fi
+          done
+          rm -rf /tmp/ci_long/.claude/settings.json; cp templates/claude_settings.json /tmp/ci_long/.claude/settings.json
           if grep -q 'do not run the cephalo guard' /tmp/ci_multi.out; then echo "merge note in a new project"; exit 1; fi
           # Git LFS is set up for the project only: the user's global config stays untouched.
           if command -v git-lfs >/dev/null; then
