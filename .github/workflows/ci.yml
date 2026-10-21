@@ -2828,6 +2828,8 @@ jobs:
           CMD="$(python -c "import json; print(json.load(open('templates/claude_settings.json'))['hooks']['PreToolUse'][0]['hooks'][0]['command'])")"
           # the hook's input, from a file: a command that does not read it must not break a pipe
           slip() { python -c "import json, sys; print(json.dumps({'session_id': 'ci', 'hook_event_name': 'PreToolUse', 'tool_name': 'Bash', 'tool_input': {'command': 'echo x >> workspace/state.md'}, 'cwd': sys.argv[1]}))" "$1" > "$1.json"; }
+          # what Claude Code receives is a deny and nothing else: no allow, no changed input
+          denies() { python -c "import json, sys; o = json.load(sys.stdin); h = o.get('hookSpecificOutput', {}); assert set(o) == {'hookSpecificOutput'} and set(h) == {'hookEventName', 'permissionDecision', 'permissionDecisionReason'} and h['permissionDecision'] == 'deny' and h['hookEventName'] == 'PreToolUse' and 'cephalo guard S1' in h['permissionDecisionReason'], o"; }
           # cephalo_guard.sh starts the guard with py on Windows, otherwise with python3, and without them not at all
           if { [ "$RUNNER_OS" = Windows ] && command -v py >/dev/null; } || command -v python3 >/dev/null; then want=deny; else want=none; fi
           echo "expected: $want"
@@ -2836,8 +2838,7 @@ jobs:
             out="$(CLAUDE_PROJECT_DIR="$P" "$shell" -c "$CMD" < "$P.json")"
             echo "$shell: ${out:0:120}"
             if [ "$want" = deny ]; then
-              echo "$out" | grep -q '"permissionDecision": "deny"'
-              echo "$out" | grep -q 'cephalo guard S1'
+              printf '%s\n' "$out" | denies
             else
               test -z "$out"
             fi
@@ -2853,7 +2854,7 @@ jobs:
           cp scripts/cephalo_guard.py scripts/cephalo_guard.sh "$M/scripts/"
           slip "$M/02_Main_Work"
           out="$(CLAUDE_PROJECT_DIR="$M/02_Main_Work" "$SH" -c "$CMD" < "$M/02_Main_Work.json")"
-          if [ "$want" = deny ]; then echo "$out" | grep -q 'cephalo guard S1'; else test -z "$out"; fi
+          if [ "$want" = deny ]; then printf '%s\n' "$out" | denies; else test -z "$out"; fi
           rm -r "$M/00_Shared_Materials"
           out="$(CLAUDE_PROJECT_DIR="$M/02_Main_Work" "$SH" -c "$CMD" < "$M/02_Main_Work.json")"
           test -z "$out"

@@ -793,7 +793,10 @@ class TestSettingsCommand(Base):
         e.update(extra or {})
         p = subprocess.run(['/bin/sh', '-c', self.cmd], input=self.sample, stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE, env=e, timeout=20, cwd=cwd or self.top)
-        return p.returncode, p.stdout.decode('ascii')
+        out = p.stdout.decode('ascii')
+        if out.strip():
+            check_shape(json.loads(out))     # what Claude Code receives: the hook command's output
+        return p.returncode, out
 
     def project(self, name, with_script=True):
         d = os.path.join(self.top, name)
