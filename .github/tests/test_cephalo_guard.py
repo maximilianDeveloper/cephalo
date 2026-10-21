@@ -450,9 +450,19 @@ class TestReports(Base):
         self.assertEqual(out['decision'], 'block')
         r = out['reason']
         for part in ('R5', 'workspace/output/verification/ch_1_einleitung_round_1.md', 'Read tool',
-                     '3 table rows', '2 with "Status:"', '1 with typographic', 'Gesamt: 1'):
+                     'no offset or limit', '3 table rows', '2 lines with "Status:"',
+                     'quotation marks: 1 \u201e, 1 \u201c;', '\u00abGesamt: 1 \u2705\u00bb'):
             self.assertIn(part, r)
         self.assertNotIn('still contains an absolute path', r)
+        self.assertNotIn('more \u201e than closing', r)
+        # the copy closed the German quotation marks with ASCII quotes, as in the fourth seminar run
+        Path(rep).write_text(text.replace('\u201c', '"'), encoding='utf-8')
+        r = run('Write', {'file_path': rep, 'content': 'x'}, event='PostToolUse', root=self.root)['reason']
+        self.assertIn('quotation marks: 1 \u201e, 1 ";', r)
+        self.assertIn('more \u201e than closing \u201c or \u201d', r)
+        Path(rep).write_text(text.replace('\u201e', '').replace('\u201c', ''), encoding='utf-8')
+        r = run('Write', {'file_path': rep, 'content': 'x'}, event='PostToolUse', root=self.root)['reason']
+        self.assertIn('quotation marks: none;', r)
         Path(rep).write_text(text + 'Quelle: %s/workspace/sources/a.pdf\n' % self.root, encoding='utf-8')
         out = run('Write', {'file_path': rep, 'content': 'x'}, event='PostToolUse', root=self.root)
         self.assertIn('still contains an absolute path', out['reason'])

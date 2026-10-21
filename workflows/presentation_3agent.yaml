@@ -205,8 +205,9 @@ phases:
           3. The source-verifier cannot write files, so do not ask it to. Save
              its answer unchanged as <companion>_round_<n>.md: the writer and
              the next round work from it. Nothing is shortened, reworded,
-             translated or added, and quotation marks, labels and emphasis
-             stay as the answer has them; only an absolute path becomes
+             translated or added, and quotation marks (a closing “ stays “,
+             not a straight "), labels and emphasis stay as the answer has
+             them; only an absolute path becomes
              project-relative. After the Write, read the file back (the Write
              tool's note that you need not read it back does not apply here:
              the read-back checks your copy against the answer) and compare

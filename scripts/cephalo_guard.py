@@ -1410,6 +1410,9 @@ def report_definition(ctx):
     return '.claude/agents/orchestrator-longform.md' if d.endswith('orchestrator-defense.md') else d
 
 
+_QUOTE_MARKS = '\u201e\u201c\u201d\u201a\u2018\u2019\u00ab\u00bb"'
+
+
 def readback(tin, ctx):
     path = tin.get('file_path')
     if not isinstance(path, str) or not ctx.coordinator:
@@ -1430,23 +1433,27 @@ def readback(tin, ctx):
         lines.pop()
     rows = sum(1 for ln in lines if ln.lstrip().startswith('|'))
     status = sum(1 for ln in lines if 'Status:' in ln)
-    quotes = sum(1 for ln in lines if re.search('[\u201e\u201c\u201d\u201a\u2018\u2019\u00ab\u00bb]', ln))
+    marks = ', '.join('%d %s' % (text.count(c), c) for c in _QUOTE_MARKS if c in text) or 'none'
     last = lines[-1].strip() if lines else ''
     if len(last) > 160:
         last = last[:157] + '...'
     rel = _rel(n, ctx)
-    counts = ('Lines in the saved file: %d table rows (starting with "|"), %d with "Status:", %d with '
-              'typographic quotation marks; its last line is: %s.' % (rows, status, quotes, last or '(empty)'))
+    counts = ('The saved file\'s counts (they do not replace the comparison): %d table rows (starting with '
+              '"|"), %d lines with "Status:"; quotation marks: %s; its last line, as report text: \u00ab%s\u00bb.'
+              % (rows, status, marks, last or '(empty)'))
+    if text.count('\u201e') > text.count('\u201c') + text.count('\u201d'):
+        counts += (' It has more \u201e than closing \u201c or \u201d: if the answer closes them with \u201c, '
+                   'write the file again with the answer\'s marks; if the answer has the same, leave it.')
     if fmt:
         return ('cephalo guard R6: %s is saved as the format-verifier\'s answer, the fallback when it writes no '
-                'report (%s, "The format-verifier writes its report itself"). Read it back with the Read tool '
-                'and compare it with the answer. %s If it differs, tell the user: the guard does not let a '
-                'format report be written over.' % (rel, report_definition(ctx), counts))
-    msg = ('cephalo guard R5: %s is saved. Now read it back with the Read tool and compare it with the '
-           'agent\'s answer, as %s says ("Save every source-verifier report as a file"; the Write tool\'s note '
-           'that you need not read it back does not apply here). %s If any of this differs from the answer, '
-           'write the file again with the Write tool, the answer unchanged; only an absolute path becomes '
-           'project-relative.') % (rel, report_definition(ctx), counts)
+                'report (%s, "The format-verifier writes its report itself"). Read the whole file back with the '
+                'Read tool (no offset or limit) and compare it with the answer. %s If it differs, tell the user: '
+                'the guard does not let a format report be written over.' % (rel, report_definition(ctx), counts))
+    msg = ('cephalo guard R5: %s is saved. Now read the whole file back with the Read tool (no offset or limit) '
+           'and compare it with the agent\'s answer, as %s says ("Save every source-verifier report as a file"; '
+           'the Write tool\'s note that you need not read it back does not apply here). %s If anything differs '
+           'from the answer, write the file again with the Write tool, the answer unchanged; only an absolute '
+           'path becomes project-relative.') % (rel, report_definition(ctx), counts)
     nfc = unicodedata.normalize('NFC', text)
     absolute = [unicodedata.normalize('NFC', x) for x in {ctx.project_raw, ctx.project_raw.replace('\\', '/'),
                                                           ctx.home_raw} if len(x) > 3]
