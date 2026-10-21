@@ -201,7 +201,7 @@ A suggested fix names the direction: which term, which page, what to drop. Wordi
 
 ## Cross-chapter consistency
 
-After every second chapter written, counted in the order of writing: consistency check per `checklists/consistency.md`, Part A, of the chapters written so far. Check additionally:
+After every second chapter written, counted in the order of writing: consistency check per `checklists/consistency.md`, Part A, of the chapters written so far. Rate each point you find now, with a status, also one that the final check will see again: by then the chapters may have used up their revisions. Check additionally:
 
 - Technical terms used identically across chapters?
 - Does this chapter contradict earlier statements?
