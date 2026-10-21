@@ -24,7 +24,7 @@
 - **`et_al.threshold`:** [e.g., 3 — use et al. from N authors onward]
 - **`page_for_indirect`:** [required / optional / forbidden]
 - **`cf_prefix`:** [required / optional / forbidden]
-- **`nbsp_before_page`:** [yes / no — non-breaking space before page number]
+- **`nbsp_before_page`:** [yes / no — non-breaking space before page number, in citations and before the page range of a reference-list entry]
 - **`page_range`:** [`15-16` or `15–16` (en-dash) or `15 to 16` or other]
 - **`multiple_sources`:** [several sources in one citation: separator and order, e.g., `(Müller 2019; Schmidt/Weber 2021)`]
 - **`two_authors`:** [e.g., `Schmidt/Weber`, `Schmidt & Weber` or `Schmidt und Weber`]
@@ -32,7 +32,7 @@
 - **`no_date`:** [e.g., `o. J.` or `n.d.`]
 - **`no_page_locator`:** [sources without page numbers, such as web pages: section, paragraph or nothing]
 - **`secondary_citation`:** [e.g., `(Weber 1922, S. 31, zit. nach Keller 2018, S. 5)`; see also `bibliography.secondary_original`]
-- **`repeated_citation`:** [a source cited again right after its previous citation: repeat the full citation / `ebd.` or `ibid.`, with the page where it differs, e.g., `(ebd., S. 14)`]
+- **`repeated_citation`:** [a source cited again right after its previous citation, on the same page or on another: repeat the full citation / `ebd.` or `ibid.`, with the page where it differs, e.g., `(ebd., S. 14)`]
 
 ---
 
