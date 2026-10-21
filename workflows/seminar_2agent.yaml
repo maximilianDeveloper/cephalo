@@ -186,8 +186,13 @@ phases:
              2: tell the user what the file says. Without Python, the
              source-verifier counts the runs by eye.
           2. Give the source-verifier the chapter file and that report file;
-             from round 2 on, also the previous round's report and the
-             sentences the revision changed. For a revision, give the writer
+             from round 2 on, call a new one with the Agent tool, not a
+             message to the one of the round before, which would judge its
+             own proposals, and give it also the previous round's report and
+             the sentences the revision changed, found by comparing the
+             chapter with the version the previous round verified, not taken
+             from the writer's answer (orchestrator.md, "Steps 1..N: Chapter
+             assignment", the return calls). For a revision, give the writer
              the report file, or the findings as the report gives them. The
              report's notes on the chapter's rows of the source registry go
              to the writer as an edit of those rows, also when the chapter
