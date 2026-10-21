@@ -22,6 +22,8 @@ Rules (on, except P1)
       redirect, tee, cp/mv/mkdir/touch destination, -o of pandoc/curl/sort,
       into /tmp, the system's temporary folder, the home folder, Claude
       Code's scratchpad or any other folder outside the project.  Denied.
+      Claude Code's ~/.claude passes for the main chat and an orchestrator,
+      for another agent only its memory, ~/.claude/agent-memory/.
   S3  'python3 x.py || py x.py' (exit code 1 is a finished report, the ||
       runs it again): denied everywhere.  python3 on Windows where py exists:
       denied.
@@ -281,7 +283,12 @@ def outside_reason(path, ctx, base):
     if inside(n, ctx.root):
         return None
     if ctx.claude_home and inside(n, ctx.claude_home):
-        return None                 # plan files, memory: Claude Code's own
+        # Claude Code's own folder: the main chat and an orchestrator write
+        # plans, memory and what the user asks for there; another agent only
+        # its memory (agent-memory/), as its work stays in the project.
+        if ctx.coordinator or inside(n, ctx.claude_home + '/agent-memory'):
+            return None
+        return "Claude Code's folder ~/.claude, which only the main chat writes"
     return 'outside the project folder'
 
 

@@ -313,6 +313,23 @@ class TestS2Outside(Base):
         self.passes(run('Write', {'file_path': '/home/u/.claude/plans/plan.md', 'content': 'x'}))
         self.passes(run('Write', {'file_path': '/home/u/proj/workspace/x.md', 'content': 'x'}, agent='writer-agent'))
 
+    def test_claude_folder(self):
+        # the main chat and an orchestrator write plans, memory or a global CLAUDE.md the user asks for;
+        # another agent only its own memory
+        for f in ('/home/u/.claude/CLAUDE.md', '/home/u/.claude/projects/-home-u-proj/memory/MEMORY.md',
+                  '/home/u/.claude/plans/plan.md'):
+            with self.subTest(f=f):
+                self.passes(run('Write', {'file_path': f, 'content': 'x'}))
+                self.passes(run('Write', {'file_path': f, 'content': 'x'}, agent='orchestrator-longform'))
+                self.deny(run('Write', {'file_path': f, 'content': 'x'}, agent='research-agent'), 'S2')
+        self.passes(run('Write', {'file_path': '/home/u/.claude/agent-memory/research-agent/MEMORY.md',
+                                  'content': 'x'}, agent='research-agent'))
+        out = bash('cp _scratch/research-agent/a.md ~/.claude/agents/a.md', agent='research-agent')
+        self.deny(out, 'S2')
+        self.assertIn('~/.claude, which only the main chat writes', out['hookSpecificOutput']['permissionDecisionReason'])
+        self.deny(run('Edit', {'file_path': 'C:\\Home\\u\\.claude\\skills\\x\\SKILL.md', 'old_string': 'a',
+                               'new_string': 'b'}, plat='windows', agent='writer-agent'), 'S2')
+
     def test_scratchpad(self):
         d = payload('Write', {'file_path': '/tmp/claude-0/proj/sess/scratchpad/report.md', 'content': 'x'})
         d['scratchpad_dir'] = '/tmp/claude-0/proj/sess/scratchpad'

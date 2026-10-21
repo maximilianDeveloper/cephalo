@@ -322,7 +322,7 @@ Setup installs it: it copies `templates/claude_settings.json` to `.claude/settin
 | Rule | Stops | Instead |
 |---|---|---|
 | S1 | A shell command that writes a file's text: an inline `py -c` or `python3 -c` program that writes a file, a here-document, `echo` or `printf` into a file, `sed -i` and the like, a PowerShell content cmdlet, or a saved program that does so and is neither one of cephalo's scripts nor a script of the project in a `data/scripts/` folder of it (an analysis or deck script) | The Write or Edit tool |
-| S2 | A write outside the project folder: `/tmp`, the system's temporary folder, the home folder, Claude Code's scratchpad | `_scratch/<role>/` in the project |
+| S2 | A write outside the project folder: `/tmp`, the system's temporary folder, the home folder, Claude Code's scratchpad. Claude Code's `~/.claude` folder passes for the main chat and an orchestrator (plans, memory, what you ask for there); another agent may write only its own memory there, `~/.claude/agent-memory/` | `_scratch/<role>/` in the project |
 | S3 | `python3 … \|\| py …`, which runs a finished report again, and `python3` on Windows where `py` exists | The command once, with `py` on Windows |
 | S4 | A redirect into a file in the PowerShell tool, which writes UTF-16 | The redirect in the Bash tool (Git Bash) |
 | S5 | A change to `.claude/settings.json` or `.claude/settings.local.json` (the project's or yours in `~/.claude/`) or to `scripts/`: a Write or Edit, or the common ways in the shell (a redirect, `cp`, `mv`, `rm`, `sed -i`, `git checkout`, a Python program), also from a script in `data/scripts/` | You change these by hand |
