@@ -183,7 +183,7 @@ Count a chapter's iterations: every revision followed by a new verification is o
 
 When a feedback loop reaches `feedback_loop_max`, you stop automatic iteration and ask the user which of the following to do:
 
-1. **Abort** — accept the current state as best effort; mark outstanding items as ⚠️ in `00_Status.md` and continue to the next chapter / phase (in Phase A these items stay open: the A → B transition requires them to be resolved first)
+1. **Abort** — accept the current state as best effort; list outstanding items in `00_Status.md` as open ⚠️ items (`- [ ] ⚠️ …`; accepting them does not resolve them) and continue to the next chapter / phase (in Phase A these items stay open: the A → B transition requires them to be resolved first)
 2. **Manual fix** — pause; user investigates and resolves the problematic item manually; resume when user confirms
 3. **Force continue** — explicitly raise the loop limit for this one item; use sparingly, document the exception in `00_Decisions.md`. The recommended raised limit is `5` for bachelor/master (content-heavy) and `3` for shorter works. The workflow file may override this via `force_continue_suggested_limit:`.
 

@@ -169,7 +169,7 @@ Count the iterations of an item as `orchestrator-longform.md` does ("Feedback-lo
 
 When a feedback loop reaches `feedback_loop_max`, you stop automatic iteration and ask the user which of the following to do:
 
-1. **Abort** — accept the current state as best effort; mark outstanding items as ⚠️ in `00_Status.md` and continue with defense preparation
+1. **Abort** — accept the current state as best effort; list outstanding items in `00_Status.md` as open ⚠️ items (`- [ ] ⚠️ …`; accepting them does not resolve them) and continue with defense preparation
 2. **Manual fix** — pause; user investigates and resolves the problematic item manually; resume when user confirms
 3. **Force continue** — explicitly raise the loop limit for this one item; use sparingly, document the exception in `00_Decisions.md`. The workflow's own `feedback_loop_max` is already `3`, so a raised limit means `4` or `5` at most for defense work (slides are short, iteration has diminishing returns faster).
 
