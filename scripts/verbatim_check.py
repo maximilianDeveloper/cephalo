@@ -153,8 +153,9 @@ HTML_COMMENT = re.compile(r"<!--.*?-->", re.S)
 # a non-breaking hyphen as a hyphen. A text box's paragraphs are paragraphs of
 # their own, and the copy of it for older readers (mc:Fallback) is left out.
 # Pandoc's block-quote style (BlockText, the one quote style of its reference
-# document and of scripts/build_reference_docx.py) makes a paragraph a quote; a
-# style the reference document lacks is plain text in the export. Attribute
+# document and of scripts/build_reference_docx.py without --base) makes a
+# paragraph a quote; a style the reference document lacks is plain text in the
+# export, and one a --base template adds (Zitat) is compared as plain text too. Attribute
 # scans stop at the next tag, so that malformed markup takes no extra time.
 WORD_PARAGRAPH_END = re.compile(r"</w:p>|<w:p(?:\s[^<>]*)?/>")
 WORD_RUN_TEXT = re.compile(r"<w:t(?:\s[^<>]*)?>([^<]*)</w:t>"
@@ -295,16 +296,39 @@ def bibliography_section(headings: list, count: int) -> Optional[tuple]:
     return start, end
 
 
-def element_spans(block: str, start_tag: str, end_tag: str) -> list:
-    """(start, end) of each element from start_tag to end_tag in block, one after
-    another (an element without its end tag runs to the end): one pass."""
-    out, i = [], block.find(start_tag)
-    while i >= 0:
-        j = block.find(end_tag, i)
-        j = len(block) if j < 0 else j + len(end_tag)
-        out.append((i, j))
-        i = block.find(start_tag, j)
+def element_spans(block: str, name: str) -> list:
+    """
+    (start, end) of each outermost element called name in block, in one pass:
+    an element inside another of its kind belongs to the outer one, an empty
+    one (<name/>) is a span of its own tag, and one without its end tag runs to
+    the end of the block.
+    """
+    out, depth, start = [], 0, 0
+    for tag in re.finditer(r"<(/?)" + re.escape(name) + r"\b[^<>]*?(/?)>", block):
+        if tag.group(1):
+            if depth:
+                depth -= 1
+                if not depth:
+                    out.append((start, tag.end()))
+        elif tag.group(2):
+            if not depth:
+                out.append((tag.start(), tag.end()))
+        else:
+            if not depth:
+                start = tag.start()
+            depth += 1
+    if depth:
+        out.append((start, len(block)))
     return out
+
+
+def blank_spans(text: str, spans: list) -> str:
+    """text with each of the sorted, separate spans replaced as blank() does, in one pass."""
+    parts, pos = [], 0
+    for a, b in spans:
+        parts += [text[pos:a], re.sub(r"[^\n]", " ", text[a:b])]
+        pos = b
+    return "".join(parts) + text[pos:]
 
 
 def raw_paragraphs(block: str) -> list:
@@ -314,12 +338,10 @@ def raw_paragraphs(block: str) -> list:
     that the paragraph around it keeps its text before and after the box and
     its own style; the copy of a box for older readers (mc:Fallback) is left out.
     """
-    for a, b in element_spans(block, "<mc:Fallback", "</mc:Fallback>"):
-        block = blank(block, a, b)
-    boxes = []
-    for a, b in element_spans(block, "<w:txbxContent", "</w:txbxContent>"):
-        boxes.append((a, block[a:b]))
-        block = blank(block, a, b)
+    block = blank_spans(block, element_spans(block, "mc:Fallback"))
+    spans = element_spans(block, "w:txbxContent")
+    boxes = [(a, block[a:b]) for a, b in spans]
+    block = blank_spans(block, spans)
     out = []
     for base, part_of in [(0, block)] + boxes:
         start = 0
@@ -362,6 +384,7 @@ def read_markdown(path: Path) -> tuple:
     # Pandoc's block-quote style is a quote, as in the export; not in an HTML
     # comment, which the export drops
     comments = [(m.start(), m.end()) for m in HTML_COMMENT.finditer(text)]
+    breaks = [m.start() for m in re.finditer("\n", text)]
     raw_text = []
     for m in RAW_BLOCK.finditer(text):
         fmt = RAW_FORMAT.search(m.group(0))
@@ -370,7 +393,7 @@ def read_markdown(path: Path) -> tuple:
         if any(a <= m.start() < b for a, b in comments):
             continue
         for words, at, is_quote in raw_paragraphs(m.group(0)):
-            line = text.count("\n", 0, m.start() + at) + 1
+            line = bisect.bisect_left(breaks, m.start() + at) + 1
             raw_text.append((normalize(words), line, is_quote, True))
     for pattern in (RAW_BLOCK, HTML_COMMENT, PANDOC_CITATION, FOOTNOTE_MARK):
         for m in reversed(list(pattern.finditer(text))):

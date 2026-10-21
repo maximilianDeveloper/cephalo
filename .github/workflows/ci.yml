@@ -1717,10 +1717,15 @@ jobs:
           sed 's/{=openxml}/{=docx}/' "$V/raw_text.md" > "$V/raw_docx.md"
           expect 0 python scripts/verbatim_check.py "$V/raw_docx.md" "$V/raw_text_src.txt"
           # a text box in a quoted paragraph: the paragraph's text after the box stays in the quote
-          printf '# 1 Einleitung\n\nEin kurzer eigener Satz steht hier.\n\n```{=openxml}\n<w:p><w:pPr><w:pStyle w:val="BlockText"/></w:pPr><w:r><w:t xml:space="preserve">Vor dem Kasten. </w:t></w:r><w:r><mc:AlternateContent><mc:Choice Requires="wps"><w:txbxContent><w:p><w:r><w:t>Notiz.</w:t></w:r></w:p></w:txbxContent></mc:Choice><mc:Fallback><w:txbxContent><w:p><w:r><w:t>Notiz.</w:t></w:r></w:p></w:txbxContent></mc:Fallback></mc:AlternateContent></w:r><w:r><w:t>Die Bäume kühlen ihre Umgebung durch Verdunstung und senken die Temperatur in dicht bebauten Vierteln deutlich.</w:t></w:r></w:p>\n```\n' > "$V/raw_box.md"
+          printf '# 1 Einleitung\n\nEin kurzer eigener Satz steht hier.\n\n```{=openxml}\n<w:p><w:pPr><w:pStyle w:val="BlockText"/></w:pPr><w:r><w:t xml:space="preserve">Vor dem Kasten. </w:t></w:r><w:r><mc:AlternateContent xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"><mc:Choice Requires="wps"><w:drawing><wp:inline><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.microsoft.com/office/word/2010/wordprocessingShape"><wps:wsp xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape"><wps:txbx><w:txbxContent><w:p><w:r><w:t>Notiz.</w:t></w:r></w:p></w:txbxContent></wps:txbx></wps:wsp></a:graphicData></a:graphic></wp:inline></w:drawing></mc:Choice><mc:Fallback><w:pict><v:shape><v:textbox><w:txbxContent><w:p><w:r><w:t>Notiz.</w:t></w:r></w:p></w:txbxContent></v:textbox></v:shape></w:pict></mc:Fallback></mc:AlternateContent></w:r><w:r><w:t>Die Bäume kühlen ihre Umgebung durch Verdunstung und senken die Temperatur in dicht bebauten Vierteln deutlich.</w:t></w:r></w:p>\n```\n' > "$V/raw_box.md"
           expect 0 python scripts/verbatim_check.py "$V/raw_box.md" "$V/raw_text_src.txt"
           sed 's|<w:pPr><w:pStyle w:val="BlockText"/></w:pPr>||' "$V/raw_box.md" > "$V/raw_box_plain.md"
           expect 1 python scripts/verbatim_check.py "$V/raw_box_plain.md" "$V/raw_text_src.txt"
+          grep -qF '16 words, line 6' "$V/out.txt"
+          # an empty copy for older readers (<mc:Fallback/>) hides nothing after it
+          sed 's|<mc:Fallback>.*</mc:Fallback>|<mc:Fallback/>|' "$V/raw_box_plain.md" > "$V/raw_box_empty.md"
+          grep -qF '<mc:Fallback/>' "$V/raw_box_empty.md"
+          expect 1 python scripts/verbatim_check.py "$V/raw_box_empty.md" "$V/raw_text_src.txt"
           grep -qF '16 words, line 6' "$V/out.txt"
           # a raw paragraph in the bibliography is one of its entries: with a year it stays out with
           # the reference list; without one the section is no reference list and is compared
