@@ -1215,14 +1215,15 @@ class TestNoNetworkOrDeviceAccess(Base):
                 return real(p, *a, **k)
             return wrap
         real_open = open
-        saved = (g.os.path.isfile, g.os.path.exists, g.os.path.isdir)
-        g.os.path.isfile, g.os.path.exists, g.os.path.isdir = (
-            log('isfile', saved[0]), log('exists', saved[1]), log('isdir', saved[2]))
+        saved = (g.os.path.isfile, g.os.path.exists, g.os.path.isdir, g.os.open, g.os.stat, g.os.listdir)
+        (g.os.path.isfile, g.os.path.exists, g.os.path.isdir, g.os.open, g.os.stat, g.os.listdir) = (
+            log('isfile', saved[0]), log('exists', saved[1]), log('isdir', saved[2]),
+            log('os.open', saved[3]), log('stat', saved[4]), log('listdir', saved[5]))
         g.open = log('open', real_open)
         try:
             out = fn()
         finally:
-            g.os.path.isfile, g.os.path.exists, g.os.path.isdir = saved
+            (g.os.path.isfile, g.os.path.exists, g.os.path.isdir, g.os.open, g.os.stat, g.os.listdir) = saved
             del g.open
         return out, [p for _, p in seen if 'cephalo-guard' not in p and '00_Shared_Materials' not in p
                      and not p.endswith('00_Status.md') and not p.startswith(STATE)]
@@ -1269,6 +1270,122 @@ class TestNoNetworkOrDeviceAccess(Base):
         root = '//server/home/u/proj'
         _, paths = self.touched(lambda: bash('sh _scratch/x.sh', root=root, cwd=root))
         self.assertIn('//server/home/u/proj/_scratch/x.sh', [p.replace('\\', '/').lower() for p in paths])
+
+
+class TestWorkLimits(Base):
+    """The guard's work for one call is bounded: what it cannot check within
+    the limits passes with its note, and a planted FIFO or device never blocks it."""
+
+    def setUp(self):
+        self.root = tempfile.mkdtemp(prefix='guard-limits-')
+        os.makedirs(os.path.join(self.root, '_scratch'))
+        os.makedirs(os.path.join(self.root, 'workspace', 'output', 'verification'))
+        self.state = tempfile.mkdtemp(prefix='guard-limits-state-')
+
+    def tearDown(self):
+        shutil.rmtree(self.root)
+        shutil.rmtree(self.state)
+
+    def put(self, rel, text):
+        Path(self.root, rel).write_text(text, encoding='utf-8')
+
+    def call(self, tool, tin, session, event='PreToolUse', **kw):
+        return g.evaluate(payload(tool, tin, event, cwd=self.root, session=session),
+                          env(root=self.root, state=self.state, **kw))
+
+    def test_a_script_is_read_once_per_call(self):
+        self.put('s.sh', 'echo x > /tmp/out.txt\n' + 'sh s.sh\n' * 2000)
+        reads, orig = [], g._read_regular
+        g._read_regular = lambda p, n: reads.append(p) or orig(p, n)
+        try:
+            out = self.call('Bash', {'command': 'sh s.sh'}, 'lim-1')
+        finally:
+            g._read_regular = orig
+        self.assertEqual(rules_of(out), {'S1', 'S2'})         # still found, in the script
+        self.assertEqual(len(reads), 1)
+
+    def test_python_program_scanned_once_for_moves(self):
+        calls, orig = [], g._PY_MOVES
+
+        class Counting:
+            def search(self, s):
+                calls.append(1)
+                return orig.search(s)
+        words = ','.join("'w%d'" % i for i in range(5000))
+        g._PY_MOVES = Counting()
+        try:
+            out = self.call('Bash', {'command': 'python3 -c "import pandas as pd\nstop = [%s]\n'
+                                                 'pd.DataFrame(stop).to_csv(\'_scratch/out.csv\')\n"' % words}, 'lim-2')
+        finally:
+            g._PY_MOVES = orig
+        self.passes(out)
+        self.assertLessEqual(len(calls), 2)
+
+    def test_unclosed_heredocs_and_long_pipelines_are_linear(self):
+        import time
+        for cmd in ('EOF\n' + 'cat <<EOF\n' * 20000, 'echo a' + ' | cat' * 30000):
+            t = time.monotonic()
+            self.call('Bash', {'command': cmd}, 'lim-3')
+            self.assertLess(time.monotonic() - t, 3.0)          # 20 s and more before
+        segs, pipes, bodies = g.parse('cat <<A\nx\nA\ncat <<-B\n\ty\n\tB\ncat <<A\nz')
+        self.assertEqual(bodies, ['x', '\ty', 'z'])             # closed, tabbed, unclosed (the rest)
+
+    def test_find_pattern_longer_than_a_file_name_is_not_compiled(self):
+        seen, orig = [], g.fnmatch
+
+        class Stub:
+            @staticmethod
+            def fnmatchcase(name, pat):
+                seen.append(len(pat))
+                return orig.fnmatchcase(name, pat)
+        g.fnmatch = Stub
+        try:
+            out = self.call('Bash', {'command': "find . -name '%s' -delete" % ('[' * 20000)}, 'lim-4')
+            short = self.call('Bash', {'command': "find . -name '*.aux' -delete"}, 'lim-4')
+        finally:
+            g.fnmatch = orig
+        self.assertEqual(rules_of(out), {'S5'})                 # counts as a pattern that can match
+        self.passes(short)
+        self.assertTrue(seen and max(seen) <= 255)
+
+    def test_over_the_limits_passes_with_the_note(self):
+        cases = [('big', 'echo ' + 'a' * g.MAX_COMMAND),
+                 ('expand', 'x=%s; python3 -c "%s"' % ('a' * 200000, '$x' * 6)),
+                 ('scan', 'cat <<EOF\n' + 'x' * 100000 + '\nEOF\n' + 'python3 -c __HD0__;' * 200)]
+        for name, cmd in cases:
+            with self.subTest(name):
+                out = self.call('Bash', {'command': cmd}, 'lim-5-' + name)
+                self.assertIn('too large to check', out['systemMessage'])
+        orig = g.DEADLINE_S
+        g.DEADLINE_S = -1.0
+        try:
+            out = self.call('Bash', {'command': 'ls'}, 'lim-5-deadline')
+        finally:
+            g.DEADLINE_S = orig
+        self.assertIn('longer than', out['systemMessage'])
+
+    @unittest.skipUnless(hasattr(os, 'mkfifo'), 'FIFOs are POSIX')
+    def test_fifo_or_device_in_place_of_a_file_never_blocks(self):
+        import hashlib
+        prompt = {'subagent_type': 'source-verifier', 'description': 'x',
+                  'prompt': 'Check chapter 1. You do not need to re-check the sentences again.'}
+        e = {'CLAUDE_PROJECT_DIR': self.root, 'CEPHALO_GUARD_STATE_DIR': self.state, 'CEPHALO_GUARD_ON': 'P1',
+             'CEPHALO_GUARD_OS': 'posix'}
+        for kind in ('fifo', 'devzero'):
+            with self.subTest(kind):
+                sid = 'lim-6-' + kind
+                sf = os.path.join(self.state, 'p1-%s.txt' % hashlib.sha256(sid.encode()).hexdigest()[:16])
+                os.mkfifo(sf) if kind == 'fifo' else os.symlink('/dev/zero', sf)
+                code, out, _ = run_script(json.dumps(payload('Agent', prompt, cwd=self.root, session=sid)).encode(), e)
+                self.assertEqual(code, 0)
+                self.assertIn('cephalo guard P1', out)          # checked; not remembered, so a note in context
+                rep = os.path.join(self.root, 'workspace', 'output', 'verification', 'ch_%s_round_1.md' % kind)
+                os.mkfifo(rep) if kind == 'fifo' else os.symlink('/dev/zero', rep)
+                d = payload('Write', {'file_path': rep, 'content': '| a |\nStatus: ok\n'}, 'PostToolUse',
+                            cwd=self.root, session=sid)
+                code, out, _ = run_script(json.dumps(d).encode(), e)
+                self.assertEqual(code, 0)
+                self.assertIn('1 table rows', json.loads(out)['reason'])   # counted from the Write's content
 
 
 if __name__ == '__main__':

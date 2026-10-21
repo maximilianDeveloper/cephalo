@@ -60,13 +60,16 @@ temporary folder, for P1 when it is on and for that note, and uses no
 network.  Python 3.9 or later, standard library only.
 """
 
+import bisect
 import fnmatch
 import hashlib
 import json
 import os
 import posixpath
 import re
+import stat
 import sys
+import time
 
 # Overrides for tests only: CEPHALO_GUARD_OS=windows|posix,
 # CEPHALO_GUARD_HAS_PY=1|0, CEPHALO_GUARD_STATE_DIR=<dir>.
@@ -79,6 +82,37 @@ DEFAULT_OFF = ('P1',)
 SHIPPED_SCRIPTS = ('abbreviations_extract.py', 'bibliography_check.py', 'build_reference_docx.py',
                    'cephalo_guard.py', 'cephalo_guard.sh', 'cross_session_audit.py', 'docx_pagination.py',
                    'docx_postprocess.sh', 'extract_styleguide.sh', 'verbatim_check.py')
+
+
+# Work limits for one call: past one of them the guard stops and lets the call
+# pass with its note (it never blocks a call it did not finish checking).
+DEADLINE_S = 5.0                # the hook's timeout is 10 s
+MAX_COMMAND = 1 << 19           # characters of one Bash/PowerShell command
+MAX_READ = 1 << 21              # bytes of all scripts and patches read for one call
+MAX_SCAN = 1 << 23              # characters of shell text and programs scanned for one call
+MAX_EXPAND = 1 << 20            # characters a $var substitution adds to one inline program
+
+
+class OverBudget(Exception):
+    """The call is too large to check within the limits above."""
+
+
+class Budget:
+    def __init__(self):
+        self.deadline = time.monotonic() + DEADLINE_S
+        self.read = self.scanned = 0
+        self.files = {}             # normalized path -> text read (each file is read once)
+        self.scripts = set()        # scripts already checked for this call
+
+    def tick(self):
+        if time.monotonic() > self.deadline:
+            raise OverBudget('it took longer than %g s' % DEADLINE_S)
+
+    def scan(self, text):
+        self.scanned += len(text)
+        if self.scanned > MAX_SCAN:
+            raise OverBudget('more than %d characters to scan' % MAX_SCAN)
+        self.tick()
 
 
 def _rule_set(value):
@@ -120,6 +154,8 @@ class Ctx:
         self.claude_home = self.home + '/.claude' if self.home else ''
         self.off = _rule_set(env.get('CEPHALO_GUARD_OFF', ''))
         self.on = _rule_set(env.get('CEPHALO_GUARD_ON', ''))
+        self.budget = Budget()
+        self._sub_projects = None
 
     def enabled(self, rule):
         if 'ALL' in self.off or rule in self.off:
@@ -247,8 +283,10 @@ def strip_heredocs(cmd):
     (it is more likely text inside quotes)."""
     lines = cmd.split('\n')
     out, bodies = [], []
-    plain = set(x.rstrip('\r') for x in lines)
-    tabbed = set(x.lstrip('\t').rstrip('\r') for x in lines)
+    plain, tabbed = {}, {}                       # closing-line text -> its line numbers, ascending
+    for k, x in enumerate(lines):
+        plain.setdefault(x.rstrip('\r'), []).append(k)
+        tabbed.setdefault(x.lstrip('\t').rstrip('\r'), []).append(k)
     i, first_rest = 0, None
     while i < len(lines):
         line = lines[i]
@@ -266,21 +304,13 @@ def strip_heredocs(cmd):
             continue
         j, found, ok = i + 1, [], True
         for delim, dash in pending:
-            if delim not in (tabbed if dash else plain):
-                ok = False                       # no closing line anywhere: skip the scan
+            at = (tabbed if dash else plain).get(delim, ())
+            k = bisect.bisect_left(at, j)
+            if k == len(at):
+                ok = False                       # no closing line after it
                 break
-            body = []
-            while j < len(lines):
-                cand = lines[j].lstrip('\t') if dash else lines[j]
-                if cand.rstrip('\r') == delim:
-                    break
-                body.append(lines[j])
-                j += 1
-            else:
-                ok = False
-                break
-            found.append('\n'.join(body))
-            j += 1
+            found.append('\n'.join(lines[j:at[k]]))
+            j = at[k] + 1
         if not ok:
             # bash reads an unterminated here-document up to the end (a closing
             # line with spaces around it does not end it).  Register the rest as
@@ -749,14 +779,41 @@ def _fs_ok(n, ctx):
     return True
 
 
-def _read_small(path, ctx, limit=262144):
+def _read_regular(path, limit):
+    """Up to limit bytes of a regular file, or None.  Opened without blocking
+    and checked on the open file, so a FIFO or device never blocks the hook."""
     try:
-        if not _fs_ok(path, ctx) or not os.path.isfile(path):  # not UNC/device/pseudo; not a FIFO
-            return None
-        with open(path, 'rb') as fh:
-            return fh.read(limit).decode('utf-8', 'replace')
+        fd = os.open(path, os.O_RDONLY | getattr(os, 'O_NONBLOCK', 0) | getattr(os, 'O_BINARY', 0))
     except (OSError, ValueError, TypeError):
         return None
+    try:
+        if not stat.S_ISREG(os.fstat(fd).st_mode):
+            return None
+        with os.fdopen(fd, 'rb') as fh:
+            fd = None
+            return fh.read(limit)
+    except (OSError, ValueError):
+        return None
+    finally:
+        if fd is not None:
+            os.close(fd)
+
+
+def _read_small(path, ctx, limit=262144):
+    """A script, patch or input the command names (a normalized path): read
+    once per call, within the call's read budget, and never from the network,
+    a device or a pseudo-file (_fs_ok)."""
+    if not _fs_ok(path, ctx):
+        return None
+    files = ctx.budget.files
+    if path not in files:
+        data = _read_regular(path, limit)
+        if data:
+            ctx.budget.read += len(data)
+            if ctx.budget.read > MAX_READ:
+                raise OverBudget('more than %d bytes of scripts to read' % MAX_READ)
+        files[path] = None if data is None else data.decode('utf-8', 'replace')
+    return files[path]
 
 
 def _trusted_script(n, ctx):
@@ -802,11 +859,13 @@ def holds_protected(n, ctx):
     anchors = [ctx.project + '/scripts', ctx.root + '/scripts']
     bases = {ctx.project, ctx.root, ctx.home}
     if ctx.root != ctx.project:
-        try:
-            bases.update(ctx.root + '/' + (d.lower() if ctx.windows else d) for d in os.listdir(ctx.root)
-                         if os.path.isdir(os.path.join(ctx.root, d)))
-        except OSError:
-            pass
+        if ctx._sub_projects is None:
+            try:
+                ctx._sub_projects = [ctx.root + '/' + (d.lower() if ctx.windows else d) for d in os.listdir(ctx.root)
+                                     if os.path.isdir(os.path.join(ctx.root, d))]
+            except OSError:
+                ctx._sub_projects = []
+        bases.update(ctx._sub_projects)
     for base in bases:
         if base:
             anchors += [base + x for x in _SETTINGS]
@@ -826,9 +885,12 @@ def py_protected(code, ctx, base):
     """A Python program that writes, moves or deletes a protected path."""
     if not code or not (_PY_WRITE.search(code) or _PY_REMOVE.search(code)):
         return None
-    for lit in _PATH_LIT.findall(code):
+    moves = bool(_PY_MOVES.search(code))
+    for k, lit in enumerate(dict.fromkeys(_PATH_LIT.findall(code))):
+        if not k % 1024:
+            ctx.budget.tick()
         n = norm_path(lit, ctx, base)
-        why = protected(n, ctx) or (holds_protected(n, ctx) if _PY_MOVES.search(code) else None)
+        why = protected(n, ctx) or (holds_protected(n, ctx) if moves else None)
         if why:
             return lit, why
     return None
@@ -839,8 +901,10 @@ def check_shell(cmd, tool, ctx, depth=0, pre=None):
     here-document bodies of an enclosing command (for a $( ) inside it)."""
     ps = tool == 'PowerShell'
     hits = []
+    ctx.budget.scan(cmd)
     segs, pipes, bodies = parse(cmd, ps, pre)
     pipe_of = {k: pp for pp in pipes for k in pp}
+    pos_of = {k: i for pp in pipes for i, k in enumerate(pp)}
     base = ctx.cwd
     bases = []                 # the folder relative paths of each segment start from
     prev_script = False        # the previous segment ran a Python script and ended in '||'
@@ -848,6 +912,8 @@ def check_shell(cmd, tool, ctx, depth=0, pre=None):
     scratch_made = set()       # _scratch files this command fills by an exempt producer
     restore = []               # (end, folder) of the ( ... ) subshells the loop is in
     for si, seg in enumerate(segs):
+        if not si % 256:
+            ctx.budget.tick()
         while restore and restore[-1][0] <= si:
             base = restore.pop()[1]               # a cd inside ( ... ) ends with it
         if seg.subshell_end is not None:
@@ -872,7 +938,7 @@ def check_shell(cmd, tool, ctx, depth=0, pre=None):
                 base = TEMPVAR if n == TEMPVAR else (n if n and n != DEVICE else None)
         is_script = False
         p = pipe_of.get(si, [si])
-        pos = p.index(si)
+        pos = pos_of.get(si, 0)
         pseg = segs[p[pos - 1]] if pos > 0 else None
         # S1 (a)/(b): inline Python programs that write a file
         if _PYNAME.match(c):
@@ -883,10 +949,14 @@ def check_shell(cmd, tool, ctx, depth=0, pre=None):
             if mode == 'c':
                 code = val + ''.join('\n' + b for b in {id(bodies[int(k)]): bodies[int(k)] for k in
                                      re.findall(r'__HD(\d+)__', val) if int(k) < len(bodies)}.values())
-                code = re.sub(r'\$\{?([A-Za-z_]\w*)\}?', lambda mm: assigns.get(mm.group(1), mm.group(0)), code)
-                for f in re.findall(r"""exec\s*\(\s*open\s*\(\s*['"]([^'"]+)['"]""", code):
-                    code += '\n' + (_read_small(norm_path(f, ctx, bases[si]) or '', ctx) or '')
-                for f in re.findall(r"""\brun_path\s*\(\s*r?['"]([^'"]+)['"]""", code):
+                code = re.sub(r'\$\{?([A-Za-z_]\w*)\}?', _expander(assigns), code)
+                added = set()
+                for f in dict.fromkeys(re.findall(r"""exec\s*\(\s*open\s*\(\s*['"]([^'"]+)['"]""", code)):
+                    n = norm_path(f, ctx, bases[si]) or ''
+                    if n not in added:
+                        added.add(n)
+                        code += '\n' + (_read_small(n, ctx) or '')
+                for f in dict.fromkeys(re.findall(r"""\brun_path\s*\(\s*r?['"]([^'"]+)['"]""", code)):
                     hits += _script_hits(f, 'py', ctx, bases[si], depth)
             elif mode == 'stdin':
                 parts = [bodies[k] for k in seg.heredocs if k < len(bodies)] + seg.herestrings
@@ -901,6 +971,8 @@ def check_shell(cmd, tool, ctx, depth=0, pre=None):
                         parts += [_read_small(norm_path(a, ctx, bases[si]) or '', ctx) or ''
                                   for a in pargs if not a.startswith('-')]
                 code = '\n'.join(parts)
+            if code:
+                ctx.budget.scan(code)
             what = py_write(code, ctx, bases[si]) if code else None
             if what:
                 hits.append(('S1', 'an inline Python program that writes a file: %s' % what))
@@ -1061,6 +1133,22 @@ def check_shell(cmd, tool, ctx, depth=0, pre=None):
     return _dedupe(hits)
 
 
+def _expander(assigns):
+    """re.sub callback for $x / ${x} in an inline program: the value of an
+    assignment seen before, within MAX_EXPAND characters in all."""
+    left = [MAX_EXPAND]
+
+    def sub(mm):
+        v = assigns.get(mm.group(1))
+        if v is None:
+            return mm.group(0)
+        left[0] -= len(v)
+        if left[0] < 0:
+            raise OverBudget('a $variable expands to more than %d characters' % MAX_EXPAND)
+        return v
+    return sub
+
+
 def _sink_hit(hits, kind, target, ctx, base):
     if not kind:
         return
@@ -1180,7 +1268,9 @@ def _change_targets(c, args, ps):
         names = [args[k + 1] for k, a in enumerate(args) if a in ('-name', '-iname') and k + 1 < len(args)]
         wide = any(a in ('-path', '-ipath', '-regex', '-iregex', '-wholename', '-iwholename') for a in args)
         keys = ('.claude', 'scripts') + tuple(x.rsplit('/', 1)[-1] for x in _SETTINGS) + SHIPPED_SCRIPTS
-        if names and not wide and not any(fnmatch.fnmatchcase(k.lower(), p.lower()) for p in names for k in keys):
+        # (a file name has at most 255 characters; a longer pattern counts as matching, unread)
+        if names and not wide and not any(len(p) > 255 or fnmatch.fnmatchcase(k.lower(), p.lower())
+                                          for p in names for k in keys):
             return [(pos[0], 'edit')]
         return [(pos[0], 'remove')]
     if lc == 'git' and args:
@@ -1208,6 +1298,11 @@ def _script_hits(path, kind, ctx, base, depth):
         return []
     if base_name(path) in ('setup.sh', 'setup.ps1'):
         return [('S1', 'SETUP:%s' % path)]          # cephalo's setup, outside this project
+    key = (n, kind, base, depth)
+    if key in ctx.budget.scripts:
+        return []                                   # checked already for this call: same hits
+    ctx.budget.scripts.add(key)
+    ctx.budget.tick()
     body = _read_small(n, ctx)
     if not body:
         return []
@@ -1285,9 +1380,9 @@ def readback(tin, ctx):
         return None
     if not ctx.enabled('R6' if fmt else 'R5'):
         return None
-    body = _read_small(n, ctx, limit=1 << 20)        # gate UNC/device/pseudo; also caps the read
-    if body is not None:
-        text = body
+    data = _read_regular(n, 1 << 22) if _fs_ok(n, ctx) else None   # a report is far smaller than 4 MiB
+    if data is not None:
+        text = data.decode('utf-8', 'replace')
     else:
         text = tin.get('content') if isinstance(tin.get('content'), str) else ''
     lines = text.replace('\r\n', '\n').split('\n')
@@ -1416,11 +1511,8 @@ def _state_file(ctx):
 
 
 def _seen(ctx, key):
-    try:
-        with open(_state_file(ctx)[1], encoding='ascii') as fh:
-            return key in fh.read().split()
-    except OSError:
-        return False
+    data = _read_regular(_state_file(ctx)[1], 1 << 20)   # 65 bytes a deny: 16000 denies
+    return data is not None and key in data.decode('ascii', 'replace').split()
 
 
 def _remember(ctx, key):
@@ -1429,8 +1521,13 @@ def _remember(ctx, key):
         os.makedirs(d, exist_ok=True)
         if not os.path.exists(path):
             _prune(d)
-        with open(path, 'a', encoding='ascii') as fh:
-            fh.write(key + '\n')
+        fd = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT | getattr(os, 'O_NONBLOCK', 0), 0o600)
+        try:
+            if not stat.S_ISREG(os.fstat(fd).st_mode):
+                return False
+            os.write(fd, (key + '\n').encode('ascii'))
+        finally:
+            os.close(fd)
         return True
     except OSError:
         return False
@@ -1455,7 +1552,7 @@ def check_prompt(tool, tin, ctx):
     if not text:
         return None                       # e.g. a SendMessage protocol message without text
     defn = ctx.definition('P1')
-    found = p1_findings(text, str(tin.get('subagent_type') or ''))
+    found = p1_findings(re.sub(r'\n\s+', '\n', text), str(tin.get('subagent_type') or ''))
     if not found:
         return None
     key = hashlib.sha256((tool + '\0' + text).encode('utf-8', 'replace')).hexdigest()
@@ -1578,7 +1675,12 @@ def evaluate(data, env=None):
         cmd = tin.get('command')
         if not isinstance(cmd, str):
             return note('hook input not understood (no command in the %s call)' % tool, data, env)
-        hits = [h for h in check_shell(cmd, tool, ctx) if ctx.enabled(h[0])]
+        try:
+            if len(cmd) > MAX_COMMAND:
+                raise OverBudget('more than %d characters' % MAX_COMMAND)
+            hits = [h for h in check_shell(cmd, tool, ctx) if ctx.enabled(h[0])]
+        except OverBudget as exc:
+            return note('the %s command is too large to check (%s)' % (tool, exc), data, env)
         return deny(shell_reason(hits, ctx, cmd)) if hits else None
     if tool in _FILE_TOOLS:
         hits = [h for h in check_file_write(tool, tin, ctx) if ctx.enabled(h[0])]
