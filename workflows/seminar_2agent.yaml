@@ -144,7 +144,8 @@ phases:
           before the closing step F.1. The chat that creates styleguide.md
           ends with the Chat closure ritual (main_session): for its item 5,
           git status --short -- styleguide.md shows the file untracked ("??"),
-          so check every provenance in it that names the user.
+          and before the first commit git diff HEAD fails, so check every
+          provenance in it that names the user.
   
   # ===========================================================
   # Per-chapter work (one chat per chapter)
@@ -338,8 +339,10 @@ phases:
            the Bash tool:
              git status --short -- styleguide.md && git diff HEAD -- styleguide.md
            Each provenance that names the user on a line the diff adds (while
-           git status shows the file untracked, "??": each one in the file)
-           rests on the user's words or on a proposal the user accepted.
+           git status shows the file untracked or newly added, "??" or "A",
+           or the project has no commit yet, so that git diff HEAD fails:
+           each one in the file) rests on the user's words or on a proposal
+           the user accepted.
 
 # Notes on the lean setup
 
