@@ -621,7 +621,10 @@ def run_script(stdin_bytes, extra_env=None, python=sys.executable):
     e.update(extra_env or {})
     p = subprocess.run([python, '-I', '-S', str(GUARD)], input=stdin_bytes, stdout=subprocess.PIPE,
                        stderr=subprocess.PIPE, env=e, timeout=20)
-    return p.returncode, p.stdout.decode('ascii'), p.stderr.decode('utf-8', 'replace')
+    out = p.stdout.decode('ascii')
+    if out.strip():
+        check_shape(json.loads(out))     # what the hook prints, not only what evaluate() returns
+    return p.returncode, out, p.stderr.decode('utf-8', 'replace')
 
 
 class TestRobustness(Base):
@@ -677,6 +680,7 @@ class TestRobustness(Base):
             finally:
                 sys.stdin, sys.stdout = sys_stdin, sys_stdout
             self.assertIn('internal error (ZeroDivisionError', json.loads(buf.getvalue())['systemMessage'])
+            check_shape(json.loads(buf.getvalue()))
         finally:
             g.check_shell = orig
 
@@ -1067,6 +1071,13 @@ class TestR5Edit(Base):
         out = run('Write', {'file_path': nfd + '/workspace/output/verification/ch_1_round_1.md', 'content': 'x'},
                   event='PostToolUse', plat='macos', root=nfd)
         self.assertIn('R5: workspace/output/verification/ch_1_round_1.md is saved', out['reason'])
+        self.assertIn('still contains an absolute path', out['reason'])
+        # the other way round: the project folder typed (NFC), the path in the report as Finder wrote it (NFD)
+        os.makedirs(os.path.join(nfc, 'workspace', 'output', 'verification'))
+        Path(nfc, 'workspace/output/verification/ch_2_round_1.md').write_text(
+            '| a |\nQuelle: %s/workspace/sources/a.pdf\n' % nfd, encoding='utf-8')
+        out = run('Write', {'file_path': nfc + '/workspace/output/verification/ch_2_round_1.md', 'content': 'x'},
+                  event='PostToolUse', plat='macos', root=nfc)
         self.assertIn('still contains an absolute path', out['reason'])
         shutil.rmtree(root)
 
