@@ -169,6 +169,7 @@ class TestS1ShellWrites(Base):
         '(echo a; echo b) > f.md',
         '{ echo a; echo b; } > f.md',
         '{ echo a; ls; } > f.md',
+        'python3 -c "import os; open(os.path.join(d, str(n)), \'w\').write(\'x\')"',
         '( printf x; ls ) > f.md',
         'cat <<< "text" > f.md',
         # in-place editors and stream-editor rewrites
@@ -1464,7 +1465,14 @@ class TestReviewFindings(Base):
                 ('triple.py', "open('''scripts/x.py''', 'w')\n"),
                 ('black.py', "import json, os\nSETTINGS = os.path.join(\n    '.claude',\n    'settings.local.json',\n)\n"
                              "json.dump({}, open(SETTINGS, 'w'))\n"),
-                ('cr_only.py', "import os\r# write the helper\ropen('scripts/x.py', 'w').write('x')\r")):
+                ('cr_only.py', "import os\r# write the helper\ropen('scripts/x.py', 'w').write('x')\r"),
+                ('path_name.py', "from pathlib import Path\nPath('scripts', name).write_text('x')\n"),
+                ('joinpath_name.py', "from pathlib import Path\nPath('.').joinpath('scripts', name).write_text('x')\n"),
+                ('home_path.py', "from pathlib import Path\n(Path.home() / '.claude' / 'settings.json').write_text('{}')\n"),
+                ('expanduser.py', "import os\nopen(os.path.join(os.path.expanduser('~'), '.claude', 'settings.json'), 'w')\n"),
+                ('any_head.py', "import os\nopen(os.path.join(BASE, '.claude', 'settings.local.json'), 'w').write('{}')\n"),
+                ('bare_rmtree.py', "from shutil import rmtree\nrmtree('scripts')\n"),
+                ('bare_copytree.py', "from shutil import copytree\ncopytree('workspace/data/x', 'scripts')\n")):
             with self.subTest(name=name):
                 self.put('workspace/data/scripts/' + name, code)
                 self.assertEqual(rules_of(self.b('python3 workspace/data/scripts/' + name)), {'S5'})
@@ -1483,6 +1491,17 @@ class TestReviewFindings(Base):
                  '\'workspace/data/outputs/a.csv\'); print(os.path.join(\'..\', \'x\'))")"\necho "$n"\n')
         program = "import os; os.replace('workspace/data/outputs/a.tmp', 'workspace/data/outputs/a.csv'); print(os.path.join('..', 'x'))"
         self.put('workspace/data/scripts/nested.sh', 'bash -c "python3 -c \\"%s\\""\n' % program)
+        # a script that changes folder first: a relative path counts only if it names a protected path from
+        # the command's folder, the script's folder and its data folder alike
+        self.put('workspace/data/scripts/run_all.py',
+                 "import os, subprocess\nos.chdir(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))\n"
+                 "subprocess.run(['python3', 'scripts/01_clean.py'])\nopen('outputs/run.log', 'w').write('done')\n")
+        self.passes(self.b('python3 workspace/data/scripts/run_all.py', agent='data-agent'))
+        self.put('workspace/data/scripts/chdir_abs.py', "import os\nos.chdir(os.path.dirname(__file__))\nopen(%r, 'w')\n"
+                 % os.path.join(self.root, 'scripts', 'x.py'))
+        self.assertEqual(rules_of(self.b('python3 workspace/data/scripts/chdir_abs.py')), {'S5'})   # absolute
+        self.put('workspace/data/scripts/chdir_rel.py', "import os\nos.chdir('workspace/data')\nopen('../../scripts/x.py', 'w')\n")
+        self.assertEqual(rules_of(self.b("python3 workspace/data/scripts/chdir_rel.py")), set())     # a known limit
         for name in ('inline.sh', 'heredoc.sh', 'subst.sh', 'nested.sh'):
             with self.subTest(name=name):
                 self.passes(self.b('sh workspace/data/scripts/' + name, agent='data-agent'))

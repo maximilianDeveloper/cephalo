@@ -8,6 +8,12 @@ Dates follow ISO 8601 (`YYYY-MM-DD`).
 
 ---
 
+## [Unreleased]
+
+### Changed
+
+- **More of a data script's paths** — the cephalo guard read a path in a script in `data/scripts/` only from the folder the command runs in, so a script that first changes folder (`os.chdir`) and then runs `scripts/01_clean.py` of its data folder was denied as changing cephalo's `scripts/`. In such a script a relative path now counts only if it names a protected path from the command's folder, from the script's own folder and from its data folder alike. The guard also reads more of the paths such a script builds: `Path('scripts', name)`, `Path('.').joinpath('scripts', name)`, `Path.home() / '.claude' / 'settings.json'`, `os.path.join(os.path.expanduser('~'), '.claude', 'settings.json')`, a `.claude/settings.json` joined to any folder, and `rmtree`, `copytree` and `copyfile` imported from `shutil`. A program that opens a file for writing with two levels of brackets in its path, as in `open(os.path.join(a, f(b)), 'w')`, now counts as one that writes a file.
+
 ## [1.4.0] — 2026-10-22
 
 **The cephalo guard.** A Claude Code hook, which setup installs, now stops a few slips that the agent definitions forbid but models repeat although they have just read the rule:
