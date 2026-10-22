@@ -59,9 +59,9 @@ elements is still compared with the sources), Pandoc citekeys (the
 whole bracket, [@key, p. 5]: Pandoc writes the citation only at the
 export), footnote marks and the bibliography do not (the line says when
 it recognized none), while author-year citations written into the text
-do. A Word chapter counts its body paragraphs,
-without tables, footnotes, text boxes and the bibliography. --words prints
-only that line and needs no sources.
+do. A Word chapter counts its body paragraphs, without tables, footnotes,
+text boxes, content controls and the bibliography. --words prints only
+that line and needs no sources.
 
 Usage:
     python scripts/verbatim_check.py <chapter> <source> [<source> ...]
@@ -598,7 +598,7 @@ def word_count(chapter: Chapter) -> str:
     text = chapter.text if chapter.counted is None else chapter.text[:chapter.counted]
     n = as_written(MARKUP.sub(lambda m: m.group(1) or "", text))
     if chapter.unit == "paragraph":
-        kept, left = "headings and block quotes", ["tables", "footnotes", "text boxes"]
+        kept, left = "headings and block quotes", ["tables", "footnotes", "text boxes", "content controls"]
     else:
         kept, left = ("headings, block quotes and footnotes",
                       ["YAML header", "HTML comments", "raw blocks", "citekeys", "footnote marks"])
