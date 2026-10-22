@@ -1454,6 +1454,8 @@ class TestReviewFindings(Base):
         ('run_cwd.py', "import subprocess, sys\nfrom pathlib import Path\nDATA = Path(__file__).resolve().parent.parent\n"
                        "for name in ['01_clean.py']:\n    subprocess.run([sys.executable, str(Path('scripts', name))], cwd=DATA)\n"
                        "(DATA / 'outputs' / 'run.log').write_text('done')\n"),
+        ('run_cwd_cont.py', "import subprocess, sys\nsubprocess.run([sys.executable, 'scripts/01_clean.py'], \\\n"
+                            "               cwd='workspace/data')\nopen('workspace/data/outputs/run.log', 'w').write('done')\n"),
         ('deck.py', "import os\nfrom pptx import Presentation\np = Presentation()\n"
                             "p.save(os.path.join('workspace', 'output', 'slides', 'deck.pptx'))\n"
                             "print(os.path.join('workspace', 'data', 'scripts'), os.replace)\n")):
@@ -1497,7 +1499,8 @@ class TestReviewFindings(Base):
                 ('open_deep.py', "import os\nopen(os.path.join('scripts', sorted(os.listdir(d))[0]), 'w')\n"),
                 ('up_settings.py', "import os\nHERE = os.path.dirname(__file__)\n"
                                    "open(os.path.join(HERE, '..', '.claude', 'settings.local.json'), 'w')\n"),
-                ('chdir_comment.py', "import shutil\n# os.chdir(DATA)\nprint('chdir(')\nshutil.rmtree('scripts')\n")):
+                ('chdir_comment.py', "import shutil\n# os.chdir(DATA)\nprint('chdir(')\nshutil.rmtree('scripts')\n"),
+                ('cwd_var.py', "import os, shutil\ncwd = os.getcwd()\nprint(cwd == '/')\nshutil.rmtree('scripts')\n")):
             with self.subTest(name=name):
                 self.put('workspace/data/scripts/' + name, code)
                 self.assertEqual(rules_of(self.b('python3 workspace/data/scripts/' + name)), {'S5'})

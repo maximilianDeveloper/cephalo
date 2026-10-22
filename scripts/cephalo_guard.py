@@ -1082,7 +1082,9 @@ def _data_bases(n, ctx):
     return here, '/'.join(parts[:k + 1])
 
 
-_PY_CHDIR = re.compile(r'\bchdir\s*\(|\bcwd\s*=')       # changes folder, or runs programs in another one
+# changes folder, or runs programs in another one: chdir( or cwd= as a call's keyword argument (also after a
+# line continuation), not a variable cwd = ... or a comparison cwd == ...
+_PY_CHDIR = re.compile(r'\bchdir\s*\(|[(,][\s\\]*cwd\s*=(?!=)')
 
 
 def _named_paths(code, tick):
