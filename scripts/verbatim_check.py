@@ -498,7 +498,7 @@ def read_docx(path: Path) -> tuple:
     except Exception as exc:
         fail(f"cannot read {path} as .docx ({type(exc).__name__}: {one_line(exc)})")
     pieces, headings = [], []
-    carry, carry_n = "", None
+    carry, carry_n, carry_q = "", None, False
     try:
         for n, p in enumerate(doc.paragraphs, 1):
             style = (p.style.name if p.style is not None else "") or ""
@@ -507,12 +507,13 @@ def read_docx(path: Path) -> tuple:
             is_quote = bool(QUOTE_STYLE.search(style))
             text = docx_text(p._p)
             if carry_n is not None:
-                text, n, carry, carry_n = carry + text, carry_n, "", None
+                # numbered where the joined text starts (a wholly deleted paragraph gives none)
+                text, n, carry, carry_n = carry + text, (carry_n if carry.strip() else n), "", None
             # a paragraph mark deleted with Track Changes on joins the paragraph to the
             # next one once the changes are accepted, in the next one's style
             mark = p._p.find(W_NS + "pPr/" + W_NS + "rPr")
             if mark is not None and (mark.find(W_NS + "del") is not None or mark.find(W_NS + "moveFrom") is not None):
-                carry, carry_n = text, n
+                carry, carry_n, carry_q = text, n, is_quote
                 continue
             if text.strip():
                 pieces.append((normalize(text), n, is_quote))
@@ -524,7 +525,7 @@ def read_docx(path: Path) -> tuple:
                 elif bibliography_heading(text):
                     headings.append((n, 1, 1, normalize(text)))
         if carry_n is not None and carry.strip():       # the last paragraph's mark: nothing to join
-            pieces.append((normalize(carry), carry_n, False))
+            pieces.append((normalize(carry), carry_n, carry_q))
     except Exception as exc:
         fail(f"cannot read {path} as .docx ({type(exc).__name__}: {one_line(exc)})")
     # The bibliography is a list of titles: left out if it looks like one.
