@@ -262,6 +262,7 @@ class TestS1ShellWrites(Base):
             with self.subTest(cmd=cmd):
                 self.assertEqual(rules_of(bash(cmd, plat='windows')), {'S1', 'S5'})
         self.passes(bash('cmd /c dir workspace', plat='windows'))
+        self.assertIn('S5', rules_of(bash("cmd //c echo x '>' scripts/x.py", plat='windows')))   # Git Bash leaves > bare
         self.passes(bash('cmd /c "py scripts/verbatim_check.py --help"', plat='windows'))
 
     def test_slips_denied_on_windows_paths(self):

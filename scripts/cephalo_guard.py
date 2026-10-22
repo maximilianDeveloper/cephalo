@@ -1322,8 +1322,9 @@ def check_shell(cmd, tool, ctx, depth=0, pre=None, data=False):
         if depth < 2 and c == 'cmd':
             k = next((j for j, a in enumerate(args) if a.lower() in ('/c', '//c', '/k', '//k')), None)
             if k is not None and k + 1 < len(args):
-                rest = args[k + 1:]                     # Git Bash quotes each word for cmd: keep them words
-                hits += check_shell(rest[0] if len(rest) == 1 else ' '.join(_sh_quote(a) for a in rest),
+                rest = args[k + 1:]                     # Git Bash quotes a word with a blank or " for cmd:
+                hits += check_shell(rest[0] if len(rest) == 1 else ' '.join(    # keep those words, the rest bare
+                    _sh_quote(a) if not a or re.search(r'[\s"]', a) else a for a in rest),
                                     'Bash', ctx, depth + 1, data=data)
         if depth < 2 and c in ('powershell', 'pwsh'):
             for k, a in enumerate(args):
