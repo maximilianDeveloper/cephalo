@@ -448,16 +448,18 @@ W_NS = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
 MC_NS = "{http://schemas.openxmlformats.org/markup-compatibility/2006}"
 # What a paragraph's text leaves out: deleted and moved-away text of tracked
 # changes, a text box's paragraphs and their copy for older readers (text boxes
-# are not counted), and the tab stops of its paragraph properties.
-DOCX_SKIP = {W_NS + "del", W_NS + "moveFrom", W_NS + "txbxContent", MC_NS + "Fallback", W_NS + "pPr"}
+# are not counted), the tab stops of its paragraph properties, and the small
+# annotation above ruby text (its base is the line's text).
+DOCX_SKIP = {W_NS + "del", W_NS + "moveFrom", W_NS + "txbxContent", MC_NS + "Fallback", W_NS + "pPr",
+             W_NS + "rt"}
 
 
 def docx_text(p) -> str:
     """
     A Word paragraph's text (its w:p element) as Word shows it with its
     tracked changes accepted: inserted text counts and deleted text does not; a
-    tab is a tab, a line, column or page break a line break, and a
-    non-breaking hyphen a hyphen.
+    tab is a tab, a line, column or page break a line break, a symbol from a
+    symbol font (Insert > Symbol) a space, and a non-breaking hyphen a hyphen.
     """
     out = []
 
@@ -474,6 +476,8 @@ def docx_text(p) -> str:
                 out.append("\n")
             elif tag == W_NS + "noBreakHyphen":
                 out.append("-")
+            elif tag == W_NS + "sym":
+                out.append(" ")
             else:
                 walk(child)
     walk(p)
@@ -494,6 +498,7 @@ def read_docx(path: Path) -> tuple:
     except Exception as exc:
         fail(f"cannot read {path} as .docx ({type(exc).__name__}: {one_line(exc)})")
     pieces, headings = [], []
+    carry, carry_n = "", None
     try:
         for n, p in enumerate(doc.paragraphs, 1):
             style = (p.style.name if p.style is not None else "") or ""
@@ -501,6 +506,14 @@ def read_docx(path: Path) -> tuple:
             # "Quotations" / "Block Quotation"
             is_quote = bool(QUOTE_STYLE.search(style))
             text = docx_text(p._p)
+            if carry_n is not None:
+                text, n, carry, carry_n = carry + text, carry_n, "", None
+            # a paragraph mark deleted with Track Changes on joins the paragraph to the
+            # next one once the changes are accepted, in the next one's style
+            mark = p._p.find(W_NS + "pPr/" + W_NS + "rPr")
+            if mark is not None and (mark.find(W_NS + "del") is not None or mark.find(W_NS + "moveFrom") is not None):
+                carry, carry_n = text, n
+                continue
             if text.strip():
                 pieces.append((normalize(text), n, is_quote))
                 # heading level from the style ("Heading 2", "Überschrift 2", "Title");
@@ -510,6 +523,8 @@ def read_docx(path: Path) -> tuple:
                     headings.append((n, int(h.group(1)) if h else 0, 0, normalize(text)))
                 elif bibliography_heading(text):
                     headings.append((n, 1, 1, normalize(text)))
+        if carry_n is not None and carry.strip():       # the last paragraph's mark: nothing to join
+            pieces.append((normalize(carry), carry_n, False))
     except Exception as exc:
         fail(f"cannot read {path} as .docx ({type(exc).__name__}: {one_line(exc)})")
     # The bibliography is a list of titles: left out if it looks like one.
