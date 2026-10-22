@@ -1062,9 +1062,10 @@ def _built_paths(t, lits):
 def _opaque(path):
     """path with each '..' that follows a <name> left out: the folder a name
     stands for is unknown, and so is its parent (os.path.join(HERE, '..',
-    'scripts') is no path into the command's folder)."""
+    'scripts') is no path into the command's folder).  A string part may hold
+    backslashes (r'..\\scripts'), which count as separators as everywhere."""
     out, after = [], False
-    for seg in path.split('/'):
+    for seg in re.split(r'[/\\]', path):
         if seg == '..' and after:
             continue
         out.append(seg)

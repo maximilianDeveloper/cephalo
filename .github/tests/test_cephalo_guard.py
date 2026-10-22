@@ -1456,6 +1456,9 @@ class TestReviewFindings(Base):
                        "(DATA / 'outputs' / 'run.log').write_text('done')\n"),
         ('run_cwd_cont.py', "import subprocess, sys\nsubprocess.run([sys.executable, 'scripts/01_clean.py'], \\\n"
                             "               cwd='workspace/data')\nopen('workspace/data/outputs/run.log', 'w').write('done')\n"),
+        ('bs_up.py', "import os, runpy\nimport pandas as pd\nHERE = os.path.dirname(os.path.abspath(__file__))\n"
+                     "runpy.run_path(os.path.join(HERE, r'..\\scripts\\00_helpers.py'))\n"
+                     "pd.DataFrame().to_csv(os.path.join(HERE, r'..\\outputs\\a.csv'))\n"),
         ('deck.py', "import os\nfrom pptx import Presentation\np = Presentation()\n"
                             "p.save(os.path.join('workspace', 'output', 'slides', 'deck.pptx'))\n"
                             "print(os.path.join('workspace', 'data', 'scripts'), os.replace)\n")):
