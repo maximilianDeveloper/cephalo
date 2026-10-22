@@ -1831,6 +1831,15 @@ class TestWorkLimits(Base):
         segs, pipes, bodies = g.parse('cat <<A\nx\nA\ncat <<-B\n\ty\n\tB\ncat <<A\nz')
         self.assertEqual(bodies, ['x', '\ty', 'z'])             # closed, tabbed, unclosed (the rest)
 
+    def test_many_redirects_are_linear(self):
+        import time
+        for cmd, plat in (('cat' + ' -' * 8192 + ' >b' * 8192, 'posix'),
+                          ('cat' + ' -' * 8192 + ' >_scratch/b' * 8192, 'posix'),
+                          ('cmd //c ' + "'a>b' " * 40000, 'windows')):
+            t = time.monotonic()
+            self.call('Bash', {'command': cmd}, 'lim-7', plat=plat)
+            self.assertLess(time.monotonic() - t, 3.0)          # 2 to 10 s before: the writer was looked up per redirect
+
     def test_find_pattern_longer_than_a_file_name_is_not_compiled(self):
         seen, orig = [], g.fnmatch
 

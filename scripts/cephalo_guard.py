@@ -1281,10 +1281,13 @@ def check_shell(cmd, tool, ctx, depth=0, pre=None, data=False):
                     if why:
                         hits.append(('S5', '%s (%s), by the patch %s' % (t.strip(), why, pf)))
         # S1 (h): a file filled in _scratch/ by this command copied or moved over a project file
+        made = None                # this command fills its stdout files itself (asked once, not per file)
         for fd, op, t in seg.redirs:
-            if op in _STDOUT_OPS and fd in (None, '1', '&') and _target_ok(t) and \
-                    under_scratch(t, ctx, bases[si]) and producer(segs, p, pos, bodies, typed=typed):
-                scratch_made.add(norm_path(t, ctx, bases[si]))
+            if op in _STDOUT_OPS and fd in (None, '1', '&') and _target_ok(t) and under_scratch(t, ctx, bases[si]):
+                if made is None:
+                    made = bool(producer(segs, p, pos, bodies, typed=typed))
+                if made:
+                    scratch_made.add(norm_path(t, ctx, bases[si]))
         if c in ('cp', 'mv', 'install', 'rsync') and scratch_made:
             pos_args = [a for a in args if not a.startswith('-')]
             if len(pos_args) >= 2 and not under_scratch(pos_args[-1], ctx, bases[si]) and any(
@@ -1377,8 +1380,8 @@ def check_shell(cmd, tool, ctx, depth=0, pre=None, data=False):
             c, args = cmd_args(seg.words)
             sinks = [t for fd, op, t in seg.redirs
                      if op in _STDOUT_OPS and fd in (None, '1', '&', '*') and _target_ok(t)]
+            kind = producer(segs, p, pos, bodies, typed=typed) if sinks else None   # the same for every file
             for t in sinks:
-                kind = producer(segs, p, pos, bodies, typed=typed)
                 _sink_hit(hits, kind, t, ctx, bases[si])
             if c == 'tee' or (ps and c.lower() == 'tee-object'):
                 files = [a for a in args if not a.startswith('-') and _target_ok(a)]
