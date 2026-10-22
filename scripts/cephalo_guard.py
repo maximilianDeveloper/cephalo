@@ -1083,8 +1083,8 @@ def _data_bases(n, ctx):
     return here, '/'.join(parts[:k + 1])
 
 
-# changes folder, or runs programs in another one: chdir( or cwd= as a call's keyword argument (also after a
-# line continuation), not a variable cwd = ... or a comparison cwd == ...
+# changes folder, or runs programs in another one: chdir( or cwd= after ( or , (a call's keyword argument, also
+# after a line continuation; a parameter default or a later tuple target too), not cwd = ... alone or cwd == ...
 _PY_CHDIR = re.compile(r'\bchdir\s*\(|[(,][\s\\]*cwd\s*=(?!=)')
 
 
