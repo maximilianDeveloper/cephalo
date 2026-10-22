@@ -2856,7 +2856,7 @@ jobs:
 
       - name: cephalo guard tests on macOS (all of them, and its own file system with a folder name with an umlaut in either form)
         if: runner.os == 'macOS'
-        run: python -I .github/tests/test_cephalo_guard.py -v 2>&1 | tee /tmp/ci_macfs.txt; grep -q '^OK' /tmp/ci_macfs.txt; if grep -q 'skipped' /tmp/ci_macfs.txt; then echo 'a test was skipped'; exit 1; fi
+        run: python -I .github/tests/test_cephalo_guard.py -v 2>&1 | tee /tmp/ci_macfs.txt; grep -q '^OK' /tmp/ci_macfs.txt; if grep -Eq '[.]{3} skipped|[(]skipped=' /tmp/ci_macfs.txt; then echo 'a test was skipped'; exit 1; fi
 
       - name: cephalo guard hook command under this shell (a path with a space and an umlaut)
         run: |
