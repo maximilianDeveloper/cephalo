@@ -1149,14 +1149,15 @@ def _sh_quote(word):
     return "'" + word.replace("'", "'\"'\"'") + "'"
 
 
-# cmd's own operators: ^x (x taken literally), > >> n> n>&m, <, | ||, & &&
-_CMD_OP = re.compile(r'(\^.|\d?>>?(?:&\d)?|<|\|\|?|&&?)', re.S)
+# cmd's own operators: ^x (x taken literally), > >> n> n>&m, <, | ||, & &&; and brackets, which group
+# commands in cmd as in Bash and are left to Bash's reading
+_CMD_OP = re.compile(r'(\^.|\d?>>?(?:&\d)?|<|\|\|?|&&?|[()])', re.S)
 
 
 def _cmd_bare(word):
     """A word cmd gets bare (Git Bash quotes only words with a blank or "),
-    as Bash text that reads as cmd reads it: its operators stay operators,
-    everything else stays literal (a backslash, a bracket, a quote), ^x is x."""
+    as Bash text that reads as cmd reads it: its operators and brackets stay
+    as they are, everything else stays literal (a backslash, a quote), ^x is x."""
     return ''.join(_sh_quote(p[1:] if p.startswith('^') else p) if k % 2 == 0 or p.startswith('^') else p
                    for k, p in enumerate(_CMD_OP.split(word)) if p)
 
