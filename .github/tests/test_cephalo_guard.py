@@ -410,7 +410,7 @@ class TestS2Outside(Base):
     def test_macos_unicode_form(self):
         # macOS: a folder named in Finder is decomposed (NFD), a typed path precomposed (NFC): both name the
         # project folder
-        nfd, nfc = (unicodedata.normalize(f, '/Users/u/Masterarbeit Übung') for f in ('NFD', 'NFC'))
+        nfd, nfc = (unicodedata.normalize(f, POSIX_HOME + '/Masterarbeit Übung') for f in ('NFD', 'NFC'))
         self.assertNotEqual(nfd, nfc)
         for root, path in ((nfd, nfc), (nfc, nfd)):
             f = path + '/workspace/output/chapters/01_Einleitung.md'
@@ -1045,7 +1045,7 @@ class TestS5Protected(Base):
         shutil.rmtree(top)
 
     def test_macos_unicode_form(self):
-        nfd, nfc = (unicodedata.normalize(f, '/Users/u/Masterarbeit Übung') for f in ('NFD', 'NFC'))
+        nfd, nfc = (unicodedata.normalize(f, POSIX_HOME + '/Masterarbeit Übung') for f in ('NFD', 'NFC'))
         for cmd in ('rm -rf "%s/scripts"' % nfc, 'rm "%s/scripts/cephalo_guard.py"' % nfc,
                     'mv "%s" ../alt' % nfc):
             with self.subTest(cmd=ascii(cmd)):
