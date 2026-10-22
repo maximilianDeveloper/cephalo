@@ -657,7 +657,8 @@ def py_mode(args):
 # --------------------------------------------------------------- S1 helpers
 
 _PY_WRITE = re.compile(
-    r"""open\s*\([^()]{0,160}?(?:\([^()]*\)[^()]{0,80}?)?(?:,\s*|mode\s*=\s*)['"][rbt]*(?:[wax]|\+)[rbt+]*['"]"""
+    r"""open\s*\([^()]{0,160}?(?:\([^()]*(?:\([^()]*(?:\([^()]*\)[^()]*){0,8}\)[^()]*){0,8}\)[^()]{0,80}?)?(?:,\s*|mode\s*=\s*)['"][rbt]*(?:[wax]|\+)[rbt+]*['"]"""
+    r"""|open\s*\(\s*[rRuUbBfF]{0,2}(?:'[^'\n]{0,4096}'|"[^"\n]{0,4096}")\s*,\s*(?:mode\s*=\s*)?['"][rbt]*(?:[wax]|\+)"""
     r"""|\.open\s*\(\s*(?:mode\s*=\s*)?['"][rbt]*(?:[wax]|\+)"""
     r"""|\.write_(?:text|bytes)\s*\("""
     r"""|\.save\s*\("""
@@ -926,6 +927,7 @@ def holds_protected(n, ctx):
 
 
 _PY_REMOVE = re.compile(r'\bos\.(?:remove|unlink|rmdir|removedirs|rename|replace)\s*\(|\bshutil\.(?:rmtree|move|copy\w*)\s*\('
+                        r'|\b(?:rmtree|copytree|copyfile)\s*\('
                         r'|\.(?:unlink|rmdir|rename|write_text|write_bytes|touch)\s*\(')
 _PY_MOVES = re.compile(r'\bshutil\.(?:rmtree|move)\s*\(|\bos\.(?:rename|replace|rmdir|removedirs)\s*\(|\.(?:rmdir|rename)\s*\(|\brmtree\s*\(')
 # A Python program's comments and string literals, left to right, so that a
@@ -939,20 +941,20 @@ _PY_TOKEN = re.compile(r"""#[^\n]*"""
 _LP = r'\x00\d+\x00'                    # a string literal, after _py_strings
 # (no two \s* side by side with only an optional part between them, and at most 32 repeats of a
 # group, each kept on the stack: each pattern stays linear and small on any input)
-# a path built from string literals: os.path.join('a', 'b'), Path('a', 'b') / 'c',
-# Path('a').joinpath('b'), Path.cwd() / 'a', 'a/' + 'b', 'a' + os.sep + 'b'; a part that
-# is not a literal after them stands for a name in that folder
-_PY_JOIN = re.compile(r'\b(?:os\.path|posixpath|ntpath)\.join\s*\(\s*(%s(?:\s*,\s*%s){0,32})\s*(,(?!\s*\))|,\s*\)|\))'
-                      % (_LP, _LP))
-_PY_PATH = re.compile(r'\b(?:(?:Pure)?(?:Posix|Windows)?Path\s*\(\s*(?:(%s(?:\s*,\s*%s){0,32})(?:\s*,)?\s*)?\)'
-                      r'|Path\s*\.\s*cwd\s*\(\s*\))'
-                      r'((?:\s*/\s*%s|\s*\.\s*joinpath\s*\(\s*%s(?:\s*,\s*%s){0,32}\s*\)){0,32})'
-                      r'(\s*(?:/|\.\s*joinpath\b))?' % ((_LP,) * 5))
+# a call that builds a path: os.path.join(...), Path(...), Path.cwd(), Path.home(); then its
+# arguments up to the closing ')', with at most 8 parenthesized parts (each scan stops at the next
+# parenthesis, so the scans of all calls together stay linear), and a chain of / 'a' or .joinpath(...)
+_PY_CALL = re.compile(r'\b(?:(os\.path|posixpath|ntpath)\.join|(?:Pure)?(?:Posix|Windows)?Path)\s*\('
+                      r'|\bPath\s*\.\s*(cwd|home)\s*\(\s*\)')
+_PY_ARGS = re.compile(r'[^()]{0,512}(?:\([^()]{0,512}\)[^()]{0,512}){0,8}\)')
+_PY_HEAD = re.compile(r'\s*(%s(?:\s*,\s*%s){0,32})\s*,' % (_LP, _LP))   # literal head, when the rest is not read
+_PY_CHAIN = re.compile(r'\s*(?:/\s*\x00(\d+)\x00|(/)|\.\s*joinpath\s*\()')
+_PY_HOME = re.compile(r'(?:os\.path\.)?expanduser\s*\(\s*\x00(\d+)\x00\s*\)|Path\s*\.\s*home\s*\(\s*\)')
 _PY_CONCAT = re.compile(r'%s(?:\s*(?:\+\s*)?(?:%s|os\.sep\b)){1,32}' % (_LP, _LP))
 # a string a file call takes as the path it removes, moves or copies to
-_PY_PATH_ARG = re.compile(r'\b(?:shutil\.(?:rmtree|move)|os\.(?:rmdir|removedirs|remove|unlink|renames?|replace))'
+_PY_PATH_ARG = re.compile(r'\b(?:shutil\.(?:rmtree|move)|rmtree|os\.(?:rmdir|removedirs|remove|unlink|renames?|replace))'
                           r'\s*\(\s*(?:\w+\s*=\s*)?(%s)' % _LP)
-_PY_DEST = re.compile(r'\b(?:shutil\.(?:copy\w*|move)|os\.(?:renames?|replace))\s*\([^,()]*(?:\([^()]*\)[^,()]*)*,'
+_PY_DEST = re.compile(r'\b(?:shutil\.(?:copy\w*|move)|copytree|copyfile|os\.(?:renames?|replace))\s*\([^,()]*(?:\([^()]*\)[^,()]*)*,'
                       r'\s*(?:\w+\s*=\s*)?(%s)' % _LP)
 
 
@@ -993,22 +995,116 @@ def _py_strings(code, tick):
     return ''.join(out), lits
 
 
+def _call_parts(t, i, lits):
+    """The parts of the path a call builds, from its arguments that start at i
+    (text after _py_strings): a string's text, '~' for the home folder, '<name>'
+    for another expression (a name in that folder); and the index after the
+    call.  None when the call does not close nearby."""
+    m = _PY_ARGS.match(t, i)
+    if not m:
+        head = _PY_HEAD.match(t, i)                     # more brackets than read: its literal head, then a name
+        if not head:
+            return None, i
+        return [lits[int(x)] for x in re.findall(r'\x00(\d+)\x00', head.group(1))] + ['<name>'], head.end()
+    inner = t[i:m.end() - 1]
+    flat = re.sub(r'\([^()]*\)', lambda g: '(' + ' ' * (len(g.group(0)) - 2) + ')', inner)
+    cuts = [-1] + [k for k, c in enumerate(flat) if c == ','] + [len(inner)]
+    out = []
+    for a, b in zip(cuts, cuts[1:]):
+        arg = inner[a + 1:b].strip()
+        if not arg:
+            continue                                    # a trailing comma
+        lit = re.fullmatch(r'\x00(\d+)\x00', arg)
+        home = _PY_HOME.fullmatch(arg)
+        if lit:
+            out.append(lits[int(lit.group(1))])
+        elif home and (home.group(1) is None or lits[int(home.group(1))] == '~'):
+            out.append('~')
+        else:
+            out.append('<name>')
+    return out, m.end()
+
+
+def _built_paths(t, lits):
+    """The paths that os.path.join and Path calls build in t, with their
+    / 'a' and .joinpath(...) chains (at most 32 links each)."""
+    out = []
+    for m in _PY_CALL.finditer(t):
+        if m.group(2):
+            parts, end = ['~' if m.group(2) == 'home' else '.'], m.end()
+        else:
+            parts, end = _call_parts(t, m.end(), lits)
+            if parts is None:
+                continue
+            if not m.group(1):
+                parts = parts or ['.']                  # Path() is the current folder
+        if not m.group(1):
+            for _ in range(32):
+                c = _PY_CHAIN.match(t, end)
+                if not c:
+                    break
+                if c.group(1):
+                    parts.append(lits[int(c.group(1))])
+                    end = c.end()
+                elif c.group(2):
+                    parts.append('<name>')
+                    break
+                else:
+                    more, end = _call_parts(t, c.end(), lits)
+                    if more is None:
+                        break
+                    parts += more
+        if parts:
+            out.append(_opaque('/'.join(parts)))
+    return out
+
+
+def _opaque(path):
+    """path with each '..' that follows a <name> left out: the folder a name
+    stands for is unknown, and so is its parent (os.path.join(HERE, '..',
+    'scripts') is no path into the command's folder).  A string part may hold
+    backslashes (r'..\\scripts'), which count as separators as everywhere."""
+    out, after = [], False
+    for seg in re.split(r'[/\\]', path):
+        if seg == '..' and after:
+            continue
+        out.append(seg)
+        after = seg == '<name>' or (after and seg in ('', '.'))
+    return '/'.join(out)
+
+
+def _data_bases(n, ctx):
+    """The folders a data script's relative paths may start from once it
+    changes folder: its own folder and its data folder (the one above
+    data/scripts/)."""
+    here = n.rsplit('/', 1)[0]
+    parts = here.split('/')
+    k = max([i for i in range(len(parts) - 1) if parts[i] == 'data' and parts[i + 1] == 'scripts'] or [len(parts) - 1])
+    return here, '/'.join(parts[:k + 1])
+
+
+# changes folder, or runs programs in another one: chdir( or cwd= after ( or , (a call's keyword argument, also
+# after a line continuation; a parameter default or a later tuple target too), not cwd = ... alone or cwd == ...
+_PY_CHDIR = re.compile(r'\bchdir\s*\(|[(,][\s\\]*cwd\s*=(?!=)')
+
+
 def _named_paths(code, tick):
+    """(paths, changes_folder): see _paths_of; changes_folder: the code
+    (without its comments and strings) changes folder or runs a program in
+    another one (os.chdir, cwd=)."""
+    t, lits = _py_strings(code, tick)
+    return _paths_of(t, lits, tick), bool(_PY_CHDIR.search(t))
+
+
+def _paths_of(t, lits, tick):
     """The paths a data script names: each string with a separator in it, each
     path it builds from strings, and each string a file call takes as the path
     it removes, moves or copies to.  Another bare word ('scripts', '.claude', a
     column name) is data, and so is a string with a line break in it (a
     docstring, a line it writes)."""
-    t, lits = _py_strings(code, tick)
-
-    def texts(s):
-        return [lits[int(i)] for i in re.findall(r'\x00(\d+)\x00', s or '')]
     out = [x for x in lits if '/' in x or '\\' in x]
     tick()
-    for m in _PY_JOIN.finditer(t):
-        out.append('/'.join(texts(m.group(1)) + (['<name>'] if m.group(2) == ',' else [])))
-    for m in _PY_PATH.finditer(t):
-        out.append('/'.join((texts(m.group(1)) or ['.']) + texts(m.group(2)) + (['<name>'] if m.group(3) else [])))
+    out += _built_paths(t, lits)
     tick()
     for m in _PY_CONCAT.finditer(t):
         out.append(''.join(lits[int(i)] if i else '/' for i in re.findall(r'\x00(\d+)\x00|os\.sep', m.group(0))))
@@ -1016,32 +1112,69 @@ def _named_paths(code, tick):
     return [x for x in out if len(x) <= 4096 and '\n' not in x and '\r' not in x]   # no path
 
 
-def py_protected(code, ctx, base, names_only=False):
+def py_protected(code, ctx, base, names_only=False, alt=()):
     """A Python program that writes, moves or deletes a protected path.  With
     names_only (a script of the project in data/scripts/, whose strings are
     data: column names, separators, folder names), only a path it names counts
     (_named_paths: '.claude/settings.local.json', './scripts', os.path.join(
     'scripts', name), shutil.rmtree('scripts')) and only if it is the hook
-    settings or in scripts/, not another bare word or a folder that holds one."""
+    settings or in scripts/, not another bare word or a folder that holds one.
+    alt: the folders such a script's relative paths may start from once it
+    changes folder (os.chdir, or cwd= for the programs it runs); a relative
+    path then counts only if it is protected from each of them and from base,
+    which a path into scripts/ never is: there only an absolute path and the
+    hook settings count."""
     if not code or not (_PY_WRITE.search(code) or _PY_REMOVE.search(code)):
         return None
     moves = bool(_PY_MOVES.search(code)) and not names_only
-    lits = _named_paths(code, ctx.budget.tick) if names_only else _PATH_LIT.findall(code)
+    if names_only:
+        lits, elsewhere = _named_paths(code, ctx.budget.tick)
+    else:
+        lits, elsewhere = _PATH_LIT.findall(code), False
+    bases = [base] + (list(alt) if elsewhere else [])
     for k, lit in enumerate(dict.fromkeys(lits)):
         if not k % 1024:
             ctx.budget.tick()
-        n = norm_path(lit, ctx, base)
-        why = protected(n, ctx) or (holds_protected(n, ctx) if moves else None)
-        if why:
-            return lit, why
+        whys = [protected(n, ctx) or (holds_protected(n, ctx) if moves else None)
+                for n in [norm_path(lit, ctx, b) for b in bases]]
+        if all(whys):
+            return lit, whys[0]
     return None
+
+
+def _sh_quote(word):
+    """word as one Bash word (as shlex.quote, without importing it)."""
+    if word and re.fullmatch(r'[\w@%+=:,./-]+', word):
+        return word
+    return "'" + word.replace("'", "'\"'\"'") + "'"
+
+
+# cmd's own operators: ^x (x taken literally), > >> n> n>&m, <, | ||, & &&; and brackets, which group
+# commands in cmd as in Bash and are left to Bash's reading
+_CMD_OP = re.compile(r'(\^.|\d?>>?(?:&\d)?|<|\|\|?|&&?|[()])', re.S)
+
+
+def _cmd_bare(word):
+    """A word cmd gets bare (Git Bash quotes only words with a blank or "),
+    as Bash text that reads as cmd reads it: its operators and brackets stay
+    as they are, everything else stays literal (a backslash, a quote), ^x is x."""
+    return ''.join(_sh_quote(p[1:] if p.startswith('^') else p) if k % 2 == 0 or p.startswith('^') else p
+                   for k, p in enumerate(_CMD_OP.split(word)) if p)
+
+
+def _cmd_line(line):
+    """cmd's command line, one word after cmd /c, as Bash text: "..." is one
+    quoted part (cmd has no backslash escape), the rest as _cmd_bare reads it."""
+    return ''.join(' ' if p.isspace() else _sh_quote(p.strip('"')) if p[0] == '"' else _cmd_bare(p)
+                   for p in re.findall(r'"[^"]*"?|[^\s"]+|\s+', line))
 
 
 def check_shell(cmd, tool, ctx, depth=0, pre=None, data=False):
     """Hits [(rule, detail)] for a Bash or PowerShell command.  pre: the
     here-document bodies of an enclosing command (for a $( ) inside it).
-    data: the command is the body of a script in data/scripts/, whose inline
-    Python programs are read as such a script is (py_protected names_only)."""
+    data: the normalized path of the script in data/scripts/ whose body the
+    command is (or False); its inline Python programs are read as such a
+    script is (py_protected names_only)."""
     ps = tool == 'PowerShell'
     hits = []
     ctx.budget.scan(cmd)
@@ -1122,8 +1255,9 @@ def check_shell(cmd, tool, ctx, depth=0, pre=None, data=False):
             if what:
                 hits.append(('S1', 'an inline Python program that writes a file: %s' % what))
             # a data script's own program is read as its code; text from another file is not
-            own = data and all(_data_script(n, ctx) for n in read)
-            prot = py_protected(code, ctx, bases[si], names_only=own) if code else None
+            own = bool(data) and all(_data_script(n, ctx) for n in read)
+            prot = py_protected(code, ctx, bases[si], names_only=own,
+                                alt=_data_bases(data, ctx) if own else ()) if code else None
             if prot:
                 hits.append(('S5', '%s (%s), by an inline Python program' % prot))
             elif code:
@@ -1167,10 +1301,13 @@ def check_shell(cmd, tool, ctx, depth=0, pre=None, data=False):
                     if why:
                         hits.append(('S5', '%s (%s), by the patch %s' % (t.strip(), why, pf)))
         # S1 (h): a file filled in _scratch/ by this command copied or moved over a project file
+        made = None                # this command fills its stdout files itself (asked once, not per file)
         for fd, op, t in seg.redirs:
-            if op in _STDOUT_OPS and fd in (None, '1', '&') and _target_ok(t) and \
-                    under_scratch(t, ctx, bases[si]) and producer(segs, p, pos, bodies, typed=typed):
-                scratch_made.add(norm_path(t, ctx, bases[si]))
+            if op in _STDOUT_OPS and fd in (None, '1', '&') and _target_ok(t) and under_scratch(t, ctx, bases[si]):
+                if made is None:
+                    made = bool(producer(segs, p, pos, bodies, typed=typed))
+                if made:
+                    scratch_made.add(norm_path(t, ctx, bases[si]))
         if c in ('cp', 'mv', 'install', 'rsync') and scratch_made:
             pos_args = [a for a in args if not a.startswith('-')]
             if len(pos_args) >= 2 and not under_scratch(pos_args[-1], ctx, bases[si]) and any(
@@ -1211,7 +1348,10 @@ def check_shell(cmd, tool, ctx, depth=0, pre=None, data=False):
         if depth < 2 and c == 'cmd':
             k = next((j for j, a in enumerate(args) if a.lower() in ('/c', '//c', '/k', '//k')), None)
             if k is not None and k + 1 < len(args):
-                hits += check_shell(' '.join(args[k + 1:]), 'Bash', ctx, depth + 1, data=data)
+                rest = args[k + 1:]                     # Git Bash quotes a word with a blank or " for cmd:
+                hits += check_shell(_cmd_line(rest[0]) if len(rest) == 1 else ' '.join(    # those stay words
+                    _sh_quote(a) if not a or re.search(r'[\s"]', a) else _cmd_bare(a) for a in rest),
+                                    'Bash', ctx, depth + 1, data=data)
         if depth < 2 and c in ('powershell', 'pwsh'):
             for k, a in enumerate(args):
                 if a.lower() in ('-command', '-c') and k + 1 < len(args):
@@ -1260,8 +1400,8 @@ def check_shell(cmd, tool, ctx, depth=0, pre=None, data=False):
             c, args = cmd_args(seg.words)
             sinks = [t for fd, op, t in seg.redirs
                      if op in _STDOUT_OPS and fd in (None, '1', '&', '*') and _target_ok(t)]
+            kind = producer(segs, p, pos, bodies, typed=typed) if sinks else None   # the same for every file
             for t in sinks:
-                kind = producer(segs, p, pos, bodies, typed=typed)
                 _sink_hit(hits, kind, t, ctx, bases[si])
             if c == 'tee' or (ps and c.lower() == 'tee-object'):
                 files = [a for a in args if not a.startswith('-') and _target_ok(a)]
@@ -1469,11 +1609,12 @@ def _script_body_hits(n, path, kind, ctx, base, depth, data):
         what = None if data else py_write(body, ctx, base)
         if what:
             hits.append(('S1', "the script %s, which is not one of cephalo's, writes a file: %s" % (path, what)))
-        prot = py_protected(body, ctx, base, names_only=data)
+        prot = py_protected(body, ctx, base, names_only=data, alt=_data_bases(n, ctx) if data else ())
         if prot:
             hits.append(('S5', '%s (%s), by the script %s' % (prot[0], prot[1], path)))
     elif depth < 2:
-        for rule, detail in check_shell(body, 'PowerShell' if kind == 'ps' else 'Bash', ctx, depth + 1, data=data):
+        for rule, detail in check_shell(body, 'PowerShell' if kind == 'ps' else 'Bash', ctx, depth + 1,
+                                        data=n if data else False):
             if rule in ('S1', 'S2', 'S5'):
                 hits.append((rule, '%s, in the script %s' % (detail, path)))
     return hits

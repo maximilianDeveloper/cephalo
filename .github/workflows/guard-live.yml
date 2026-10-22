@@ -1,0 +1,98 @@
+name: Guard live check
+
+# The cephalo guard in a real Claude Code session on GitHub's macOS runner:
+# .github/tests/guard_live.py sets up a project with setup.sh in a folder named
+# with an umlaut (stored as NFD) and has Claude make a few tool calls that the
+# guard must deny or let pass. It needs the repository secret ANTHROPIC_API_KEY
+# (API billing; a run costs a few cents with haiku). Without it the job prints
+# a notice and passes. It runs on a pull request that carries the label
+# 'guard-live' (again on each push while the label stays), or by "Run workflow",
+# which GitHub offers once this file is on the default branch.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+
+permissions:
+  contents: read
+
+concurrency:
+  # One live check per branch: a newer push cancels the older run. Adding another
+  # label starts a run that does nothing; a group of its own keeps it from
+  # cancelling a live check in progress.
+  group: guard-live-${{ github.ref }}-${{ github.event.action == 'labeled' && github.event.label.name != 'guard-live' && github.run_id || 'live' }}
+  cancel-in-progress: true
+
+jobs:
+  guard-live:
+    # A static name: a skipped job shows its name unevaluated.
+    name: cephalo guard in a live Claude Code session (macOS)
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (contains(github.event.pull_request.labels.*.name, 'guard-live') &&
+      (github.event.action != 'labeled' || github.event.label.name == 'guard-live'))
+    runs-on: macos-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        shell: bash
+    env:
+      DISABLE_AUTOUPDATER: "1"
+    steps:
+      # Only whether the secret is set reaches this step, not its value.
+      - name: ANTHROPIC_API_KEY set?
+        id: key
+        env:
+          HAS_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
+        run: |
+          if [ "$HAS_KEY" = true ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Guard live check skipped::The repository secret ANTHROPIC_API_KEY is not set, or this run gets no secrets (a pull request from a fork), so no Claude Code session ran."
+          fi
+
+      # Pinned to a commit, as this job holds a paid key; no git credentials are
+      # left in the checkout, where Claude's tools could read them.
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        if: steps.key.outputs.present == 'true'
+        with:
+          persist-credentials: false
+
+      # The hook runs the guard with the first python3 on PATH: Apple's
+      # /usr/bin/python3 (from the Command Line Tools), as on a Mac without
+      # Homebrew, when it runs and is 3.9 or later; otherwise the image's own,
+      # whose version changes with the image.
+      - name: Platform and the python3 the hook uses
+        if: steps.key.outputs.present == 'true'
+        run: |
+          sw_vers
+          uname -m
+          if /usr/bin/python3 -I -c 'import sys; sys.exit(sys.version_info < (3, 9))' 2>/dev/null; then
+            echo /usr/bin >> "$GITHUB_PATH"
+            echo "python3: /usr/bin/python3 (Apple's), $(/usr/bin/python3 --version 2>&1)"
+          else
+            echo "python3: $(command -v python3) (the image's), $(python3 --version 2>&1)"
+          fi
+
+      # The 'stable' channel (about a week old, without releases that had major
+      # regressions); set an exact version such as 2.1.308 to reproduce a run.
+      - name: Install Claude Code (official installer)
+        if: steps.key.outputs.present == 'true'
+        timeout-minutes: 5
+        env:
+          CLAUDE_CODE_VERSION: stable
+        run: |
+          curl -fsSL https://claude.ai/install.sh | bash -s "$CLAUDE_CODE_VERSION"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          "$HOME/.local/bin/claude" --version
+
+      # The script starts no call after 12 minutes (--deadline 720), so that it
+      # still writes its summary within this step's limit.
+      - name: Live check (K1-K7)
+        if: steps.key.outputs.present == 'true'
+        timeout-minutes: 15
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python3 -I .github/tests/guard_live.py --skip-without-key
