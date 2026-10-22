@@ -1872,6 +1872,60 @@ class TestWorkLimits(Base):
                 self.assertIn('1 table rows', json.loads(out)['reason'])   # counted from the Write's content
 
 
+
+@unittest.skipUnless(sys.platform == 'darwin', "a Mac's own file system (APFS)")
+class TestMacFileSystem(Base):
+    """On a Mac's file system a folder named in Finder (decomposed, NFD) and the
+    same name typed (precomposed, NFC) are one folder: the guard compares the two
+    forms as one and reads a file by either.  CI runs this on its macOS runner."""
+
+    def setUp(self):
+        self.top = tempfile.mkdtemp(prefix='guard-mac-')
+        self.nfd = os.path.join(self.top, unicodedata.normalize('NFD', 'Prüfungsarbeit Übung'))
+        self.nfc = unicodedata.normalize('NFC', self.nfd)
+        for d in ('scripts', '.claude', '_scratch/orchestrator', 'workspace/output/chapters',
+                  'workspace/output/verification'):
+            os.makedirs(os.path.join(self.nfd, d))
+
+    def tearDown(self):
+        shutil.rmtree(self.top)
+
+    def forms(self):
+        return ((self.nfd, self.nfc), (self.nfc, self.nfd))
+
+    def test_one_folder_in_both_forms(self):
+        self.assertNotEqual(self.nfd, self.nfc)
+        self.assertTrue(os.path.isdir(os.path.join(self.nfc, 'scripts')))
+
+    def test_writes_into_the_project_and_its_scripts(self):
+        for root, path in self.forms():
+            with self.subTest(root=ascii(root[-12:])):
+                self.passes(run('Write', {'file_path': path + '/workspace/output/chapters/ch_1.md', 'content': 'x'},
+                                plat='macos', root=root, cwd=root))
+                self.deny(run('Write', {'file_path': path + '/scripts/x.py', 'content': 'x'},
+                              plat='macos', root=root, cwd=root), 'S5')
+                self.deny(run('Write', {'file_path': path + ' 2/x.md', 'content': 'x'},
+                              plat='macos', root=root, cwd=root), 'S2')
+
+    def test_a_saved_program_is_read_by_either_name(self):
+        Path(self.nfd, '_scratch', 'orchestrator', 'fix.py').write_text(
+            "open('workspace/output/chapters/ch_1.md', 'w').write('x')\n", encoding='utf-8')
+        for root, path in self.forms():
+            with self.subTest(root=ascii(root[-12:])):
+                self.assertIn('S1', rules_of(bash('python3 "%s/_scratch/orchestrator/fix.py"' % path,
+                                                  plat='macos', root=root, cwd=root)))
+
+    def test_reports_are_read_by_either_name(self):
+        Path(self.nfd, 'workspace/output/verification/ch_1_round_1.md').write_text(
+            '| a |\n| b |\nStatus: ok\n', encoding='utf-8')
+        Path(self.nfd, 'workspace/output/verification/document_format_round_1.md').write_text('x', encoding='utf-8')
+        out = run('Write', {'file_path': self.nfc + '/workspace/output/verification/ch_1_round_1.md', 'content': 'x'},
+                  event='PostToolUse', plat='macos', root=self.nfc, cwd=self.nfc)
+        self.assertIn('2 table rows', out['reason'])            # counted from the saved file, not the content
+        self.deny(run('Write', {'file_path': self.nfc + '/workspace/output/verification/document_format_round_1.md',
+                                'content': 'y'}, plat='macos', root=self.nfc, cwd=self.nfc), 'R6')
+
+
 if __name__ == '__main__':
     print('Python', sys.version.split()[0])
     unittest.main()

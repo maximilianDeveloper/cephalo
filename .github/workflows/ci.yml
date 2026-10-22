@@ -2849,6 +2849,10 @@ jobs:
           "$SH" "$R/scripts/extract_styleguide.sh" "$W/good" "$W/out_good"
           grep -q "Example rule text" "$W/out_good/guide.txt"
 
+      - name: cephalo guard on this file system (macOS, a folder name with an umlaut in either form)
+        if: runner.os == 'macOS'
+        run: python -I .github/tests/test_cephalo_guard.py -v TestMacFileSystem 2>&1 | tee /tmp/ci_macfs.txt; grep -q '^OK' /tmp/ci_macfs.txt; if grep -q 'skipped' /tmp/ci_macfs.txt; then echo 'the Mac tests were skipped'; exit 1; fi
+
       - name: cephalo guard hook command under this shell (a path with a space and an umlaut)
         run: |
           P="$RUNNER_TEMP/guard proj ü"; rm -rf "$P"; mkdir -p "$P/scripts" "$P/workspace"
