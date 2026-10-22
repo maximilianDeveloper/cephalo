@@ -8,7 +8,17 @@ Dates follow ISO 8601 (`YYYY-MM-DD`).
 
 ---
 
-## [Unreleased]
+## [1.4.0] — 2026-10-22
+
+**The cephalo guard.** A Claude Code hook, which setup installs, now stops a few slips that the agent definitions forbid but models repeat although they have just read the rule:
+- a shell command that writes a file's text,
+- a write outside the project,
+- `python3` on Windows,
+- a redirect in the PowerShell tool,
+- a change to the hook settings or `scripts/`,
+- an edit of a saved report, after whose Write it asks for the read-back with the file's counts.
+
+A denial names the rule, the definition that holds it and what to do instead. The definitions stay the rule, and a project without the guard works the same. Before the release, reviewers checked the guard against the scope of `SECURITY.md` in five rounds. None found anything critical or high, and the fixes are listed below: it opens no network or device path, stops checking after 5 seconds, keeps its state in a folder of the user's own, and the hook command runs only the project's own guard or that of its multi-project folder. Replayed on every shell command of the second to fourth seminar runs, it stopped only commands that broke a rule. A fourth seminar trial run on Windows went through with the guard on, and a last hook test on Windows gave each of its checks the expected result. The third and fourth runs' other findings are fixed where a definition caused them, among them rule sections read whole, a new source-verifier per round, and the format report read whole with its notes shown. `scripts/verbatim_check.py` now compares the text of Word raw blocks as the export shows it.
 
 ### Added
 
