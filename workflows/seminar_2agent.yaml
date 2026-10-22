@@ -92,8 +92,11 @@ main_session:
     No orchestrator runs this workflow: Claude in the main chat coordinates
     it, and the user decides. At the start of every chat, read this file,
     workspace/state.md and styleguide.md (once steps 0.0 and 0.5 have
-    created them) and the sections of the definition named above. Where
-    they say "you" or "the orchestrator", they mean Claude in the main chat.
+    created them) and the sections of the definition named above, each
+    whole and with the Read tool: a Grep result leaves out every line over
+    about 500 characters, and many rules, the longest among them, stand on
+    such lines ("Principles", "Read a rule with the Read tool"). Where they
+    say "you" or "the orchestrator", they mean Claude in the main chat.
     The rest of the definition does not apply, except where a step below
     points to it: no research-agent, no extracts, no Phase A and B.
     - The agents do the steps that name them. Never do their work yourself:
@@ -102,7 +105,10 @@ main_session:
       missing, tell the user and stop.
     - Yours: step 0.0 and workspace/state.md, except the rows of its source
       registry, which the writer adds, changes and removes; recording the
-      answers to open styleguide questions; each chapter's budget and word
+      answers to open styleguide questions and, for a rule an agent names as
+      missing, its entry under "Open questions" or a note to the user
+      (style-resolver.md, "Recording answers to open questions", item 6);
+      each chapter's budget and word
       counts (steps 1 and 3); running scripts/verbatim_check.py and saving
       the source-verifier's reports (step 2); in F.1, what its steps give you.
 
@@ -135,7 +141,11 @@ phases:
         note: |
           Once per project. If the resolver leaves open ❓ [content] items,
           clarify them before starting chapter work; open ❓ [format] items
-          before the closing step F.1.
+          before the closing step F.1. The chat that creates styleguide.md
+          ends with the Chat closure ritual (main_session): for its item 5,
+          git status --short -- styleguide.md shows the file untracked ("??"),
+          and before the first commit git diff HEAD fails, so check every
+          provenance in it that names the user.
   
   # ===========================================================
   # Per-chapter work (one chat per chapter)
@@ -155,7 +165,10 @@ phases:
           - Follow the styleguide
           - Stay within the chapter's budget in words, which Claude names in the task (main_session, "Page budget monitoring")
         note: |
-          Before step 2, also after a revision, Claude counts the draft; more
+          When the writer's answer comes in, a line in workspace/state.md
+          first, before a question to the user or the next call
+          (orchestrator.md, "Steps 1..N: Chapter assignment", after every
+          agent call). Before step 2, also after a revision, Claude counts the draft; more
           than 20% over its budget, the writer shortens it first, unless the
           user accepts the length (main_session, "Page budget monitoring").
       
@@ -171,23 +184,38 @@ phases:
         note: |
           Claude in the main chat runs this step (main_session). Each round:
           1. Count the verbatim runs with the script in Claude Code's Bash tool
-             (Git Bash on Windows, with py instead of python3, not
-             "python3 ... || py ...": exit code 1 is a finished report), and
-             save its output beside the reports:
+             (Git Bash on Windows), and save its output beside the reports:
                mkdir -p workspace/output/verification && python3 scripts/verbatim_check.py workspace/output/chapters/ch_X_<slug>.md workspace/sources/ workspace/state.md > workspace/output/verification/<name>_round_<n>_verbatim.txt 2>&1
+             On Windows, the same line with py in place of python3, not
+             "python3 ... || py ...": exit code 1 is a finished report.
              Not with ">" in Windows PowerShell, which writes UTF-16
              (docs/scripts.md). Exit code 0 or 1: the report is finished;
              2: tell the user what the file says. Without Python, the
              source-verifier counts the runs by eye.
           2. Give the source-verifier the chapter file and that report file;
-             from round 2 on, also the previous round's report and the
-             sentences the revision changed. For a revision, give the writer
-             the report file, or the findings as the report gives them.
+             from round 2 on, call a new one with the Agent tool, not a
+             message to the one of the round before, which would judge its
+             own proposals, and give it also the previous round's report and
+             the sentences the revision changed, found by comparing the
+             chapter with the version the previous round verified, not taken
+             from the writer's answer (orchestrator.md, "Steps 1..N: Chapter
+             assignment", the return calls). For a revision, give the writer
+             the report file, or the findings as the report gives them. The
+             report's notes on the chapter's rows of the source registry go
+             to the writer as an edit of those rows, also when the chapter
+             passed and when a note calls itself optional (orchestrator.md,
+             "Feedback loop control"). In the first round of the second
+             chapter written, the task prompt also names the cross-chapter
+             consistency check (source-verifier.md, "Cross-chapter
+             consistency") and gives the file of the chapter written first;
+             a finding on that chapter goes to the writer too, and the
+             sentences it changes there get a round of their own.
           3. The source-verifier cannot write files, so do not ask it to. Save
              its answer unchanged as <name>_round_<n>.md: the writer and the
              next round work from it. Nothing is shortened, reworded,
-             translated or added, and quotation marks, labels and emphasis
-             stay as the answer has them; only an absolute path becomes
+             translated or added, and quotation marks (a closing “ stays “,
+             not a straight "), labels and emphasis stay as the answer has
+             them; only an absolute path becomes
              project-relative. After the Write, read the file back (the Write
              tool's note that you need not read it back does not apply here:
              the read-back checks your copy against the answer) and compare
@@ -204,7 +232,9 @@ phases:
         task: |
           Claude in the main chat updates workspace/state.md (main_session):
           the chapter status, its word count as "Page budget monitoring"
-          counts it, and Page count: [X] of [max]
+          counts it, and Page count: [X] of [max]; then the Chat closure
+          ritual (main_session), item 5 with the commands of F.1 item 8 if
+          this chat wrote to styleguide.md.
   
   # ===========================================================
   # Closing
@@ -216,14 +246,19 @@ phases:
         Claude in the main chat runs this step (main_session), with the user
         for the answers and the steps in Word. The writer-agent writes the
         reference list and the format-verifier checks the export; Claude does
-        not check formats itself and writes no format report.
+        not check formats itself and writes no format report. As in every
+        chat, read the sections that main_session names before item 1, and
+        .claude/agents/style-resolver.md, "Recording answers to open
+        questions", each whole and with the Read tool: the items below rest
+        on them.
       task: |
         1. Open questions first, before the first export: every open ❓ [format]
            entry of styleguide.md, and every styleguide question under the open
            issues of workspace/state.md, answered (usually with the supervisor)
            and recorded as .claude/agents/style-resolver.md describes
-           ("Recording answers to open questions"), read in this chat. One that
-           comes up later in F.1 is asked too, not filled with a placeholder.
+           ("Recording answers to open questions"), read before item 1. One
+           that comes up later in F.1 is asked too, not filled with a
+           placeholder.
         2. Without citekeys, the writer-agent writes the reference list
            (docs/reference_management.md, "The reference list").
         3. Consistency check, before the export: the source-verifier checks all
@@ -269,10 +304,16 @@ phases:
            then the format-verifier checks it and writes
            workspace/output/verification/document_format_round_<n>.md (it runs
            scripts/bibliography_check.py and scripts/abbreviations_extract.py
-           itself). Read the report: record its counts from its "Status:" lines
-           in workspace/state.md at once, before any fix or question to the
-           user (orchestrator.md, item 5 of "Action on transition", step (4)),
-           and show the user its Notes. Then apply its format-only findings
+           itself). On Windows every Python script (.py) runs with py, also
+           where its help text or docs/scripts.md writes python3. When the
+           format-verifier returns, before any fix or question to the user:
+           (a) count the report's "Status:" lines per symbol with Grep and
+           write the counts, and any difference from its answer, to
+           workspace/state.md (orchestrator.md, item 5 of "Action on
+           transition", step (4)); (b) read the report with the Read tool,
+           whole: its answer gives only the path and the counts, the
+           findings and the Notes are in the file; (c) show the user its
+           Notes. Then apply its format-only findings
            (chapter files with the Edit tool, no rewording, a non-breaking
            space as `\ `: writer-agent.md, "Formatting rules"; layout by
            building the reference document again), answer its ❓ (item 1),
@@ -280,18 +321,28 @@ phases:
            wording goes to the writer-agent, and a verification round (step 2)
            checks the sentences it changed.
         7. For the user, in Word, after the last export, listed under the open
-           issues of workspace/state.md and named in the chat: update the fields
-           (Ctrl+A, then F9, twice: docs/reference_management.md, "The title
-           page"); with Roman numerals in the back matter that
-           continue the front matter's count, check that its first number
-           follows the front matter's last page, and if it does not, set it in
-           Word with Format Page Numbers, "Start at"
-           (docs/reference_management.md, "The title page", step 5) and update
-           the fields again; fill in the title page's placeholders; visual
-           proofreading.
+           issues of workspace/state.md and named in the chat, each step as
+           its own point: (a) update the fields (Ctrl+A, then F9, twice:
+           docs/reference_management.md, "The title page"); (b) with Roman
+           numerals in the back matter that continue the front matter's
+           count, check that its first number follows the front matter's
+           last page, and if it does not, set it in Word with Format Page
+           Numbers, "Start at" (docs/reference_management.md, "The title
+           page", step 5) and update the fields again; (c) fill in the title
+           page's placeholders; (d) visual proofreading.
         8. Before the chat closes: the "Current state" and "Open issues" of
            workspace/state.md and the "Open questions" of styleguide.md agree;
-           nothing is called resolved in one that is still open in another.
+           nothing is called resolved in one that is still open in another,
+           and the word counts and the Page count line match the chapter
+           files as they now are.
+           Then the Chat closure ritual (main_session). For its item 5, run in
+           the Bash tool:
+             git status --short -- styleguide.md && git diff HEAD -- styleguide.md
+           Each provenance that names the user on a line the diff adds (while
+           git status shows the file untracked or newly added, "??" or "A",
+           or the project has no commit yet, so that git diff HEAD fails:
+           each one in the file) rests on the user's words or on a proposal
+           the user accepted.
 
 # Notes on the lean setup
 
@@ -303,7 +354,7 @@ minimal_setup_notes: |
   
   Trade-offs vs. bachelor_5agent:
   - No strict separation of reading / extracting / writing
-  - Consistency is checked twice, not per chapter pair: by the source-verifier after the second chapter (source-verifier.md, "Cross-chapter consistency") and once in F.1
+  - Consistency is checked twice, not per chapter pair: by the source-verifier in the first round of the second chapter written (step 2; source-verifier.md, "Cross-chapter consistency") and once in F.1
   
   For < 10 pages and < 15 sources, the overhead of the larger setup
   is not justified. Quality loss is modest.

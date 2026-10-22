@@ -89,11 +89,11 @@ Verify the following categories. Concrete values (font size, page-range notation
 - [ ] format per styleguide
 - [ ] et-al. rule per styleguide
 - [ ] Page number requirement per styleguide
-- [ ] Non-breaking space before page number per styleguide (`in_text.nbsp_before_page`); in a chapter file it is written as Pandoc's escaped space, a backslash before the space (`S.\ 12`), and a finding there names the fix in that notation (`writer-agent.md`, "Formatting rules"), except in a presentation's companion that is not exported with Pandoc, which takes no backslash; with citekeys, the CSL style sets the space only after the label of a citekey's locator, and a page number in plain text, such as the original's page in a secondary citation's prefix, takes the escaped space
+- [ ] Non-breaking space before page number per styleguide (`in_text.nbsp_before_page`), also before the page range of a reference-list entry unless the styleguide says otherwise; in a chapter file it is written as Pandoc's escaped space, a backslash before the space (`S.\ 12`), and a finding there names the fix in that notation (`writer-agent.md`, "Formatting rules"), except in a presentation's companion that is not exported with Pandoc, which takes no backslash; with citekeys, the CSL style sets the space only after the label of a citekey's locator, and a page number in plain text, such as the original's page in a secondary citation's prefix, takes the escaped space
 - [ ] Page range notation per styleguide
 - [ ] Several sources, two authors, same author and year, no date, no page numbers per styleguide (`in_text.multiple_sources`, `in_text.two_authors`, `in_text.same_author_year`, `in_text.no_date`, `in_text.no_page_locator`)
 - [ ] Secondary citations per styleguide (`in_text.secondary_citation`)
-- [ ] Repeated citations per styleguide (`in_text.repeated_citation`: a source cited again right after its previous citation); `ebd.` or `ibid.` stands only there
+- [ ] Repeated citations per styleguide (`in_text.repeated_citation`: a source cited again right after its previous citation, on the same page or another; list every such pair with its line and check each against the value); `ebd.` or `ibid.` stands only there
 
 ## Style
 - [ ] Forbidden evaluative wording per styleguide (`style.forbidden_evaluative`)
@@ -104,7 +104,7 @@ Verify the following categories. Concrete values (font size, page-range notation
 
 ### 3. Automated mechanical checks
 
-These run deterministically (on Windows, use `py` instead of `python3`). Run the two scripts below as given, without piping their output through `head` or another command, so that the last line shows the exit code, and put each exit code into your report:
+These run deterministically (on Windows, use `py` instead of `python3`, and keep the paths' forward slashes: Git Bash drops an unquoted backslash). Run the two scripts below as given, without piping their output through `head` or another command, so that the last line shows the exit code, and put each exit code into your report:
 
 **Bibliography minus-test:**
 ```bash
@@ -194,4 +194,4 @@ From round 2 on, the task prompt names the previous round's report and what chan
 - **Precise findings** — line number + context, so the fix can be applied directly: in Phase A by the writer, in Phase B by the orchestrator (in the seminar and presentation workflows, Claude in the main chat) or the user (format-only edits; the writer stays deactivated)
 - **Use scripts** — don't manually count what a script can count
 - **Stay inside the project** — write no files outside the project folder (multi-project: the folder that holds all sub-projects), not even scratch files: no `/tmp`, which in Git Bash on Windows is the system's temporary folder, and no scratchpad that Claude Code may name. Put scratch files in `_scratch/format-verifier/` at the project root (multi-project: of the sub-project you work in), which Git ignores, and delete that folder before you finish; leave the rest of `_scratch/` alone, the orchestrator may keep a file there; the scripts in `scripts/`, which clean up their own temporary folders, are fine
-- **Write a file's text with the Write tool** — not with the shell (`cat <<EOF`, `echo … >`, `printf … >`, or an inline `python -c` / `py -c` program that writes a file's text): in Git Bash on Windows, a here-document with umlauts or quotes can fail or write altered text, and the shell's quoting can alter the backticks, `$` signs and quotes of an inline program. Use the shell to run scripts and commands; the files a saved script writes (one in `scripts/`, or an analysis script of the project), and its output redirected to a file, are fine
+- **Write a file's text with the Write tool** — not with the shell (`cat <<EOF`, `echo … >`, `printf … >`, or an inline `python -c` / `py -c` program that writes a file's text): in Git Bash on Windows, a here-document with umlauts or quotes can fail or write altered text, and the shell's quoting can alter the backticks, `$` signs and quotes of an inline program. Use the shell to run scripts and commands; the files a saved script writes (one of cephalo's scripts in `scripts/`, or a script of the project in its `data/scripts/`, such as an analysis script or a presentation's deck script; not a program you save to make the change), and its output redirected to a file, are fine

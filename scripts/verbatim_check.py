@@ -54,10 +54,12 @@ The report's header gives the chapter's word count for the page budget, as
 written: the stretches between whitespace or dashes that hold a letter or
 digit (a hyphenated compound is one word), headings and block quotes
 included. In Markdown, footnotes count too; the YAML front matter, HTML
-comments, Pandoc citekeys (the whole bracket, [@key, p. 5]: Pandoc writes
-the citation only at the export), footnote marks and the bibliography do
-not (the line says when it recognized none), while author-year citations
-written into the text do. A Word chapter counts its body paragraphs,
+comments, raw blocks for the export (```{=openxml}; the text of their w:t
+elements is still compared with the sources), Pandoc citekeys (the
+whole bracket, [@key, p. 5]: Pandoc writes the citation only at the
+export), footnote marks and the bibliography do not (the line says when
+it recognized none), while author-year citations written into the text
+do. A Word chapter counts its body paragraphs,
 without tables, footnotes, text boxes and the bibliography. --words prints
 only that line and needs no sources.
 
@@ -77,6 +79,7 @@ With --words: 0, or 2 for bad arguments or a chapter that cannot be read.
 """
 
 import bisect
+import html
 import os
 import re
 import sys
@@ -138,6 +141,31 @@ CITATION = re.compile(
     r"|\d{4}[a-z]?(?:\s*[,:;][^()]{0,80})?"
     r"|(?:[Ee]bd|[Ee]benda|[Ii]bid(?:em)?)\.?(?:[,:\s][^()]{0,80})?)\)")
 HTML_COMMENT = re.compile(r"<!--.*?-->", re.S)
+# A raw block for one output format (```{=openxml}, also with ~~~ and a longer
+# fence): markup that Pandoc passes to the export, such as the bookmark that
+# starts the back matter (docs/reference_management.md), not text. Like an HTML
+# comment it is blanked, so it neither counts nor joins a run. It closes with a
+# fence of the same character, at least as long.
+# The text of a Word raw block (the w:t elements of ```{=openxml}; Pandoc drops
+# a {=docx} block): the export writes it into the document, so it is compared
+# with the sources, though not counted for the page budget. A paragraph ends at
+# </w:p> or is an empty <w:p/>; in it, a tab or line break shows as a space and
+# a non-breaking hyphen as a hyphen. A text box's paragraphs are paragraphs of
+# their own, and the copy of it for older readers (mc:Fallback) is left out.
+# Pandoc's block-quote style (BlockText, the one quote style of its reference
+# document and of scripts/build_reference_docx.py without --base) makes a
+# paragraph a quote; a style the reference document lacks is plain text in the
+# export, and one a --base template adds (Zitat) is compared as plain text too. Attribute
+# scans stop at the next tag, so that malformed markup takes no extra time.
+WORD_PARAGRAPH_END = re.compile(r"</w:p>|<w:p(?:\s[^<>]*)?/>")
+WORD_RUN_TEXT = re.compile(r"<w:t(?:\s[^<>]*)?>([^<]*)</w:t>"
+                           r"|<w:(tab|ptab|br|cr|noBreakHyphen)\b[^<>]*(?:/>|>\s*</w:\2>)")
+WORD_STYLE = re.compile(r"<w:pStyle\s[^<>]*?w:val=\"([^\"<>]*)\"")
+RAW_QUOTE_STYLE = re.compile(r"(?i)(?:footnote)?blocktext")
+QUOTE_STYLE = re.compile(r"(?i)quot|zitat|block ?text")
+RAW_FORMAT = re.compile(r"\{=([^{}\s]+)\}")
+RAW_BLOCK = re.compile(r"(?ms)^ {0,3}(?P<fence>(?P<char>[`~])(?P=char){2,})[ \t]*\{=[^{}\s]+\}[ \t]*\n"
+                       r".*?^ {0,3}(?P=fence)(?P=char)*[ \t]*$")
 # The heading of a chapter's bibliography (as in bibliography_check.py, and more):
 # the titles listed under it are no runs.
 BIBLIOGRAPHY_HEADINGS = {"bibliography", "references", "reference list", "works cited", "literature",
@@ -222,6 +250,7 @@ class Chapter(NamedTuple):
     quotes: list           # (place, quotation text) of the marked direct quotes
     quoted: list           # for each entry of words: True inside a short quotation
     bibliography: Optional[tuple] = None  # its first and last line or paragraph (None: to the end)
+    counted: Optional[int] = None  # text[:counted] is what the word count counts (None: all of it)
 
 
 def blank(text: str, start: int, end: int) -> str:
@@ -267,6 +296,72 @@ def bibliography_section(headings: list, count: int) -> Optional[tuple]:
     return start, end
 
 
+def element_spans(block: str, name: str) -> list:
+    """
+    (start, end) of each outermost element called name in block, in one pass:
+    an element inside another of its kind belongs to the outer one, an empty
+    one (<name/>) is a span of its own tag, and one without its end tag runs to
+    the end of the block.
+    """
+    out, depth, start = [], 0, 0
+    for tag in re.finditer(r"<(/?)" + re.escape(name) + r"\b[^<>]*?(/?)>", block):
+        if tag.group(1):
+            if depth:
+                depth -= 1
+                if not depth:
+                    out.append((start, tag.end()))
+        elif tag.group(2):
+            if not depth:
+                out.append((tag.start(), tag.end()))
+        else:
+            if not depth:
+                start = tag.start()
+            depth += 1
+    if depth:
+        out.append((start, len(block)))
+    return out
+
+
+def blank_spans(text: str, spans: list) -> str:
+    """text with each of the sorted, separate spans replaced as blank() does, in one pass."""
+    parts, pos = [], 0
+    for a, b in spans:
+        parts += [text[pos:a], re.sub(r"[^\n]", " ", text[a:b])]
+        pos = b
+    return "".join(parts) + text[pos:]
+
+
+def raw_paragraphs(block: str) -> list:
+    """
+    (text, offset of its first text, is_quote) of each paragraph of a Word raw
+    block. A text box's paragraphs (w:txbxContent) are taken on their own, so
+    that the paragraph around it keeps its text before and after the box and
+    its own style; the copy of a box for older readers (mc:Fallback) is left out.
+    """
+    block = blank_spans(block, element_spans(block, "mc:Fallback"))
+    spans = element_spans(block, "w:txbxContent")
+    boxes = [(a, block[a:b]) for a, b in spans]
+    block = blank_spans(block, spans)
+    out = []
+    for base, part_of in [(0, block)] + boxes:
+        start = 0
+        for end in [e.start() for e in WORD_PARAGRAPH_END.finditer(part_of)] + [len(part_of)]:
+            part = part_of[start:end]
+            chars, at = [], None
+            for r in WORD_RUN_TEXT.finditer(part):
+                if r.group(1) is not None:
+                    at = r.start() if at is None else at
+                    chars.append(html.unescape(r.group(1)))
+                else:
+                    chars.append("-" if r.group(2) == "noBreakHyphen" else " ")
+            words = "".join(chars).strip()
+            if words and at is not None:
+                style = WORD_STYLE.search(part)
+                out.append((words, base + start + at, bool(style and RAW_QUOTE_STYLE.fullmatch(style.group(1)))))
+            start = end
+    return out
+
+
 def read_markdown(path: Path) -> tuple:
     """
     Paragraph-sized pieces of a Markdown or text chapter, (text, first line,
@@ -283,7 +378,24 @@ def read_markdown(path: Path) -> tuple:
         inside = bool(re.match(r"\[\^[^\]]+\]:", line)) or (inside and bool(re.match(r"\s{2,}\S|\t", line)))
         if inside:
             footnotes.add(n)
-    for pattern in (HTML_COMMENT, PANDOC_CITATION, FOOTNOTE_MARK):
+    # the text of Word raw blocks that the export writes: one piece per w:p
+    # paragraph, at the line of its first text, its runs joined as Word shows
+    # them (a tab or line break between runs as a space); a paragraph in
+    # Pandoc's block-quote style is a quote, as in the export; not in an HTML
+    # comment, which the export drops
+    comments = [(m.start(), m.end()) for m in HTML_COMMENT.finditer(text)]
+    breaks = [m.start() for m in re.finditer("\n", text)]
+    raw_text = []
+    for m in RAW_BLOCK.finditer(text):
+        fmt = RAW_FORMAT.search(m.group(0))
+        if not fmt or fmt.group(1).lower() != "openxml":
+            continue
+        if any(a <= m.start() < b for a, b in comments):
+            continue
+        for words, at, is_quote in raw_paragraphs(m.group(0)):
+            line = bisect.bisect_left(breaks, m.start() + at) + 1
+            raw_text.append((normalize(words), line, is_quote, True))
+    for pattern in (RAW_BLOCK, HTML_COMMENT, PANDOC_CITATION, FOOTNOTE_MARK):
         for m in reversed(list(pattern.finditer(text))):
             text = blank(text, m.start(), m.end())
     pieces = []
@@ -299,6 +411,8 @@ def read_markdown(path: Path) -> tuple:
     if cut:
         body = [n for n in range(cut[0] + 1, cut[1]) if n not in footnotes]
         paragraphs = "\n".join(lines[n] if n in body else "" for n in range(cut[0] + 1, cut[1])).split("\n\n")
+        # a raw paragraph in the section is one of its entries, as in the export
+        paragraphs += [r[0] for r in raw_text if cut[0] + 1 <= r[1] <= cut[1]]
         if reference_list(paragraphs):
             for n in [cut[0]] + body:
                 lines[n] = ""
@@ -322,8 +436,12 @@ def read_markdown(path: Path) -> tuple:
         buf.append(re.sub(r"^\s{0,3}>\s?", "", line) if is_quote else line)
     if buf:
         pieces.append(("\n".join(buf), first, quote))
-    # 1-based first and last line, the last None when it runs to the end
-    return pieces, (cut and (cut[0] + 1, cut[1] if cut[1] < len(lines) else None))
+    # 1-based first and last line, the last None when it runs to the end; the
+    # text of Word raw blocks comes last, marked as not counted, and not from
+    # the bibliography
+    if cut:
+        raw_text = [r for r in raw_text if not cut[0] + 1 <= r[1] <= cut[1]]
+    return pieces + raw_text, (cut and (cut[0] + 1, cut[1] if cut[1] < len(lines) else None))
 
 
 def read_docx(path: Path) -> tuple:
@@ -345,7 +463,7 @@ def read_docx(path: Path) -> tuple:
             style = (p.style.name if p.style is not None else "") or ""
             # Quote, Intense Quote, Zitat; Pandoc's "Block Text"; LibreOffice's
             # "Quotations" / "Block Quotation"
-            is_quote = bool(re.search(r"(?i)quot|zitat|block ?text", style))
+            is_quote = bool(QUOTE_STYLE.search(style))
             if p.text.strip():
                 pieces.append((normalize(p.text), n, is_quote))
                 # heading level from the style ("Heading 2", "Überschrift 2", "Title");
@@ -370,7 +488,7 @@ def read_chapter(path: Path) -> Chapter:
     docx = path.suffix.lower() == ".docx"
     pieces, cut = read_docx(path) if docx else read_markdown(path)
     words, places, spans, quotes, inside = [], [], [], [], []
-    text_parts, offset = [], 0
+    text_parts, offset, counted = [], 0, None
 
     def brk():
         if words and words[-1] is not None:
@@ -379,7 +497,9 @@ def read_chapter(path: Path) -> Chapter:
             spans.append(None)
             inside.append(False)
 
-    for piece, first, is_quote in pieces:
+    for piece, first, is_quote, *raw in pieces:
+        if raw and counted is None:
+            counted = offset             # from here on: the text of raw blocks, not counted
         base = offset
         text_parts.append(piece + "\n\n")
         offset += len(piece) + 2
@@ -410,7 +530,7 @@ def read_chapter(path: Path) -> Chapter:
             brk()
             pos = e
     return Chapter(words, places, spans, "".join(text_parts), "paragraph" if docx else "line",
-                   quotes, inside, cut)
+                   quotes, inside, cut, counted)
 
 
 def word_count(chapter: Chapter) -> str:
@@ -422,12 +542,13 @@ def word_count(chapter: Chapter) -> str:
     if read_chapter recognized one, and otherwise says that a reference list
     in the file counts.
     """
-    n = as_written(MARKUP.sub(lambda m: m.group(1) or "", chapter.text))
+    text = chapter.text if chapter.counted is None else chapter.text[:chapter.counted]
+    n = as_written(MARKUP.sub(lambda m: m.group(1) or "", text))
     if chapter.unit == "paragraph":
         kept, left = "headings and block quotes", ["tables", "footnotes", "text boxes"]
     else:
         kept, left = ("headings, block quotes and footnotes",
-                      ["YAML header", "HTML comments", "citekeys", "footnote marks"])
+                      ["YAML header", "HTML comments", "raw blocks", "citekeys", "footnote marks"])
     if chapter.bibliography:
         left.append("the bibliography")
     what = f"{kept} included; {', '.join(left[:-1])} and {left[-1]} not counted"

@@ -215,6 +215,33 @@ copy_template_or_fallback() {
     fi
 }
 
+install_guard_settings() {
+    # .claude/settings.json runs the cephalo guard (docs/scripts.md, "cephalo
+    # guard"). Copied only where it is missing (a byte copy): a user's own
+    # settings are kept, and "Next steps" names the template to merge when
+    # they lack the guard.
+    local dest=".claude/settings.json"
+    if [ "$1" != "." ]; then
+        dest="$1/.claude/settings.json"
+    fi
+    if [ ! -f "templates/claude_settings.json" ]; then
+        return 0
+    fi
+    if [ -e "$dest" ] || [ -L "$dest" ]; then
+        # also a link (one that points nowhere too) or a folder: kept, never copied into
+        if [ -f "$dest" ] && grep -q 'cephalo_guard' "$dest" 2>/dev/null; then
+            echo -e "  ${GRAY}. $dest (exists)${NC}"
+        else
+            echo -e "  ${YELLOW}. $dest (exists, kept: it does not run the cephalo guard)${NC}"
+            GUARD_MERGE="$GUARD_MERGE $dest"
+        fi
+        return 0
+    fi
+    mkdir -p "$(dirname "$dest")"
+    cp "templates/claude_settings.json" "$dest"
+    echo -e "  ${GREEN}+ $dest${NC}"
+}
+
 normalize_structure() {
     # Map both the CLI value ("Flat") and the full interactive option text
     # ("Flat (single directory, simple)") to the canonical short form the
@@ -867,6 +894,8 @@ IS_MINIMAL=false
 WORKFLOW=""
 # Multi-project: shared/ entries left from an earlier cephalo version.
 OLD_SHARED=""
+# Claude Code settings kept without the cephalo guard (install_guard_settings).
+GUARD_MERGE=""
 
 # ==========================================================
 # Flat structure
@@ -1037,6 +1066,20 @@ elif [[ "$STRUCTURE" =~ ^Multi-project ]]; then
     done
     
     WORKFLOW="proposal_workflow.yaml, bachelor/master_*_longform.yaml, defense_workflow.yaml (per sub-project)"
+fi
+
+# ==========================================================
+# Claude Code hooks (cephalo guard)
+# ==========================================================
+
+step "Claude Code hooks (cephalo guard)"
+install_guard_settings "."
+if [[ "$STRUCTURE" =~ ^Multi-project ]]; then
+    # Claude Code opens each sub-project as a project of its own and does not
+    # read the settings of the folder above it.
+    for p in "01_Proposal" "$MAIN_NAME" "03_Defense"; do
+        install_guard_settings "$p"
+    done
 fi
 
 # ==========================================================
@@ -1212,6 +1255,15 @@ if $IS_MINIMAL; then
     STEP_NO=$((STEP_NO + 1))
     echo -e "${YELLOW}$STEP_NO. The style-resolver will propose additional subdirectories"
     echo -e "   based on your guidelines. Review and confirm before creation.${NC}"
+    echo ""
+fi
+
+if [ -n "$GUARD_MERGE" ]; then
+    STEP_NO=$((STEP_NO + 1))
+    echo -e "${YELLOW}$STEP_NO. These Claude Code settings were kept and do not run the cephalo guard:"
+    echo -e "  $GUARD_MERGE"
+    echo -e "   To use it, merge the hooks of templates/claude_settings.json into them"
+    echo -e "   (docs/scripts.md, \"cephalo guard\").${NC}"
     echo ""
 fi
 

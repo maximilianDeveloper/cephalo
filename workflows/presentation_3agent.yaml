@@ -83,8 +83,11 @@ main_session:
     No orchestrator runs this workflow: Claude in the main chat coordinates
     it, and the user decides. At the start of every chat, read this file,
     workspace/state.md and styleguide.md (once steps 0.0 and 0.5 have
-    created them) and the sections of the definition named above. Where
-    they say "you" or "the orchestrator", they mean Claude in the main chat.
+    created them) and the sections of the definition named above, each
+    whole and with the Read tool: a Grep result leaves out every line over
+    about 500 characters, and many rules, the longest among them, stand on
+    such lines ("Principles", "Read a rule with the Read tool"). Where they
+    say "you" or "the orchestrator", they mean Claude in the main chat.
     The rest of the definition does not apply, except where a step below
     points to it: no research-agent, no extracts, no Phase A and B.
     - The agents do the steps that name them. Never do their work yourself:
@@ -158,7 +161,7 @@ phases:
           workspace/output/slides/; it cannot build a PPTX. Before step 3,
           workspace/output/slides/<deck>.pptx is built from them, as the user
           decides: by the user in PowerPoint, or by Claude in the main chat
-          with a python-pptx script it saves in workspace/output/slides/ and
+          with a python-pptx script it saves in workspace/data/scripts/ and
           runs (pptx_notes below; without python-pptx, ask the user). Either
           way the deck keeps the writer's wording unchanged and takes its
           layout from the institution's slide template, if the guidelines
@@ -182,23 +185,33 @@ phases:
         note: |
           Claude in the main chat runs this step (main_session). Each round:
           1. Count the companion's verbatim runs with the script in Claude
-             Code's Bash tool (Git Bash on Windows, with py instead of python3,
-             not "python3 ... || py ...": exit code 1 is a finished report),
-             and save its output beside the reports:
+             Code's Bash tool (Git Bash on Windows), and save its output beside
+             the reports:
                mkdir -p workspace/output/verification && python3 scripts/verbatim_check.py workspace/output/chapters/<companion>.md workspace/sources/ workspace/state.md > workspace/output/verification/<companion>_round_<n>_verbatim.txt 2>&1
+             On Windows, the same line with py in place of python3, not
+             "python3 ... || py ...": exit code 1 is a finished report.
              Not with ">" in Windows PowerShell, which writes UTF-16
              (docs/scripts.md). Exit code 0 or 1: the report is finished;
              2: tell the user what the file says. Without Python, the
              source-verifier counts the runs by eye.
           2. Give the source-verifier the slides, the companion file and that
-             report file; from round 2 on, also the previous round's report
-             and the sentences the revision changed. For a revision, give the
+             report file; from round 2 on, call a new one with the Agent tool,
+             not a message to the one of the round before, which would judge
+             its own proposals, and give it also the previous round's report
+             and the sentences the revision changed, found by comparing with
+             the version the previous round verified (orchestrator.md, "Steps
+             1..N: Chapter assignment", the return calls). For a revision, give the
              writer the report file, or the findings as the report gives them.
+             The report's notes on the rows of the source registry go to the
+             writer as an edit of those rows, also when the slides and the
+             companion passed and when a note calls itself optional
+             (orchestrator.md, "Feedback loop control").
           3. The source-verifier cannot write files, so do not ask it to. Save
              its answer unchanged as <companion>_round_<n>.md: the writer and
              the next round work from it. Nothing is shortened, reworded,
-             translated or added, and quotation marks, labels and emphasis
-             stay as the answer has them; only an absolute path becomes
+             translated or added, and quotation marks (a closing “ stays “,
+             not a straight "), labels and emphasis stay as the answer has
+             them; only an absolute path becomes
              project-relative. After the Write, read the file back (the Write
              tool's note that you need not read it back does not apply here:
              the read-back checks your copy against the answer) and compare
@@ -228,9 +241,10 @@ phases:
           round's report and what changed since; the format-verifier writes
           the report itself (orchestrator.md, "Steps 1..N: Chapter
           assignment"; format-verifier.md, "Workflows without Phase B").
-          After each round Claude first reads the report, records its counts
-          from its "Status:" lines in workspace/state.md at once, before any
-          fix or question to the user, and shows the user its Notes (the same
+          After each round, before any fix or question to the user, Claude
+          (a) counts the report's "Status:" lines per symbol with Grep and
+          writes the counts to workspace/state.md, (b) reads the report with
+          the Read tool, whole, and (c) shows the user its Notes (the same
           section of orchestrator.md).
           Claude applies the companion's format-only findings with the Edit
           tool, without rewording. A finding in the slide text or speaker

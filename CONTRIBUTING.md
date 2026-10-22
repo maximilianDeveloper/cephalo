@@ -56,12 +56,17 @@ EOF
 for f in setup.sh scripts/docx_postprocess.sh scripts/extract_styleguide.sh; do
     bash -n "$f" || echo "FAILED: $f"
 done
+sh -n scripts/cephalo_guard.sh || echo "FAILED: scripts/cephalo_guard.sh"
 
 # Shell lint (as in CI)
-shellcheck setup.sh scripts/docx_postprocess.sh scripts/extract_styleguide.sh
+shellcheck setup.sh scripts/cephalo_guard.sh scripts/docx_postprocess.sh scripts/extract_styleguide.sh
 
 # Python syntax
-python3 -m py_compile scripts/abbreviations_extract.py scripts/bibliography_check.py scripts/cross_session_audit.py scripts/verbatim_check.py
+python3 -m py_compile scripts/abbreviations_extract.py scripts/bibliography_check.py scripts/build_reference_docx.py scripts/cephalo_guard.py scripts/cross_session_audit.py scripts/docx_pagination.py scripts/verbatim_check.py
+
+# The cephalo guard: its rules, its hook command, and every command the
+# definitions, workflows and docs give (macOS or Linux)
+python3 -I .github/tests/test_cephalo_guard.py
 ```
 
 ### Runtime checks — the part that catches real bugs
@@ -158,6 +163,7 @@ The `bibliography_check.py` output should not contain false positives for German
 - Update `CHANGELOG.md` in the same PR (add an `[Unreleased]` section at the top if none exists yet).
 - If the change touches the setup scripts, confirm in the PR description which platforms you tested on.
 - If the change touches `scripts/bibliography_check.py` or `scripts/verbatim_check.py`, include a test case showing the new behavior.
+- If the change touches `scripts/cephalo_guard.py`, add a case to `.github/tests/test_cephalo_guard.py`: a slip it should stop and, beside it, a command it must let pass. A new script in `scripts/` goes into the guard's `SHIPPED_SCRIPTS`, which the test checks.
 - If the change touches `README.md` or `docs/QUICKSTART.md`, re-render the embedded copy in `docs/setup-wizard.html` (between the `DOC_README_*` / `DOC_QUICKSTART_*` markers). CI fails while their wording differs; it compares words only, so check changed punctuation, options and paths (such as `--target` or `.\setup.ps1`) by eye.
 
 ## Versioning

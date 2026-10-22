@@ -122,6 +122,10 @@ Long-form works go through two distinct phases:
 
 This split keeps Phase B cheap, provided the Phase B chats run on a fast main model: `format-verifier` and the orchestrators inherit the chat's model. How much it saves on a whole thesis has not been measured. See `docs/phase_separation.md`.
 
+## Mechanical guardrails
+
+Setup installs a Claude Code hook, the cephalo guard (`scripts/cephalo_guard.py`, run from `.claude/settings.json` through `scripts/cephalo_guard.sh`; the template is `templates/claude_settings.json`). It sees some tool calls before they run and denies a few slips the definitions forbid: a shell command that writes a file's text, a write outside the project, `python3` on Windows, a redirect in the PowerShell tool and the coordinator's edit of a saved report; and, as a rule of its own, a change to the hook settings or to `scripts/`, which only the user makes. A denial names the rule, the definition that holds it and what to do instead: do that, with the tool it names, and do not get around the check. The definitions stay the rule, and no agent definition may depend on the guard: a project without it works the same. The user switches rules off in `.claude/settings.local.json` (`docs/scripts.md`, "cephalo guard").
+
 ## Universal rules (apply in every project)
 
 1. **Preserve original quotes, not just page numbers.** Source extracts must contain verbatim text, enabling downstream verification.
