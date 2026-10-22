@@ -1899,7 +1899,7 @@ class TestMacFileSystem(Base):
         self.nfd = os.path.join(self.top, unicodedata.normalize('NFD', 'Prüfungsarbeit Übung'))
         self.nfc = unicodedata.normalize('NFC', self.nfd)
         for d in ('scripts', '.claude', '_scratch/orchestrator', 'workspace/output/chapters',
-                  'workspace/output/verification'):
+                  'workspace/output/verification', 'workspace/data/scripts'):
             os.makedirs(os.path.join(self.nfd, d))
 
     def tearDown(self):
@@ -1930,15 +1930,30 @@ class TestMacFileSystem(Base):
                 self.assertIn('S1', rules_of(bash('python3 "%s/_scratch/orchestrator/fix.py"' % path,
                                                   plat='macos', root=root, cwd=root)))
 
+    def test_a_data_script_is_the_project_s_by_either_name(self):
+        Path(self.nfd, 'workspace/data/scripts/table.py').write_text(
+            "import csv\nwith open('workspace/data/outputs/t.csv', 'w') as fh:\n    csv.writer(fh).writerow([1])\n",
+            encoding='utf-8')
+        Path(self.nfd, 'workspace/data/scripts/off.py').write_text(
+            "open('.claude/settings.local.json', 'w').write('{}')\n", encoding='utf-8')
+        for root, path in self.forms():
+            with self.subTest(root=ascii(root[-12:])):
+                self.passes(bash('python3 "%s/workspace/data/scripts/table.py"' % path,
+                                 plat='macos', root=root, cwd=root, agent='data-agent'))
+                self.assertEqual(rules_of(bash('python3 "%s/workspace/data/scripts/off.py"' % path,
+                                               plat='macos', root=root, cwd=root)), {'S5'})
+
     def test_reports_are_read_by_either_name(self):
         Path(self.nfd, 'workspace/output/verification/ch_1_round_1.md').write_text(
             '| a |\n| b |\nStatus: ok\n', encoding='utf-8')
         Path(self.nfd, 'workspace/output/verification/document_format_round_1.md').write_text('x', encoding='utf-8')
-        out = run('Write', {'file_path': self.nfc + '/workspace/output/verification/ch_1_round_1.md', 'content': 'x'},
-                  event='PostToolUse', plat='macos', root=self.nfc, cwd=self.nfc)
-        self.assertIn('2 table rows', out['reason'])            # counted from the saved file, not the content
-        self.deny(run('Write', {'file_path': self.nfc + '/workspace/output/verification/document_format_round_1.md',
-                                'content': 'y'}, plat='macos', root=self.nfc, cwd=self.nfc), 'R6')
+        for root, path in self.forms():
+            with self.subTest(root=ascii(root[-12:])):
+                out = run('Write', {'file_path': path + '/workspace/output/verification/ch_1_round_1.md',
+                                    'content': 'x'}, event='PostToolUse', plat='macos', root=root, cwd=root)
+                self.assertIn('2 table rows', out['reason'])    # counted from the saved file, not the content
+                self.deny(run('Write', {'file_path': path + '/workspace/output/verification/document_format_round_1.md',
+                                        'content': 'y'}, plat='macos', root=root, cwd=root), 'R6')
 
 
 if __name__ == '__main__':
