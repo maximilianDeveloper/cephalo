@@ -1444,7 +1444,14 @@ class TestReviewFindings(Base):
                 ('doc.py', '"""\nscripts/verbatim_check.py is cephalo\'s; this one reads workspace/data/raw.\n"""\n'
                            '"""The guard lives in ~/.claude/settings.json\n"""\n'
                            "open('workspace/data/outputs/t.tsv', 'w').write('scripts\\tdata\\n')\n"),
-                ('deck.py', "import os\nfrom pptx import Presentation\np = Presentation()\n"
+                ('setup_run.py', "import os, runpy, pandas as pd\nrunpy.run_path(os.path.join(os.path.dirname(__file__), '..', 'scripts', "
+                         "'00_setup.py'))\npd.DataFrame().to_csv('workspace/data/outputs/a.csv')\n"),
+        ('sys_path.py', "import os, sys\nimport matplotlib.pyplot as plt\nsys.path.insert(0, os.path.join(OUT, '..', 'scripts'))\n"
+                        "plt.savefig(os.path.join(OUT, 'f.png'))\n"),
+        ('run_cwd.py', "import subprocess, sys\nfrom pathlib import Path\nDATA = Path(__file__).resolve().parent.parent\n"
+                       "for name in ['01_clean.py']:\n    subprocess.run([sys.executable, str(Path('scripts', name))], cwd=DATA)\n"
+                       "(DATA / 'outputs' / 'run.log').write_text('done')\n"),
+        ('deck.py', "import os\nfrom pptx import Presentation\np = Presentation()\n"
                             "p.save(os.path.join('workspace', 'output', 'slides', 'deck.pptx'))\n"
                             "print(os.path.join('workspace', 'data', 'scripts'), os.replace)\n")):
             with self.subTest(name=name):
@@ -1481,7 +1488,10 @@ class TestReviewFindings(Base):
                 ('expanduser.py', "import os\nopen(os.path.join(os.path.expanduser('~'), '.claude', 'settings.json'), 'w')\n"),
                 ('any_head.py', "import os\nopen(os.path.join(BASE, '.claude', 'settings.local.json'), 'w').write('{}')\n"),
                 ('bare_rmtree.py', "from shutil import rmtree\nrmtree('scripts')\n"),
-                ('bare_copytree.py', "from shutil import copytree\ncopytree('workspace/data/x', 'scripts')\n")):
+                ('bare_copytree.py', "from shutil import copytree\ncopytree('workspace/data/x', 'scripts')\n"),
+                ('up_settings.py', "import os\nHERE = os.path.dirname(__file__)\n"
+                                   "open(os.path.join(HERE, '..', '.claude', 'settings.local.json'), 'w')\n"),
+                ('chdir_comment.py', "import shutil\n# os.chdir(DATA)\nprint('chdir(')\nshutil.rmtree('scripts')\n")):
             with self.subTest(name=name):
                 self.put('workspace/data/scripts/' + name, code)
                 self.assertEqual(rules_of(self.b('python3 workspace/data/scripts/' + name)), {'S5'})
@@ -1506,7 +1516,7 @@ class TestReviewFindings(Base):
                  "import os, subprocess\nos.chdir(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))\n"
                  "subprocess.run(['python3', 'scripts/01_clean.py'])\nopen('outputs/run.log', 'w').write('done')\n")
         self.passes(self.b('python3 workspace/data/scripts/run_all.py', agent='data-agent'))
-        self.put('workspace/data/scripts/chdir_abs.py', "import os\nos.chdir(os.path.dirname(__file__))\nopen(%r, 'w')\n"
+        self.put('workspace/data/scripts/chdir_abs.py', "import os\nos.chdir(os.path.dirname(__file__))\nP = %r\nopen(P, 'w')\n"
                  % os.path.join(self.root, 'scripts', 'x.py'))
         self.assertEqual(rules_of(self.b('python3 workspace/data/scripts/chdir_abs.py')), {'S5'})   # absolute
         self.put('workspace/data/scripts/chdir_rel.py', "import os\nos.chdir('workspace/data')\nopen('../../scripts/x.py', 'w')\n")

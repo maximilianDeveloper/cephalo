@@ -1050,8 +1050,21 @@ def _built_paths(t, lits):
                         break
                     parts += more
         if parts:
-            out.append('/'.join(parts))
+            out.append(_opaque('/'.join(parts)))
     return out
+
+
+def _opaque(path):
+    """path with each '..' that follows a <name> left out: the folder a name
+    stands for is unknown, and so is its parent (os.path.join(HERE, '..',
+    'scripts') is no path into the command's folder)."""
+    out, after = [], False
+    for seg in path.split('/'):
+        if seg == '..' and after:
+            continue
+        out.append(seg)
+        after = seg == '<name>' or (after and seg in ('', '.'))
+    return '/'.join(out)
 
 
 def _data_bases(n, ctx):
@@ -1064,16 +1077,23 @@ def _data_bases(n, ctx):
     return here, '/'.join(parts[:k + 1])
 
 
-_PY_CHDIR = re.compile(r'\bchdir\s*\(')
+_PY_CHDIR = re.compile(r'\bchdir\s*\(|\bcwd\s*=')       # changes folder, or runs programs in another one
 
 
 def _named_paths(code, tick):
+    """(paths, changes_folder): see _paths_of; changes_folder: the code
+    (without its comments and strings) changes folder or runs a program in
+    another one (os.chdir, cwd=)."""
+    t, lits = _py_strings(code, tick)
+    return _paths_of(t, lits, tick), bool(_PY_CHDIR.search(t))
+
+
+def _paths_of(t, lits, tick):
     """The paths a data script names: each string with a separator in it, each
     path it builds from strings, and each string a file call takes as the path
     it removes, moves or copies to.  Another bare word ('scripts', '.claude', a
     column name) is data, and so is a string with a line break in it (a
     docstring, a line it writes)."""
-    t, lits = _py_strings(code, tick)
     out = [x for x in lits if '/' in x or '\\' in x]
     tick()
     out += _built_paths(t, lits)
@@ -1092,13 +1112,18 @@ def py_protected(code, ctx, base, names_only=False, alt=()):
     'scripts', name), shutil.rmtree('scripts')) and only if it is the hook
     settings or in scripts/, not another bare word or a folder that holds one.
     alt: the folders such a script's relative paths may start from once it
-    changes folder (os.chdir); a relative path then counts only if it is
-    protected from each of them and from base."""
+    changes folder (os.chdir, or cwd= for the programs it runs); a relative
+    path then counts only if it is protected from each of them and from base,
+    which a path into scripts/ never is: there only an absolute path and the
+    hook settings count."""
     if not code or not (_PY_WRITE.search(code) or _PY_REMOVE.search(code)):
         return None
     moves = bool(_PY_MOVES.search(code)) and not names_only
-    lits = _named_paths(code, ctx.budget.tick) if names_only else _PATH_LIT.findall(code)
-    bases = [base] + (list(alt) if names_only and alt and _PY_CHDIR.search(code) else [])
+    if names_only:
+        lits, elsewhere = _named_paths(code, ctx.budget.tick)
+    else:
+        lits, elsewhere = _PATH_LIT.findall(code), False
+    bases = [base] + (list(alt) if elsewhere else [])
     for k, lit in enumerate(dict.fromkeys(lits)):
         if not k % 1024:
             ctx.budget.tick()
