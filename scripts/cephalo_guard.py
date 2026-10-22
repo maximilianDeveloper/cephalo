@@ -1109,6 +1109,13 @@ def py_protected(code, ctx, base, names_only=False, alt=()):
     return None
 
 
+def _sh_quote(word):
+    """word as one Bash word (as shlex.quote, without importing it)."""
+    if word and re.fullmatch(r'[\w@%+=:,./-]+', word):
+        return word
+    return "'" + word.replace("'", "'\"'\"'") + "'"
+
+
 def check_shell(cmd, tool, ctx, depth=0, pre=None, data=False):
     """Hits [(rule, detail)] for a Bash or PowerShell command.  pre: the
     here-document bodies of an enclosing command (for a $( ) inside it).
@@ -1285,7 +1292,9 @@ def check_shell(cmd, tool, ctx, depth=0, pre=None, data=False):
         if depth < 2 and c == 'cmd':
             k = next((j for j, a in enumerate(args) if a.lower() in ('/c', '//c', '/k', '//k')), None)
             if k is not None and k + 1 < len(args):
-                hits += check_shell(' '.join(args[k + 1:]), 'Bash', ctx, depth + 1, data=data)
+                rest = args[k + 1:]                     # Git Bash quotes each word for cmd: keep them words
+                hits += check_shell(rest[0] if len(rest) == 1 else ' '.join(_sh_quote(a) for a in rest),
+                                    'Bash', ctx, depth + 1, data=data)
         if depth < 2 and c in ('powershell', 'pwsh'):
             for k, a in enumerate(args):
                 if a.lower() in ('-command', '-c') and k + 1 < len(args):

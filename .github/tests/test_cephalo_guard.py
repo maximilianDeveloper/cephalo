@@ -254,6 +254,15 @@ class TestS1ShellWrites(Base):
             with self.subTest(cmd=cmd[:70]):
                 self.assertIn('S1', rules_of(bash(cmd)), cmd)
 
+    def test_cmd_c_keeps_the_quoting(self):
+        # Git Bash quotes each word for cmd: a program after cmd /c stays one word, also unquoted as a whole
+        for cmd in ('cmd /c python -c "import json; json.dump({}, open(\'.claude/settings.local.json\', \'w\'))"',
+                    'cmd /c "py -c \\"import json; json.dump({}, open(\'.claude/settings.local.json\', \'w\'))\\""'):
+            with self.subTest(cmd=cmd):
+                self.assertEqual(rules_of(bash(cmd, plat='windows')), {'S1', 'S5'})
+        self.passes(bash('cmd /c dir workspace', plat='windows'))
+        self.passes(bash('cmd /c "py scripts/verbatim_check.py --help"', plat='windows'))
+
     def test_slips_denied_on_windows_paths(self):
         out = bash('cd "%s" && py -c "import pathlib; pathlib.Path(\'ch.md\').write_text(\'x\')"' % WIN_ROOT,
                    plat='windows')
