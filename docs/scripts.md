@@ -138,7 +138,7 @@ Limitations:
 - **Verbatim only**: a paraphrase that swaps every few words for a synonym, or a translation, is not found. That is still the source-verifier's call (step 8, and step 7 on overinterpretation).
 - **PDF pages are the viewer's page index**: the printed page number may differ; extract quotes carry the printed one.
 - **Text extraction**: a word hyphenated at a line or page break in a PDF (also with a soft hyphen, and across a running header or footer) is joined when the chapter has the joined word (`Verdun-` + `stung`); otherwise the hyphen is kept as that of a compound (`long-` + `term`, `Stadt-` + `und`). PDFs with unusual encodings can yield garbled text, which then matches nothing.
-- **Word chapters**: only the body paragraphs are read; text in tables, footnotes and text boxes is not checked. Export the chapter from Markdown, or check the Markdown file instead.
+- **Word chapters**: only the body paragraphs are read, with their tracked changes accepted (inserted text counts, deleted text does not, and a page break keeps the words on either side apart); text in tables, footnotes and text boxes is not checked. Export the chapter from Markdown, or check the Markdown file instead.
 - **A direct quote not found** may also mean that its source is missing from the arguments, or that the quotation keeps an omission without marking it; check those by hand.
 
 ### `abbreviations_extract.py`

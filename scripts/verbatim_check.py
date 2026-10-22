@@ -444,6 +444,42 @@ def read_markdown(path: Path) -> tuple:
     return pieces + raw_text, (cut and (cut[0] + 1, cut[1] if cut[1] < len(lines) else None))
 
 
+W_NS = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
+MC_NS = "{http://schemas.openxmlformats.org/markup-compatibility/2006}"
+# What a paragraph's text leaves out: deleted and moved-away text of tracked
+# changes, a text box's paragraphs and their copy for older readers (text boxes
+# are not counted), and the tab stops of its paragraph properties.
+DOCX_SKIP = {W_NS + "del", W_NS + "moveFrom", W_NS + "txbxContent", MC_NS + "Fallback", W_NS + "pPr"}
+
+
+def docx_text(p) -> str:
+    """
+    A Word paragraph's text (its w:p element) as Word shows it with its
+    tracked changes accepted: inserted text counts and deleted text does not; a
+    tab is a tab, a line, column or page break a line break, and a
+    non-breaking hyphen a hyphen.
+    """
+    out = []
+
+    def walk(el):
+        for child in el:
+            tag = child.tag
+            if not isinstance(tag, str) or tag in DOCX_SKIP:
+                continue
+            if tag == W_NS + "t":
+                out.append(child.text or "")
+            elif tag in (W_NS + "tab", W_NS + "ptab"):
+                out.append("\t")
+            elif tag in (W_NS + "br", W_NS + "cr"):
+                out.append("\n")
+            elif tag == W_NS + "noBreakHyphen":
+                out.append("-")
+            else:
+                walk(child)
+    walk(p)
+    return "".join(out)
+
+
 def read_docx(path: Path) -> tuple:
     """
     Paragraphs of a Word chapter, (text, paragraph number, is_quote), and the
@@ -464,15 +500,16 @@ def read_docx(path: Path) -> tuple:
             # Quote, Intense Quote, Zitat; Pandoc's "Block Text"; LibreOffice's
             # "Quotations" / "Block Quotation"
             is_quote = bool(QUOTE_STYLE.search(style))
-            if p.text.strip():
-                pieces.append((normalize(p.text), n, is_quote))
+            text = docx_text(p._p)
+            if text.strip():
+                pieces.append((normalize(text), n, is_quote))
                 # heading level from the style ("Heading 2", "Überschrift 2", "Title");
                 # a plain paragraph "Literatur" counts as level 1 but yields to a styled one
                 h = re.match(r"(?i)(?:heading|überschrift)\s*(\d)", style)
                 if h or re.match(r"(?i)title|titel", style):
-                    headings.append((n, int(h.group(1)) if h else 0, 0, normalize(p.text)))
-                elif bibliography_heading(p.text):
-                    headings.append((n, 1, 1, normalize(p.text)))
+                    headings.append((n, int(h.group(1)) if h else 0, 0, normalize(text)))
+                elif bibliography_heading(text):
+                    headings.append((n, 1, 1, normalize(text)))
     except Exception as exc:
         fail(f"cannot read {path} as .docx ({type(exc).__name__}: {one_line(exc)})")
     # The bibliography is a list of titles: left out if it looks like one.
