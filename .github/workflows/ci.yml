@@ -1669,9 +1669,9 @@ jobs:
           expect 1 python scripts/verbatim_check.py "$V/tracked.docx" "$V/tracked_src.txt"
           grep -qF '16 words, paragraph 2' "$V/out.txt"
           if grep -q 'paragraph 3' "$V/out.txt"; then cat "$V/out.txt"; echo "deleted text was compared"; exit 1; fi
-          # a paragraph mark deleted with Track Changes joins the paragraph to the next one, and a
-          # ruby annotation above a word is not part of the text
-          python -c "import sys; from docx import Document; from docx.oxml import parse_xml; W = 'xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"'; d = Document(); d.add_heading('1 Einleitung', 1); p = d.add_paragraph('Die '); p._p.append(parse_xml('<w:r %s><w:ruby><w:rubyPr/><w:rt><w:r><w:t>ki</w:t></w:r></w:rt><w:rubyBase><w:r><w:t>Bäume</w:t></w:r></w:rubyBase></w:ruby></w:r>' % W)); p.add_run(' kühlen ihre Umgebung durch Verdunstung und '); p._p.get_or_add_pPr().append(parse_xml('<w:rPr %s><w:del w:id=\"1\" w:author=\"a\"/></w:rPr>' % W)); d.add_paragraph('senken die Temperatur in dicht bebauten Vierteln deutlich.'); d.save(sys.argv[1])" "$V/joined.docx"
+          # a paragraph mark deleted or moved away with Track Changes joins the paragraph to the next one,
+          # a ruby annotation above a word is not part of the text, and a symbol counts as a space
+          python -c "import sys; from docx import Document; from docx.oxml import parse_xml; W = 'xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"'; d = Document(); d.add_heading('1 Einleitung', 1); p = d.add_paragraph('Die '); p._p.append(parse_xml('<w:r %s><w:ruby><w:rubyPr/><w:rt><w:r><w:t>ki</w:t></w:r></w:rt><w:rubyBase><w:r><w:t>Bäume</w:t></w:r></w:rubyBase></w:ruby></w:r>' % W)); p.add_run(' kühlen ihre Umgebung durch Verdunstung und '); p._p.get_or_add_pPr().append(parse_xml('<w:rPr %s><w:del w:id=\"1\" w:author=\"a\"/></w:rPr>' % W)); q = d.add_paragraph('senken die Temperatur '); q._p.get_or_add_pPr().append(parse_xml('<w:rPr %s><w:moveFrom w:id=\"2\" w:author=\"a\"/></w:rPr>' % W)); r = d.add_paragraph('in dicht'); r._p.append(parse_xml('<w:r %s><w:sym w:font=\"Wingdings\" w:char=\"F0E0\"/></w:r>' % W)); r.add_run('bebauten Vierteln deutlich.'); d.save(sys.argv[1])" "$V/joined.docx"
           expect 1 python scripts/verbatim_check.py "$V/joined.docx" "$V/tracked_src.txt"
           grep -qF '16 words, paragraph 2' "$V/out.txt"
           # after a wholly deleted paragraph, a paragraph keeps its own number
