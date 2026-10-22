@@ -657,7 +657,8 @@ def py_mode(args):
 # --------------------------------------------------------------- S1 helpers
 
 _PY_WRITE = re.compile(
-    r"""open\s*\([^()]{0,160}?(?:\([^()]*(?:\([^()]*\)[^()]*){0,8}\)[^()]{0,80}?)?(?:,\s*|mode\s*=\s*)['"][rbt]*(?:[wax]|\+)[rbt+]*['"]"""
+    r"""open\s*\([^()]{0,160}?(?:\([^()]*(?:\([^()]*(?:\([^()]*\)[^()]*){0,8}\)[^()]*){0,8}\)[^()]{0,80}?)?(?:,\s*|mode\s*=\s*)['"][rbt]*(?:[wax]|\+)[rbt+]*['"]"""
+    r"""|open\s*\(\s*[rRuUbBfF]{0,2}(?:'[^'\n]{0,4096}'|"[^"\n]{0,4096}")\s*,\s*(?:mode\s*=\s*)?['"][rbt]*(?:[wax]|\+)"""
     r"""|\.open\s*\(\s*(?:mode\s*=\s*)?['"][rbt]*(?:[wax]|\+)"""
     r"""|\.write_(?:text|bytes)\s*\("""
     r"""|\.save\s*\("""
@@ -946,6 +947,7 @@ _LP = r'\x00\d+\x00'                    # a string literal, after _py_strings
 _PY_CALL = re.compile(r'\b(?:(os\.path|posixpath|ntpath)\.join|(?:Pure)?(?:Posix|Windows)?Path)\s*\('
                       r'|\bPath\s*\.\s*(cwd|home)\s*\(\s*\)')
 _PY_ARGS = re.compile(r'[^()]{0,512}(?:\([^()]{0,512}\)[^()]{0,512}){0,8}\)')
+_PY_HEAD = re.compile(r'\s*(%s(?:\s*,\s*%s){0,32})\s*,' % (_LP, _LP))   # literal head, when the rest is not read
 _PY_CHAIN = re.compile(r'\s*(?:/\s*\x00(\d+)\x00|(/)|\.\s*joinpath\s*\()')
 _PY_HOME = re.compile(r'(?:os\.path\.)?expanduser\s*\(\s*\x00(\d+)\x00\s*\)|Path\s*\.\s*home\s*\(\s*\)')
 _PY_CONCAT = re.compile(r'%s(?:\s*(?:\+\s*)?(?:%s|os\.sep\b)){1,32}' % (_LP, _LP))
@@ -1000,7 +1002,10 @@ def _call_parts(t, i, lits):
     call.  None when the call does not close nearby."""
     m = _PY_ARGS.match(t, i)
     if not m:
-        return None, i
+        head = _PY_HEAD.match(t, i)                     # more brackets than read: its literal head, then a name
+        if not head:
+            return None, i
+        return [lits[int(x)] for x in re.findall(r'\x00(\d+)\x00', head.group(1))] + ['<name>'], head.end()
     inner = t[i:m.end() - 1]
     flat = re.sub(r'\([^()]*\)', lambda g: '(' + ' ' * (len(g.group(0)) - 2) + ')', inner)
     cuts = [-1] + [k for k, c in enumerate(flat) if c == ','] + [len(inner)]

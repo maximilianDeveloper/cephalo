@@ -170,6 +170,7 @@ class TestS1ShellWrites(Base):
         '{ echo a; echo b; } > f.md',
         '{ echo a; ls; } > f.md',
         'python3 -c "import os; open(os.path.join(d, str(n)), \'w\').write(\'x\')"',
+        'python3 -c "open(\'/home/u/proj/workspace/output/' + 'a' * 200 + '.md\', \'w\').write(\'x\')"',
         '( printf x; ls ) > f.md',
         'cat <<< "text" > f.md',
         # in-place editors and stream-editor rewrites
@@ -1489,6 +1490,9 @@ class TestReviewFindings(Base):
                 ('any_head.py', "import os\nopen(os.path.join(BASE, '.claude', 'settings.local.json'), 'w').write('{}')\n"),
                 ('bare_rmtree.py', "from shutil import rmtree\nrmtree('scripts')\n"),
                 ('bare_copytree.py', "from shutil import copytree\ncopytree('workspace/data/x', 'scripts')\n"),
+                ('join_deep.py', "import os\nos.remove(os.path.join('scripts', os.path.basename(str(p))))\n"),
+                ('copy_deep.py', "import os, shutil\nshutil.copy(src, os.path.join('scripts', os.path.basename(os.path.dirname(src))))\n"),
+                ('open_deep.py', "import os\nopen(os.path.join('scripts', sorted(os.listdir(d))[0]), 'w')\n"),
                 ('up_settings.py', "import os\nHERE = os.path.dirname(__file__)\n"
                                    "open(os.path.join(HERE, '..', '.claude', 'settings.local.json'), 'w')\n"),
                 ('chdir_comment.py', "import shutil\n# os.chdir(DATA)\nprint('chdir(')\nshutil.rmtree('scripts')\n")):
