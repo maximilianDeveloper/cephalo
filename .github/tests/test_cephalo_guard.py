@@ -264,6 +264,12 @@ class TestS1ShellWrites(Base):
         self.passes(bash('cmd /c dir workspace', plat='windows'))
         self.assertIn('S5', rules_of(bash("cmd //c echo x '>' scripts/x.py", plat='windows')))   # Git Bash leaves > bare
         self.passes(bash('cmd /c "py scripts/verbatim_check.py --help"', plat='windows'))
+        # cmd takes a backslash, a bracket or a quote in a bare word literally, and ^> is a plain >
+        self.assertEqual(rules_of(bash('cmd //c python -c "open(\'scripts/x.py\',\'w\').write(\'x\')"', plat='windows')),
+                         {'S1', 'S5'})
+        self.assertEqual(rules_of(bash('cmd //c rmdir //s //q scripts\\\\sub', plat='windows')), {'S5'})
+        self.assertEqual(rules_of(bash('cmd //c "rmdir /s /q scripts\\sub"', plat='windows')), {'S5'})
+        self.passes(bash("cmd //c echo x '^>' notes.txt", plat='windows'))
 
     def test_slips_denied_on_windows_paths(self):
         out = bash('cd "%s" && py -c "import pathlib; pathlib.Path(\'ch.md\').write_text(\'x\')"' % WIN_ROOT,

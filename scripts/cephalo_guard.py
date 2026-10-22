@@ -1149,6 +1149,25 @@ def _sh_quote(word):
     return "'" + word.replace("'", "'\"'\"'") + "'"
 
 
+# cmd's own operators: ^x (x taken literally), > >> n> n>&m, <, | ||, & &&
+_CMD_OP = re.compile(r'(\^.|\d?>>?(?:&\d)?|<|\|\|?|&&?)', re.S)
+
+
+def _cmd_bare(word):
+    """A word cmd gets bare (Git Bash quotes only words with a blank or "),
+    as Bash text that reads as cmd reads it: its operators stay operators,
+    everything else stays literal (a backslash, a bracket, a quote), ^x is x."""
+    return ''.join(_sh_quote(p[1:] if p.startswith('^') else p) if k % 2 == 0 or p.startswith('^') else p
+                   for k, p in enumerate(_CMD_OP.split(word)) if p)
+
+
+def _cmd_line(line):
+    """cmd's command line, one word after cmd /c, as Bash text: "..." is one
+    quoted part (cmd has no backslash escape), the rest as _cmd_bare reads it."""
+    return ''.join(' ' if p.isspace() else _sh_quote(p.strip('"')) if p[0] == '"' else _cmd_bare(p)
+                   for p in re.findall(r'"[^"]*"?|[^\s"]+|\s+', line))
+
+
 def check_shell(cmd, tool, ctx, depth=0, pre=None, data=False):
     """Hits [(rule, detail)] for a Bash or PowerShell command.  pre: the
     here-document bodies of an enclosing command (for a $( ) inside it).
@@ -1329,8 +1348,8 @@ def check_shell(cmd, tool, ctx, depth=0, pre=None, data=False):
             k = next((j for j, a in enumerate(args) if a.lower() in ('/c', '//c', '/k', '//k')), None)
             if k is not None and k + 1 < len(args):
                 rest = args[k + 1:]                     # Git Bash quotes a word with a blank or " for cmd:
-                hits += check_shell(rest[0] if len(rest) == 1 else ' '.join(    # keep those words, the rest bare
-                    _sh_quote(a) if not a or re.search(r'[\s"]', a) else a for a in rest),
+                hits += check_shell(_cmd_line(rest[0]) if len(rest) == 1 else ' '.join(    # those stay words
+                    _sh_quote(a) if not a or re.search(r'[\s"]', a) else _cmd_bare(a) for a in rest),
                                     'Bash', ctx, depth + 1, data=data)
         if depth < 2 and c in ('powershell', 'pwsh'):
             for k, a in enumerate(args):
