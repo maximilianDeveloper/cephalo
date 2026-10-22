@@ -1102,8 +1102,9 @@ class TestR5Edit(Base):
                   event='PostToolUse', plat='macos', root=nfd)
         self.assertIn('R5: workspace/output/verification/ch_1_round_1.md is saved', out['reason'])
         self.assertIn('still contains an absolute path', out['reason'])
-        # the other way round: the project folder typed (NFC), the path in the report as Finder wrote it (NFD)
-        os.makedirs(os.path.join(nfc, 'workspace', 'output', 'verification'))
+        # the other way round: the project folder typed (NFC), the path in the report as Finder wrote it (NFD);
+        # on a Mac's own file system both name the folder made above
+        os.makedirs(os.path.join(nfc, 'workspace', 'output', 'verification'), exist_ok=True)
         Path(nfc, 'workspace/output/verification/ch_2_round_1.md').write_text(
             '| a |\nQuelle: %s/workspace/sources/a.pdf\n' % nfd, encoding='utf-8')
         out = run('Write', {'file_path': nfc + '/workspace/output/verification/ch_2_round_1.md', 'content': 'x'},
