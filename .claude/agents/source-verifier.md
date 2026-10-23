@@ -201,7 +201,7 @@ A suggested fix names the direction: which term, which page, what to drop. Wordi
 
 ## Cross-chapter consistency
 
-After every second chapter written, counted in the order of writing: consistency check per `checklists/consistency.md`, Part A, of the chapters written so far. Rate each point you find now, with a status, also one that the final check will see again: by then the chapters may have used up their revisions. Check additionally:
+After every second chapter written, counted in the order of writing: consistency check per `checklists/consistency.md`, Part A, of the chapters written so far. Rate each point you find now, with a status, also one that the final check will see again: by then the chapters may have used up their revisions. A gap you describe between chapters (what one chapter announces, names or states and another leaves out or says otherwise) is ⚠️ or ❌, never ✅ with a remark ("only a note"), here and in the final check: only ⚠️, ❌ and ❓ reach the revision and the next round. A category takes the status of its worst point. Check additionally:
 
 - Technical terms used identically across chapters?
 - Does this chapter contradict earlier statements?
