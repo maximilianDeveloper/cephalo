@@ -302,8 +302,12 @@ phases:
         - Final PDF (for submission)
         - Speaker notes export (if required)
         - Rehearsal with timing (target per assignment / styleguide.md, e.g. 15-20 min)
-        - Before closing: the "Current state" and "Open issues" of
-          workspace/state.md and the "Open questions" of styleguide.md agree;
+        - Before closing, read workspace/state.md whole with the Read tool (a
+          Grep result leaves out its long lines): its "Current state",
+          "Chapter status" and "Open issues" and the "Open questions" of
+          styleguide.md agree, and an open issue this chat resolved is ticked
+          (`- [x]`), not one the user accepted as it stands, which stays
+          `- [ ]` (orchestrator.md, "Feedback-loop escalation", item 1);
           nothing is called resolved in one that is still open in another
 
 # python-pptx specifics (from project experience)
