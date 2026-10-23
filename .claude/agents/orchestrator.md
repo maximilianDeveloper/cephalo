@@ -129,7 +129,7 @@ See `docs/phase_separation.md` for details.
 
 ### Feedback-loop escalation
 
-When a feedback loop reaches `feedback_loop_max`, you stop automatic iteration and ask the user which of the following to do:
+When a feedback loop reaches `feedback_loop_max`, you stop automatic iteration and ask the user which of the following to do, naming all three (consent to a higher limit alone is not this question):
 
 1. **Abort** — accept the current state as best effort; list outstanding items in the state file as open ⚠️ items (`- [ ] ⚠️ …`; accepting them does not resolve them) and continue to the next chapter / phase (in Phase A these items stay open: the A → B transition requires them to be resolved first)
 2. **Manual fix** — pause; user investigates and resolves the problematic item manually; resume when user confirms

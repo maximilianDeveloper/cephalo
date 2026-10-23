@@ -181,7 +181,7 @@ under "Next chat". Ready to copy-paste.
 
 Count a chapter's iterations: every revision followed by a new verification is one, also a revision the user asks for to polish 🟡 findings after the chapter has passed. A change the user asks for that no finding prompted (a new structure, a section added, moved or removed) is not one: verify the chapter again as after any revision; the count goes on from where it stood. The count runs across chats; keep it in `00_Status.md` with the chapter. This loop count is not the "last 3 iterations" of the A → B transition, which looks at commits.
 
-When a feedback loop reaches `feedback_loop_max`, you stop automatic iteration and ask the user which of the following to do:
+When a feedback loop reaches `feedback_loop_max`, you stop automatic iteration and ask the user which of the following to do, naming all three (consent to a higher limit alone is not this question):
 
 1. **Abort** — accept the current state as best effort; list outstanding items in `00_Status.md` as open ⚠️ items (`- [ ] ⚠️ …`; accepting them does not resolve them) and continue to the next chapter / phase (in Phase A these items stay open: the A → B transition requires them to be resolved first)
 2. **Manual fix** — pause; user investigates and resolves the problematic item manually; resume when user confirms
