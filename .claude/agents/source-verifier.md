@@ -74,6 +74,8 @@ Does the paraphrase go beyond what the source says?
 
 **Common error:** Source says "typically, no single instrument can..." → text says "No instrument can..." Hardening of qualifications.
 
+**Also:** the source ties a result to several conditions together ("where they did A, B and C") → the text names only some of them and does not mark them as a selection ("among others"): leaving out a condition widens the claim.
+
 ### 8. Plagiarism check
 
 Rate verbatim word runs from the source (see `checklists/plagiarism_protection.md`), counted in words as written: a hyphenated compound or a word with an apostrophe is one word; a dash between words separates them.
