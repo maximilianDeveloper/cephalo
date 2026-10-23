@@ -167,7 +167,7 @@ defense/rehearsal: second run, timing OK (19 min)
 
 Count the iterations of an item as `orchestrator-longform.md` does ("Feedback-loop escalation"): every revision followed by a new check is one, also one the user asks for to polish it. A change the user asks for that no finding prompted (a new slide order, a slide added or removed) is not one. The count runs across chats; keep it in `00_Status.md`.
 
-When a feedback loop reaches `feedback_loop_max`, you stop automatic iteration and ask the user which of the following to do:
+When a feedback loop reaches `feedback_loop_max`, you stop automatic iteration and ask the user which of the following to do, naming all three (consent to a higher limit alone is not this question):
 
 1. **Abort** — accept the current state as best effort; list outstanding items in `00_Status.md` as open ⚠️ items (`- [ ] ⚠️ …`; accepting them does not resolve them) and continue with defense preparation
 2. **Manual fix** — pause; user investigates and resolves the problematic item manually; resume when user confirms
