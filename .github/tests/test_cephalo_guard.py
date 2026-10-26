@@ -169,6 +169,8 @@ class TestS1ShellWrites(Base):
         '(echo a; echo b) > f.md',
         '{ echo a; echo b; } > f.md',
         '{ echo a; ls; } > f.md',
+        'python3 -c "import os; open(os.path.join(d, str(n)), \'w\').write(\'x\')"',
+        'python3 -c "open(\'/home/u/proj/workspace/output/' + 'a' * 200 + '.md\', \'w\').write(\'x\')"',
         '( printf x; ls ) > f.md',
         'cat <<< "text" > f.md',
         # in-place editors and stream-editor rewrites
@@ -252,6 +254,22 @@ class TestS1ShellWrites(Base):
         for cmd in self.SLIPS:
             with self.subTest(cmd=cmd[:70]):
                 self.assertIn('S1', rules_of(bash(cmd)), cmd)
+
+    def test_cmd_c_keeps_the_quoting(self):
+        # Git Bash quotes each word for cmd: a program after cmd /c stays one word, also unquoted as a whole
+        for cmd in ('cmd /c python -c "import json; json.dump({}, open(\'.claude/settings.local.json\', \'w\'))"',
+                    'cmd /c "py -c \\"import json; json.dump({}, open(\'.claude/settings.local.json\', \'w\'))\\""'):
+            with self.subTest(cmd=cmd):
+                self.assertEqual(rules_of(bash(cmd, plat='windows')), {'S1', 'S5'})
+        self.passes(bash('cmd /c dir workspace', plat='windows'))
+        self.assertIn('S5', rules_of(bash("cmd //c echo x '>' scripts/x.py", plat='windows')))   # Git Bash leaves > bare
+        self.passes(bash('cmd /c "py scripts/verbatim_check.py --help"', plat='windows'))
+        # cmd takes a backslash or a quote in a bare word literally, and ^> is a plain >; its brackets group
+        self.assertEqual(rules_of(bash('cmd //c "(echo a) > f.md"', plat='windows')), {'S1'})
+        self.assertEqual(rules_of(bash('cmd //c "if exist f.md (echo x > f.md)"', plat='windows')), {'S1'})
+        self.assertEqual(rules_of(bash('cmd //c rmdir //s //q scripts\\\\sub', plat='windows')), {'S5'})
+        self.assertEqual(rules_of(bash('cmd //c "rmdir /s /q scripts\\sub"', plat='windows')), {'S5'})
+        self.passes(bash("cmd //c echo x '^>' notes.txt", plat='windows'))
 
     def test_slips_denied_on_windows_paths(self):
         out = bash('cd "%s" && py -c "import pathlib; pathlib.Path(\'ch.md\').write_text(\'x\')"' % WIN_ROOT,
@@ -392,7 +410,7 @@ class TestS2Outside(Base):
     def test_macos_unicode_form(self):
         # macOS: a folder named in Finder is decomposed (NFD), a typed path precomposed (NFC): both name the
         # project folder
-        nfd, nfc = (unicodedata.normalize(f, '/Users/u/Masterarbeit Übung') for f in ('NFD', 'NFC'))
+        nfd, nfc = (unicodedata.normalize(f, POSIX_HOME + '/Masterarbeit Übung') for f in ('NFD', 'NFC'))
         self.assertNotEqual(nfd, nfc)
         for root, path in ((nfd, nfc), (nfc, nfd)):
             f = path + '/workspace/output/chapters/01_Einleitung.md'
@@ -1027,7 +1045,7 @@ class TestS5Protected(Base):
         shutil.rmtree(top)
 
     def test_macos_unicode_form(self):
-        nfd, nfc = (unicodedata.normalize(f, '/Users/u/Masterarbeit Übung') for f in ('NFD', 'NFC'))
+        nfd, nfc = (unicodedata.normalize(f, POSIX_HOME + '/Masterarbeit Übung') for f in ('NFD', 'NFC'))
         for cmd in ('rm -rf "%s/scripts"' % nfc, 'rm "%s/scripts/cephalo_guard.py"' % nfc,
                     'mv "%s" ../alt' % nfc):
             with self.subTest(cmd=ascii(cmd)):
@@ -1090,8 +1108,9 @@ class TestR5Edit(Base):
                   event='PostToolUse', plat='macos', root=nfd)
         self.assertIn('R5: workspace/output/verification/ch_1_round_1.md is saved', out['reason'])
         self.assertIn('still contains an absolute path', out['reason'])
-        # the other way round: the project folder typed (NFC), the path in the report as Finder wrote it (NFD)
-        os.makedirs(os.path.join(nfc, 'workspace', 'output', 'verification'))
+        # the other way round: the project folder typed (NFC), the path in the report as Finder wrote it (NFD);
+        # on a Mac's own file system both name the folder made above
+        os.makedirs(os.path.join(nfc, 'workspace', 'output', 'verification'), exist_ok=True)
         Path(nfc, 'workspace/output/verification/ch_2_round_1.md').write_text(
             '| a |\nQuelle: %s/workspace/sources/a.pdf\n' % nfd, encoding='utf-8')
         out = run('Write', {'file_path': nfc + '/workspace/output/verification/ch_2_round_1.md', 'content': 'x'},
@@ -1434,7 +1453,19 @@ class TestReviewFindings(Base):
                 ('doc.py', '"""\nscripts/verbatim_check.py is cephalo\'s; this one reads workspace/data/raw.\n"""\n'
                            '"""The guard lives in ~/.claude/settings.json\n"""\n'
                            "open('workspace/data/outputs/t.tsv', 'w').write('scripts\\tdata\\n')\n"),
-                ('deck.py', "import os\nfrom pptx import Presentation\np = Presentation()\n"
+                ('setup_run.py', "import os, runpy, pandas as pd\nrunpy.run_path(os.path.join(os.path.dirname(__file__), '..', 'scripts', "
+                         "'00_setup.py'))\npd.DataFrame().to_csv('workspace/data/outputs/a.csv')\n"),
+        ('sys_path.py', "import os, sys\nimport matplotlib.pyplot as plt\nsys.path.insert(0, os.path.join(OUT, '..', 'scripts'))\n"
+                        "plt.savefig(os.path.join(OUT, 'f.png'))\n"),
+        ('run_cwd.py', "import subprocess, sys\nfrom pathlib import Path\nDATA = Path(__file__).resolve().parent.parent\n"
+                       "for name in ['01_clean.py']:\n    subprocess.run([sys.executable, str(Path('scripts', name))], cwd=DATA)\n"
+                       "(DATA / 'outputs' / 'run.log').write_text('done')\n"),
+        ('run_cwd_cont.py', "import subprocess, sys\nsubprocess.run([sys.executable, 'scripts/01_clean.py'], \\\n"
+                            "               cwd='workspace/data')\nopen('workspace/data/outputs/run.log', 'w').write('done')\n"),
+        ('bs_up.py', "import os, runpy\nimport pandas as pd\nHERE = os.path.dirname(os.path.abspath(__file__))\n"
+                     "runpy.run_path(os.path.join(HERE, r'..\\scripts\\00_helpers.py'))\n"
+                     "pd.DataFrame().to_csv(os.path.join(HERE, r'..\\outputs\\a.csv'))\n"),
+        ('deck.py', "import os\nfrom pptx import Presentation\np = Presentation()\n"
                             "p.save(os.path.join('workspace', 'output', 'slides', 'deck.pptx'))\n"
                             "print(os.path.join('workspace', 'data', 'scripts'), os.replace)\n")):
             with self.subTest(name=name):
@@ -1464,7 +1495,21 @@ class TestReviewFindings(Base):
                 ('triple.py', "open('''scripts/x.py''', 'w')\n"),
                 ('black.py', "import json, os\nSETTINGS = os.path.join(\n    '.claude',\n    'settings.local.json',\n)\n"
                              "json.dump({}, open(SETTINGS, 'w'))\n"),
-                ('cr_only.py', "import os\r# write the helper\ropen('scripts/x.py', 'w').write('x')\r")):
+                ('cr_only.py', "import os\r# write the helper\ropen('scripts/x.py', 'w').write('x')\r"),
+                ('path_name.py', "from pathlib import Path\nPath('scripts', name).write_text('x')\n"),
+                ('joinpath_name.py', "from pathlib import Path\nPath('.').joinpath('scripts', name).write_text('x')\n"),
+                ('home_path.py', "from pathlib import Path\n(Path.home() / '.claude' / 'settings.json').write_text('{}')\n"),
+                ('expanduser.py', "import os\nopen(os.path.join(os.path.expanduser('~'), '.claude', 'settings.json'), 'w')\n"),
+                ('any_head.py', "import os\nopen(os.path.join(BASE, '.claude', 'settings.local.json'), 'w').write('{}')\n"),
+                ('bare_rmtree.py', "from shutil import rmtree\nrmtree('scripts')\n"),
+                ('bare_copytree.py', "from shutil import copytree\ncopytree('workspace/data/x', 'scripts')\n"),
+                ('join_deep.py', "import os\nos.remove(os.path.join('scripts', os.path.basename(str(p))))\n"),
+                ('copy_deep.py', "import os, shutil\nshutil.copy(src, os.path.join('scripts', os.path.basename(os.path.dirname(src))))\n"),
+                ('open_deep.py', "import os\nopen(os.path.join('scripts', sorted(os.listdir(d))[0]), 'w')\n"),
+                ('up_settings.py', "import os\nHERE = os.path.dirname(__file__)\n"
+                                   "open(os.path.join(HERE, '..', '.claude', 'settings.local.json'), 'w')\n"),
+                ('chdir_comment.py', "import shutil\n# os.chdir(DATA)\nprint('chdir(')\nshutil.rmtree('scripts')\n"),
+                ('cwd_var.py', "import os, shutil\ncwd = os.getcwd()\nprint(cwd == '/')\nshutil.rmtree('scripts')\n")):
             with self.subTest(name=name):
                 self.put('workspace/data/scripts/' + name, code)
                 self.assertEqual(rules_of(self.b('python3 workspace/data/scripts/' + name)), {'S5'})
@@ -1483,6 +1528,17 @@ class TestReviewFindings(Base):
                  '\'workspace/data/outputs/a.csv\'); print(os.path.join(\'..\', \'x\'))")"\necho "$n"\n')
         program = "import os; os.replace('workspace/data/outputs/a.tmp', 'workspace/data/outputs/a.csv'); print(os.path.join('..', 'x'))"
         self.put('workspace/data/scripts/nested.sh', 'bash -c "python3 -c \\"%s\\""\n' % program)
+        # a script that changes folder first: a relative path counts only if it names a protected path from
+        # the command's folder, the script's folder and its data folder alike
+        self.put('workspace/data/scripts/run_all.py',
+                 "import os, subprocess\nos.chdir(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))\n"
+                 "subprocess.run(['python3', 'scripts/01_clean.py'])\nopen('outputs/run.log', 'w').write('done')\n")
+        self.passes(self.b('python3 workspace/data/scripts/run_all.py', agent='data-agent'))
+        self.put('workspace/data/scripts/chdir_abs.py', "import os\nos.chdir(os.path.dirname(__file__))\nP = %r\nopen(P, 'w')\n"
+                 % os.path.join(self.root, 'scripts', 'x.py'))
+        self.assertEqual(rules_of(self.b('python3 workspace/data/scripts/chdir_abs.py')), {'S5'})   # absolute
+        self.put('workspace/data/scripts/chdir_rel.py', "import os\nos.chdir('workspace/data')\nopen('../../scripts/x.py', 'w')\n")
+        self.assertEqual(rules_of(self.b("python3 workspace/data/scripts/chdir_rel.py")), set())     # a known limit
         for name in ('inline.sh', 'heredoc.sh', 'subst.sh', 'nested.sh'):
             with self.subTest(name=name):
                 self.passes(self.b('sh workspace/data/scripts/' + name, agent='data-agent'))
@@ -1781,6 +1837,15 @@ class TestWorkLimits(Base):
         segs, pipes, bodies = g.parse('cat <<A\nx\nA\ncat <<-B\n\ty\n\tB\ncat <<A\nz')
         self.assertEqual(bodies, ['x', '\ty', 'z'])             # closed, tabbed, unclosed (the rest)
 
+    def test_many_redirects_are_linear(self):
+        import time
+        for cmd, plat in (('cat' + ' -' * 8192 + ' >b' * 8192, 'posix'),
+                          ('cat' + ' -' * 8192 + ' >_scratch/b' * 8192, 'posix'),
+                          ('cmd //c ' + "'a>b' " * 40000, 'windows')):
+            t = time.monotonic()
+            self.call('Bash', {'command': cmd}, 'lim-7', plat=plat)
+            self.assertLess(time.monotonic() - t, 3.0)          # 2 to 10 s before: the writer was looked up per redirect
+
     def test_find_pattern_longer_than_a_file_name_is_not_compiled(self):
         seen, orig = [], g.fnmatch
 
@@ -1842,6 +1907,75 @@ class TestWorkLimits(Base):
                 code, out, _ = run_script(json.dumps(d).encode(), e)
                 self.assertEqual(code, 0)
                 self.assertIn('1 table rows', json.loads(out)['reason'])   # counted from the Write's content
+
+
+
+@unittest.skipUnless(sys.platform == 'darwin', "a Mac's own file system (APFS)")
+class TestMacFileSystem(Base):
+    """On a Mac's file system a folder named in Finder (decomposed, NFD) and the
+    same name typed (precomposed, NFC) are one folder: the guard compares the two
+    forms as one and reads a file by either.  CI runs this on its macOS runner."""
+
+    def setUp(self):
+        self.top = tempfile.mkdtemp(prefix='guard-mac-')
+        self.nfd = os.path.join(self.top, unicodedata.normalize('NFD', 'Prüfungsarbeit Übung'))
+        self.nfc = unicodedata.normalize('NFC', self.nfd)
+        for d in ('scripts', '.claude', '_scratch/orchestrator', 'workspace/output/chapters',
+                  'workspace/output/verification', 'workspace/data/scripts'):
+            os.makedirs(os.path.join(self.nfd, d))
+
+    def tearDown(self):
+        shutil.rmtree(self.top)
+
+    def forms(self):
+        return ((self.nfd, self.nfc), (self.nfc, self.nfd))
+
+    def test_one_folder_in_both_forms(self):
+        self.assertNotEqual(self.nfd, self.nfc)
+        self.assertTrue(os.path.isdir(os.path.join(self.nfc, 'scripts')))
+
+    def test_writes_into_the_project_and_its_scripts(self):
+        for root, path in self.forms():
+            with self.subTest(root=ascii(root[-12:])):
+                self.passes(run('Write', {'file_path': path + '/workspace/output/chapters/ch_1.md', 'content': 'x'},
+                                plat='macos', root=root, cwd=root))
+                self.deny(run('Write', {'file_path': path + '/scripts/x.py', 'content': 'x'},
+                              plat='macos', root=root, cwd=root), 'S5')
+                self.deny(run('Write', {'file_path': path + ' 2/x.md', 'content': 'x'},
+                              plat='macos', root=root, cwd=root), 'S2')
+
+    def test_a_saved_program_is_read_by_either_name(self):
+        Path(self.nfd, '_scratch', 'orchestrator', 'fix.py').write_text(
+            "open('workspace/output/chapters/ch_1.md', 'w').write('x')\n", encoding='utf-8')
+        for root, path in self.forms():
+            with self.subTest(root=ascii(root[-12:])):
+                self.assertIn('S1', rules_of(bash('python3 "%s/_scratch/orchestrator/fix.py"' % path,
+                                                  plat='macos', root=root, cwd=root)))
+
+    def test_a_data_script_is_the_project_s_by_either_name(self):
+        Path(self.nfd, 'workspace/data/scripts/table.py').write_text(
+            "import csv\nwith open('workspace/data/outputs/t.csv', 'w') as fh:\n    csv.writer(fh).writerow([1])\n",
+            encoding='utf-8')
+        Path(self.nfd, 'workspace/data/scripts/off.py').write_text(
+            "open('.claude/settings.local.json', 'w').write('{}')\n", encoding='utf-8')
+        for root, path in self.forms():
+            with self.subTest(root=ascii(root[-12:])):
+                self.passes(bash('python3 "%s/workspace/data/scripts/table.py"' % path,
+                                 plat='macos', root=root, cwd=root, agent='data-agent'))
+                self.assertEqual(rules_of(bash('python3 "%s/workspace/data/scripts/off.py"' % path,
+                                               plat='macos', root=root, cwd=root)), {'S5'})
+
+    def test_reports_are_read_by_either_name(self):
+        Path(self.nfd, 'workspace/output/verification/ch_1_round_1.md').write_text(
+            '| a |\n| b |\nStatus: ok\n', encoding='utf-8')
+        Path(self.nfd, 'workspace/output/verification/document_format_round_1.md').write_text('x', encoding='utf-8')
+        for root, path in self.forms():
+            with self.subTest(root=ascii(root[-12:])):
+                out = run('Write', {'file_path': path + '/workspace/output/verification/ch_1_round_1.md',
+                                    'content': 'x'}, event='PostToolUse', plat='macos', root=root, cwd=root)
+                self.assertIn('2 table rows', out['reason'])    # counted from the saved file, not the content
+                self.deny(run('Write', {'file_path': path + '/workspace/output/verification/document_format_round_1.md',
+                                        'content': 'y'}, plat='macos', root=root, cwd=root), 'R6')
 
 
 if __name__ == '__main__':

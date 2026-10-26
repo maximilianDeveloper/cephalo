@@ -59,9 +59,9 @@ elements is still compared with the sources), Pandoc citekeys (the
 whole bracket, [@key, p. 5]: Pandoc writes the citation only at the
 export), footnote marks and the bibliography do not (the line says when
 it recognized none), while author-year citations written into the text
-do. A Word chapter counts its body paragraphs,
-without tables, footnotes, text boxes and the bibliography. --words prints
-only that line and needs no sources.
+do. A Word chapter counts its body paragraphs, without tables, footnotes,
+text boxes, content controls and the bibliography. --words prints only
+that line and needs no sources.
 
 Usage:
     python scripts/verbatim_check.py <chapter> <source> [<source> ...]
@@ -444,6 +444,46 @@ def read_markdown(path: Path) -> tuple:
     return pieces + raw_text, (cut and (cut[0] + 1, cut[1] if cut[1] < len(lines) else None))
 
 
+W_NS = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
+MC_NS = "{http://schemas.openxmlformats.org/markup-compatibility/2006}"
+# What a paragraph's text leaves out: deleted and moved-away text of tracked
+# changes, a text box's paragraphs and their copy for older readers (text boxes
+# are not counted), the tab stops of its paragraph properties, and the small
+# annotation above ruby text (its base is the line's text).
+DOCX_SKIP = {W_NS + "del", W_NS + "moveFrom", W_NS + "txbxContent", MC_NS + "Fallback", W_NS + "pPr",
+             W_NS + "rt"}
+
+
+def docx_text(p) -> str:
+    """
+    A Word paragraph's text (its w:p element) as Word shows it with its
+    tracked changes accepted: inserted text counts and deleted text does not; a
+    tab is a tab, a line, column or page break a line break, a symbol from a
+    symbol font (Insert > Symbol) a space, and a non-breaking hyphen a hyphen.
+    """
+    out = []
+
+    def walk(el):
+        for child in el:
+            tag = child.tag
+            if not isinstance(tag, str) or tag in DOCX_SKIP:
+                continue
+            if tag == W_NS + "t":
+                out.append(child.text or "")
+            elif tag in (W_NS + "tab", W_NS + "ptab"):
+                out.append("\t")
+            elif tag in (W_NS + "br", W_NS + "cr"):
+                out.append("\n")
+            elif tag == W_NS + "noBreakHyphen":
+                out.append("-")
+            elif tag == W_NS + "sym":
+                out.append(" ")
+            else:
+                walk(child)
+    walk(p)
+    return "".join(out)
+
+
 def read_docx(path: Path) -> tuple:
     """
     Paragraphs of a Word chapter, (text, paragraph number, is_quote), and the
@@ -458,21 +498,34 @@ def read_docx(path: Path) -> tuple:
     except Exception as exc:
         fail(f"cannot read {path} as .docx ({type(exc).__name__}: {one_line(exc)})")
     pieces, headings = [], []
+    carry, carry_n, carry_q = "", None, False
     try:
         for n, p in enumerate(doc.paragraphs, 1):
             style = (p.style.name if p.style is not None else "") or ""
             # Quote, Intense Quote, Zitat; Pandoc's "Block Text"; LibreOffice's
             # "Quotations" / "Block Quotation"
             is_quote = bool(QUOTE_STYLE.search(style))
-            if p.text.strip():
-                pieces.append((normalize(p.text), n, is_quote))
+            text = docx_text(p._p)
+            if carry_n is not None:
+                # numbered where the joined text starts (a wholly deleted paragraph gives none)
+                text, n, carry, carry_n = carry + text, (carry_n if carry.strip() else n), "", None
+            # a paragraph mark deleted with Track Changes on joins the paragraph to the
+            # next one once the changes are accepted, in the next one's style
+            mark = p._p.find(W_NS + "pPr/" + W_NS + "rPr")
+            if mark is not None and (mark.find(W_NS + "del") is not None or mark.find(W_NS + "moveFrom") is not None):
+                carry, carry_n, carry_q = text, n, is_quote
+                continue
+            if text.strip():
+                pieces.append((normalize(text), n, is_quote))
                 # heading level from the style ("Heading 2", "Überschrift 2", "Title");
                 # a plain paragraph "Literatur" counts as level 1 but yields to a styled one
                 h = re.match(r"(?i)(?:heading|überschrift)\s*(\d)", style)
                 if h or re.match(r"(?i)title|titel", style):
-                    headings.append((n, int(h.group(1)) if h else 0, 0, normalize(p.text)))
-                elif bibliography_heading(p.text):
-                    headings.append((n, 1, 1, normalize(p.text)))
+                    headings.append((n, int(h.group(1)) if h else 0, 0, normalize(text)))
+                elif bibliography_heading(text):
+                    headings.append((n, 1, 1, normalize(text)))
+        if carry_n is not None and carry.strip():       # the last paragraph's mark: nothing to join
+            pieces.append((normalize(carry), carry_n, carry_q))
     except Exception as exc:
         fail(f"cannot read {path} as .docx ({type(exc).__name__}: {one_line(exc)})")
     # The bibliography is a list of titles: left out if it looks like one.
@@ -545,7 +598,7 @@ def word_count(chapter: Chapter) -> str:
     text = chapter.text if chapter.counted is None else chapter.text[:chapter.counted]
     n = as_written(MARKUP.sub(lambda m: m.group(1) or "", text))
     if chapter.unit == "paragraph":
-        kept, left = "headings and block quotes", ["tables", "footnotes", "text boxes"]
+        kept, left = "headings and block quotes", ["tables", "footnotes", "text boxes", "content controls"]
     else:
         kept, left = ("headings, block quotes and footnotes",
                       ["YAML header", "HTML comments", "raw blocks", "citekeys", "footnote marks"])
