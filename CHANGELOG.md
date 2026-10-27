@@ -8,7 +8,9 @@ Dates follow ISO 8601 (`YYYY-MM-DD`).
 
 ---
 
-## [Unreleased]
+## [1.4.2] — 2026-10-27
+
+**What the fifth seminar trial run found.** The definitions now keep status marks out of a seminar reference list, rate a gap between chapters instead of noting it, keep the state file short and check it whole at the close, copy a chapter before each revision, and name all three options at the loop limit. The sixth seminar trial run, on these definitions, had no status mark in the reference list in any version or in the Word file, caught a claim that left out one of its conditions in the first round, copied the chapter before each of six revisions, and saw no false or missed denial of the guard; it cost about as much as the fifth (31.83 against 31.67 USD) and took 81 minutes instead of 88. Its findings follow in the next release: a revision in the closing step that went past the loop limit without the question, a closing check that read the state file in parts, and gaps the writer named that went only into the state file.
 
 ### Changed
 
