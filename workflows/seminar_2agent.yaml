@@ -168,12 +168,14 @@ phases:
           When the writer's answer comes in, a line in workspace/state.md
           before a question to the user or the next agent call (the word
           count below may come first and go into that line; orchestrator.md,
-          "Steps 1..N: Chapter assignment", after every agent call). A rule
-          the answer names as not covered goes, when the answer comes in,
-          under "Open questions" in styleguide.md if its gap names a rule of
+          "Steps 1..N: Chapter assignment", after every agent call). Each rule
+          the answer names as not covered goes, when the answer comes in and
+          before a question to the user or the next agent call, under "Open
+          questions" in styleguide.md if its gap names a rule of
           styleguide.md or a key of its template, otherwise to the user as a
           note (style-resolver.md, "Recording answers to open questions",
-          item 6).
+          item 6); a line under the open issues of workspace/state.md does
+          not replace either.
           Before step 2, also after a revision, Claude counts the draft; more
           than 20% over its budget, the writer shortens it first, unless the
           user accepts the length (main_session, "Page budget monitoring").
