@@ -220,7 +220,8 @@ phases:
              consistency check (source-verifier.md, "Cross-chapter
              consistency") and gives the file of the chapter written first;
              a finding on that chapter goes to the writer too, and the
-             sentences it changes there get a round of their own.
+             sentences it changes there get a round of their own (the
+             revision counts toward that chapter's loop count).
           3. The source-verifier cannot write files, so do not ask it to. Save
              its answer unchanged as <name>_round_<n>.md: the writer and the
              next round work from it. Nothing is shortened, reworded,
@@ -281,7 +282,12 @@ phases:
            step 2, and record its open items under the open issues of
            workspace/state.md. Its findings go to the writer-agent (chapter text
            and reference list; copies first: step 2, item 2), and the
-           sentences changed get a verification round (step 2).
+           sentences changed get a verification round (step 2). A revision
+           of a chapter's text counts toward its loop count (a change to the
+           reference list alone does not): for a chapter already at its loop
+           limit, ask the user the question of orchestrator.md,
+           "Feedback-loop escalation", before the revision; a choice between
+           ways to fix the finding does not answer it.
         4. The title page with the table of contents field,
            workspace/output/title_page.md (docs/reference_management.md,
            "The title page"). If pagination.back_matter numbers the back
@@ -330,7 +336,8 @@ phases:
            building the reference document again), answer its ❓ (item 1),
            and let the next round check the fixes. A finding that needs new
            wording goes to the writer-agent (copies first: step 2, item 2), and
-           a verification round (step 2) checks the sentences it changed.
+           a verification round (step 2) checks the sentences it changed (the
+           loop limit as in item 3).
         7. For the user, in Word, after the last export, listed under the open
            issues of workspace/state.md and named in the chat, each step as
            its own point: (a) update the fields (Ctrl+A, then F9, twice:

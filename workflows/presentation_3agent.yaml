@@ -255,7 +255,8 @@ phases:
           tool, without rewording. A finding in the slide text or speaker
           notes, or one that needs new wording, goes to the writer (copies
           first: step 2, item 2), and a round of step 2 checks what it
-          changed; a finding in the PPTX's layout is fixed where the deck is
+          changed (the revision counts toward the loop count, as in the
+          three-way check); a finding in the PPTX's layout is fixed where the deck is
           built (step 1). A finding on the
           non-breaking space before a page number goes to the user as an
           open point: slides, speaker notes and a companion not exported
@@ -273,8 +274,8 @@ phases:
       (<companion> as in step 2; without a companion:
       slides_threeway_round_<n>.md; <n>: 1, then +1 after each new
       comparison), saved unchanged and read back by Claude in the main chat
-      as in step 2, item 3. It is not a round of step 2 and does not count
-      in its loop.
+      as in step 2, item 3. The comparison itself is not a round of step 2
+      and does not count in its loop; a revision it prompts does (below).
     
     description: |
       Every number, quote, and statement must be consistent across three artifacts:
@@ -293,7 +294,7 @@ phases:
     steps:
       - Export PPTX to PDF (PowerPoint, or LibreOffice via soffice --headless --convert-to pdf), by Claude in the main chat or the user
       - The format-verifier and the source-verifier compare the numbers across PPTX <-> PDF <-> companion and check that the speaker notes contain the key numbers (the format-verifier reads the PPTX and its notes, which the source-verifier cannot)
-      - A discrepancy in slide text, speaker notes or companion goes to the writer as a revision (copies first: step 2, item 2), and a round of step 2 checks what it changed (step 3's note); then the deck is built again (step 1) and exported to PDF again, and the agents compare again, until all three versions are identical
+      - A discrepancy in slide text, speaker notes or companion goes to the writer as a revision (copies first: step 2, item 2), and a round of step 2 checks what it changed (step 3's note; the revision counts toward the loop count, and where that count is already at its limit the user is asked the question of orchestrator.md, "Feedback-loop escalation", before it); then the deck is built again (step 1) and exported to PDF again, and the agents compare again, until all three versions are identical
 
 # ===========================================================
 # Closing
