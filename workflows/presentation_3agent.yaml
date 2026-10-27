@@ -200,8 +200,13 @@ phases:
              its own proposals, and give it also the previous round's report
              and the sentences the revision changed, found by comparing with
              the version the previous round verified (orchestrator.md, "Steps
-             1..N: Chapter assignment", the return calls). For a revision, give the
-             writer the report file, or the findings as the report gives them.
+             1..N: Chapter assignment", the return calls). Before a revision,
+             copy what it may change, as the last round verified it, whether or
+             not git has it:
+               mkdir -p _scratch/orchestrator && cp -r workspace/output/slides workspace/output/chapters _scratch/orchestrator/
+             After the revision, compare with the copies using diff -r; delete
+             the copies before the chat ends. For a revision, give the writer
+             the report file, or the findings as the report gives them.
              The report's notes on the rows of the source registry go to the
              writer as an edit of those rows, also when the slides and the
              companion passed and when a note calls itself optional
@@ -248,9 +253,10 @@ phases:
           section of orchestrator.md).
           Claude applies the companion's format-only findings with the Edit
           tool, without rewording. A finding in the slide text or speaker
-          notes, or one that needs new wording, goes to the writer, and a
-          round of step 2 checks what it changed; a finding in the PPTX's
-          layout is fixed where the deck is built (step 1). A finding on the
+          notes, or one that needs new wording, goes to the writer (copies
+          first: step 2, item 2), and a round of step 2 checks what it
+          changed; a finding in the PPTX's layout is fixed where the deck is
+          built (step 1). A finding on the
           non-breaking space before a page number goes to the user as an
           open point: slides, speaker notes and a companion not exported
           with Pandoc have no notation for it (writer-agent.md, "Formatting
@@ -287,7 +293,7 @@ phases:
     steps:
       - Export PPTX to PDF (PowerPoint, or LibreOffice via soffice --headless --convert-to pdf), by Claude in the main chat or the user
       - The format-verifier and the source-verifier compare the numbers across PPTX <-> PDF <-> companion and check that the speaker notes contain the key numbers (the format-verifier reads the PPTX and its notes, which the source-verifier cannot)
-      - A discrepancy in slide text, speaker notes or companion goes to the writer as a revision, and a round of step 2 checks what it changed (step 3's note); then the deck is built again (step 1) and exported to PDF again, and the agents compare again, until all three versions are identical
+      - A discrepancy in slide text, speaker notes or companion goes to the writer as a revision (copies first: step 2, item 2), and a round of step 2 checks what it changed (step 3's note); then the deck is built again (step 1) and exported to PDF again, and the agents compare again, until all three versions are identical
 
 # ===========================================================
 # Closing
@@ -302,8 +308,12 @@ phases:
         - Final PDF (for submission)
         - Speaker notes export (if required)
         - Rehearsal with timing (target per assignment / styleguide.md, e.g. 15-20 min)
-        - Before closing: the "Current state" and "Open issues" of
-          workspace/state.md and the "Open questions" of styleguide.md agree;
+        - Before closing, read workspace/state.md whole with the Read tool (a
+          Grep result leaves out its long lines): its "Current state",
+          "Chapter status" and "Open issues" and the "Open questions" of
+          styleguide.md agree, and an open issue this chat resolved is ticked
+          (`- [x]`), not one the user accepted as it stands, which stays
+          `- [ ]` (orchestrator.md, "Feedback-loop escalation", item 1);
           nothing is called resolved in one that is still open in another
 
 # python-pptx specifics (from project experience)

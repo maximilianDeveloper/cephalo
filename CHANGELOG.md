@@ -8,6 +8,19 @@ Dates follow ISO 8601 (`YYYY-MM-DD`).
 
 ---
 
+## [Unreleased]
+
+### Changed
+
+- **A seminar reference list without status marks** — a field the source file does not show (an excerpt without its title page or imprint) comes from `literature.bib` or stays out, and the writer names it in its answer; the entry itself carries no `❓` or note, since the export prints it as written (`writer-agent.md`, `docs/reference_management.md`). In the fifth seminar trial run three such marks reached the Word file.
+- **Cross-chapter gaps are rated, not noted** — a gap the source-verifier describes between chapters is ⚠️ or ❌, never ✅ with a remark, also in the final check, and a category takes the status of its worst point: only ⚠️, ❌ and ❓ reach the revision. Step 7 also gives an example of a claim widened by leaving out one of several conditions the source names together, which three rounds of the trial run passed.
+- **A state file that stays readable** — an agent's result is a short line, under chapter status for a chapter, and open issues hold only what is still open. The closing check of the seminar and presentation workflows reads `workspace/state.md` whole with the Read tool, compares Chapter status too, and ticks what the chat resolved; an item the user accepted as it stands stays open. In the trial run the file grew to 54 KB, and the check ran on a Grep that left out its long lines.
+- **The styleguide closure check after the last change** — it runs after the chat's last change to `styleguide.md`, and again after a later one, also in a later turn (all three orchestrators).
+- **A copy before each revision** — step 2 of the seminar and presentation workflows gives the command that copies what a revision may change into `_scratch/orchestrator/`, whether or not git has it, so the next round can compare with the version it verified.
+- **The writer's answer in a seminar paper** — its line in `workspace/state.md` comes before a question to the user or the next agent call (the word count may come first), and a rule the answer names as not covered goes at once under "Open questions", or to the user as a note, as `style-resolver.md` says.
+- **format-verifier** — it corrects its saved report by writing it again whole, not with `sed -i`, and lists every pair of repeated citations under the rule, one line each with file and line, also when the rule passes.
+- **The loop limit** — at `feedback_loop_max` the question to the user names all three options, Abort, Manual fix and Force continue; asking only for consent to a higher limit is not that question.
+
 ## [1.4.1] — 2026-10-26
 
 **The guard on a Mac, and its limits.** The cephalo guard of 1.4.0 has now run on macOS: all its tests on a Mac with macOS 12 and on GitHub's macOS runner, and live Claude Code sessions on both, in a project folder named with an umlaut, where it denied a shell write, a Write into `scripts/` and writes outside the project and let a Write into the chapter folder pass. The limits of 1.4.0 that the fourth seminar trial run and two reviews found are fixed: a data script that changes folder and then runs a script of its data folder is no longer denied, `cmd /c` with an unquoted program is read as Git Bash passes it on, and `scripts/verbatim_check.py` reads Word chapters with their tracked changes accepted. The fifth seminar trial run, on this version, saw no false denial of the guard and 6 of the fourth run's 9 problems solved; its findings follow in the next release.

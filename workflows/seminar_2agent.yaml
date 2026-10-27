@@ -166,9 +166,15 @@ phases:
           - Stay within the chapter's budget in words, which Claude names in the task (main_session, "Page budget monitoring")
         note: |
           When the writer's answer comes in, a line in workspace/state.md
-          first, before a question to the user or the next call
-          (orchestrator.md, "Steps 1..N: Chapter assignment", after every
-          agent call). Before step 2, also after a revision, Claude counts the draft; more
+          before a question to the user or the next agent call (the word
+          count below may come first and go into that line; orchestrator.md,
+          "Steps 1..N: Chapter assignment", after every agent call). A rule
+          the answer names as not covered goes, when the answer comes in,
+          under "Open questions" in styleguide.md if its gap names a rule of
+          styleguide.md or a key of its template, otherwise to the user as a
+          note (style-resolver.md, "Recording answers to open questions",
+          item 6).
+          Before step 2, also after a revision, Claude counts the draft; more
           than 20% over its budget, the writer shortens it first, unless the
           user accepts the length (main_session, "Page budget monitoring").
       
@@ -199,10 +205,15 @@ phases:
              the sentences the revision changed, found by comparing the
              chapter with the version the previous round verified, not taken
              from the writer's answer (orchestrator.md, "Steps 1..N: Chapter
-             assignment", the return calls). For a revision, give the writer
-             the report file, or the findings as the report gives them. The
-             report's notes on the chapter's rows of the source registry go
-             to the writer as an edit of those rows, also when the chapter
+             assignment", the return calls). Before a revision, copy each
+             chapter it may change, as its last round verified it, whether or
+             not git has it:
+               mkdir -p _scratch/orchestrator && cp workspace/output/chapters/ch_X_<slug>.md _scratch/orchestrator/
+             After the revision, compare with the copy using diff; delete the
+             copies before the chat ends. For a revision, give the writer the
+             report file, or the findings as the report gives them.
+             The report's notes on the chapter's rows of the source registry
+             go to the writer as an edit of those rows, also when the chapter
              passed and when a note calls itself optional (orchestrator.md,
              "Feedback loop control"). In the first round of the second
              chapter written, the task prompt also names the cross-chapter
@@ -269,8 +280,8 @@ phases:
            workspace/output/verification/consistency_final.md, read back as in
            step 2, and record its open items under the open issues of
            workspace/state.md. Its findings go to the writer-agent (chapter text
-           and reference list), and the sentences changed get a verification
-           round (step 2).
+           and reference list; copies first: step 2, item 2), and the
+           sentences changed get a verification round (step 2).
         4. The title page with the table of contents field,
            workspace/output/title_page.md (docs/reference_management.md,
            "The title page"). If pagination.back_matter numbers the back
@@ -318,8 +329,8 @@ phases:
            space as `\ `: writer-agent.md, "Formatting rules"; layout by
            building the reference document again), answer its ❓ (item 1),
            and let the next round check the fixes. A finding that needs new
-           wording goes to the writer-agent, and a verification round (step 2)
-           checks the sentences it changed.
+           wording goes to the writer-agent (copies first: step 2, item 2), and
+           a verification round (step 2) checks the sentences it changed.
         7. For the user, in Word, after the last export, listed under the open
            issues of workspace/state.md and named in the chat, each step as
            its own point: (a) update the fields (Ctrl+A, then F9, twice:
@@ -330,8 +341,12 @@ phases:
            Numbers, "Start at" (docs/reference_management.md, "The title
            page", step 5) and update the fields again; (c) fill in the title
            page's placeholders; (d) visual proofreading.
-        8. Before the chat closes: the "Current state" and "Open issues" of
-           workspace/state.md and the "Open questions" of styleguide.md agree;
+        8. Before the chat closes, read workspace/state.md whole with the Read
+           tool (a Grep result leaves out its long lines): its "Current state",
+           "Chapter status" and "Open issues" and the "Open questions" of
+           styleguide.md agree, and an open issue this chat resolved is ticked
+           (`- [x]`), not one the user accepted as it stands, which stays
+           `- [ ]` (orchestrator.md, "Feedback-loop escalation", item 1);
            nothing is called resolved in one that is still open in another,
            and the word counts and the Page count line match the chapter
            files as they now are.

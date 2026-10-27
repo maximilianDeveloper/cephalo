@@ -93,7 +93,7 @@ Verify the following categories. Concrete values (font size, page-range notation
 - [ ] Page range notation per styleguide
 - [ ] Several sources, two authors, same author and year, no date, no page numbers per styleguide (`in_text.multiple_sources`, `in_text.two_authors`, `in_text.same_author_year`, `in_text.no_date`, `in_text.no_page_locator`)
 - [ ] Secondary citations per styleguide (`in_text.secondary_citation`)
-- [ ] Repeated citations per styleguide (`in_text.repeated_citation`: a source cited again right after its previous citation, on the same page or another; list every such pair with its line and check each against the value); `ebd.` or `ibid.` stands only there
+- [ ] Repeated citations per styleguide (`in_text.repeated_citation`: a source cited again right after its previous citation, on the same page or another; list every such pair under the rule as `Pairs:`, one line each, also when all pass (`<file>:<line> — <source>, cited again as <the form the text uses>`), and check each against the value); `ebd.` or `ibid.` stands only there
 
 ## Style
 - [ ] Forbidden evaluative wording per styleguide (`style.forbidden_evaluative`)
@@ -163,7 +163,7 @@ Styleguide gap (for ❓):
 - ["styleguide.md leaves <rule> open (missing / still ❓ / unclear for <case> / closed with n/a, but the document contains it at <location>) — the orchestrator (or Claude in the main chat) should clarify, or open the entry again"]
 ```
 
-Every finding has a `Status:` line of its own: a gap you find under a rule you otherwise pass is a rule entry of its own with `Status: ❓`. Write these lines as the template shows them, `Status:` plain at the start of a line, not bold and not in a table: the orchestrator counts them with a search for `Status: ✅`, `Status: ⚠`, `Status: ❌` and `Status: ❓`. Count the totals of your answer from these lines.
+Every finding has a `Status:` line of its own: a gap you find under a rule you otherwise pass is a rule entry of its own with `Status: ❓`. Write these lines as the template shows them, `Status:` plain at the start of a line, not bold and not in a table: the orchestrator counts them with a search for `Status: ✅`, `Status: ⚠`, `Status: ❌` and `Status: ❓`. Count the totals of your answer, and of a totals line if your report has one, from these lines; to correct the saved report, Write it again whole (not `sed -i` or another shell edit).
 
 A ❓ marks a rule this check needs that `styleguide.md` leaves open: a rule it states, or one of the keys its template has, that is missing, still ❓, or unclear for a case the document contains. An element the document contains although its key is closed with the n/a value is a ❓ too: its entry must be opened again (`style-resolver.md`, "Recording answers to open questions", item 4). These are no ❓ and get no `Status:` line, neither a symbol nor `Status: Not applicable`; they stand only in the lists at the end of the report:
 - a rule with nothing to apply to: an element the work does not need and the document does not contain (a list of abbreviations for a text without abbreviations), also where its key is closed with the n/a value. List it under **Not applicable** at the end of the report. A required element the export lacks, such as the title page, the table of contents field or the reference list, is no such case: it is a finding, ⚠️ or ❌;
