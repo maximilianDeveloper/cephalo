@@ -309,8 +309,12 @@ phases:
         - Final PDF (for submission)
         - Speaker notes export (if required)
         - Rehearsal with timing (target per assignment / styleguide.md, e.g. 15-20 min)
-        - Before closing, read workspace/state.md whole with the Read tool (a
-          Grep result leaves out its long lines): its "Current state",
+        - Before closing, read workspace/state.md whole with the Read tool, in
+          one call without offset or limit, also if you read it earlier in
+          this chat (a Grep result leaves out its long lines, and an earlier
+          read does not show what this chat changed; only if the Read tool
+          refuses the file as too large, read it in consecutive parts that
+          cover every line, and tell the user): its "Current state",
           "Chapter status" and "Open issues" and the "Open questions" of
           styleguide.md agree, and an open issue this chat resolved is ticked
           (`- [x]`), not one the user accepted as it stands, which stays

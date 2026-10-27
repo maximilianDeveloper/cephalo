@@ -349,8 +349,12 @@ phases:
            page", step 5) and update the fields again; (c) fill in the title
            page's placeholders; (d) visual proofreading.
         8. Before the chat closes, read workspace/state.md whole with the Read
-           tool (a Grep result leaves out its long lines): its "Current state",
-           "Chapter status" and "Open issues" and the "Open questions" of
+           tool, in one call without offset or limit, also if you read it
+           earlier in this chat (a Grep result leaves out its long lines, and
+           an earlier read does not show what this chat changed; only if the
+           Read tool refuses the file as too large, read it in consecutive
+           parts that cover every line, and tell the user): its "Current
+           state", "Chapter status" and "Open issues" and the "Open questions" of
            styleguide.md agree, and an open issue this chat resolved is ticked
            (`- [x]`), not one the user accepted as it stands, which stays
            `- [ ]` (orchestrator.md, "Feedback-loop escalation", item 1);
