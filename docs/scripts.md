@@ -1,11 +1,12 @@
 # Scripts
 
-cephalo ships eight utility scripts in `scripts/`, and the cephalo guard, a Claude Code hook that setup installs (see [cephalo guard](#cephalo-guard)). The utility scripts are optional — the agents can guide a project without them — but each one automates a check or transformation that would otherwise take manual effort.
+cephalo ships nine utility scripts in `scripts/`, and the cephalo guard, a Claude Code hook that setup installs (see [cephalo guard](#cephalo-guard)). The utility scripts are optional — the agents can guide a project without them — but each one automates a check or transformation that would otherwise take manual effort.
 
 | Script | Purpose | When to run |
 |--------|---------|-------------|
 | `extract_styleguide.sh` | Convert institutional guideline PDFs to plain text for the style-resolver | Once per project during setup |
 | `verbatim_check.py` | Count the verbatim word runs a chapter shares with its sources, rated by the plagiarism thresholds; with `--words`, the chapter's word count for the page budget | Phase A, before each chapter verification (bachelor and master workflows: step A.4) |
+| `state_check.py` | List the state file's Current state, Chapter status and open items in full, with the chapters' word counts, and report its lines over 500 characters | Flat projects, at the end of every chat |
 | `abbreviations_extract.py` | Derive the list of abbreviations from a finished DOCX | Phase B, final stages |
 | `bibliography_check.py` | Minus-test by author surname: every cited author is in the bibliography, every entry's lead author is cited | Phase B, final stages |
 | `build_reference_docx.py` | Build Pandoc's reference document (layout of the exported DOCX) from the styleguide's values | Phase B, before the first export and after a layout finding |
@@ -17,7 +18,7 @@ cephalo ships eight utility scripts in `scripts/`, and the cephalo guard, a Clau
 
 ## Installation
 
-All scripts require Python 3.9 or newer. `abbreviations_extract.py`, `bibliography_check.py`, `build_reference_docx.py`, `docx_pagination.py`, `verbatim_check.py` and `extract_styleguide.sh` have dependencies listed in `requirements.txt` (`python-docx`, and `pypdf` with its `[crypto]` extra, which installs `cryptography` for AES-encrypted PDFs). `cross_session_audit.py` uses only the Python standard library.
+All scripts require Python 3.9 or newer. `abbreviations_extract.py`, `bibliography_check.py`, `build_reference_docx.py`, `docx_pagination.py`, `verbatim_check.py` and `extract_styleguide.sh` have dependencies listed in `requirements.txt`, and so does `state_check.py` for the word count of a Word chapter (`python-docx`, and `pypdf` with its `[crypto]` extra, which installs `cryptography` for AES-encrypted PDFs). `cross_session_audit.py` uses only the Python standard library.
 
 ### On Linux / macOS
 
@@ -140,6 +141,29 @@ Limitations:
 - **Text extraction**: a word hyphenated at a line or page break in a PDF (also with a soft hyphen, and across a running header or footer) is joined when the chapter has the joined word (`Verdun-` + `stung`); otherwise the hyphen is kept as that of a compound (`long-` + `term`, `Stadt-` + `und`). PDFs with unusual encodings can yield garbled text, which then matches nothing.
 - **Word chapters**: only the body paragraphs are read, with their tracked changes accepted (inserted text counts, deleted text does not, a deleted paragraph mark joins the paragraph to the next one, and a page break keeps the words on either side apart; ruby text above a word is left out, and a symbol from a symbol font counts as a space); text in tables, footnotes, text boxes and content controls (a block of paragraphs inside a content control, as some templates use for placeholders) is not checked. The report numbers the paragraphs as the file holds them with its tracked changes shown (in Word: All Markup): deleted and empty paragraphs count, paragraphs in tables do not, and joined paragraphs have the number of the one where the text starts. Export the chapter from Markdown, or check the Markdown file instead.
 - **A direct quote not found** may also mean that its source is missing from the arguments, or that the quotation keeps an omission without marking it; check those by hand.
+
+### `state_check.py`
+
+Lists, in full, what the closing check of a chat compares in the state file of a flat project, `workspace/state.md`: a Grep result leaves out every line over about 500 characters, and a Read in parts leaves out what lies between them. It only reads. The orchestrator, or in the seminar and presentation workflows Claude in the main chat, runs it at the end of every chat (`orchestrator.md`, "Chat closure ritual", item 1) and in the closing step.
+
+```bash
+# The state file and the folder of the chapter files
+python3 scripts/state_check.py workspace/state.md workspace/output/chapters/
+
+# Or single chapter files (.md, .txt or .docx)
+python3 scripts/state_check.py workspace/state.md workspace/output/chapters/ch_2_basics.md
+```
+
+The report starts with a summary line: the open and ticked items, the chapter files counted, and the lines over 500 characters with their numbers. Then it gives, each with its line number:
+- every line of "Current state";
+- every line of "Chapter status", its table and anything else in it;
+- every open item (`- [ ] …`, in any section) with its section, and the number of ticked ones;
+- the word count of each chapter file named, as `verbatim_check.py --words` counts it (a folder: its `.md` and `.docx` files, not those in subfolders and no hidden file). A chapter it cannot count (a Word file without `python-docx`, or one that is broken) and an argument that is no chapter or does not exist are listed with the reason, and the report goes on;
+- the lines of "Current state" and "Chapter status" over 500 characters, which "State file format" in `orchestrator.md` keeps short.
+
+A section runs from its heading, at any level and with more words after its name (`### Chapter status (2026-10-28)`), to the next heading. The source registry, the decision log and the pre-check result are not listed: their rows may be long. Whether an open item is resolved, and whether the sections agree, is for whoever reads the report to judge; the script compares no wording.
+
+Exit code 0 = no line of "Current state" or "Chapter status" over 500 characters, 1 = at least one (shorten it and run the script again), 2 = bad arguments, a state file that cannot be read, or one without a "Current state" or "Chapter status" heading (an `Error:` line on stderr). A chapter that cannot be counted does not change the exit code. The long-form status file `00_Status.md` has another structure and is not read.
 
 ### `abbreviations_extract.py`
 

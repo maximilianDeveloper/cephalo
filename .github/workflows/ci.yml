@@ -34,7 +34,7 @@ jobs:
         run: python -m pip install -r requirements.txt pyyaml
 
       - name: Python syntax
-        run: python -m py_compile scripts/abbreviations_extract.py scripts/bibliography_check.py scripts/build_reference_docx.py scripts/cephalo_guard.py scripts/cross_session_audit.py scripts/docx_pagination.py scripts/verbatim_check.py
+        run: python -m py_compile scripts/abbreviations_extract.py scripts/bibliography_check.py scripts/build_reference_docx.py scripts/cephalo_guard.py scripts/cross_session_audit.py scripts/docx_pagination.py scripts/state_check.py scripts/verbatim_check.py
 
       - name: Shell syntax
         # One file per call: `bash -n a b c` parses only a (b and c become its arguments).
@@ -229,6 +229,7 @@ jobs:
           python scripts/build_reference_docx.py --help
           python scripts/cross_session_audit.py --help
           python scripts/docx_pagination.py --help
+          python scripts/state_check.py --help
           python scripts/verbatim_check.py --help
           bash scripts/docx_postprocess.sh --help
           bash scripts/extract_styleguide.sh --help
@@ -1198,6 +1199,79 @@ jobs:
           g init -q "$W/src" && g -C "$W/src" add -A && g -C "$W/src" commit -qm src
           g clone -q --bare "$W/src" "$W/bare.git" && g -C "$W/bare.git" worktree add -q main
           expect 0 python scripts/cross_session_audit.py --repo-root "$W/bare.git/main"
+
+      - name: state_check.py on a state file (open items, rows, word counts, long lines)
+        run: |
+          W=/tmp/ci_state; rm -rf "$W"; mkdir -p "$W/ch" "$W/ch2"
+          expect() {
+            local want=$1; shift
+            set +e; "$@" > "$W/out.txt" 2>&1; local got=$?; set -e
+            if [ "$got" != "$want" ]; then echo "expected exit $want, got $got: $*"; cat "$W/out.txt"; exit 1; fi
+          }
+          has() { grep -qF -- "$1" "$W/out.txt" || { echo "missing: $1"; cat "$W/out.txt"; exit 1; }; }
+          hasnt() { if grep -qF -- "$1" "$W/out.txt"; then echo "unexpected: $1"; cat "$W/out.txt"; exit 1; fi; }
+          quote=$(printf 'x%.0s' $(seq 1 600))
+          printf '%s\n' '# State' '' '## Current state' '- Workflow: seminar_2agent' '- Page count: 2 of 3' '' \
+            '## Chapter status' '| Chapter | Written | Source-verified |' '|:-|:-:|-|' \
+            '| 2 Body | ✅ ch_2_body.md, 4 of 600 words | ✅ R1: ✅ 3; loop 0 |' '' \
+            '## Source registry (WITH ORIGINAL QUOTES)' "| Src | 2 | 5 | $quote | paraphrase |" '' \
+            '## Open issues' '- [ ] An open item' '- [x] A ticked item' > "$W/state.md"
+          printf '%s\n' '# Body' '' 'One two three.' > "$W/ch/ch_2_body.md"
+          printf 'not a chapter\n' > "$W/ch/.gitkeep"
+          expect 0 python scripts/state_check.py "$W/state.md" "$W/ch"
+          has '(17 lines)'
+          has 'Summary: open items 1, ticked 1; chapter files counted 1 of 1; lines over 500 characters in Current state and Chapter status: 0'
+          has 'l. 4: - Workflow: seminar_2agent'
+          has '1 row(s) below the table'
+          has 'l. 10: | 2 Body | ✅ ch_2_body.md, 4 of 600 words | ✅ R1: ✅ 3; loop 0 |'
+          has 'l. 16 [Open issues]: - [ ] An open item'
+          has 'ch_2_body.md: Words: 4 '                   # the heading counts, as with --words
+          hasnt 'gitkeep'
+          # a long line in Current state, or a long row in Chapter status: exit 1, named with its line
+          long=$(printf 'y%.0s' $(seq 1 520))
+          sed "s/^- Workflow: seminar_2agent\$/- Last agent: $long/" "$W/state.md" > "$W/long.md"
+          expect 1 python scripts/state_check.py "$W/long.md"
+          has 'l. 4 [Current state], 534 characters'
+          has 'Shorten each'
+          sed "s/^| 2 Body | /| 2 Body $long | /" "$W/state.md" > "$W/longrow.md"
+          expect 1 python scripts/state_check.py "$W/longrow.md"
+          has 'l. 10 [Chapter status]'
+          # any heading ends a section; a heading may carry more words; a long line elsewhere does not count
+          printf '%s\n' '### Current state (2026-10-28)' '- Stand: offen' '## Chapter status' '| A | B |' \
+            '#### Notes' "$long" '- [ ] An item under the notes' > "$W/levels.md"
+          expect 0 python scripts/state_check.py "$W/levels.md"
+          has 'l. 2: - Stand: offen'
+          has 'l. 7 [Notes]: - [ ] An item under the notes'
+          # Windows line endings, a byte order mark, UTF-16 and Windows-1252 are read the same way
+          sed 's/$/\r/' "$W/state.md" > "$W/crlf.md"
+          expect 0 python scripts/state_check.py "$W/crlf.md"
+          has '(17 lines)'
+          has 'l. 16 [Open issues]: - [ ] An open item'
+          printf '\xef\xbb\xbf' | cat - "$W/state.md" > "$W/bom.md"
+          expect 0 python scripts/state_check.py "$W/bom.md"
+          has 'l. 4: - Workflow: seminar_2agent'
+          iconv -f utf-8 -t utf-16 "$W/state.md" > "$W/utf16.md"
+          expect 0 python scripts/state_check.py "$W/utf16.md"
+          has 'l. 16 [Open issues]: - [ ] An open item'
+          printf '## Current state\n- Stand: Prüfung\n## Chapter status\n' | iconv -f utf-8 -t cp1252 > "$W/ansi.md"
+          expect 0 python scripts/state_check.py "$W/ansi.md"
+          has 'l. 2: - Stand: Prüfung'
+          # a chapter it cannot count is named, and the report goes on with the state file's exit code
+          printf 'not a zip' > "$W/ch2/broken.docx"; printf 'x' > "$W/ch.pdf"
+          expect 1 python scripts/state_check.py "$W/long.md" "$W/ch2" "$W/ch.pdf" "$W/none" "$W/ch/ch_2_body.md"
+          has 'chapter files counted 1 of 2'
+          has 'broken.docx: not counted:'
+          has 'ch.pdf: not counted (not a .md, .txt or .docx chapter)'
+          has 'none: not found'
+          has 'l. 4 [Current state], 534 characters'
+          # not a state file, a missing state file, no arguments: exit 2
+          printf '# Notes\n' > "$W/notes.md"
+          expect 2 python scripts/state_check.py "$W/notes.md"
+          has 'no "Current state" heading'
+          expect 2 python scripts/state_check.py "$W/missing.md"
+          expect 2 python scripts/state_check.py
+          expect 0 python scripts/state_check.py --help
+          has 'Exit codes:'
 
       - name: verbatim_check.py on generated chapters and sources
         run: |
@@ -2604,7 +2678,7 @@ jobs:
 
       - name: Python syntax (Windows)
         shell: powershell
-        run: python -m py_compile scripts/abbreviations_extract.py scripts/bibliography_check.py scripts/build_reference_docx.py scripts/cephalo_guard.py scripts/cross_session_audit.py scripts/docx_pagination.py scripts/verbatim_check.py
+        run: python -m py_compile scripts/abbreviations_extract.py scripts/bibliography_check.py scripts/build_reference_docx.py scripts/cephalo_guard.py scripts/cross_session_audit.py scripts/docx_pagination.py scripts/state_check.py scripts/verbatim_check.py
 
       # Informational only: not part of the verified baseline. Remove
       # continue-on-error once a clean run is confirmed.
