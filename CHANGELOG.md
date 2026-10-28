@@ -8,7 +8,9 @@ Dates follow ISO 8601 (`YYYY-MM-DD`).
 
 ---
 
-## [Unreleased]
+## [1.4.3] — 2026-10-28
+
+**What the sixth seminar trial run found.** The loop limit now holds in the closing step too: a revision for a finding of a later check is an iteration, and a chapter already at its limit gets the question with all three options first. A seminar paper's state file has no phase line and short rows, the closing check reads it in one call, the writer's gaps go to the styleguide at once, and the format-verifier lists every pair of repeated citations on its own line. The seventh seminar trial run, on these definitions and on the subscription, asked the question at the limit at all four places, two of them in the closing step, kept the phase out of the state file and the commit proposals of chats 2 to 5, listed 38 of 38 pairs on their own lines and recorded 3 of 6 writer gaps as asked (before: none); the guard again denied nothing it should not have. It cost 37.29 USD and took 103 minutes, more than the sixth run, mostly through the extra rounds the user chose at the limit. Two rules did not take hold and are next: the closing check again read the state file in parts, and its rows grew longer.
 
 ### Changed
 
