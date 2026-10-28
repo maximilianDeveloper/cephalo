@@ -147,7 +147,8 @@ phases:
     verification_method: |
       The orchestrator checks these criteria before transitioning:
         - all_chapters_content_complete: read workspace/state.md; every row of the
-          Chapter status table has ✅ in the Written and Source-verified columns
+          Chapter status table begins its Written and Source-verified cells with ✅
+          (the round counts after it are history)
         - all_chapters_source_verified: grep chapter files for any ⚠️ or ❓ markers
         - open_content_warnings: count open ⚠️, ❌ and ❓ items in workspace/state.md
           (Chapter status table, unchecked "- [ ]" lines under Open issues; not the

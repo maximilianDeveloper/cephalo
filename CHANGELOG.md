@@ -8,6 +8,17 @@ Dates follow ISO 8601 (`YYYY-MM-DD`).
 
 ---
 
+## [Unreleased]
+
+### Changed
+
+- **The loop limit also in a later check** — a revision that a finding of any later check prompts (a consistency check, a format round, the final check) counts as an iteration, while a change to the reference list alone does not, and a chapter already at its limit gets the question with Abort, Manual fix and Force continue before the writer's next revision of it; a choice between ways to fix the finding does not answer it, and a format-only fix is no revision (all three orchestrators; the seminar workflow's step 2 and F.1 items 3 and 6, the presentation workflow's format round and three-way check). In the sixth seminar trial run the closing step revised the conclusion a third time with a limit of 2.
+- **The closing read of the state file in one call** — the closing check of the seminar and presentation workflows reads `workspace/state.md` in one Read call without offset or limit, also when the chat read it earlier; only if the Read tool refuses the file as too large does it read consecutive parts that cover every line, and say so. In the trial run it read the file in two parts and missed two resolved items and old word counts.
+- **Short rows in the state file** — "State file format" in `orchestrator.md` says what a row of Chapter status holds: each cell begins with its status, followed by the chapter file and its word count against the budget, or each round's status counts and the loop count; findings stay in the saved reports, decisions in the decision log, and a line of Current state is replaced, not extended. The A → B check of the bachelor workflow reads the status at the start of the cells. In the trial run chapter rows reached 3,700 characters.
+- **The writer's gaps at once** — in a seminar paper, each rule the writer names as not covered goes under "Open questions" in `styleguide.md`, or to the user as a note, when the answer comes in and before a question to the user or the next agent call; a line in the state file does not replace either.
+- **No phase in a seminar paper or presentation** — its state file has no phase line and leaves out the Chapter status columns its workflow names, and a commit message proposed at the end of a chat names the chapter or step (`ch_2: …`, `slides: …`, `F.1: …`) in place of the phase.
+- **format-verifier** — every pair of repeated citations gets its own line, also when one paragraph holds several, not one line with "×2" (`format-verifier.md`, `checklists/format_rules.md`).
+
 ## [1.4.2] — 2026-10-27
 
 **What the fifth seminar trial run found.** The definitions now keep status marks out of a seminar reference list, rate a gap between chapters instead of noting it, keep the state file short and check it whole at the close, copy a chapter before each revision, and name all three options at the loop limit. The sixth seminar trial run, on these definitions, had no status mark in the reference list in any version or in the Word file, caught a claim that left out one of its conditions in the first round, copied the chapter before each of six revisions, and saw no false or missed denial of the guard; it cost about as much as the fifth (31.83 against 31.67 USD) and took 81 minutes instead of 88. Its findings follow in the next release: a revision in the closing step that went past the loop limit without the question, a closing check that read the state file in parts, and gaps the writer named that went only into the state file.
