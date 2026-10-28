@@ -285,9 +285,11 @@ phases:
            workspace/state.md. Its findings go to the writer-agent (chapter text
            and reference list; copies first: step 2, item 2), and the
            sentences changed get a verification round (step 2). A revision
-           of a chapter's text counts toward its loop count (a change to the
-           reference list alone does not): for a chapter already at its loop
-           limit, ask the user the question of orchestrator.md,
+           of a chapter's text for these findings counts toward its loop
+           count (a change to the reference list alone does not, nor one the
+           user asks for that no finding prompted: orchestrator.md, "Feedback
+           loop control"): for a chapter already at its loop limit, ask the
+           user the question of orchestrator.md,
            "Feedback-loop escalation", before the revision; a choice between
            ways to fix the finding does not answer it.
         4. The title page with the table of contents field,
