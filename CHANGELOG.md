@@ -8,6 +8,20 @@ Dates follow ISO 8601 (`YYYY-MM-DD`).
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- **`scripts/state_check.py`** — a read-only check of the state file of a flat project: after a summary line, it lists every line of Current state and Chapter status and every open item in full, with line numbers, the word count of each chapter file as `verbatim_check.py --words` counts it (a chapter it cannot count is named, and the report goes on), and the lines of Current state and Chapter status over 500 characters (exit code 1). A section runs from its heading, at any level, to the next one; UTF-8, UTF-16 and Windows-1252 files are read. A Grep leaves such lines out, and a Read in parts what lies between the parts; in the sixth and seventh seminar trial runs the closing check read the state file in parts, although the definition asked for one whole read. `docs/scripts.md` describes it.
+
+### Changed
+
+- **The closing check runs `state_check.py`** — at the end of every chat the orchestrator, or Claude in the main chat, runs it on `workspace/state.md` and the chapter folder and shortens each line it reports as too long (`orchestrator.md`, "Chat closure ritual", item 1); the closing check of the seminar and presentation workflows goes through its output instead of one whole Read of the file. On exit code 2, or without Python, the file is read whole with the Read tool, and the user is told. In the seventh trial run the state file grew to 46.7 KB, with a Chapter status row of 5,719 characters.
+- **A follow-up round's task prompt adds no instruction of its own** — it names the chapter file, the previous round's report, the changed sentences and the verbatim report, with the files every prompt or an open item needs; how a later round rates is in `source-verifier.md`, "Rounds after a revision". In the trial runs such prompts asked the verifier to check every sentence anew or restated its rules.
+- **The 80 % warning of the page budget** comes while a chapter is still to be written, counted in the order of writing; "after chapter 3" read differently with the order body, conclusion, introduction.
+- **A seminar paper's reference list** is written when a task prompt asks for it, in the closing step F.1, item 2 (`writer-agent.md`, `docs/reference_management.md`).
+- **The setup chat's commit proposal** names its step, `0.5: …`, in a seminar paper or presentation.
+
 ## [1.4.3] — 2026-10-28
 
 **What the sixth seminar trial run found.** The loop limit now holds in the closing step too: a revision for a finding of a later check is an iteration, and a chapter already at its limit gets the question with all three options first. A seminar paper's state file has no phase line and short rows, the closing check reads it in one call, the writer's gaps go to the styleguide at once, and the format-verifier lists every pair of repeated citations on its own line. The seventh seminar trial run, on these definitions and on the subscription, asked the question at the limit at all four places, two of them in the closing step, kept the phase out of the state file and the commit proposals of chats 2 to 5, listed 38 of 38 pairs on their own lines and recorded 3 of 6 writer gaps as asked (before: none); the guard again denied nothing it should not have. It cost 37.29 USD and took 103 minutes, more than the sixth run, mostly through the extra rounds the user chose at the limit. Two rules did not take hold and are next: the closing check again read the state file in parts, and its rows grew longer.

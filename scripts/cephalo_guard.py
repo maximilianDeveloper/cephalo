@@ -86,7 +86,7 @@ DEFAULT_OFF = ('P1',)
 # S5), to write files.
 SHIPPED_SCRIPTS = ('abbreviations_extract.py', 'bibliography_check.py', 'build_reference_docx.py',
                    'cephalo_guard.py', 'cephalo_guard.sh', 'cross_session_audit.py', 'docx_pagination.py',
-                   'docx_postprocess.sh', 'extract_styleguide.sh', 'verbatim_check.py')
+                   'docx_postprocess.sh', 'extract_styleguide.sh', 'state_check.py', 'verbatim_check.py')
 
 
 # Work limits for one call: past one of them the guard stops and lets the call

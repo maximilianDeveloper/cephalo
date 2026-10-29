@@ -352,19 +352,21 @@ phases:
            Numbers, "Start at" (docs/reference_management.md, "The title
            page", step 5) and update the fields again; (c) fill in the title
            page's placeholders; (d) visual proofreading.
-        8. Before the chat closes, read workspace/state.md whole with the Read
-           tool, in one call without offset or limit, also if you read it
-           earlier in this chat (a Grep result leaves out its long lines, and
-           an earlier read does not show what this chat changed; only if the
-           Read tool refuses the file as too large, read it in consecutive
-           parts that cover every line, and tell the user): its "Current
-           state", "Chapter status" and "Open issues" and the "Open questions" of
-           styleguide.md agree, and an open issue this chat resolved is ticked
-           (`- [x]`), not one the user accepted as it stands, which stays
+        8. Before the chat closes, run in the Bash tool (on Windows with py):
+             python3 scripts/state_check.py workspace/state.md workspace/output/chapters/
+           and go through its whole output, which lists the "Current state",
+           the "Chapter status" and every open item of workspace/state.md in
+           full, with each chapter's word count (a Grep result leaves out long
+           lines, and a Read in parts what lies between them): these and the
+           "Open questions" of styleguide.md agree, and an open issue this
+           chat resolved is ticked (`- [x]`), not one the user accepted as it stands, which stays
            `- [ ]` (orchestrator.md, "Feedback-loop escalation", item 1);
            nothing is called resolved in one that is still open in another,
-           and the word counts and the Page count line match the chapter
-           files as they now are.
+           and the word counts and the Page count line match the counts it
+           gives. After your changes, run it again: it ends with exit code 0
+           once no line it checks is too long, and this run is the one item 1
+           of the Chat closure ritual asks for. On exit code 2, or without
+           Python, the Chat closure ritual, item 1, says what to do.
            Then the Chat closure ritual (main_session). For its item 5, run in
            the Bash tool:
              git status --short -- styleguide.md && git diff HEAD -- styleguide.md
