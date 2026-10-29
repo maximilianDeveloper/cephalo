@@ -132,22 +132,26 @@ The source-verifier or orchestrator returns a structured report:
 
 | Category | Status | Findings |
 |----------|--------|----------|
-| A.1 Cross-references | ✅ / ⚠️ / ❌ | ... |
-| A.2 Self-plagiarism | ✅ / ⚠️ / ❌ | ... |
-| A.3 Argumentation | ✅ / ⚠️ / ❌ | ... |
-| A.4 Terms | ✅ / ⚠️ / ❌ | ... |
-| A.5 Editions | ✅ / ⚠️ / ❌ | ... |
+| A.1 Cross-references | ✅ / ⚠️ / ❌ / ❓ / – | ... |
+| A.2 Self-plagiarism | ✅ / ⚠️ / ❌ / ❓ / – | ... |
+| A.3 Argumentation | ✅ / ⚠️ / ❌ / ❓ / – | ... |
+| A.4 Terms | ✅ / ⚠️ / ❌ / ❓ / – | ... |
+| A.5 Editions | ✅ / ⚠️ / ❌ / ❓ / – | ... |
+| B.3 Body ↔ conclusion (when the task prompt names it) | ✅ / ⚠️ / ❌ / ❓ / – | ... |
 
 ### Detailed findings
 
-[Per ⚠️ or ❌: precise location, problem description, proposed fix]
+[Per ⚠️, ❌ or ❓: precise location, problem description, proposed fix; per –: the chapter it waits for]
 
 ### Recommendation
 
-✅ Work can proceed
-⚠️ Minor adjustments recommended (non-blocking)
+✅ Work can proceed: no ⚠️, ❌ or ❓ left
+⚠️ Adjustments required: they go to the revision
 ❌ Correction required before continuing
+❓ Material missing: what, and who supplies it
 ```
+
+In Part A and B.2-B.3, no status is minor or non-blocking: a ⚠️ or ❌ goes to the revision of the chapter its fix changes, a ❓ to whoever supplies what is missing, and that chapter has not passed while one is left (`.claude/agents/orchestrator.md`, "Feedback loop control"; long-form: `orchestrator-longform.md`, "Feedback-loop escalation"). A `–` (an en dash) marks a point that waits for a chapter not yet written: the next consistency check that includes that chapter, or else the final check, takes it up.
 
 ---
 
