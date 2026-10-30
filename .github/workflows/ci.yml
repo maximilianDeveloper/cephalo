@@ -2027,7 +2027,7 @@ jobs:
             '5 words, line 7: "das Gefühl, am alten Hafen"' '    in ch_2_hafen.md (line 7)' \
             '9 words, line 15: "Die alten Kräne am Kai wurden abgebaut und verschrottet"' \
             '    in ch_2_hafen.md (line 13); 7 of these words also in a run from the sources above' \
-            'quotation, line 7: "wie sich die leeren Speicher am alten Hafen nutzen lassen"' \
+            'quotation of 10 words, line 7: "wie sich die leeren Speicher am alten Hafen nutzen lassen"' \
             '    in ch_1_einleitung.docx (paragraph 2), there outside quotation marks' > "$X/shared_want.txt"
           if ! diff "$X/shared_want.txt" "$X/shared.txt"; then cat "$V/out.txt"; echo "the runs shared with other chapters differ"; exit 1; fi
           # the source part is the report without --chapters, apart from the header line

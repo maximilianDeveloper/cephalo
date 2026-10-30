@@ -67,9 +67,10 @@ With --chapters and the paths after it, the chapter is also compared with
 the other chapters, for the self-plagiarism check between chapters (A.2 of
 checklists/consistency.md): chapter files, or the .md and .docx files
 directly in a folder, the chapter itself left out. Each is read as the
-chapter is, so that its quotations, block quotes, bibliography and raw
-blocks for the export are left out on its side too, and a run is found and
-counted as above. Under "Runs shared with other chapters" the report lists
+chapter is, so that its bibliography and raw blocks for the export are
+left out, and a run is found and counted as above; quotations and block
+quotes are compared only with text outside quotation marks on the other
+side. Under "Runs shared with other chapters" the report lists
 each run of 5 or more words the chapter shares with one of them, with that
 chapter's file and line, unless the run lies wholly within a run from the
 sources listed above; and each direct quote of the chapter that the sources
@@ -1221,8 +1222,9 @@ def main() -> None:
             runs.append((i, n, c, q, hits))
 
     # The other chapters (--chapters), read as the chapter is: a run they share
-    # with it is counted the same way, and their quotations, block quotes,
-    # bibliography and raw blocks take no part. What cannot be read goes into
+    # with it is counted the same way; their bibliography and raw blocks take
+    # no part, their quotations and block quotes are compared with the
+    # chapter's own text only (below). What cannot be read goes into
     # the lists of the sources' report, but not into its line on the sources.
     others, other_quotes, other_unchecked, other_unreadable = [], [], [], []
     for f in other_chapter_files(other_args or [], chapter_path, other_unchecked):
@@ -1348,7 +1350,7 @@ def main() -> None:
             print(f"    in {describe_chapters(compared, hits, n, lambda i, m: sum(run_length(chapter, ids, i, m)))}"
                   + (f"; {also} of these words also in a run from the sources above" if also else ""))
         for place, quote, at in quoted:
-            print(f"quotation, {chapter.unit} {place}: \"{shorten(quote)}\"")
+            print(f"quotation of {as_written(quote)} words, {chapter.unit} {place}: \"{shorten(quote)}\"")
             # each place has the whole quotation part (n = m = 0: no "of these words")
             print(f"    in {describe_chapters(others, [(s, p, 0, 0) for s, p in at], 0, None)}, "
                   "there outside quotation marks")
