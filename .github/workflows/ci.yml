@@ -1410,7 +1410,13 @@ jobs:
           expect 0 python scripts/repeated_citations.py "$W/ch" "$W/other/ch_1_intro.md"
           has "- $W/other/ch_1_intro.md:1 — Smith 2010, cited again as \`(ibid.)\`"
           has "- $W/ch/ch_1_intro.md:7 — Keller 2018"
-          # a heading with a long run of spaces (a blanked comment) takes no time
+          # a footnote's form keeps its period; a file named twice is read once; a heading with
+          # a long run of spaces (a blanked comment) takes no time
+          printf '%s\n' '# Text' '' 'Ein Satz.[^1] Noch einer.[^2]' '' '[^1]: Keller 2018, S. 4.' '[^2]: Ebd.' > "$W/notes.md"
+          expect 0 python scripts/repeated_citations.py "$W/notes.md" "$W/./notes.md" "$W/notes.md"
+          has 'read in this order: notes.md'
+          hasnt 'notes.md, '
+          has '- notes.md:6 — Keller 2018, cited again as `Ebd.` (footnote [^2]'
           printf '## Grundlagen%3000s und Begriffe\n\nText (Keller 2018). Dann (ebd.).\n' '' > "$W/slow.md"
           expect 0 timeout 20 python scripts/repeated_citations.py "$W/slow.md"
           has '- slow.md:3 — Keller 2018, cited again as `(ebd.)`'

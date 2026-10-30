@@ -72,6 +72,7 @@ text file, or a folder without .md files (an Error: line on stderr).
 """
 
 import bisect
+import os
 import re
 import sys
 import unicodedata
@@ -453,8 +454,11 @@ def citations_in(text: str, file: str, lines_at: list, note: bool = False) -> li
                     got, sec = parse_part(part)
                     items += got
                     secondary = secondary or sec
-                if items and free(start, start + len(content)):
-                    add(start, start + len(content), items, secondary)
+                end = start + len(content)
+                if text[end:end + 1] == ".":
+                    end += 1             # the form keeps its period: "Ebd.", "S. 7 ff."
+                if items and free(start, end):
+                    add(start, end, items, secondary)
     found.sort(key=lambda x: x[0])
     return found
 
@@ -540,7 +544,7 @@ def natural(name: str) -> list:
 
 
 def chapter_files(args: list) -> list:
-    files = []
+    files, seen = [], set()
     for arg in args:
         p = Path(arg)
         if p.is_dir():
@@ -561,7 +565,14 @@ def chapter_files(args: list) -> list:
             files.append(p)
         else:
             fail(f"not found: {p}")
-    return files
+    # a file named twice (a folder and a file in it, "./x.md" and "x.md") is read once
+    unique = []
+    for f in files:
+        key = os.path.normcase(str(f.resolve()))
+        if key not in seen:
+            seen.add(key)
+            unique.append(f)
+    return unique
 
 
 def report(args: list) -> int:
