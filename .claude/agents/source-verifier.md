@@ -154,11 +154,11 @@ Name an extract entry by its file name and quote ID, the `### Q<n>` heading abov
 Per extract: its verdict (see "Verdict on an extract" above), then one row per entry with a finding, and the notes below them. Entries without a finding need no row.
 
 ```markdown
-**Lindqvist_2017.md: ⚠️**
+**Weber_2017.md: ⚠️**
 
 | Entry | Status | Finding |
 |---|---|---|
-| Lindqvist_2017.md Q12 | ⚠️ | [what is wrong, with the page] |
+| Weber_2017.md Q12 | ⚠️ | [what is wrong, with the page] |
 
 Notes: [remarks on the extract's own wording, quote IDs, labels]
 ```

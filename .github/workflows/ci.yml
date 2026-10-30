@@ -1809,7 +1809,7 @@ jobs:
                   content.set_data(("BT /F1 10 Tf 20 280 Td 12 TL " + " ".join(f"({l}) '" for l in lines) + " ET").encode("latin-1"))
                   page[NameObject("/Contents")] = pw._add_object(content)
               pw.write(path)
-          a, b = "Brandt - Stadtklima und Gruen", "Kapitel 3: Baeume in der Stadt"
+          a, b = "Lorenz - Stadtklima und Gruen", "Kapitel 3: Baeume in der Stadt"
           fill = "Ein Absatz mit allgemeinem Text ueber Parks und Plaetze in der Stadt."
           pdf(os.path.join(h, "book", "book.pdf"), [["40 " + a, fill, fill], [b + " 41", fill, fill],
               ["42 " + a, fill, "Die Baeume der Altstadt kuehlen ihre Umgebung, weil ihr dichter Baum-"],

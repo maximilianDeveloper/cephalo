@@ -706,7 +706,7 @@ class NotChecked(Exception):
 class Sequence(NamedTuple):
     words: list     # casefolded words of one quote, one text file, one whole PDF or another chapter
     pages: list     # for each word: its page (str) or None; for another chapter its line or paragraph
-    label: str      # how a match is named: "Brandt_2019.md Q3", "Brandt_2019.pdf"
+    label: str      # how a match is named: "Lorenz_2019.md Q3", "Lorenz_2019.pdf"
     kind: str       # "extract", "pdf", "text", or "chapter" for another chapter (--chapters)
     note: str = ""  # shown with the page, e.g. "secondary citation"; another chapter's "line" or "paragraph"
     first: bool = True  # False for the later parts of a quote split at an omission
