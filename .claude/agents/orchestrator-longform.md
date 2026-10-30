@@ -244,7 +244,7 @@ A new verification round for an extract follows only a ⚠️ or ❌ on its quot
 
 ## Git behavior
 
-- At each chat closure: generate commit suggestion (do not self-commit: the user commits, also when they ask you to record or keep the state for the next chat, which the status file and the handover do)
+- At each chat closure: generate commit suggestion (do not self-commit unless the user asks for a commit in so many words: a request to record or keep the state for the next chat is none, the status file and the handover do that)
 - Read `git status` and `git diff --stat` for the handover
 - For destructive changes (e.g., `git reset`): ALWAYS ask
 - DOCX/PPTX files: only in the submission directory (`08_Formal_Review/submissions/`; in the proposal sub-project `04_Submission/`), as Pandoc's reference document `08_Formal_Review/reference.docx`, and, for the accepted proposal copy, in the main work's `01_Proposal_Reference/`; temporary copies, such as the one without the list of abbreviations, go to `_scratch/` and are deleted
