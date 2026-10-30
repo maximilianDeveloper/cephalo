@@ -58,7 +58,7 @@ In every phase, also once `styleguide.md` exists (a `[format]` entry answered in
 
 Every task prompt to another agent names:
 
-- the files it works on and the files it may change; for the format-verifier the checked file and the report file;
+- the files it works on and the files it may change; for the format-verifier the checked file and the report file, and for a check of an export the chapter files the export was made from, in its order (a seminar paper may name its chapter folder, whose files are numbered in document order);
 - for an agent with a shell, the Python command of this machine: `py` on Windows, otherwise `python3` (`checklists/precheck.md`, build tools). The agent definitions write `python3`, and an agent does not always switch to `py` on its own;
 - the entries of `workspace/feedback.md` that concern it, as written: the other agents do not read the file themselves. Skip an entry you do not follow ("Steps 1..N");
 - for a rule, the definition, `styleguide.md` or the checklist that holds it, not the rule in other words ("Point to rules, do not restate them" under "Principles").
