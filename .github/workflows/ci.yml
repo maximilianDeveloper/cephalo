@@ -1410,6 +1410,10 @@ jobs:
           expect 0 python scripts/repeated_citations.py "$W/ch" "$W/other/ch_1_intro.md"
           has "- $W/other/ch_1_intro.md:1 — Smith 2010, cited again as \`(ibid.)\`"
           has "- $W/ch/ch_1_intro.md:7 — Keller 2018"
+          # a heading with a long run of spaces (a blanked comment) takes no time
+          printf '## Grundlagen%3000s und Begriffe\n\nText (Keller 2018). Dann (ebd.).\n' '' > "$W/slow.md"
+          expect 0 timeout 20 python scripts/repeated_citations.py "$W/slow.md"
+          has '- slow.md:3 — Keller 2018, cited again as `(ebd.)`'
           # Windows line endings, UTF-16 and Windows-1252 are read the same way
           expect 0 python scripts/repeated_citations.py "$W/crlf.md" "$W/utf16.md" "$W/ansi.md"
           has '- crlf.md:2 — Keller 2018, cited again as `(ebd., S. 5)`'
@@ -2042,6 +2046,9 @@ jobs:
           grep -qF 'notes.pdf (.pdf is not read' "$V/out.txt"
           grep -qxF '✅ No verbatim run of 5 or more words outside quotation marks.' "$V/out.txt"
           grep -qxF "Runs shared with other chapters (A.2 of checklists/consistency.md): none of 5 or more words, and no quotation of another chapter's text." "$V/out.txt"
+          # a heading with a long run of spaces (a blanked comment) takes no time
+          printf '# Kapitel <!--%3000s--> eins\n\nEin Satz ohne Belege, der lang genug ist.\n' '' > "$X/slow.md"
+          expect 0 timeout 20 python scripts/verbatim_check.py "$X/slow.md" "$X/lange.txt"
           expect 2 python scripts/verbatim_check.py "$X/chapters/ch_3_fazit.md" "$X/lange.txt" --chapters "$X/broken.docx"
           grep -qF 'Verbatim check for: ch_3_fazit.md' "$V/out.txt"
           grep -A1 -xF 'Could not be read:' "$V/out.txt" | grep -qF 'broken.docx (cannot read it as .docx'

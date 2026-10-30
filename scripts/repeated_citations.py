@@ -130,7 +130,26 @@ FOOTNOTE_DEF = re.compile(r"\[\^([^\]\s]+)\]:")
 SOURCE_LINE = re.compile(r"(?mi)^[ \t>]*[*_]*(?:quellen?|sources?)[*_]*\s*:[*_]*")
 INLINE_NOTE = re.compile(r"\^\[((?:[^\[\]]|\[[^\[\]]*\])*)\]")
 FENCE = re.compile(r"(?ms)^ {0,3}(?P<f>`{3,}|~{3,})[^\n]*\n.*?(?:^ {0,3}(?P=f)[`~]*[ \t]*$|\Z)")
-HEADING = re.compile(r"\s{0,3}(#{1,6})\s+(.*?)\s*(?:\{[^}]*\})?\s*#*\s*$")
+HEADING_START = re.compile(r"\s{0,3}(#{1,6})\s+")
+
+
+def heading(line: str):
+    """(the #s, the title) of an ATX heading, or None: the title without a
+    closing {attributes} block and closing #s. A linear check: the pattern
+    it replaces took seconds on a heading with a long run of spaces inside,
+    which a blanked HTML comment leaves."""
+    m = HEADING_START.match(line)
+    if not m:
+        return None
+    title = line[m.end():].rstrip().rstrip("#").rstrip()
+    if title.endswith("}"):
+        cut = title.rfind("}", 0, len(title) - 1) + 1
+        brace = title.find("{", cut)
+        if brace >= 0:
+            title = title[:brace].rstrip()
+    return m.group(1), title
+
+
 # Capitalized words before a year that name no author: "(Stand 2020)", "(März
 # 2021)", "(Tabelle 3, 2020)". Words that are also surnames (Sommer, Winter,
 # Mai, August) count as authors, as in bibliography_check.py's parentheses.
@@ -210,7 +229,7 @@ def footnotes(lines: list) -> dict:
             out.setdefault(label, []).append(n)
         elif label is not None and not line.strip():
             gap = True
-        elif label is not None and (re.match(r" {2,}\S|\t", line) or not gap) and not HEADING.match(line):
+        elif label is not None and (re.match(r" {2,}\S|\t", line) or not gap) and not heading(line):
             out[label].append(n)
             gap = False
         else:
@@ -234,9 +253,9 @@ def chapter_parts(path: Path, vc) -> tuple:
     # the reference list: as verbatim_check.py finds it, its footnotes aside
     headings = []
     for n, line in enumerate(lines):
-        h = HEADING.match(line)
+        h = heading(line)
         if h and n not in in_notes:
-            headings.append((n, len(h.group(1)), 0, h.group(2)))
+            headings.append((n, len(h[0]), 0, h[1]))
     cut, refs = vc.bibliography_section(headings, len(lines)), None
     if cut:
         body = [n for n in range(cut[0] + 1, cut[1]) if n not in in_notes]

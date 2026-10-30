@@ -275,6 +275,26 @@ class Chapter(NamedTuple):
     counted: Optional[int] = None  # text[:counted] is what the word count counts (None: all of it)
 
 
+HEADING_START = re.compile(r"\s{0,3}(#{1,6})\s+")
+
+
+def heading(line: str):
+    """(the #s, the title) of an ATX heading, or None: the title without a
+    closing {attributes} block and closing #s. A linear check: the pattern
+    it replaces took seconds on a heading with a long run of spaces inside,
+    which a blanked HTML comment leaves."""
+    m = HEADING_START.match(line)
+    if not m:
+        return None
+    title = line[m.end():].rstrip().rstrip("#").rstrip()
+    if title.endswith("}"):
+        cut = title.rfind("}", 0, len(title) - 1) + 1
+        brace = title.find("{", cut)
+        if brace >= 0:
+            title = title[:brace].rstrip()
+    return m.group(1), title
+
+
 def blank(text: str, start: int, end: int) -> str:
     """Replace text[start:end] by spaces, keeping line breaks (and line numbers)."""
     return text[:start] + re.sub(r"[^\n]", " ", text[start:end]) + text[end:]
@@ -426,9 +446,9 @@ def read_markdown(path: Path) -> tuple:
     # that the line numbers stay) if it looks like one.
     headings = []
     for n, line in enumerate(lines):
-        h = re.match(r"\s{0,3}(#{1,6})\s+(.*?)\s*(?:\{[^}]*\})?\s*#*\s*$", line)
+        h = heading(line)
         if h:
-            headings.append((n, len(h.group(1)), 0, h.group(2)))
+            headings.append((n, len(h[0]), 0, h[1]))
     cut = bibliography_section(headings, len(lines))
     if cut:
         body = [n for n in range(cut[0] + 1, cut[1]) if n not in footnotes]
