@@ -74,7 +74,8 @@ each run of 5 or more words the chapter shares with one of them, with that
 chapter's file and line, unless the run lies wholly within a run from the
 sources listed above; and each direct quote of the chapter that the sources
 do not have but another chapter has outside quotation marks (the research
-question quoted again, for example). These are not rated and do not change
+question quoted again, for example), and each run of its own text that
+another chapter has in quotation marks. These are not rated and do not change
 the exit code. Another chapter that cannot be read is listed under "Could
 not be read", as a source is; a path that does not exist, under "Not
 checked".
@@ -694,10 +695,18 @@ def other_chapter_files(args: list, chapter_path: Path, unchecked: list) -> list
             unchecked.append(f"{p} (not found)")
             continue
         for f in files:
-            if f.resolve() not in seen:
+            if f.resolve() not in seen and not same_file(f, chapter_path):
                 seen.add(f.resolve())
                 found.append(f)
     return found
+
+
+def same_file(a: Path, b: Path) -> bool:
+    """True for the same file under another name (a hard link, a path in another case)."""
+    try:
+        return os.path.samefile(a, b)
+    except OSError:
+        return False
 
 
 def read_other_chapter(path: Path) -> tuple:
@@ -727,7 +736,7 @@ class Sequence(NamedTuple):
     words: list     # casefolded words of one quote, one text file, one whole PDF or another chapter
     pages: list     # for each word: its page (str) or None; for another chapter its line or paragraph
     label: str      # how a match is named: "Lorenz_2019.md Q3", "Lorenz_2019.pdf"
-    kind: str       # "extract", "pdf", "text", or "chapter" for another chapter (--chapters)
+    kind: str       # "extract", "pdf", "text"; "chapter" or "quote" for another chapter's text or quotations (--chapters)
     note: str = ""  # shown with the page, e.g. "secondary citation"; another chapter's "line" or "paragraph"
     first: bool = True  # False for the later parts of a quote split at an omission
 
@@ -1099,15 +1108,16 @@ def describe_chapters(seqs: list, hits: list, n: int, written) -> str:
     (line 18)", "ch_2_basics.md (lines 18, 40)"; a chapter that has only part
     of it, with the number of these words, as describe() names a source.
     """
-    places = {}  # (file name, unit, words of a part or None) -> [line or paragraph]
+    places = {}  # (file name, unit, in a quotation, words of a part or None) -> [line or paragraph]
     for s, p, m, i in sorted(hits, key=lambda h: (h[2] < n, h[0], h[1])):
         seq = seqs[s]
-        where = places.setdefault((seq.label, seq.note, written(i, m) if m < n else None), [])
+        where = places.setdefault((seq.label, seq.note, seq.kind == "quote", written(i, m) if m < n else None), [])
         if seq.pages[p] not in where:
             where.append(seq.pages[p])
     names = []
-    for (label, unit, part), where in places.items():
+    for (label, unit, quote, part), where in places.items():
         at = f"{unit}s {', '.join(where)}" if len(where) > 1 else f"{unit} {where[0]}"
+        at += ", in quotation marks there" if quote else ""
         names.append(f"{label} ({at}" + (f", {part} of these words)" if part else ")"))
     shown = "; ".join(names[:3])
     return shown + (f"; and {len(names) - 3} more" if len(names) > 3 else "")
@@ -1214,7 +1224,7 @@ def main() -> None:
     # with it is counted the same way, and their quotations, block quotes,
     # bibliography and raw blocks take no part. What cannot be read goes into
     # the lists of the sources' report, but not into its line on the sources.
-    others, other_unchecked, other_unreadable = [], [], []
+    others, other_quotes, other_unchecked, other_unreadable = [], [], [], []
     for f in other_chapter_files(other_args or [], chapter_path, other_unchecked):
         if f.suffix.lower() == ".docx":
             # without python-docx a Word chapter is not checked, as a PDF source is without pypdf
@@ -1229,11 +1239,20 @@ def main() -> None:
         else:
             others.append(Sequence(other.words, [None if pl is None else str(pl) for pl in other.places],
                                    f.name, "chapter", other.unit))
+            # its quotations and block quotes, which its words leave out: a run of
+            # the chapter's own text that another chapter quotes (the research
+            # question, quoted there and repeated here) is listed too
+            for place, quote in other.quotes:
+                for part in quote_parts(quote):
+                    words = tokens(PANDOC_CITATION.sub(" ", CITATION.sub(" ", part)))
+                    if len(words) >= POLISH:
+                        other_quotes.append(Sequence(words, [str(place)] * len(words), f.name, "quote", other.unit))
     # A run that lies wholly within runs listed against the sources is not
     # listed again: step 8 of the source-verifier rates it.
     from_sources = {k for i, n, *_ in runs for k in range(i, i + n)}
     shared = []
-    for i, n, hits in find_runs(chapter, others):
+    compared = others + other_quotes  # the text of the other chapters, then their quotations
+    for i, n, hits in find_runs(chapter, compared):
         c, q = run_length(chapter, ids, i, n)
         if c >= POLISH and not all(k in from_sources for k in range(i, i + n)):
             also = len({ids[k] for k in range(i, i + n) if k in from_sources and not chapter.quoted[k]})
@@ -1314,7 +1333,10 @@ def main() -> None:
             else:
                 quoted.append((place, quote, list(in_others[k])))
         print()
-        if not shared and not quoted:
+        if not others:
+            print("Runs shared with other chapters (A.2 of checklists/consistency.md): "
+                  "no other chapter compared.")
+        elif not shared and not quoted:
             print("Runs shared with other chapters (A.2 of checklists/consistency.md): "
                   "none of 5 or more words, and no quotation of another chapter's text.")
         else:
@@ -1323,7 +1345,7 @@ def main() -> None:
             start, end = chapter.spans[i][0], chapter.spans[i + n - 1][1]
             inside = f" (and {q} in quotation marks)" if q else ""
             print(f"{c} words{inside}, {chapter.unit} {chapter.places[i]}: \"{shorten(chapter.text[start:end])}\"")
-            print(f"    in {describe_chapters(others, hits, n, lambda i, m: sum(run_length(chapter, ids, i, m)))}"
+            print(f"    in {describe_chapters(compared, hits, n, lambda i, m: sum(run_length(chapter, ids, i, m)))}"
                   + (f"; {also} of these words also in a run from the sources above" if also else ""))
         for place, quote, at in quoted:
             print(f"quotation, {chapter.unit} {place}: \"{shorten(quote)}\"")

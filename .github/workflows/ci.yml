@@ -2051,7 +2051,14 @@ jobs:
           grep -qF 'no_such_chapter.md (not found)' "$V/out.txt"
           grep -qF 'notes.pdf (.pdf is not read' "$V/out.txt"
           grep -qxF '✅ No verbatim run of 5 or more words outside quotation marks.' "$V/out.txt"
-          grep -qxF "Runs shared with other chapters (A.2 of checklists/consistency.md): none of 5 or more words, and no quotation of another chapter's text." "$V/out.txt"
+          # the introduction's own sentence that the conclusion quotes is listed from this side too
+          grep -qxF '10 words, paragraph 2: "wie sich die leeren Speicher am alten Hafen nutzen lassen"' "$V/out.txt"
+          grep -qxF '    in ch_3_fazit.md (line 7, in quotation marks there)' "$V/out.txt"
+          # a hard link of the chapter is the chapter itself
+          ln "$X/chapters/ch_3_fazit.md" "$X/chapters/zz_link.md"
+          expect 0 python scripts/verbatim_check.py "$X/chapters/ch_3_fazit.md" "$X/lange.txt" --chapters "$X/chapters/"
+          grep -qxF '  Other chapters: 2 (ch_1_einleitung.docx, ch_2_hafen.md)' "$V/out.txt"
+          rm "$X/chapters/zz_link.md"
           # a heading with a long run of spaces (a blanked comment) takes no time
           printf '# Kapitel <!--%3000s--> eins\n\nEin Satz ohne Belege, der lang genug ist.\n' '' > "$X/slow.md"
           expect 0 timeout 20 python scripts/verbatim_check.py "$X/slow.md" "$X/lange.txt"
@@ -2060,7 +2067,7 @@ jobs:
           grep -A1 -xF 'Could not be read:' "$V/out.txt" | grep -qF 'broken.docx (cannot read it as .docx'
           expect 0 python scripts/verbatim_check.py "$X/chapters/ch_3_fazit.md" "$X/lange.txt" --chapters
           grep -qxF '  Other chapters: 0' "$V/out.txt"
-          grep -qxF "Runs shared with other chapters (A.2 of checklists/consistency.md): none of 5 or more words, and no quotation of another chapter's text." "$V/out.txt"
+          grep -qxF "Runs shared with other chapters (A.2 of checklists/consistency.md): no other chapter compared." "$V/out.txt"
           expect 2 python scripts/verbatim_check.py "$X/chapters/ch_3_fazit.md" --chapters "$X/chapters/" "$X/lange.txt"
           expect 2 python scripts/verbatim_check.py --words "$X/chapters/ch_3_fazit.md" --chapters "$X/chapters/"
           expect 0 python scripts/verbatim_check.py --help
