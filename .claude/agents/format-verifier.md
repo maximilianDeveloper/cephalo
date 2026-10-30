@@ -22,7 +22,7 @@ If `styleguide.md` lacks a rule, report this explicitly — do not guess.
 - Institutional guidelines (fallback reference): `workspace/sources/_guidelines/` or `guidelines/`
 - Status file: `workspace/state.md` or `00_Status.md`
 - format rules checklist: `checklists/format_rules.md`
-- Scripts: `scripts/bibliography_check.py`, `scripts/abbreviations_extract.py`
+- Scripts: `scripts/bibliography_check.py`, `scripts/abbreviations_extract.py`, `scripts/repeated_citations.py`
 - Commands: this definition writes `python3`; on Windows use `py`, also for your own one-line checks
 
 **Multi-project sub-project** (Claude Code opened on `01_Proposal/`, `02_Main_Work/` or `03_Defense/`): the styleguide is `../00_Shared_Materials/styleguide.md` and the guidelines are in `../00_Shared_Materials/guidelines/`. The framework folders stay at the multi-project root, one level up: `../checklists/`, `../scripts/`, `../templates/`, `../workflows/`, `../docs/`.
@@ -93,7 +93,7 @@ Verify the following categories. Concrete values (font size, page-range notation
 - [ ] Page range notation per styleguide
 - [ ] Several sources, two authors, same author and year, no date, no page numbers per styleguide (`in_text.multiple_sources`, `in_text.two_authors`, `in_text.same_author_year`, `in_text.no_date`, `in_text.no_page_locator`)
 - [ ] Secondary citations per styleguide (`in_text.secondary_citation`)
-- [ ] Repeated citations per styleguide (`in_text.repeated_citation`: a source cited again right after its previous citation, on the same page or another; list every such pair under the rule as `Pairs:`, one line each (`<file>:<line> — <source>, cited again as <the form the text uses>`), also when all pass and when one line of a chapter file (a paragraph) holds several: a paragraph that cites a source again twice gets two such lines with the same `<file>:<line>`, not one line with "×2"; check each against the value); `ebd.` or `ibid.` stands only there
+- [ ] Repeated citations per styleguide (`in_text.repeated_citation`: a source cited again right after its previous citation, on the same page or another, also in the next paragraph or chapter; `scripts/repeated_citations.py` (section 3) lists every such pair, one line each, `<file>:<line> — <source>, cited again as <the form the text uses>`: copy its `Pairs:` line and the lines below it under the rule as they stand, also when all pass, and check each line against the value, with citekeys in the form the DOCX shows; below them, add a pair it missed, or name a line that is no pair, as a line of your own that says so; without Python, list the pairs yourself in its form, one line each, also two with the same `<file>:<line>`); `ebd.` or `ibid.` stands only there: the script also lists one with no citation before it
 
 ## Style
 - [ ] Forbidden evaluative wording per styleguide (`style.forbidden_evaluative`)
@@ -104,7 +104,7 @@ Verify the following categories. Concrete values (font size, page-range notation
 
 ### 3. Automated mechanical checks
 
-These run deterministically (on Windows, use `py` instead of `python3`, and keep the paths' forward slashes: Git Bash drops an unquoted backslash). Run the two scripts below as given, without piping their output through `head` or another command, so that the last line shows the exit code, and put each exit code into your report:
+These run deterministically (on Windows, use `py` instead of `python3`, and keep the paths' forward slashes: Git Bash drops an unquoted backslash). Run the three scripts below as given, without piping their output through `head` or another command, so that the last line shows the exit code, and put each exit code into your report:
 
 **Bibliography minus-test:**
 ```bash
@@ -116,6 +116,12 @@ python3 scripts/bibliography_check.py workspace/output/document.docx; echo "exit
 python3 scripts/abbreviations_extract.py workspace/output/document.docx; echo "exit=$?"
 ```
 Run it on a copy of the document without the list of abbreviations, in `_scratch/format-verifier/`: the script reads the list too, so every listed entry would count as used.
+
+**Repeated citations** (`in_text.repeated_citation`, section 2), on the chapter files the export was made from, not on the DOCX: flat, the chapter folder, whose files the script reads in the order of the numbers in their names; long-form and the proposal, the files the export lists, in its order, which the task prompt names; a presentation, the companion's Markdown file:
+```bash
+python3 scripts/repeated_citations.py workspace/output/chapters/; echo "exit=$?"
+```
+Its first line names the files in the order read: compare it with the export's. It lists the pairs and judges no form; the check against the value is yours.
 
 **Automatic hyphenation** (only if `styleguide.md` sets `document.hyphenation` to automatic): check that the DOCX carries the flag, without changing it:
 ```bash
@@ -146,7 +152,7 @@ At the top of the report, the file you checked and the scripts' exit codes:
 
 ```markdown
 **Checked file:** [path of the DOCX, as the task prompt names it]
-**Script exit codes:** bibliography_check.py [n], abbreviations_extract.py [n]; hyphenation flag: [set / missing / not required]
+**Script exit codes:** bibliography_check.py [n], abbreviations_extract.py [n], repeated_citations.py [n]; hyphenation flag: [set / missing / not required]
 ```
 
 Then per verified rule:
@@ -181,7 +187,7 @@ These symbols are status codes, not decoration: the orchestrator, the state file
 
 **Phase B (Formatting):** full check including mechanical scripts, on the exported DOCX: fonts, margins, spacing, headings, pagination, the title page and the bibliography layout show only there, not in the Markdown chapter files. Multiple iterations expected.
 
-**Workflows without Phase B:** the check of the exported DOCX in the seminar's closing step F.1 is the full check of Phase B, also in its rounds after a fix (section 6). The presentation's step 3 exports no DOCX: its check is a full check too, not Phase A's, of the PPTX and the companion's Markdown file that the task prompt names, both in the **Checked file** line, against every rule of `styleguide.md` they can show, also in its rounds after a fix. The layout of the written document shows only in a DOCX (fonts, page size and margins, spacing, heading sizes, the page count and pagination, the title page, the table of contents field, the reference list's layout, the hyphenation flag): its rules go under **Not applicable** with this reason, for the companion and the slides alike, also where sections 4 and 6 would give them a status. Check the slides' layout for consistency from slide to slide (fonts, colours, logo position) and against a rule that `styleguide.md` gives for slides, if it has one. Run the two scripts and the hyphenation check of section 3 only on a DOCX the task prompt names; otherwise write `not run: no DOCX` for them in the **Script exit codes** line. In a round after a fix, judge the PPTX's layout afresh, as section 6 does with a DOCX.
+**Workflows without Phase B:** the check of the exported DOCX in the seminar's closing step F.1 is the full check of Phase B, also in its rounds after a fix (section 6). The presentation's step 3 exports no DOCX: its check is a full check too, not Phase A's, of the PPTX and the companion's Markdown file that the task prompt names, both in the **Checked file** line, against every rule of `styleguide.md` they can show, also in its rounds after a fix. The layout of the written document shows only in a DOCX (fonts, page size and margins, spacing, heading sizes, the page count and pagination, the title page, the table of contents field, the reference list's layout, the hyphenation flag): its rules go under **Not applicable** with this reason, for the companion and the slides alike, also where sections 4 and 6 would give them a status. Check the slides' layout for consistency from slide to slide (fonts, colours, logo position) and against a rule that `styleguide.md` gives for slides, if it has one. Run `bibliography_check.py`, `abbreviations_extract.py` and the hyphenation check of section 3 only on a DOCX the task prompt names; otherwise write `not run: no DOCX` for them in the **Script exit codes** line. `repeated_citations.py` runs on the companion's Markdown file. In a round after a fix, judge the PPTX's layout afresh, as section 6 does with a DOCX.
 
 ### 6. Rounds after a fix
 

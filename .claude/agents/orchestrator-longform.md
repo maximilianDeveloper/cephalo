@@ -101,7 +101,7 @@ Only start work after the user's answer, also when the start prompt says "procee
 
 Every task prompt to another agent names:
 
-- the files it works on and the files it may change; for the format-verifier the checked file and the report file ("`08_Formal_Review` (Phase B)");
+- the files it works on and the files it may change; for the format-verifier the checked file and the report file ("`08_Formal_Review` (Phase B)"), and for a check of an export the files the export lists, in its order, which `scripts/repeated_citations.py` reads;
 - for an agent with a shell, the Python command of this machine: `py` on Windows, otherwise `python3` (`checklists/precheck.md`, build tools). The agent definitions write `python3`, and an agent does not always switch to `py` on its own;
 - the entries of `00_Feedback_log.md` whose **Scope** names it, as written: the other agents do not read the log themselves. Skip entries marked `[EXAMPLE]`: they come from the template, and an entry you do not follow ("Chat start ritual", item 5);
 - for a rule, the definition, `styleguide.md` or the checklist that holds it, not the rule in other words ("Point to rules, do not restate them" under "Principles").

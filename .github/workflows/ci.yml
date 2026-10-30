@@ -34,7 +34,7 @@ jobs:
         run: python -m pip install -r requirements.txt pyyaml
 
       - name: Python syntax
-        run: python -m py_compile scripts/abbreviations_extract.py scripts/bibliography_check.py scripts/build_reference_docx.py scripts/cephalo_guard.py scripts/cross_session_audit.py scripts/docx_pagination.py scripts/state_check.py scripts/verbatim_check.py
+        run: python -m py_compile scripts/abbreviations_extract.py scripts/bibliography_check.py scripts/build_reference_docx.py scripts/cephalo_guard.py scripts/cross_session_audit.py scripts/docx_pagination.py scripts/repeated_citations.py scripts/state_check.py scripts/verbatim_check.py
 
       - name: Shell syntax
         # One file per call: `bash -n a b c` parses only a (b and c become its arguments).
@@ -229,6 +229,7 @@ jobs:
           python scripts/build_reference_docx.py --help
           python scripts/cross_session_audit.py --help
           python scripts/docx_pagination.py --help
+          python scripts/repeated_citations.py --help
           python scripts/state_check.py --help
           python scripts/verbatim_check.py --help
           bash scripts/docx_postprocess.sh --help
@@ -1271,6 +1272,160 @@ jobs:
           expect 2 python scripts/state_check.py "$W/missing.md"
           expect 2 python scripts/state_check.py
           expect 0 python scripts/state_check.py --help
+          has 'Exit codes:'
+
+      - name: repeated_citations.py on chapter files (pairs, footnotes, reference list, order, errors)
+        run: |
+          W=/tmp/ci_repeated; rm -rf "$W"; mkdir -p "$W/ch/sub" "$W/other" "$W/empty"
+          python - "$W" <<'EOF'
+          import os, sys
+          w = sys.argv[1]
+          def put(name, text, encoding="utf-8"):
+              with open(os.path.join(w, name), "w", encoding=encoding, newline="") as f:
+                  f.write(text)
+          put("ch/ch_1_intro.md",
+              "---\nchapter: 1\ntitle: \"Einleitung (Keller 2018)\"\n---\n# 1 Einleitung\n\n"
+              # line 7: ebd. after a citation; line 8: a citation over a line break
+              "Ein Satz (vgl. Keller 2018, S.\\ 4). Noch einer (ebd., S.\\ 5). Und einer\n"
+              "über zwei Zeilen (vgl. Keller\n2018, S.\\ 6).\n\n"
+              # a comment and a code block are no text
+              "<!-- (Keller 2018, S. 7) -->\n\n```r\nx <- f(1)  # (Keller 2018)\n```\n\n"
+              # line 17: a citation in the sentence between two of Keller: no pair
+              "Nach Weber (2019, S. 12) gilt das. Wieder Keller (Keller 2018, S. 8).\n"
+              # line 18: two sources, then ebd.: the source named last
+              "Zwei Quellen (vgl. Keller 2018, S.\\ 9; Weber/Schulz 2020, S. 3), dann (ebd., S. 4).\n"
+              # line 19: the same source in other forms; a parenthesis with a year that is no citation
+              "Dann (Weber & Schulz, 2020, p. 6), Weber und Schulz (2020, S. 7) und eine Zahl (Stand 2020).\n")
+          put("ch/ch_2_body.md",
+              "# 2 Hauptteil\n\n"
+              # line 3: et al. and u. a. are one source
+              "Weiter mit Weber und Schulz (2020). Dann (Müller et al. 2017) und (Müller u. a. 2017, S. 3).\n\n"
+              # line 5: a block quote's citation
+              "> Ein Blockzitat, lang genug für eines. (Müller et al. 2017, S. 4)\n\n"
+              # line 7: three pairs in one line, after a secondary citation too
+              "Danach (ebd., S. 5). Sekundär (Weber 1922, S.\\ 31, zit. nach Keller 2018, S.\\ 5), dann (ebd., S. 6)"
+              " und (Keller 2018, S. 7).\n"
+              # line 8: two years, two letters
+              "Jahre (Keller 2018, 2020), dann (Keller 2020, S. 3). Briefe (Brown 2019a, b), dann (Brown 2019b, S. 2).\n"
+              # line 9: no date; a footnote between two citations of Berg
+              "Ohne Jahr (Horst o. J.) und (Horst o. J., S. 2). Eine Fußnote.[^1] Danach (Berg 2015).\n"
+              # line 10: a page alone, a non-breaking space, a name particle
+              "Seite allein (S. 45), dann (vgl. auch Berg 2015, S. 46) und (von Wagner 2016) (ebd.).\n\n"
+              "| A | B |\n|---|---|\n| 1 | 2 |\n\n"
+              # line 16: a table's source line is a citation too, so line 18 is no pair
+              "Quelle: Smith 2010, S. 3\n\n"
+              "Nach der Tabelle (Wagner 2016, S. 8).\n\n"
+              # line 20: the footnote, read at its mark in line 9
+              "[^1]: Vgl. Berg 2015, S. 3; dazu (Berg 2015, S. 4).\n")
+          put("ch/ch_10_end.md",
+              "# 10 Fazit\n\n"
+              # line 3: ebd. right after the last citation of the chapter file before; citekeys
+              "(ebd., S. 9). Citekeys [@keller2018, p. 5], [see @keller2018, p. 6; @weber2019] and @weber2019 [p. 7].\n"
+              # line 4: a secondary citation with a citekey
+              "Secondary [Weber 1922, S.\\ 31, zit. nach @keller2018, S. 5], then [@keller2018, S. 6].\n"
+              # line 5: an e-mail address is no citekey; APA forms, ibid.
+              "Mail name@example.com (Smith, 2001, as cited in Jones, 2015), (Jones, 2015, p. 4), (Ibid., p. 5) and (ibid.).\n\n"
+              "```{=openxml}\n<w:p><w:r><w:br w:type=\"page\"/></w:r></w:p>\n```\n\n"
+              # lines 11-17: the reference list is left out
+              "# Literaturverzeichnis\n\n::: {custom-style=\"Bibliography\"}\nKeller, Anna (2018): Titel. Ort: Verlag.\n\n"
+              "Weber, Bernd (2019): Titel. Ort: Verlag, S.\\ 1–20.\n:::\n")
+          # not read from a folder: a hidden file, a .txt file, a subfolder
+          for name in ("ch/.hidden.md", "ch/notes.txt", "ch/sub/ch_9_draft.md"):
+              put(name, "(Keller 2018) (Keller 2018)\n")
+          put("alone.md", "(ebd.) Ein Satz (S. 4).\n\nDann (Keller 2018) und (Weber 2019).\n")
+          # a year in parentheses after a word is a citation only with a locator after it
+          put("prose.md", "Ein Wert (Keller 2018, S. 4), in Deutschland (2020: 5,9 %) und im Umsatz (2020, in Mio. €),"
+              " dann (ebd., S. 5).\nSmith's (2020) study and Smith (2020, p. 4) agree.\n")
+          put("other/ch_1_intro.md", "(Smith 2010) (ibid.)\n")
+          put("crlf.md", "(Keller 2018, S. 4)\r\n(ebd., S. 5)\r\n")
+          put("utf16.md", "(Müller 2017, S. 4)\n(ebd., S. 5)\n", encoding="utf-16")
+          put("ansi.md", "(Müller 2017, S. 4)\n(ebd., S. 5)\n", encoding="cp1252")
+          put("chapter.docx", "not a zip")
+          EOF
+          expect() {
+            local want=$1; shift
+            set +e; "$@" > "$W/out.txt" 2>&1; local got=$?; set -e
+            if [ "$got" != "$want" ]; then echo "expected exit $want, got $got: $*"; cat "$W/out.txt"; exit 1; fi
+            if grep -q '^Traceback' "$W/out.txt"; then cat "$W/out.txt"; echo "traceback: $*"; exit 1; fi
+          }
+          has() { grep -qF -- "$1" "$W/out.txt" || { echo "missing: $1"; cat "$W/out.txt"; exit 1; }; }
+          hasnt() { if grep -qF -- "$1" "$W/out.txt"; then echo "unexpected: $1"; cat "$W/out.txt"; exit 1; fi; }
+          # a folder: its .md files in the order of their numbers, one pair per line
+          expect 0 python scripts/repeated_citations.py "$W/ch"
+          has 'read in this order: ch_1_intro.md, ch_2_body.md, ch_10_end.md'
+          has 'Reference list left out: ch_10_end.md, l. 11–17'
+          has 'Pairs: 28'
+          has '- ch_1_intro.md:7 — Keller 2018, cited again as `(ebd., S.\ 5)`'
+          has '- ch_1_intro.md:8 — Keller 2018, cited again as `(vgl. Keller 2018, S.\ 6)`'
+          hasnt 'ch_1_intro.md:17 —'
+          has '- ch_1_intro.md:18 — Keller 2018, cited again as `vgl. Keller 2018, S.\ 9` in `(vgl. Keller 2018, S.\ 9; Weber/Schulz 2020, S. 3)`'
+          has '- ch_1_intro.md:18 — Weber/Schulz 2020, cited again as `(ebd., S. 4)`; the previous citation names 2 sources: `(vgl. Keller 2018, S.\ 9; Weber/Schulz 2020, S. 3)`; read as the source named last'
+          has '- ch_1_intro.md:19 — Weber & Schulz 2020, cited again as `(Weber & Schulz, 2020, p. 6)`'
+          has '- ch_1_intro.md:19 — Weber und Schulz 2020, cited again as `Weber und Schulz (2020, S. 7)`'
+          hasnt 'Stand 2020'
+          has '- ch_2_body.md:3 — Weber und Schulz 2020, cited again as `Weber und Schulz (2020)`; the previous citation is in ch_1_intro.md:19: `Weber und Schulz (2020, S. 7)`'
+          has '- ch_2_body.md:3 — Müller u. a. 2017, cited again as `(Müller u. a. 2017, S. 3)`'
+          has '- ch_2_body.md:5 — Müller et al. 2017, cited again as `(Müller et al. 2017, S. 4)`'
+          test "$(grep -c '^- ch_2_body.md:7 — ' "$W/out.txt")" = 3 || { echo "expected 3 pairs in ch_2_body.md:7"; cat "$W/out.txt"; exit 1; }
+          has '- ch_2_body.md:7 — Keller 2018, cited again as `(ebd., S. 6)`; the previous citation is a secondary citation: `(Weber 1922, S.\ 31, zit. nach Keller 2018, S.\ 5)`; read as the source named last'
+          has '- ch_2_body.md:8 — Keller 2020, cited again as `(Keller 2020, S. 3)`; the previous citation names 2 sources: `(Keller 2018, 2020)`'
+          has '- ch_2_body.md:8 — Brown 2019b, cited again as `(Brown 2019b, S. 2)`; the previous citation names 2 sources: `(Brown 2019a, b)`'
+          has '- ch_2_body.md:9 — Horst o. J., cited again as `(Horst o. J., S. 2)`'
+          has '- ch_2_body.md:20 — Berg 2015, cited again as `(Berg 2015, S. 4)` (footnote [^1], marked in l. 9)'
+          has '- ch_2_body.md:9 — Berg 2015, cited again as `(Berg 2015)`'
+          has '- ch_2_body.md:10 — Berg 2015, cited again as `(S. 45)`'
+          has "$(printf -- '- ch_2_body.md:10 — Berg 2015, cited again as `(vgl. auch Berg 2015, S.\302\24046)`')"
+          has '- ch_2_body.md:10 — von Wagner 2016, cited again as `(ebd.)`'
+          has 'Smith 2010 (1)'
+          hasnt 'ch_2_body.md:18 —'
+          has '- ch_10_end.md:3 — Wagner 2016, cited again as `(ebd., S. 9)`; the previous citation is in ch_2_body.md:18: `(Wagner 2016, S. 8)`'
+          has '- ch_10_end.md:3 — @keller2018, cited again as `see @keller2018, p. 6` in `[see @keller2018, p. 6; @weber2019]`'
+          has '- ch_10_end.md:3 — @weber2019, cited again as `@weber2019 [p. 7]`; the previous citation names 2 sources'
+          has '- ch_10_end.md:4 — @keller2018, cited again as `[@keller2018, S. 6]`; the previous citation is a secondary citation: `[Weber 1922, S.\ 31, zit. nach @keller2018, S. 5]`'
+          has '- ch_10_end.md:5 — Jones 2015, cited again as `(Jones, 2015, p. 4)`; the previous citation is a secondary citation'
+          has '- ch_10_end.md:5 — Jones 2015, cited again as `(Ibid., p. 5)`'
+          has '- ch_10_end.md:5 — Jones 2015, cited again as `(ibid.)`'
+          has 'Citekeys: the export shows the form the CSL style gives'
+          hasnt '@example'
+          hasnt 'Anna'
+          has 'Keller 2018 (9)'                         # not the hidden file, the .txt file or the subfolder
+          hasnt 'no citation before it'
+          # files in the order given; an ebd. with no citation before it
+          expect 0 python scripts/repeated_citations.py "$W/ch/ch_10_end.md" "$W/ch/ch_1_intro.md"
+          has 'read in this order: ch_10_end.md, ch_1_intro.md'
+          has '- ch_1_intro.md:7 — Keller 2018, cited again as `(ebd., S.\ 5)`'
+          has 'ebd., ibid. or a page alone with no citation before it: 1'
+          has '- ch_10_end.md:3 — `(ebd., S. 9)`'
+          expect 0 python scripts/repeated_citations.py "$W/alone.md"
+          has 'Pairs: 0'
+          has 'Reference list left out: none found in these files'
+          has '- alone.md:1 — `(ebd.)`'
+          has '- alone.md:1 — `(S. 4)`'
+          expect 0 python scripts/repeated_citations.py "$W/prose.md"
+          has '- prose.md:1 — Keller 2018, cited again as `(ebd., S. 5)`'
+          has '- prose.md:2 — Smith 2020, cited again as `Smith (2020, p. 4)`'
+          hasnt 'Deutschland'
+          hasnt 'Umsatz'
+          # two files of the same name are named by their path
+          expect 0 python scripts/repeated_citations.py "$W/ch" "$W/other/ch_1_intro.md"
+          has "- $W/other/ch_1_intro.md:1 — Smith 2010, cited again as \`(ibid.)\`"
+          has "- $W/ch/ch_1_intro.md:7 — Keller 2018"
+          # Windows line endings, UTF-16 and Windows-1252 are read the same way
+          expect 0 python scripts/repeated_citations.py "$W/crlf.md" "$W/utf16.md" "$W/ansi.md"
+          has '- crlf.md:2 — Keller 2018, cited again as `(ebd., S. 5)`'
+          has '- utf16.md:2 — Müller 2017, cited again as `(ebd., S. 5)`'
+          has '- ansi.md:2 — Müller 2017, cited again as `(ebd., S. 5)`'
+          # a missing path, a Word file, a folder without .md files, bad arguments: exit 2
+          expect 2 python scripts/repeated_citations.py "$W/ch" "$W/missing.md"
+          has 'Error: not found:'
+          hasnt 'Pairs:'
+          expect 2 python scripts/repeated_citations.py "$W/chapter.docx"
+          has 'is a Word file'
+          expect 2 python scripts/repeated_citations.py "$W/empty"
+          has 'no .md chapter files in the folder'
+          expect 2 python scripts/repeated_citations.py
+          expect 2 python scripts/repeated_citations.py --pairs "$W/ch"
+          expect 0 python scripts/repeated_citations.py --help
           has 'Exit codes:'
 
       - name: verbatim_check.py on generated chapters and sources
@@ -2745,7 +2900,7 @@ jobs:
 
       - name: Python syntax (Windows)
         shell: powershell
-        run: python -m py_compile scripts/abbreviations_extract.py scripts/bibliography_check.py scripts/build_reference_docx.py scripts/cephalo_guard.py scripts/cross_session_audit.py scripts/docx_pagination.py scripts/state_check.py scripts/verbatim_check.py
+        run: python -m py_compile scripts/abbreviations_extract.py scripts/bibliography_check.py scripts/build_reference_docx.py scripts/cephalo_guard.py scripts/cross_session_audit.py scripts/docx_pagination.py scripts/repeated_citations.py scripts/state_check.py scripts/verbatim_check.py
 
       # Informational only: not part of the verified baseline. Remove
       # continue-on-error once a clean run is confirmed.

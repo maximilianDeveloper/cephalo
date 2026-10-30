@@ -1,6 +1,6 @@
 # Scripts
 
-cephalo ships nine utility scripts in `scripts/`, and the cephalo guard, a Claude Code hook that setup installs (see [cephalo guard](#cephalo-guard)). The utility scripts are optional — the agents can guide a project without them — but each one automates a check or transformation that would otherwise take manual effort.
+cephalo ships ten utility scripts in `scripts/`, and the cephalo guard, a Claude Code hook that setup installs (see [cephalo guard](#cephalo-guard)). The utility scripts are optional — the agents can guide a project without them — but each one automates a check or transformation that would otherwise take manual effort.
 
 | Script | Purpose | When to run |
 |--------|---------|-------------|
@@ -9,6 +9,7 @@ cephalo ships nine utility scripts in `scripts/`, and the cephalo guard, a Claud
 | `state_check.py` | List the state file's Current state, Chapter status and open items in full, with the chapters' word counts, and report its lines over 500 characters | Flat projects, at the end of every chat |
 | `abbreviations_extract.py` | Derive the list of abbreviations from a finished DOCX | Phase B, final stages |
 | `bibliography_check.py` | Minus-test by author surname: every cited author is in the bibliography, every entry's lead author is cited | Phase B, final stages |
+| `repeated_citations.py` | List every repeated citation (a source cited again right after its previous citation) with its chapter file and line, for the check of `in_text.repeated_citation` | Each full format check (Phase B; seminar: F.1; presentation: step 3), by the format-verifier |
 | `build_reference_docx.py` | Build Pandoc's reference document (layout of the exported DOCX) from the styleguide's values | Phase B, before the first export and after a layout finding |
 | `docx_postprocess.sh` | Enable automatic hyphenation in a DOCX (Pandoc and python-docx don't set this) | Phase B, right after every export (orchestrator), only if `document.hyphenation` is automatic |
 | `docx_pagination.py` | Number the front matter of an exported DOCX unlike the main text: Roman numerals, counted but not shown, or not counted, and a main text from 1 or continuing the count; and the back matter (the reference list, an appendix) unlike the main text | Phase B, right after every export (orchestrator), only if `pagination.front_matter`, `pagination.main_text` or `pagination.back_matter` asks for it |
@@ -18,7 +19,7 @@ cephalo ships nine utility scripts in `scripts/`, and the cephalo guard, a Claud
 
 ## Installation
 
-All scripts require Python 3.9 or newer. `abbreviations_extract.py`, `bibliography_check.py`, `build_reference_docx.py`, `docx_pagination.py`, `verbatim_check.py` and `extract_styleguide.sh` have dependencies listed in `requirements.txt`, and so does `state_check.py` for the word count of a Word chapter (`python-docx`, and `pypdf` with its `[crypto]` extra, which installs `cryptography` for AES-encrypted PDFs). `cross_session_audit.py` uses only the Python standard library.
+All scripts require Python 3.9 or newer. `abbreviations_extract.py`, `bibliography_check.py`, `build_reference_docx.py`, `docx_pagination.py`, `verbatim_check.py` and `extract_styleguide.sh` have dependencies listed in `requirements.txt`, and so does `state_check.py` for the word count of a Word chapter (`python-docx`, and `pypdf` with its `[crypto]` extra, which installs `cryptography` for AES-encrypted PDFs). `cross_session_audit.py` uses only the Python standard library, and so does `repeated_citations.py`, which needs `verbatim_check.py` beside it.
 
 ### On Linux / macOS
 
@@ -225,6 +226,36 @@ The check uses heuristics and may produce false positives — and, in a few know
 - **Unusual bibliography headings**: numbered (`7 Literaturverzeichnis`, `7.1 Literatur`) and punctuated (`References:`) headings are tolerated — the detection strips typed decimal numbering and trailing punctuation before matching against `BIBLIOGRAPHY_HEADERS` (case-insensitive). A genuinely different heading word, or a typed letter or Roman number (`A. Literaturverzeichnis`, `IV. Literaturverzeichnis`), fails detection; if that happens, add your exact heading text to `BIBLIOGRAPHY_HEADERS` in the script.
 
 Use the output as a starting point for manual verification, not as a final verdict.
+
+### `repeated_citations.py`
+
+Lists the repeated citations of a work for the format check of `in_text.repeated_citation`: each pair of a source cited again right after its previous citation, as one line with the chapter file and line of the repeated citation and the form the text gives it. The format-verifier runs it in every full format check and copies its lines into its report, where it checks each against the styleguide's value (`format-verifier.md`, "In-text citations"); the script judges no form. It reads the chapter files the export was made from, not the DOCX: a finding is fixed there.
+
+```bash
+# Flat structure: the chapter folder, its .md files in the order of the numbers in their names
+python3 scripts/repeated_citations.py workspace/output/chapters/
+
+# Long-form: the files the export lists, in its order (in a multi-project sub-project: ../scripts/repeated_citations.py)
+python3 scripts/repeated_citations.py 07_Introduction/introduction.md 03_Theory_chapters/chapter_2_basics.md 06_Discussion_Conclusion/conclusion.md 08_Formal_Review/bibliography.md
+```
+
+What it does:
+
+1. Reads the files one after the other, in the order given; a folder gives its `.md` files (not those in subfolders, and no hidden file) in the order of their names, with numbers compared as numbers (`ch_2_…` before `ch_10_…`). A long-form phase folder also holds `handover.md` and `README.md`: name the chapter files there. It leaves out the YAML front matter, HTML comments, code and raw blocks, and the reference list, found as `verbatim_check.py` finds it: the section under a heading such as "Literaturverzeichnis" or "References" in which every entry has a year (in a seminar paper the last section of the conclusion; long-form, `bibliography.md`, which may be given or left out)
+2. Reads every citation, in reading order, a footnote's at its mark: author and year in parentheses (`(Keller 2018, S. 44)`, `(vgl. Keller/Weber 2018, S.\ 5)`, `(Keller & Weber, 2018, p. 5)`, `(Keller et al. 2018)`, `(Keller u. a. 2018)`, `(Keller 2018a)`, `(Keller 2018, 2020)`, `(Keller o. J.)`), several sources separated by `;`, and a secondary citation (`(Weber 1922, S. 31, zit. nach Keller 2018, S. 5)`, also after `zitiert nach`, `cited in` or `quoted in`), which names both; author and year in the sentence (`Keller (2018, S. 44)`, `Keller und Weber (2018)`); `ebd.`, `ebenda`, `ibid.` or `ibidem`, and a page alone in parentheses (`(S. 45)`), which name the source of the citation just before, the source named last where that one names several; Pandoc citekeys (`[@keller2018, S. 5]`, `@keller2018 [S. 5]`, a secondary citation's original as plain text in the prefix); and in a footnote, an inline note or a source line below a table or figure (`Quelle: Keller 2018, S. 5`) a citation without parentheses too (`Vgl. Keller 2018, S. 5.`, `Ebd., S. 6.`). A source is its surnames and year (`Keller/Weber 2018` and `Keller und Weber (2018)` are one source, `Keller 2018a` and `Keller 2018b` two), or its citekey
+3. Lists each pair: a source that a citation names and the citation just before it names too, also as one of several sources or in a secondary citation, and across paragraphs and chapter files, since the rule counts a repeated citation "on the same page or another" and names no point where the count starts anew. The line gives the chapter file and line of the repeated citation, the source and the citation as written (``- ch_2_body.md:14 — Keller 2018, cited again as `(ebd., S.\ 5)` ``), for a citation of several sources with its part (`` `Weber 2019, S. 3` in `(…)` ``), and says when the previous citation names several sources, is a secondary citation or stands in another file, and when the citation stands in a footnote. Two pairs in one paragraph are two lines with the same line number
+
+Above the pairs, the report names the files in the order read (compare it with the export's), counts the citations, names the reference list it left out and lists the sources with the number of their citations; below them, each `ebd.`, `ibid.` or page alone with no citation before it.
+
+Exit code 0 = listed, also when there is no pair; 2 = bad arguments, a path that does not exist, a file that cannot be read or is no `.md` or `.txt` file (for a Word file, give the Markdown chapter files it was exported from), or a folder without `.md` files (an `Error:` line on stderr). No exit code means a finding: the script judges no form.
+
+Limitations:
+
+- **Whether a pair follows the rule** is not judged: the format-verifier checks each line against `in_text.repeated_citation`, also where the previous citation names several sources or stands in another chapter, which `styleguide.md` may leave open (then it is a ❓).
+- **With citekeys**, a chapter file shows the citekey, and the export the form the CSL style gives a repeated citation: the format check reads that form in the DOCX.
+- **Citations it does not read**: a citation without parentheses in the running text (only footnotes and source lines are read that way), one without a year (`(Keller, S. 5)`), `a. a. O.` and `op. cit.`; a citation it does not see between two others leaves a pair across it that is none. A source written in two ways is two sources (`Keller et al. 2018` and `Keller/Weber/Schulz 2018`, or a German genitive, `Kellers (2018)`), and an author of several words is read by the last one (`Statistisches Bundesamt 2020` as `Bundesamt 2020`).
+- **Parentheses that are no citation**: a capitalized word before a year (`(Mai 2020)`, `(Zensus 2011)`) is read as a citation, except a few words such as `Stand`, `Jahr`, `Kapitel`, `Tabelle` and the months that are not also surnames; such a source shows in the list of sources. A page alone in parentheses, such as a cross-reference `(S. 12)`, is read as a citation of the source before it (one after `siehe` or `see` is not).
+- **Name particles** are not part of the source: `van der Berg 2015` and `Berg 2015` count as one, as in `bibliography_check.py`.
 
 ### `build_reference_docx.py`
 

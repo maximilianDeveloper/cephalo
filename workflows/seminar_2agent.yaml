@@ -347,9 +347,10 @@ phases:
            scripts/docx_postprocess.sh;
            then the format-verifier checks it and writes
            workspace/output/verification/document_format_round_<n>.md (it runs
-           scripts/bibliography_check.py and scripts/abbreviations_extract.py
-           itself). On Windows every Python script (.py) runs with py, also
-           where its help text or docs/scripts.md writes python3. When the
+           scripts/bibliography_check.py, scripts/abbreviations_extract.py
+           and scripts/repeated_citations.py itself). On Windows every Python
+           script (.py) runs with py, also where its help text or
+           docs/scripts.md writes python3. When the
            format-verifier returns, before any fix or question to the user:
            (a) count the report's "Status:" lines per symbol with Grep and
            write the counts, and any difference from its answer, to
