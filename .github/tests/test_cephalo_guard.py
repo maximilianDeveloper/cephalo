@@ -840,7 +840,7 @@ class TestSettingsCommand(Base):
             hooks = self.settings['hooks'][event][0]['hooks']
             self.assertEqual(len(hooks), 1)
             # onFailure "continue": a hook that cannot run (no Git Bash on Windows) never blocks a call
-            self.assertEqual(hooks[0], {'type': 'command', 'command': self.cmd, 'timeout': 10,
+            self.assertEqual(hooks[0], {'type': 'command', 'command': self.cmd, 'timeout': 30,
                                         'onFailure': 'continue'})
         raw = SETTINGS.read_bytes()
         self.assertFalse(raw.startswith(b'\xef\xbb\xbf'))

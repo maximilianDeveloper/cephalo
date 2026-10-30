@@ -91,7 +91,7 @@ SHIPPED_SCRIPTS = ('abbreviations_extract.py', 'bibliography_check.py', 'build_r
 
 # Work limits for one call: past one of them the guard stops and lets the call
 # pass with its note (it never blocks a call it did not finish checking).
-DEADLINE_S = 5.0                # the hook's timeout is 10 s
+DEADLINE_S = 5.0                # the hook's timeout is 30 s
 MAX_COMMAND = 1 << 19           # characters of one Bash/PowerShell command
 MAX_READ = 1 << 21              # bytes of all scripts and patches read for one call
 MAX_SCAN = 1 << 23              # characters of shell text and programs scanned for one call
