@@ -371,7 +371,8 @@ phases:
            Numbers, "Start at" (docs/reference_management.md, "The title
            page", step 5) and update the fields again; (c) fill in the title
            page's placeholders; (d) visual proofreading.
-        8. Before the chat closes, run in the Bash tool (on Windows with py):
+        8. Before the chat closes, run in the Bash tool (on Windows with py),
+           without a pipe (Chat closure ritual, item 1):
              python3 scripts/state_check.py workspace/state.md workspace/output/chapters/
            and go through its whole output, which lists the "Current state",
            the "Chapter status" and every open item of workspace/state.md in
