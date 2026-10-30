@@ -266,7 +266,7 @@ phases:
       - Manual export to DOCX (04_Submission/proposal_final_<YYYY-MM-DD>.docx); then scripts/docx_postprocess.sh on it, only if ../00_Shared_Materials/styleguide.md document.hyphenation = automatic (orchestrator, after every export: a new export does not carry the flag)
       - format-verifier: check this DOCX against ../00_Shared_Materials/styleguide.md, report in 04_Submission/format_report_round_<n>.md; after fixes, export again as in the step above, hyphenation included
       - Manual export to PDF (if supervisor prefers)
-      - Commit the exported files, then Git tag: proposal_v1_<date>
+      - Commit the exported files, then Git tag: proposal_v1_<date> (the user runs them, or asks Claude to)
     
     submission_is_manual: true
     submission_note: |
@@ -297,7 +297,7 @@ phases:
       - Set 00_Status.md to "completed"
       - Copy final DOCX to: ../02_Main_Work/01_Proposal_Reference/proposal_final_<date>.docx
       - Update README.md: "FROZEN — as of <date>"
-      - Commit: 'git add -A (it also stages the copy in ../02_Main_Work/), then git commit -m "meta: proposal accepted, copied to main/01_Proposal_Reference/"'
+      - Commit (the user runs it, or asks Claude to): 'git add -A (it also stages the copy in ../02_Main_Work/), then git commit -m "meta: proposal accepted, copied to main/01_Proposal_Reference/"'
       - Git tag: proposal_accepted_<date>
       - 01_Proposal/ becomes read-only
     
