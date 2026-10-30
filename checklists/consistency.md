@@ -2,7 +2,7 @@
 
 **Purpose:** Verifies consistency within and between chapters.
 **Executed by:** source-verifier (cross-chapter checks; in a seminar paper also the final check of Part A and B.2-B.3), orchestrator (final check).
-**When:** After every second chapter, plus a final check before submission.
+**When:** After every second chapter, plus a final check before submission; A.2 also in every round whose verbatim report lists runs shared with other chapters (`.claude/agents/source-verifier.md`, "Cross-chapter consistency").
 
 ---
 
@@ -134,7 +134,7 @@ The source-verifier or orchestrator returns a structured report:
 | Category | Status | Findings |
 |----------|--------|----------|
 | A.1 Cross-references | ✅ / ⚠️ / ❌ / ❓ / – | ... |
-| A.2 Self-plagiarism | ✅ / ⚠️ / ❌ / ❓ / – | ... |
+| A.2 Self-plagiarism | ✅ / 🟡 / ⚠️ / ❌ / ❓ / – | ... |
 | A.3 Argumentation | ✅ / ⚠️ / ❌ / ❓ / – | ... |
 | A.4 Terms | ✅ / ⚠️ / ❌ / ❓ / – | ... |
 | A.5 Editions | ✅ / ⚠️ / ❌ / ❓ / – | ... |
