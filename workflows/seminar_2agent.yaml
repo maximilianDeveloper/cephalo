@@ -267,9 +267,11 @@ phases:
           the chapter status, its word count as "Page budget monitoring"
           counts it, and Page count: [X] of [max]. If a chapter is still to
           be written and the words of the chapters written plus the budgets
-          of those still to be written exceed the total budget, warn the user
-          and propose an adjustment, as "Page budget monitoring" says, and
-          wait for the answer. Then the Chat closure ritual (main_session),
+          of those still to be written exceed the total budget in words, warn
+          the user and propose an adjustment, as "Page budget monitoring"
+          says, unless you did for these figures in this chat or the user
+          answered for them (decision log), and wait for the answer. Then the
+          Chat closure ritual (main_session),
           item 5 with the commands of F.1 item 8 if this chat wrote to
           styleguide.md.
   
