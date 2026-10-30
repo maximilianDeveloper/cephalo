@@ -230,7 +230,8 @@ phases:
              files of the chapters written before it, so that a gap there
              reaches a revision while the loop count allows one. A ⚠️, ❌ or
              ❓ of these checks withholds the pass of the chapter whose text
-             its fix changes, as one on a sentence does (orchestrator.md,
+             its fix changes, as one on a sentence does, except a ❓ for
+             bibliographic data the user cannot supply (orchestrator.md,
              "Feedback loop control"). A finding on a chapter written before
              goes to the writer too, and the sentences it changes there get a
              round of their own, whose task prompt also gives the report that
