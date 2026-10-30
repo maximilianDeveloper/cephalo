@@ -565,14 +565,22 @@ def chapter_files(args: list) -> list:
             files.append(p)
         else:
             fail(f"not found: {p}")
-    # a file named twice (a folder and a file in it, "./x.md" and "x.md") is read once
+    # a file named twice (a folder and a file in it, "./x.md" and "x.md", a hard
+    # link, a path in another case) is read once
     unique = []
     for f in files:
         key = os.path.normcase(str(f.resolve()))
-        if key not in seen:
+        if key not in seen and not any(same_file(f, u) for u in unique):
             seen.add(key)
             unique.append(f)
     return unique
+
+
+def same_file(a: Path, b: Path) -> bool:
+    try:
+        return os.path.samefile(a, b)
+    except OSError:
+        return False
 
 
 def report(args: list) -> int:
