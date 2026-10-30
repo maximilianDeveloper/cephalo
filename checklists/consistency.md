@@ -138,11 +138,11 @@ The source-verifier or orchestrator returns a structured report:
 | A.3 Argumentation | ✅ / ⚠️ / ❌ / ❓ / – | ... |
 | A.4 Terms | ✅ / ⚠️ / ❌ / ❓ / – | ... |
 | A.5 Editions | ✅ / ⚠️ / ❌ / ❓ / – | ... |
-| B.3 Body ↔ conclusion (when the task prompt names it) | ✅ / ⚠️ / ❌ / ❓ / – | ... |
+| B.3 Body ↔ conclusion (when the task prompt names it) | ✅ / 🟡 / ⚠️ / ❌ / ❓ / – | ... |
 
 ### Detailed findings
 
-[Per ⚠️, ❌ or ❓: precise location, problem description, proposed fix; per –: the chapter it waits for]
+[Per 🟡, ⚠️, ❌ or ❓: precise location, problem description, proposed fix; per –: the chapter it waits for]
 
 ### Recommendation
 
