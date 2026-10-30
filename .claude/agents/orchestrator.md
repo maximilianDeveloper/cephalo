@@ -94,7 +94,7 @@ After each written chapter, and after each revision, before the verification:
 - Count its words with `python3 scripts/verbatim_check.py --words <chapter file>` (on Windows `py`), the same way for every chapter; without Python, `wc -w <chapter file>` minus the words of its YAML header, and say so with the figure. The writer cannot count: its figure is an estimate
 - Calculate: pages used / total budget, and keep `Page count: [X] of [max]` in `workspace/state.md` current
 - Over 20% above the chapter's budget: before the verification, a return call to the writer to shorten it; if the writer names a claim the budget would drop, or the user wants the length, ask the user, and record a length the user accepts in the decision log
-- While a chapter is still to be written (counted in the order of writing): when the words of the chapters written so far plus the budgets of those still to be written exceed the total budget in words ([max] of the `Page count` line times the words per page), warn and propose an adjustment, and wait for the answer before the next chapter's writer task; once the user has answered for these figures (decision log), warn again only when they grow
+- While a chapter is still to be written (counted in the order of writing): when the words of the chapters written so far plus the budgets of those still to be written exceed the total budget in words (the [max] of the `Page count` line, or a total the user set, times the words per page), warn and propose an adjustment, wait for the answer before the next chapter's writer task, and record it in the decision log with the figures; once the user has answered for these figures, warn again only when they grow
 
 ### Phase A → B transition
 
