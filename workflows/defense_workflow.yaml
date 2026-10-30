@@ -355,4 +355,4 @@ phases:
       - Update README.md with grade (optional)
       - Record committee feedback (for future projects)
       - Commit (the user runs it, or asks Claude to): 'git add -A, then git commit -m "defense/closure: defense passed"'
-      - Git tag: defense_passed_<date>
+      - Git tag (the user runs it, or asks Claude to): defense_passed_<date>
