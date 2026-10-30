@@ -1830,6 +1830,73 @@ jobs:
           sed 's/Keller, A. (2018): //' "$V/raw_bib.md" > "$V/raw_bib_noyear.md"
           expect 1 python scripts/verbatim_check.py "$V/raw_bib_noyear.md" "$V/raw_text_src.txt"
           grep -qF '16 words, line 10' "$V/out.txt"
+          # --chapters: the runs a chapter shares with the other chapters (A.2 of
+          # checklists/consistency.md), after the part on the sources. The conclusion shares
+          # 5 words across a comma with chapter 2 and quotes the research question of the
+          # Word introduction; the definition in a block quote and the quotation that both
+          # chapters have, the run that lies wholly within a run from the source, the
+          # reference list (on either side) and the chapter itself take no part; a run longer
+          # than its part from the source is listed with that part; no exit code changes
+          X="$V/xch"; mkdir -p "$X/chapters"
+          printf '%s\n' 'Ein Speicher ist ein Gebäude, das Waren zwischen ihrer Ankunft und ihrem Verkauf trocken und sicher verwahrt.' \
+            'Wer die Speicher leer stehen lässt, gibt den Hafen ein zweites Mal auf.' 'Am Wasser stiegen die Mieten binnen zehn Jahren um ein Drittel.' \
+            'Die alten Kräne am Kai wurden abgebaut.' > "$X/lange.txt"
+          printf '%s\n' '---' 'chapter: 2' '---' '' '# 2 Der alte Hafen' '' \
+            'Viele Befragte schilderten das Gefühl, am alten Hafen beginne etwas Neues (Lange 2020, S. 14).' '' \
+            '> Ein Speicher ist ein Gebäude, das Waren zwischen ihrer Ankunft und ihrem Verkauf trocken und sicher verwahrt. (Lange 2020, S. 9)' '' \
+            'Lange hält fest: „Wer die Speicher leer stehen lässt, gibt den Hafen ein zweites Mal auf.“ (Lange 2020, S. 15)' '' \
+            'Dort stiegen die Mieten binnen zehn Jahren spürbar (Lange 2020, S. 21). Die alten Kräne am Kai wurden abgebaut und verschrottet.' '' \
+            'Die Hefte der Hafenchronik erscheinen in loser Folge bei einem Verlag am Ort.' > "$X/chapters/ch_2_hafen.md"
+          printf '%s\n' '---' 'chapter: 3' '---' '' '# 3 Fazit' '' \
+            'Die Frage, „wie sich die leeren Speicher am alten Hafen nutzen lassen“, beantwortet die Literatur nur zum Teil. Hinzu kommt das Gefühl, am alten Hafen entstehe etwas Neues (Lange 2020, S. 14).' '' \
+            '> Ein Speicher ist ein Gebäude, das Waren zwischen ihrer Ankunft und ihrem Verkauf trocken und sicher verwahrt. (Lange 2020, S. 9)' '' \
+            'Lange warnt: „Wer die Speicher leer stehen lässt, gibt den Hafen ein zweites Mal auf.“ (Lange 2020, S. 15)' '' \
+            'Zugleich stiegen die Mieten binnen zehn Jahren (Lange 2020, S. 21).' '' 'Die alten Kräne am Kai wurden abgebaut und verschrottet.' '' \
+            '# Literaturverzeichnis' '' 'Lange, Ida (2020): Die Hefte der Hafenchronik erscheinen in loser Folge. Hafenstadt: Stadtverlag.' > "$X/chapters/ch_3_fazit.md"
+          python -c "import sys; from docx import Document; d = Document(); d.add_heading('1 Einleitung', 1); d.add_paragraph('Diese Arbeit fragt, wie sich die leeren Speicher am alten Hafen nutzen lassen.'); d.save(sys.argv[1])" "$X/chapters/ch_1_einleitung.docx"
+          expect 0 python scripts/verbatim_check.py "$X/chapters/ch_3_fazit.md" "$X/lange.txt" --chapters "$X/chapters/"
+          grep -qxF '  Other chapters: 2 (ch_1_einleitung.docx, ch_2_hafen.md)' "$V/out.txt"
+          grep -qxF 'Summary: ❌ 0, ⚠️ 0, 🟡 2. Runs of 1-4 words are not listed;' "$V/out.txt"
+          sed -n '/^Runs shared with other chapters/,$p' "$V/out.txt" > "$X/shared.txt"
+          printf '%s\n' 'Runs shared with other chapters (A.2 of checklists/consistency.md; not rated):' \
+            '5 words, line 7: "das Gefühl, am alten Hafen"' '    in ch_2_hafen.md (line 7)' \
+            '9 words, line 15: "Die alten Kräne am Kai wurden abgebaut und verschrottet"' \
+            '    in ch_2_hafen.md (line 13); 7 of these words also in a run from the sources above' \
+            'quotation, line 7: "wie sich die leeren Speicher am alten Hafen nutzen lassen"' \
+            '    in ch_1_einleitung.docx (paragraph 2), there outside quotation marks' > "$X/shared_want.txt"
+          if ! diff "$X/shared_want.txt" "$X/shared.txt"; then cat "$V/out.txt"; echo "the runs shared with other chapters differ"; exit 1; fi
+          # the source part is the report without --chapters, apart from the header line
+          expect 0 python scripts/verbatim_check.py "$X/chapters/ch_3_fazit.md" "$X/lange.txt"
+          if grep -q 'Other chapters\|Runs shared' "$V/out.txt"; then cat "$V/out.txt"; echo "a report without --chapters changed"; exit 1; fi
+          cp "$V/out.txt" "$X/plain.txt"
+          expect 0 python scripts/verbatim_check.py "$X/chapters/ch_3_fazit.md" "$X/lange.txt" --chapters "$X/chapters/"
+          grep -v '^  Other chapters:' "$V/out.txt" | head -n "$(wc -l < "$X/plain.txt")" > "$X/sources_part.txt"
+          if ! diff "$X/plain.txt" "$X/sources_part.txt"; then echo "the part on the sources differs with --chapters"; exit 1; fi
+          # from chapter 2: the conclusion's reference list is left out on its side too
+          expect 0 python scripts/verbatim_check.py "$X/chapters/ch_2_hafen.md" "$X/lange.txt" --chapters "$X/chapters/"
+          grep -qxF '    in ch_3_fazit.md (line 7)' "$V/out.txt"
+          if grep -q 'line 15:\|Hefte' "$V/out.txt"; then cat "$V/out.txt"; echo "a reference list took part"; exit 1; fi
+          # a Word chapter checked against named files; a path that does not exist and a file that
+          # is no chapter are not checked (the line on the sources still says they were all read),
+          # a Word chapter that cannot be read is an error, as a source is; --chapters alone
+          # compares with none; it comes after the sources and not with --words
+          printf 'PK\003\004broken' > "$X/broken.docx"; printf 'x' > "$X/notes.pdf"
+          expect 0 python scripts/verbatim_check.py "$X/chapters/ch_1_einleitung.docx" "$X/lange.txt" --chapters "$X/chapters/ch_3_fazit.md" "$X/no_such_chapter.md" "$X/notes.pdf"
+          grep -qxF '  Other chapters: 1 (ch_3_fazit.md)' "$V/out.txt"
+          grep -qF 'no_such_chapter.md (not found)' "$V/out.txt"
+          grep -qF 'notes.pdf (.pdf is not read' "$V/out.txt"
+          grep -qxF '✅ No verbatim run of 5 or more words outside quotation marks.' "$V/out.txt"
+          grep -qxF "Runs shared with other chapters (A.2 of checklists/consistency.md): none of 5 or more words, and no quotation of another chapter's text." "$V/out.txt"
+          expect 2 python scripts/verbatim_check.py "$X/chapters/ch_3_fazit.md" "$X/lange.txt" --chapters "$X/broken.docx"
+          grep -qF 'Verbatim check for: ch_3_fazit.md' "$V/out.txt"
+          grep -A1 -xF 'Could not be read:' "$V/out.txt" | grep -qF 'broken.docx (cannot read it as .docx'
+          expect 0 python scripts/verbatim_check.py "$X/chapters/ch_3_fazit.md" "$X/lange.txt" --chapters
+          grep -qxF '  Other chapters: 0' "$V/out.txt"
+          grep -qxF "Runs shared with other chapters (A.2 of checklists/consistency.md): none of 5 or more words, and no quotation of another chapter's text." "$V/out.txt"
+          expect 2 python scripts/verbatim_check.py "$X/chapters/ch_3_fazit.md" --chapters "$X/chapters/" "$X/lange.txt"
+          expect 2 python scripts/verbatim_check.py --words "$X/chapters/ch_3_fazit.md" --chapters "$X/chapters/"
+          expect 0 python scripts/verbatim_check.py --help
+          grep -qF -- '--chapters <chapter or folder>' "$V/out.txt"
 
       - name: build_reference_docx.py (styles, page settings, errors; round trip through Pandoc)
         run: |

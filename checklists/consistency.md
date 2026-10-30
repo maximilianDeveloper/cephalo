@@ -21,6 +21,7 @@ To be performed by source-verifier after every second chapter.
 ### A.2 Self-plagiarism
 
 - [ ] No verbatim overlaps between chapters (except for definitions intentionally repeated)
+  - Count: `scripts/verbatim_check.py` with `--chapters` lists the runs of 5 or more words a chapter shares with the other chapters, and its quotations of their text, in the section "Runs shared with other chapters" of the chapter's verbatim report (`.claude/agents/source-verifier.md`, "Cross-chapter consistency")
 - [ ] **Especially between introduction and conclusion:** the conclusion must use its own wording, not paraphrase the introduction
 - [ ] The research question is quoted verbatim only once (in the introduction); afterwards only referenced
 
