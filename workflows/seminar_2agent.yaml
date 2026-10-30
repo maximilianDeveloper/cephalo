@@ -163,7 +163,7 @@ phases:
       - step: 1
         agent: writer
         input: Sources (uploaded by user or in workspace/sources/)
-        output: workspace/output/chapters/ch_X_<slug>.md
+        output: workspace/output/chapters/ch_X_<slug>.md   # X: the chapter's number in the document (1 introduction ... the conclusion last)
         tasks:
           - Read sources and identify relevant passages
           - Record original quotes with page numbers in the state file (source registry table, see writer-agent.md)
@@ -304,9 +304,11 @@ phases:
            chapters and the reference list by checklists/consistency.md, Part A
            and B.2-B.3, and each entry of the reference list against the
            source's title page and imprint (authors, title, year, publisher or
-           series, pages); its task prompt also gives the last verbatim report
-           of each chapter (step 2), whose section "Runs shared with other
-           chapters" counts A.2. Save its answer unchanged as
+           series, pages). For it, run the command of step 2, item 1, for
+           each chapter, saving its output as
+           workspace/output/verification/<name>_final_verbatim.txt, and give
+           these files in the task prompt: their section "Runs shared with
+           other chapters" counts A.2. Save its answer unchanged as
            workspace/output/verification/consistency_final.md, read back as in
            step 2, and record its open items under the open issues of
            workspace/state.md. Its findings go to the writer-agent (chapter text
