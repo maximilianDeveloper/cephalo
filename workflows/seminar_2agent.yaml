@@ -55,7 +55,7 @@ constraints:
     body: 70%
     conclusion: 10%
   feedback_loop_max: 2   # per chapter, for source verification; an iteration is a revision followed by a new verification, counted in workspace/state.md
-  # a chapter passes when no ⚠️, ❌ or ❓ is left; 🟡 does not block (orchestrator.md, "Feedback loop control")
+  # a chapter passes when no ⚠️, ❌ or ❓ is left, also in a cross-chapter check on a point its fix changes; 🟡 does not block (orchestrator.md, "Feedback loop control")
   feedback_loop_escalation:
     # See orchestrator.md -> "Feedback-loop escalation" for the full behavior.
     on_limit_reached: abort | manual_fix | force_continue (user choice)
@@ -220,10 +220,18 @@ phases:
              "Feedback loop control"). In the first round of the second
              chapter written, the task prompt also names the cross-chapter
              consistency check (source-verifier.md, "Cross-chapter
-             consistency") and gives the file of the chapter written first;
-             a finding on that chapter goes to the writer too, and the
-             sentences it changes there get a round of their own (the
-             revision counts toward that chapter's loop count).
+             consistency") and gives the file of the chapter written first.
+             In the conclusion's first round, it also names B.3 of
+             checklists/consistency.md (body <-> conclusion) and gives the
+             files of the chapters written before it, so that a gap there
+             reaches a revision while the loop count allows one. A ⚠️, ❌ or
+             ❓ of these checks withholds the pass of the chapter whose text
+             its fix changes, as one on a sentence does (orchestrator.md,
+             "Feedback loop control"). A finding on a chapter written before
+             goes to the writer too, and the sentences it changes there get a
+             round of their own, whose task prompt also gives the report that
+             found it and that report's chapter file (orchestrator.md, "Return
+             calls"; the revision counts toward that chapter's loop count).
           3. The source-verifier cannot write files, so do not ask it to. Save
              its answer unchanged as <name>_round_<n>.md: the writer and the
              next round work from it. Nothing is shortened, reworded,
@@ -386,7 +394,7 @@ minimal_setup_notes: |
   
   Trade-offs vs. bachelor_5agent:
   - No strict separation of reading / extracting / writing
-  - Consistency is checked twice, not per chapter pair: by the source-verifier in the first round of the second chapter written (step 2; source-verifier.md, "Cross-chapter consistency") and once in F.1
+  - Consistency is checked twice, not per chapter pair: by the source-verifier in the first round of the second chapter written and, for B.3, in the conclusion's first round (step 2; source-verifier.md, "Cross-chapter consistency"), and once in F.1
   
   For < 10 pages and < 15 sources, the overhead of the larger setup
   is not justified. Quality loss is modest.
