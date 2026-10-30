@@ -61,11 +61,20 @@ USAGE = "Usage: python scripts/state_check.py <state file> [<chapter file or fol
 LONG = 500                     # characters; a Grep result leaves out longer lines
 CHAPTER_SUFFIXES = {".md", ".markdown", ".txt", ".docx"}
 FOLDER_SUFFIXES = {".md", ".markdown", ".docx"}
-HEADING = re.compile(r"^\s{0,3}#{1,6}\s+(.*?)\s*#*\s*$")
+HEADING_START = re.compile(r"\s{0,3}#{1,6}\s+")  # the title: heading_title()
 OPEN = re.compile(r"^\s*[-*+]\s+\[ \]")
 TICKED = re.compile(r"^\s*[-*+]\s+\[[xX]\]")
 SEPARATOR = re.compile(r"^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$")
 CHECKED = ("current state", "chapter status")
+
+
+
+def heading_title(line: str):
+    """The title of an ATX heading without closing #s, or None. A linear check,
+    as in verbatim_check.py: the pattern it replaces took seconds on a heading
+    with a long run of spaces inside."""
+    m = HEADING_START.match(line)
+    return line[m.end():].rstrip().rstrip("#").rstrip() if m else None
 
 
 def fail(message: str) -> None:
@@ -158,9 +167,9 @@ def report(args: list) -> int:
     section, title, seen = "", "", {}
     current, status, open_items, ticked, long_lines = [], [], [], 0, []
     for no, line in enumerate(lines, 1):
-        m = HEADING.match(line)
-        if m:
-            title = m.group(1)
+        h = heading_title(line)
+        if h is not None:
+            title = h
             section = section_of(title)
             if section:
                 seen.setdefault(section, no)

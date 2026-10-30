@@ -63,23 +63,45 @@ do. A Word chapter counts its body paragraphs, without tables, footnotes,
 text boxes, content controls and the bibliography. --words prints only
 that line and needs no sources.
 
+With --chapters and the paths after it, the chapter is also compared with
+the other chapters, for the self-plagiarism check between chapters (A.2 of
+checklists/consistency.md): chapter files, or the .md and .docx files
+directly in a folder, the chapter itself left out. Each is read as the
+chapter is, so that its bibliography and raw blocks for the export are
+left out, and a run is found and counted as above; quotations and block
+quotes are compared only with text outside quotation marks on the other
+side. Under "Runs shared with other chapters" the report lists
+each run of 5 or more words the chapter shares with one of them, with that
+chapter's file and line, unless the run lies wholly within a run from the
+sources listed above; and each direct quote of the chapter that the sources
+do not have but another chapter has outside quotation marks (the research
+question quoted again, for example), and each run of its own text that
+another chapter has in quotation marks. These are not rated and do not change
+the exit code. Another chapter that cannot be read is listed under "Could
+not be read", as a source is; a path that does not exist, under "Not
+checked".
+
 Usage:
-    python scripts/verbatim_check.py <chapter> <source> [<source> ...]
+    python scripts/verbatim_check.py <chapter> <source> [<source> ...] [--chapters <chapter or folder> ...]
     python scripts/verbatim_check.py --words <chapter>
     python scripts/verbatim_check.py workspace/output/chapters/ch_2_basics.md workspace/sources/
+    python scripts/verbatim_check.py workspace/output/chapters/ch_3_conclusion.md workspace/sources/ --chapters workspace/output/chapters/
     python scripts/verbatim_check.py --help
 
 The chapter may be Markdown (.md), plain text (.txt) or Word (.docx).
 
-Exit codes: 0 = no run of 8 or more words, 1 = at least one run of 8 or more
-words (⚠️ or ❌), 2 = bad arguments, a chapter that cannot be read or holds no
-text, a source that cannot be read (the report is printed all the same, with
-the file under "Could not be read"), or no source text to compare against.
-With --words: 0, or 2 for bad arguments or a chapter that cannot be read.
+Exit codes: 0 = no run of 8 or more words from the sources, 1 = at least
+one run of 8 or more words from the sources (⚠️ or ❌), 2 = bad arguments, a
+chapter that cannot be read or holds no text, a source or another chapter
+that cannot be read (the report is printed all the same, with the file
+under "Could not be read"), or no source text to compare against. With
+--words: 0, or 2 for bad arguments or a chapter that cannot be read.
 """
 
 import bisect
+import contextlib
 import html
+import io
 import os
 import re
 import sys
@@ -101,9 +123,11 @@ for stream in (sys.stdout, sys.stderr):
 # Thresholds of checklists/plagiarism_protection.md, section 1.
 POLISH, RISK, SERIOUS = 5, 8, 15
 
-USAGE = ("Usage: python scripts/verbatim_check.py <chapter> <source> [<source> ...]\n"
+USAGE = ("Usage: python scripts/verbatim_check.py <chapter> <source> [<source> ...] [--chapters <chapter or folder> ...]\n"
          "       python scripts/verbatim_check.py --words <chapter>")
 CHAPTER_SUFFIXES = {".md", ".markdown", ".txt", ".docx"}
+# The chapter files of a folder given to --chapters, as state_check.py reads one
+FOLDER_SUFFIXES = {".md", ".markdown", ".docx"}
 SOURCE_SUFFIXES = {".md", ".markdown", ".txt", ".pdf"}
 # Document types a source might come in that the script cannot read: listed as
 # not checked. Other files in a source folder (.bib, a saved page's scripts and
@@ -251,6 +275,26 @@ class Chapter(NamedTuple):
     quoted: list           # for each entry of words: True inside a short quotation
     bibliography: Optional[tuple] = None  # its first and last line or paragraph (None: to the end)
     counted: Optional[int] = None  # text[:counted] is what the word count counts (None: all of it)
+
+
+HEADING_START = re.compile(r"\s{0,3}(#{1,6})\s+")
+
+
+def heading(line: str):
+    """(the #s, the title) of an ATX heading, or None: the title without a
+    closing {attributes} block and closing #s. A linear check: the pattern
+    it replaces took seconds on a heading with a long run of spaces inside,
+    which a blanked HTML comment leaves."""
+    m = HEADING_START.match(line)
+    if not m:
+        return None
+    title = line[m.end():].rstrip().rstrip("#").rstrip()
+    if title.endswith("}"):
+        cut = title.rfind("}", 0, len(title) - 1) + 1
+        brace = title.find("{", cut)
+        if brace >= 0:
+            title = title[:brace].rstrip()
+    return m.group(1), title
 
 
 def blank(text: str, start: int, end: int) -> str:
@@ -404,9 +448,9 @@ def read_markdown(path: Path) -> tuple:
     # that the line numbers stay) if it looks like one.
     headings = []
     for n, line in enumerate(lines):
-        h = re.match(r"\s{0,3}(#{1,6})\s+(.*?)\s*(?:\{[^}]*\})?\s*#*\s*$", line)
+        h = heading(line)
         if h:
-            headings.append((n, len(h.group(1)), 0, h.group(2)))
+            headings.append((n, len(h[0]), 0, h[1]))
     cut = bibliography_section(headings, len(lines))
     if cut:
         body = [n for n in range(cut[0] + 1, cut[1]) if n not in footnotes]
@@ -625,6 +669,62 @@ def checked_chapter(path: Path) -> Path:
     return path
 
 
+def other_chapter_files(args: list, chapter_path: Path, unchecked: list) -> list:
+    """
+    The files of --chapters: each chapter file named, and the .md and .docx
+    files directly in each folder named (not those in subfolders, no hidden
+    file), without the checked chapter and without repeats; what is not a
+    chapter goes to unchecked.
+    """
+    found, seen = [], {chapter_path.resolve()}
+    for arg in args:
+        p = Path(arg)
+        if p.is_dir():
+            try:
+                files = sorted(x for x in p.iterdir() if x.is_file() and not x.name.startswith((".", "~$"))
+                               and x.suffix.lower() in FOLDER_SUFFIXES)
+            except OSError as exc:
+                unchecked.append(f"{p} (folder not read: {exc.strerror or exc})")
+                continue
+        elif p.is_file():
+            if p.suffix.lower() not in CHAPTER_SUFFIXES:
+                unchecked.append(f"{p} ({p.suffix or 'a file without extension'} is not read: "
+                                 "give a .md, .txt or .docx chapter)")
+                continue
+            files = [p]
+        else:
+            unchecked.append(f"{p} (not found)")
+            continue
+        for f in files:
+            if f.resolve() not in seen and not same_file(f, chapter_path):
+                seen.add(f.resolve())
+                found.append(f)
+    return found
+
+
+def same_file(a: Path, b: Path) -> bool:
+    """True for the same file under another name (a hard link, a path in another case)."""
+    try:
+        return os.path.samefile(a, b)
+    except OSError:
+        return False
+
+
+def read_other_chapter(path: Path) -> tuple:
+    """(Chapter, None) for another chapter, or (None, why) if it cannot be read:
+    read_chapter() ends the script with exit code 2, as it must for the checked
+    chapter."""
+    err = io.StringIO()
+    try:
+        with contextlib.redirect_stderr(err):
+            return read_chapter(path), None
+    except SystemExit:
+        why = " ".join(err.getvalue().split()).replace("Error: ", "", 1).replace(f" {path} ", " it ")
+        return None, why or "cannot be read"
+    except Exception as exc:
+        return None, f"{type(exc).__name__}: {one_line(exc)}"
+
+
 # ---------------------------------------------------------------------------
 # Sources
 # ---------------------------------------------------------------------------
@@ -634,11 +734,11 @@ class NotChecked(Exception):
 
 
 class Sequence(NamedTuple):
-    words: list     # casefolded words of one quote, one text file or one whole PDF
-    pages: list     # for each word: its page (str) or None
-    label: str      # how a match is named: "Brandt_2019.md Q3", "Brandt_2019.pdf"
-    kind: str       # "extract", "pdf" or "text"
-    note: str = ""  # shown with the page, e.g. "secondary citation"
+    words: list     # casefolded words of one quote, one text file, one whole PDF or another chapter
+    pages: list     # for each word: its page (str) or None; for another chapter its line or paragraph
+    label: str      # how a match is named: "Lorenz_2019.md Q3", "Lorenz_2019.pdf"
+    kind: str       # "extract", "pdf", "text"; "chapter" or "quote" for another chapter's text or quotations (--chapters)
+    note: str = ""  # shown with the page, e.g. "secondary citation"; another chapter's "line" or "paragraph"
     first: bool = True  # False for the later parts of a quote split at an omission
 
 
@@ -963,19 +1063,25 @@ def run_length(chapter: Chapter, ids: list, i: int, n: int) -> tuple:
     return len(outside), len(inside)
 
 
-def found_quotes(parts: list, seqs: list) -> set:
-    """The indexes of the parts (word lists of POLISH or more words) found verbatim in a source."""
+def quote_places(parts: list, seqs: list) -> dict:
+    """For each part (a word list of POLISH or more words) found verbatim in a
+    sequence, its index: [(seq, pos)] of the places it was found at."""
     starts = {}
     for k, words in enumerate(parts):
         starts.setdefault(tuple(words[:POLISH]), []).append(k)
-    found = set()
-    for seq in seqs:
+    places = {}
+    for s, seq in enumerate(seqs):
         w = seq.words
         for p in range(len(w) - POLISH + 1):
             for k in starts.get(tuple(w[p:p + POLISH]), ()):
-                if k not in found and w[p:p + len(parts[k])] == parts[k]:
-                    found.add(k)
-    return found
+                if w[p:p + len(parts[k])] == parts[k]:
+                    places.setdefault(k, []).append((s, p))
+    return places
+
+
+def found_quotes(parts: list, seqs: list) -> set:
+    """The indexes of the parts (word lists of POLISH or more words) found verbatim in a source."""
+    return set(quote_places(parts, seqs))
 
 
 def describe(seqs: list, hits: list, n: int, written) -> str:
@@ -993,6 +1099,27 @@ def describe(seqs: list, hits: list, n: int, written) -> str:
         name = f"{seq.label} ({', '.join(where)})" if where else seq.label
         if name not in names:
             names.append(name)
+    shown = "; ".join(names[:3])
+    return shown + (f"; and {len(names) - 3} more" if len(names) > 3 else "")
+
+
+def describe_chapters(seqs: list, hits: list, n: int, written) -> str:
+    """
+    Where a run of n tokens stands in the other chapters: "ch_2_basics.md
+    (line 18)", "ch_2_basics.md (lines 18, 40)"; a chapter that has only part
+    of it, with the number of these words, as describe() names a source.
+    """
+    places = {}  # (file name, unit, in a quotation, words of a part or None) -> [line or paragraph]
+    for s, p, m, i in sorted(hits, key=lambda h: (h[2] < n, h[0], h[1])):
+        seq = seqs[s]
+        where = places.setdefault((seq.label, seq.note, seq.kind == "quote", written(i, m) if m < n else None), [])
+        if seq.pages[p] not in where:
+            where.append(seq.pages[p])
+    names = []
+    for (label, unit, quote, part), where in places.items():
+        at = f"{unit}s {', '.join(where)}" if len(where) > 1 else f"{unit} {where[0]}"
+        at += ", in quotation marks there" if quote else ""
+        names.append(f"{label} ({at}" + (f", {part} of these words)" if part else ")"))
     shown = "; ".join(names[:3])
     return shown + (f"; and {len(names) - 3} more" if len(names) > 3 else "")
 
@@ -1023,6 +1150,14 @@ def main() -> None:
             sys.exit(2)
         print(word_count(read_chapter(checked_chapter(Path(rest[0])))))
         sys.exit(0)
+    # the other chapters, for A.2 of checklists/consistency.md: the paths after --chapters
+    other_args = None
+    if "--chapters" in args:
+        at = args.index("--chapters")
+        args, other_args = args[:at], args[at + 1:]
+        if "--chapters" in other_args:
+            print(USAGE, file=sys.stderr)
+            sys.exit(2)
     if len(args) < 2:
         print(USAGE, file=sys.stderr)
         sys.exit(2)
@@ -1086,10 +1221,51 @@ def main() -> None:
         if c >= POLISH:
             runs.append((i, n, c, q, hits))
 
+    # The other chapters (--chapters), read as the chapter is: a run they share
+    # with it is counted the same way; their bibliography and raw blocks take
+    # no part, their quotations and block quotes are compared with the
+    # chapter's own text only (below). What cannot be read goes into
+    # the lists of the sources' report, but not into its line on the sources.
+    others, other_quotes, other_unchecked, other_unreadable = [], [], [], []
+    for f in other_chapter_files(other_args or [], chapter_path, other_unchecked):
+        if f.suffix.lower() == ".docx":
+            # without python-docx a Word chapter is not checked, as a PDF source is without pypdf
+            try:
+                import docx  # noqa: F401
+            except ImportError:
+                other_unchecked.append(f"{f} (python-docx not installed: pip install -r requirements.txt)")
+                continue
+        other, why = read_other_chapter(f)
+        if other is None:
+            other_unreadable.append(f"{f} ({why})")
+        else:
+            others.append(Sequence(other.words, [None if pl is None else str(pl) for pl in other.places],
+                                   f.name, "chapter", other.unit))
+            # its quotations and block quotes, which its words leave out: a run of
+            # the chapter's own text that another chapter quotes (the research
+            # question, quoted there and repeated here) is listed too
+            for place, quote in other.quotes:
+                for part in quote_parts(quote):
+                    words = tokens(PANDOC_CITATION.sub(" ", CITATION.sub(" ", part)))
+                    if len(words) >= POLISH:
+                        other_quotes.append(Sequence(words, [str(place)] * len(words), f.name, "quote", other.unit))
+    # A run that lies wholly within runs listed against the sources is not
+    # listed again: step 8 of the source-verifier rates it.
+    from_sources = {k for i, n, *_ in runs for k in range(i, i + n)}
+    shared = []
+    compared = others + other_quotes  # the text of the other chapters, then their quotations
+    for i, n, hits in find_runs(chapter, compared):
+        c, q = run_length(chapter, ids, i, n)
+        if c >= POLISH and not all(k in from_sources for k in range(i, i + n)):
+            also = len({ids[k] for k in range(i, i + n) if k in from_sources and not chapter.quoted[k]})
+            shared.append((i, n, c, q, also, hits))
+
     print(f"Verbatim check for: {chapter_path.name}")
     print(f"  Sources: {counts['extract']} extract(s) with "
           f"{sum(1 for s in seqs if s.kind == 'extract' and s.first)} quotes, "
           f"{counts['pdf']} PDF(s), {counts['text']} text file(s)")
+    if other_args is not None:
+        print(f"  Other chapters: {len(others)}" + (f" ({', '.join(s.label for s in others)})" if others else ""))
     print(f"  {word_count(chapter)}")
     if chapter.bibliography:
         first, last = chapter.bibliography
@@ -1124,14 +1300,14 @@ def main() -> None:
             print(f"    {chapter.unit} {place}: \"{shorten(quote)}\"")
         print()
 
-    if unchecked:
+    if unchecked or other_unchecked:
         print("Not checked:")
-        for u in unchecked:
+        for u in unchecked + other_unchecked:
             print(f"    {u}")
         print()
-    if unreadable:
+    if unreadable or other_unreadable:
         print("Could not be read:")
-        for u in unreadable:
+        for u in unreadable + other_unreadable:
             print(f"    {u}")
         print()
 
@@ -1145,7 +1321,41 @@ def main() -> None:
               + (" in the sources that were read." if unchecked or unreadable else "."))
     print("text in quotation marks and block quotes is not counted (see checklists/plagiarism_protection.md).")
 
-    if unreadable:
+    if other_args is not None:
+        # After the part on the sources, which stays as it is without --chapters.
+        # A direct quote that no source has but another chapter has as its own
+        # text is a quotation of that chapter (the research question quoted again).
+        in_others = quote_places([words for _, _, words in checks], others)
+        quoted = []  # (place, quote, [(seq, pos)])
+        for k, (place, quote, _) in enumerate(checks):
+            if k in found or k not in in_others:
+                continue
+            if quoted and quoted[-1][:2] == (place, quote):
+                quoted[-1][2].extend(in_others[k])
+            else:
+                quoted.append((place, quote, list(in_others[k])))
+        print()
+        if not others:
+            print("Runs shared with other chapters (A.2 of checklists/consistency.md): "
+                  "no other chapter compared.")
+        elif not shared and not quoted:
+            print("Runs shared with other chapters (A.2 of checklists/consistency.md): "
+                  "none of 5 or more words, and no quotation of another chapter's text.")
+        else:
+            print("Runs shared with other chapters (A.2 of checklists/consistency.md; not rated):")
+        for i, n, c, q, also, hits in shared:
+            start, end = chapter.spans[i][0], chapter.spans[i + n - 1][1]
+            inside = f" (and {q} in quotation marks)" if q else ""
+            print(f"{c} words{inside}, {chapter.unit} {chapter.places[i]}: \"{shorten(chapter.text[start:end])}\"")
+            print(f"    in {describe_chapters(compared, hits, n, lambda i, m: sum(run_length(chapter, ids, i, m)))}"
+                  + (f"; {also} of these words also in a run from the sources above" if also else ""))
+        for place, quote, at in quoted:
+            print(f"quotation of {as_written(quote)} words, {chapter.unit} {place}: \"{shorten(quote)}\"")
+            # each place has the whole quotation part (n = m = 0: no "of these words")
+            print(f"    in {describe_chapters(others, [(s, p, 0, 0) for s, p in at], 0, None)}, "
+                  "there outside quotation marks")
+
+    if unreadable or other_unreadable:
         sys.exit(2)
     sys.exit(1 if serious or risk else 0)
 

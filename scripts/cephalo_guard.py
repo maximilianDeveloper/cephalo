@@ -86,12 +86,13 @@ DEFAULT_OFF = ('P1',)
 # S5), to write files.
 SHIPPED_SCRIPTS = ('abbreviations_extract.py', 'bibliography_check.py', 'build_reference_docx.py',
                    'cephalo_guard.py', 'cephalo_guard.sh', 'cross_session_audit.py', 'docx_pagination.py',
-                   'docx_postprocess.sh', 'extract_styleguide.sh', 'state_check.py', 'verbatim_check.py')
+                   'docx_postprocess.sh', 'extract_styleguide.sh', 'repeated_citations.py', 'state_check.py',
+                   'verbatim_check.py')
 
 
 # Work limits for one call: past one of them the guard stops and lets the call
 # pass with its note (it never blocks a call it did not finish checking).
-DEADLINE_S = 5.0                # the hook's timeout is 10 s
+DEADLINE_S = 5.0                # the hook's timeout is 30 s
 MAX_COMMAND = 1 << 19           # characters of one Bash/PowerShell command
 MAX_READ = 1 << 21              # bytes of all scripts and patches read for one call
 MAX_SCAN = 1 << 23              # characters of shell text and programs scanned for one call

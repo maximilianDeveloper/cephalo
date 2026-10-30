@@ -101,8 +101,14 @@ main_session:
     points to it: no research-agent, no extracts, no Phase A and B.
     - The agents do the steps that name them. Never do their work yourself:
       chapter text and its revisions, the quotes of the source registry,
-      source and format checks, style resolution. If the Agent tool is
-      missing, tell the user and stop.
+      source and format checks, style resolution. A change to a chapter's
+      text that the user asks for or a styleguide answer brings, such as a
+      citation form, goes to the writer, also when it is format-only, and
+      a round of step 2 checks the sentences it changed (no iteration:
+      orchestrator.md, "Feedback loop control"). One that styleguide.md
+      now requires may instead wait for F.1, where the format-verifier
+      finds it and item 6 has you apply it; ask the user which. In F.1,
+      item 6 applies. If the Agent tool is missing, tell the user and stop.
     - Yours: step 0.0 and workspace/state.md, except the rows of its source
       registry, which the writer adds, changes and removes; recording the
       answers to open styleguide questions and, for a rule an agent names as
@@ -157,7 +163,7 @@ phases:
       - step: 1
         agent: writer
         input: Sources (uploaded by user or in workspace/sources/)
-        output: workspace/output/chapters/ch_X_<slug>.md
+        output: workspace/output/chapters/ch_X_<slug>.md   # X: the chapter's number in the document (1 introduction ... the conclusion last)
         tasks:
           - Read sources and identify relevant passages
           - Record original quotes with page numbers in the state file (source registry table, see writer-agent.md)
@@ -193,9 +199,13 @@ phases:
           Claude in the main chat runs this step (main_session). Each round:
           1. Count the verbatim runs with the script in Claude Code's Bash tool
              (Git Bash on Windows), and save its output beside the reports:
-               mkdir -p workspace/output/verification && python3 scripts/verbatim_check.py workspace/output/chapters/ch_X_<slug>.md workspace/sources/ workspace/state.md > workspace/output/verification/<name>_round_<n>_verbatim.txt 2>&1
+               mkdir -p workspace/output/verification && python3 scripts/verbatim_check.py workspace/output/chapters/ch_X_<slug>.md workspace/sources/ workspace/state.md --chapters workspace/output/chapters/ > workspace/output/verification/<name>_round_<n>_verbatim.txt 2>&1
              On Windows, the same line with py in place of python3, not
              "python3 ... || py ...": exit code 1 is a finished report.
+             With --chapters, last, the report also lists the runs the
+             chapter shares with the other chapter files, for A.2 of
+             checklists/consistency.md (source-verifier.md, "Cross-chapter
+             consistency").
              Not with ">" in Windows PowerShell, which writes UTF-16
              (docs/scripts.md). Exit code 0 or 1: the report is finished;
              2: tell the user what the file says. Without Python, the
@@ -226,7 +236,8 @@ phases:
              files of the chapters written before it, so that a gap there
              reaches a revision while the loop count allows one. A ⚠️, ❌ or
              ❓ of these checks withholds the pass of the chapter whose text
-             its fix changes, as one on a sentence does (orchestrator.md,
+             its fix changes, as one on a sentence does, except a ❓ for
+             bibliographic data the user cannot supply (orchestrator.md,
              "Feedback loop control"). A finding on a chapter written before
              goes to the writer too, and the sentences it changes there get a
              round of their own, whose task prompt also gives the report that
@@ -254,9 +265,15 @@ phases:
         task: |
           Claude in the main chat updates workspace/state.md (main_session):
           the chapter status, its word count as "Page budget monitoring"
-          counts it, and Page count: [X] of [max]; then the Chat closure
-          ritual (main_session), item 5 with the commands of F.1 item 8 if
-          this chat wrote to styleguide.md.
+          counts it, and Page count: [X] of [max]. If a chapter is still to
+          be written and the words of the chapters written plus the budgets
+          of those still to be written exceed the total budget in words, warn
+          the user and propose an adjustment, as "Page budget monitoring"
+          says, unless you did for these figures in this chat or the user
+          answered for them (decision log), and wait for the answer. Then the
+          Chat closure ritual (main_session),
+          item 5 with the commands of F.1 item 8 if this chat wrote to
+          styleguide.md.
   
   # ===========================================================
   # Closing
@@ -287,7 +304,11 @@ phases:
            chapters and the reference list by checklists/consistency.md, Part A
            and B.2-B.3, and each entry of the reference list against the
            source's title page and imprint (authors, title, year, publisher or
-           series, pages). Save its answer unchanged as
+           series, pages). For it, run the command of step 2, item 1, for
+           each chapter, saving its output as
+           workspace/output/verification/<name>_final_verbatim.txt, and give
+           these files in the task prompt: their section "Runs shared with
+           other chapters" counts A.2. Save its answer unchanged as
            workspace/output/verification/consistency_final.md, read back as in
            step 2, and record its open items under the open issues of
            workspace/state.md. Its findings go to the writer-agent (chapter text
@@ -332,9 +353,10 @@ phases:
            scripts/docx_postprocess.sh;
            then the format-verifier checks it and writes
            workspace/output/verification/document_format_round_<n>.md (it runs
-           scripts/bibliography_check.py and scripts/abbreviations_extract.py
-           itself). On Windows every Python script (.py) runs with py, also
-           where its help text or docs/scripts.md writes python3. When the
+           scripts/bibliography_check.py, scripts/abbreviations_extract.py
+           and scripts/repeated_citations.py itself). On Windows every Python
+           script (.py) runs with py, also where its help text or
+           docs/scripts.md writes python3. When the
            format-verifier returns, before any fix or question to the user:
            (a) count the report's "Status:" lines per symbol with Grep and
            write the counts, and any difference from its answer, to
@@ -360,7 +382,8 @@ phases:
            Numbers, "Start at" (docs/reference_management.md, "The title
            page", step 5) and update the fields again; (c) fill in the title
            page's placeholders; (d) visual proofreading.
-        8. Before the chat closes, run in the Bash tool (on Windows with py):
+        8. Before the chat closes, run in the Bash tool (on Windows with py),
+           without a pipe (Chat closure ritual, item 1):
              python3 scripts/state_check.py workspace/state.md workspace/output/chapters/
            and go through its whole output, which lists the "Current state",
            the "Chapter status" and every open item of workspace/state.md in
@@ -394,7 +417,7 @@ minimal_setup_notes: |
   
   Trade-offs vs. bachelor_5agent:
   - No strict separation of reading / extracting / writing
-  - Consistency is checked twice, not per chapter pair: by the source-verifier in the first round of the second chapter written and, for B.3, in the conclusion's first round (step 2; source-verifier.md, "Cross-chapter consistency"), and once in F.1
+  - Consistency is checked twice, not per chapter pair: by the source-verifier in the first round of the second chapter written and, for B.3, in the conclusion's first round (step 2; source-verifier.md, "Cross-chapter consistency"), and once in F.1; A.2 also in every round whose verbatim report lists runs shared with other chapters
   
   For < 10 pages and < 15 sources, the overhead of the larger setup
   is not justified. Quality loss is modest.

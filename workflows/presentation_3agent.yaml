@@ -311,7 +311,8 @@ phases:
         - Rehearsal with timing (target per assignment / styleguide.md, e.g. 15-20 min)
         - Before closing, run
           `python3 scripts/state_check.py workspace/state.md workspace/output/chapters/`
-          in the Bash tool (on Windows with py) and go through its whole
+          in the Bash tool (on Windows with py), without a pipe (Chat
+          closure ritual, item 1), and go through its whole
           output, which lists the "Current state", the "Chapter status" and
           every open item of workspace/state.md in full (a Grep result leaves
           out long lines, and a Read in parts what lies between them): these

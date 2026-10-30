@@ -62,7 +62,7 @@ sh -n scripts/cephalo_guard.sh || echo "FAILED: scripts/cephalo_guard.sh"
 shellcheck setup.sh scripts/cephalo_guard.sh scripts/docx_postprocess.sh scripts/extract_styleguide.sh
 
 # Python syntax
-python3 -m py_compile scripts/abbreviations_extract.py scripts/bibliography_check.py scripts/build_reference_docx.py scripts/cephalo_guard.py scripts/cross_session_audit.py scripts/docx_pagination.py scripts/state_check.py scripts/verbatim_check.py
+python3 -m py_compile scripts/abbreviations_extract.py scripts/bibliography_check.py scripts/build_reference_docx.py scripts/cephalo_guard.py scripts/cross_session_audit.py scripts/docx_pagination.py scripts/repeated_citations.py scripts/state_check.py scripts/verbatim_check.py
 
 # The cephalo guard: its rules, its hook command, and every command the
 # definitions, workflows and docs give (macOS or Linux)

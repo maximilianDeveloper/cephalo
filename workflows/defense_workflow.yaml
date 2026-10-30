@@ -354,5 +354,5 @@ phases:
       - Set 00_Status.md to "completed"
       - Update README.md with grade (optional)
       - Record committee feedback (for future projects)
-      - Commit: 'git add -A, then git commit -m "defense/closure: defense passed"'
-      - Git tag: defense_passed_<date>
+      - Commit (the user runs it, or asks Claude to): 'git add -A, then git commit -m "defense/closure: defense passed"'
+      - Git tag (the user runs it, or asks Claude to): defense_passed_<date>
