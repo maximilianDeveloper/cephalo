@@ -101,8 +101,12 @@ main_session:
     points to it: no research-agent, no extracts, no Phase A and B.
     - The agents do the steps that name them. Never do their work yourself:
       chapter text and its revisions, the quotes of the source registry,
-      source and format checks, style resolution. If the Agent tool is
-      missing, tell the user and stop.
+      source and format checks, style resolution. A change to a chapter's
+      text that the user asks for or a styleguide answer brings, such as a
+      citation form, goes to the writer, also when it is format-only; or
+      it waits for F.1, where item 6 has you apply the format-verifier's
+      format-only findings. If the Agent tool is missing, tell the user and
+      stop.
     - Yours: step 0.0 and workspace/state.md, except the rows of its source
       registry, which the writer adds, changes and removes; recording the
       answers to open styleguide questions and, for a rule an agent names as
