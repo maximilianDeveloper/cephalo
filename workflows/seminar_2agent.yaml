@@ -107,8 +107,8 @@ main_session:
       a round of step 2 checks the sentences it changed (no iteration:
       orchestrator.md, "Feedback loop control"). One that styleguide.md
       now requires may instead wait for F.1, where the format-verifier
-      finds it and item 6 has you apply it; ask the user which. If the
-      Agent tool is missing, tell the user and stop.
+      finds it and item 6 has you apply it; ask the user which. In F.1,
+      item 6 applies. If the Agent tool is missing, tell the user and stop.
     - Yours: step 0.0 and workspace/state.md, except the rows of its source
       registry, which the writer adds, changes and removes; recording the
       answers to open styleguide questions and, for a rule an agent names as
@@ -304,7 +304,9 @@ phases:
            chapters and the reference list by checklists/consistency.md, Part A
            and B.2-B.3, and each entry of the reference list against the
            source's title page and imprint (authors, title, year, publisher or
-           series, pages). Save its answer unchanged as
+           series, pages); its task prompt also gives the last verbatim report
+           of each chapter (step 2), whose section "Runs shared with other
+           chapters" counts A.2. Save its answer unchanged as
            workspace/output/verification/consistency_final.md, read back as in
            step 2, and record its open items under the open issues of
            workspace/state.md. Its findings go to the writer-agent (chapter text
@@ -413,7 +415,7 @@ minimal_setup_notes: |
   
   Trade-offs vs. bachelor_5agent:
   - No strict separation of reading / extracting / writing
-  - Consistency is checked twice, not per chapter pair: by the source-verifier in the first round of the second chapter written and, for B.3, in the conclusion's first round (step 2; source-verifier.md, "Cross-chapter consistency"), and once in F.1
+  - Consistency is checked twice, not per chapter pair: by the source-verifier in the first round of the second chapter written and, for B.3, in the conclusion's first round (step 2; source-verifier.md, "Cross-chapter consistency"), and once in F.1; A.2 also in every round whose verbatim report lists runs shared with other chapters
   
   For < 10 pages and < 15 sources, the overhead of the larger setup
   is not justified. Quality loss is modest.
