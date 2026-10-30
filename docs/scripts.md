@@ -232,8 +232,8 @@ Use the output as a starting point for manual verification, not as a final verdi
 Lists the repeated citations of a work for the format check of `in_text.repeated_citation`: each pair of a source cited again right after its previous citation, as one line with the chapter file and line of the repeated citation and the form the text gives it. The format-verifier runs it in every full format check and copies its lines into its report, where it checks each against the styleguide's value (`format-verifier.md`, "In-text citations"); the script judges no form. It reads the chapter files the export was made from, not the DOCX: a finding is fixed there.
 
 ```bash
-# Flat structure: the chapter folder, its .md files in the order of the numbers in their names
-python3 scripts/repeated_citations.py workspace/output/chapters/
+# The chapter files the export was made from, in its order (a seminar paper: its numbered chapter folder)
+python3 scripts/repeated_citations.py workspace/output/chapters/ch_1_intro.md workspace/output/chapters/ch_2_body.md workspace/output/chapters/ch_3_conclusion.md
 
 # Long-form: the files the export lists, in its order (in a multi-project sub-project: ../scripts/repeated_citations.py)
 python3 scripts/repeated_citations.py 07_Introduction/introduction.md 03_Theory_chapters/chapter_2_basics.md 06_Discussion_Conclusion/conclusion.md 08_Formal_Review/bibliography.md

@@ -121,9 +121,9 @@ python3 scripts/bibliography_check.py workspace/output/document.docx
 # List-of-abbreviations derivation
 python3 scripts/abbreviations_extract.py workspace/output/document.docx
 
-# Repeated citations: every pair, from the chapter files the export was made from
-# (long-form: the files the export lists, in its order)
-python3 scripts/repeated_citations.py workspace/output/chapters/
+# Repeated citations: every pair, from the chapter files the export was made from, in its order
+# (a seminar paper may give its numbered chapter folder instead)
+python3 scripts/repeated_citations.py <the export's chapter files, in its order>
 
 # Pronoun check (use forbidden pronouns from styleguide)
 pandoc workspace/output/document.docx --to plain --wrap=none | \
