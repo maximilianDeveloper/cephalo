@@ -181,7 +181,11 @@ phases:
           styleguide.md or a key of its template, otherwise to the user as a
           note (style-resolver.md, "Recording answers to open questions",
           item 6); a line under the open issues of workspace/state.md does
-          not replace either.
+          not replace either. The line in workspace/state.md for the answer
+          names each such rule by its key or in two or three words and
+          where it went (`gaps: in_text.multiple_sources → Open questions;
+          percentages in the text → note to the user`), or says
+          `gaps: none`.
           Before step 2, also after a revision, Claude counts the draft; more
           than 20% over its budget, the writer shortens it first, unless the
           user accepts the length (main_session, "Page budget monitoring").
