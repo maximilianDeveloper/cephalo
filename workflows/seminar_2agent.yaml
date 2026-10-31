@@ -363,12 +363,13 @@ phases:
            workspace/state.md (orchestrator.md, item 5 of "Action on
            transition", step (4)); (b) read the report with the Read tool,
            whole: its answer gives only the path and the counts, the
-           findings and the Notes are in the file; (c) show the user its
-           Notes. Then apply its format-only findings
-           (chapter files with the Edit tool, no rewording, a non-breaking
-           space as `\ `: writer-agent.md, "Formatting rules"; layout by
-           building the reference document again), answer its ❓ (item 1),
-           and let the next round check the fixes. A finding that needs new
+           findings and the Notes are in the file. Then apply its
+           format-only findings (chapter files with the Edit tool, no
+           rewording, a non-breaking space as `\ `: writer-agent.md,
+           "Formatting rules"; layout by building the reference document
+           again), answer its ❓ (item 1), and let the next round check the
+           fixes. Show the user its Notes in your message on the round, at
+           the latest with a question on its ❓. A finding that needs new
            wording goes to the writer-agent (copies first: step 2, item 2), and
            a verification round (step 2) checks the sentences it changed (the
            loop limit as in item 3).
