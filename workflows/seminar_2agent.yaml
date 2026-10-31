@@ -241,8 +241,9 @@ phases:
              "Feedback loop control"). A finding on a chapter written before
              goes to the writer too, and the sentences it changes there get a
              round of their own, whose task prompt also gives the report that
-             found it and that report's chapter file (orchestrator.md, "Return
-             calls"; the revision counts toward that chapter's loop count).
+             found it and the chapter files its finding names (orchestrator.md,
+             "Return calls"; the revision counts toward that chapter's loop
+             count).
           3. The source-verifier cannot write files, so do not ask it to. Save
              its answer unchanged as <name>_round_<n>.md: the writer and the
              next round work from it. Nothing is shortened, reworded,
