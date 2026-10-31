@@ -104,7 +104,7 @@ Choose your workflow based on your project type:
 
 Open the chosen workflow file once to understand the phase structure. Then start a chat for the first chapter.
 
-If your workflow uses an orchestrator (all except seminar paper and presentation), start each chat by asking Claude to invoke it: `orchestrator` (flat), `orchestrator-longform` (long-form, and the proposal and main-work sub-projects) or `orchestrator-defense` (defense sub-project). The orchestrator calls the specialist agents itself. In the CLI you can instead start the session as the orchestrator, e.g. `claude --agent orchestrator-longform`; use that mode if the orchestrator reports that it cannot call other agents.
+If your workflow uses an orchestrator (all except seminar paper and presentation), start each chat by asking Claude to invoke it: `orchestrator` (flat), `orchestrator-longform` (long-form, and the proposal and main-work sub-projects) or `orchestrator-defense` (defense sub-project). The orchestrator calls the specialist agents itself. In the CLI you can instead start the session as the orchestrator, e.g. `claude --agent orchestrator-longform`; use that mode if the orchestrator reports that it cannot call other agents or asks you to restart the chat as the orchestrator.
 
 For a seminar paper or a presentation there is no orchestrator: name the workflow file and the step in your first message (for example "I am following `workflows/seminar_2agent.yaml`; today chapter 2, steps 1 to 3"). Claude in the chat then calls the agents itself, as the workflow's `main_session` block says.
 
