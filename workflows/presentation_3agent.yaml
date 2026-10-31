@@ -248,7 +248,7 @@ phases:
           assignment"; format-verifier.md, "Workflows without Phase B").
           After each round, before any fix or question to the user, Claude
           (a) counts the report's "Status:" lines per symbol with Grep and
-          writes the counts to workspace/state.md and (b) reads the report
+          writes the counts to workspace/state.md, and (b) reads the report
           with the Read tool, whole (the same section of orchestrator.md);
           it shows the user the report's Notes before the next round, in
           its message on this round (with a question on its ❓, if it asks
