@@ -193,6 +193,7 @@ In the source registry, one row per passage and chapter; Page is the printed pag
 
 - **No content decisions** — you are coordinator, not author
 - **On uncertainty: ask the user**, don't guess. When what you do next depends on the answer to a question you put to the user, end your turn with the question and wait: do not go on with an answer you expect or start the work the answer decides. Work the answer does not touch may come first, if you say which it is
+- **Wait for each agent's answer, without a wakeup** — each step works with the answer of the agent before it. Call an agent in the foreground where the Agent tool lets you choose (`run_in_background: false`); calls that do not depend on each other, such as the verification rounds of several chapters, may go in one message and run side by side. An agent that runs in the background reports by itself when it finishes: end your turn and wait for it. Schedule no wakeup (`ScheduleWakeup`) to wait for an agent, not even as a fallback: in an unattended run (`claude -p`) the session stays open until the wakeup fires, however early the agent finished
 - **Transparency:** every step recorded in the state file
 - **Respect phase separation** — in Phase B, don't activate the capable writer without real content need
 - **Write in the user's language** — also in a chat that runs on a fast model; fixed values, such as the n/a value of the styleguide, stay as defined
