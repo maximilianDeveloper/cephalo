@@ -355,5 +355,5 @@ phases:
       - Confirm the hyphenation setting matches styleguide.md (document.hyphenation)
       - Visual proofreading
       - Sign declaration of academic integrity
-      - Commit the final state (git add -A then git commit -m "submission: final version", in a multi-project main work "main/submission: final version"), then tag it: git tag v_final_<date>
+      - Commit the final state (the user runs it, or asks Claude to: git add -A then git commit -m "submission: final version", in a multi-project main work "main/submission: final version"), then the tag, the same way: git tag v_final_<date>
       - Mentally rehearse defending each sentence (especially methods chapter)

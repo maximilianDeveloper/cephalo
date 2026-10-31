@@ -90,7 +90,7 @@ For every category below: **read concrete values from `styleguide.md`**, not fro
 - [ ] "cf." or "see" prefix (styleguide: `in_text.cf_prefix`)
 - [ ] Non-breaking space before page number, also before the page range of a reference-list entry unless the styleguide says otherwise (styleguide: `in_text.nbsp_before_page`; a chapter file writes it as Pandoc's escaped space, `S.\ 12`, except a presentation's companion that is not exported with Pandoc; with citekeys, the CSL style sets it only after the label of a citekey's locator, and a page number in plain text, such as the original's page in a secondary citation's prefix, takes the escaped space)
 - [ ] Page-range notation (styleguide: `in_text.page_range`)
-- [ ] A source cited again right after its previous citation, on the same page or another (styleguide: `in_text.repeated_citation`): list every such pair of consecutive citations in the report, one line each with its file and line, also when all pass and when one line of a chapter file (a paragraph) holds several, and check each against the value; `ebd.` or `ibid.` stands only there
+- [ ] A source cited again right after its previous citation, on the same page or another (styleguide: `in_text.repeated_citation`): every such pair of consecutive citations in the report, one line each with its file and line, as `scripts/repeated_citations.py` lists them, also when all pass and when one line of a chapter file (a paragraph) holds several, and each checked against the value; `ebd.` or `ibid.` stands only there
 
 ### Tables and figures
 
@@ -120,6 +120,10 @@ python3 scripts/bibliography_check.py workspace/output/document.docx
 
 # List-of-abbreviations derivation
 python3 scripts/abbreviations_extract.py workspace/output/document.docx
+
+# Repeated citations: every pair, from the chapter files the export was made from, in its order
+# (a seminar paper may give its numbered chapter folder instead)
+python3 scripts/repeated_citations.py <the export's chapter files, in its order>
 
 # Pronoun check (use forbidden pronouns from styleguide)
 pandoc workspace/output/document.docx --to plain --wrap=none | \

@@ -58,7 +58,7 @@ The original quotes in the extracts, and in the seminar and presentation workflo
 3. **Preserve terminology, rewrite surrounding prose** — keep technical terms, rewrite the framing.
 4. **Synonym substitution** — last resort, least effective.
 
-A count by eye misses runs, so do not report one as a check result ("no run of five or more words"). Before every verification, `scripts/verbatim_check.py` counts them (run by the orchestrator; in the seminar and presentation workflows, by Claude in the main chat or by the user), and the source-verifier passes them on to you.
+A count by eye misses runs, so do not report one as a check result ("no run of five or more words"), against the sources or against another chapter. Before every verification, `scripts/verbatim_check.py` counts them, also those the chapter shares with the other chapters (run by the orchestrator; in the seminar and presentation workflows, by Claude in the main chat or by the user), and the source-verifier passes them on to you.
 
 ## Style rules
 

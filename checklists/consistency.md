@@ -2,7 +2,7 @@
 
 **Purpose:** Verifies consistency within and between chapters.
 **Executed by:** source-verifier (cross-chapter checks; in a seminar paper also the final check of Part A and B.2-B.3), orchestrator (final check).
-**When:** After every second chapter, plus a final check before submission.
+**When:** After every second chapter, plus a final check before submission; A.2 also in every round whose verbatim report lists runs shared with other chapters (`.claude/agents/source-verifier.md`, "Cross-chapter consistency").
 
 ---
 
@@ -21,6 +21,7 @@ To be performed by source-verifier after every second chapter.
 ### A.2 Self-plagiarism
 
 - [ ] No verbatim overlaps between chapters (except for definitions intentionally repeated)
+  - Count: `scripts/verbatim_check.py` with `--chapters` lists the runs of 5 or more words a chapter shares with the other chapters, and its quotations of their text, in the section "Runs shared with other chapters" of the chapter's verbatim report (`.claude/agents/source-verifier.md`, "Cross-chapter consistency")
 - [ ] **Especially between introduction and conclusion:** the conclusion must use its own wording, not paraphrase the introduction
 - [ ] The research question is quoted verbatim only once (in the introduction); afterwards only referenced
 
@@ -133,15 +134,15 @@ The source-verifier or orchestrator returns a structured report:
 | Category | Status | Findings |
 |----------|--------|----------|
 | A.1 Cross-references | ✅ / ⚠️ / ❌ / ❓ / – | ... |
-| A.2 Self-plagiarism | ✅ / ⚠️ / ❌ / ❓ / – | ... |
+| A.2 Self-plagiarism | ✅ / 🟡 / ⚠️ / ❌ / ❓ / – | ... |
 | A.3 Argumentation | ✅ / ⚠️ / ❌ / ❓ / – | ... |
 | A.4 Terms | ✅ / ⚠️ / ❌ / ❓ / – | ... |
 | A.5 Editions | ✅ / ⚠️ / ❌ / ❓ / – | ... |
-| B.3 Body ↔ conclusion (when the task prompt names it) | ✅ / ⚠️ / ❌ / ❓ / – | ... |
+| B.3 Body ↔ conclusion (when the task prompt names it) | ✅ / 🟡 / ⚠️ / ❌ / ❓ / – | ... |
 
 ### Detailed findings
 
-[Per ⚠️, ❌ or ❓: precise location, problem description, proposed fix; per –: the chapter it waits for]
+[Per 🟡, ⚠️, ❌ or ❓: precise location, problem description, proposed fix; per –: the chapter it waits for]
 
 ### Recommendation
 
@@ -151,7 +152,7 @@ The source-verifier or orchestrator returns a structured report:
 ❓ Material missing: what, and who supplies it
 ```
 
-In Part A and B.2-B.3, no status is minor or non-blocking: a ⚠️ or ❌ goes to the revision of the chapter its fix changes, a ❓ to whoever supplies what is missing, and that chapter has not passed while one is left (`.claude/agents/orchestrator.md`, "Feedback loop control"; long-form: `orchestrator-longform.md`, "Feedback-loop escalation"). A `–` (an en dash) marks a point that waits for a chapter not yet written: the next consistency check that includes that chapter, or else the final check, takes it up.
+In Part A and B.2-B.3, no status is minor or non-blocking: a ⚠️ or ❌ goes to the revision of the chapter its fix changes, a ❓ to whoever supplies what is missing, and that chapter has not passed while one is left, except a ❓ for bibliographic data the user cannot supply in a seminar paper or presentation (`.claude/agents/orchestrator.md`, "Feedback loop control"; long-form: `orchestrator-longform.md`, "Feedback-loop escalation"). A `–` (an en dash) marks a point that waits for a chapter not yet written: the next consistency check that includes that chapter, or else the final check, takes it up.
 
 ---
 

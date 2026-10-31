@@ -98,6 +98,7 @@ In Phase B, the format-verifier handles:
 
 - Bibliography minus-test (`scripts/bibliography_check.py`)
 - List-of-abbreviations derivation (`scripts/abbreviations_extract.py`)
+- Repeated citations, each pair listed with its chapter file and line (`scripts/repeated_citations.py`)
 - Pronoun and forbidden-wording checks
 - Page-range notation consistency
 - Et al. rule consistency
