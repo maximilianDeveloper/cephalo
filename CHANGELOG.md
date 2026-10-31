@@ -10,6 +10,10 @@ Dates follow ISO 8601 (`YYYY-MM-DD`).
 
 ## [Unreleased]
 
+## [1.4.7] — 2026-10-31
+
+**What the tenth seminar trial run found.** The coordinator calls each agent in the foreground and waits for an agent without a wakeup, a ❓ left open for bibliographic data the user cannot supply is named in Chapter status too, and the format report's Notes go to the user before the next round. The eleventh seminar trial run, on these definitions and on the subscription, called all 24 agents in the foreground, scheduled no wakeup and had no idle time, so that its chats took 83 minutes instead of 116; the conclusion's row in Chapter status ended with the open ❓. The Notes of the first format round reached the user only after the second round. It cost 28.51 USD (the tenth run: 30.44). Next: the Notes of a format round; the coordinator's own additions to the task prompts of follow-up rounds, in the third run in a row; `ebd.` across a chapter boundary, which no styleguide key covers; and gaps the writer named that went unrecorded.
+
 ### Changed
 
 - **Each agent's answer is awaited without a wakeup** (`orchestrator.md`, `orchestrator-longform.md`, `orchestrator-defense.md`, "Principles"; the seminar and presentation workflows take it from `orchestrator.md`): the coordinator calls an agent in the foreground where the Agent tool lets it choose, waits for an agent in the background by ending its turn (an orchestrator started as a subagent stops instead and asks for a restart as the orchestrator, which `docs/QUICKSTART.md` now names), and schedules no wakeup to wait for one, not even as a fallback. In the tenth seminar trial run, on Claude Code 2.1.316, where every agent call ran in the background, the main session twice scheduled a wakeup of 20 minutes while it waited for an agent, and the unattended run stayed open until each fired, which left it idle for about 30 minutes in all (an estimate).
