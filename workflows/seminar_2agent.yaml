@@ -368,11 +368,12 @@ phases:
            rewording, a non-breaking space as `\ `: writer-agent.md,
            "Formatting rules"; layout by building the reference document
            again), answer its ❓ (item 1), and let the next round check the
-           fixes. Show the user its Notes in your message on the round, at
-           the latest with a question on its ❓. A finding that needs new
-           wording goes to the writer-agent (copies first: step 2, item 2), and
-           a verification round (step 2) checks the sentences it changed (the
-           loop limit as in item 3).
+           fixes. Show the user its Notes before the next round, in your
+           message on this round (with a question on its ❓, if you ask
+           one). A finding that needs new wording goes to the writer-agent
+           (copies first: step 2, item 2), and a verification round (step
+           2) checks the sentences it changed (the loop limit as in item
+           3).
         7. For the user, in Word, after the last export, listed under the open
            issues of workspace/state.md and named in the chat, each step as
            its own point: (a) update the fields (Ctrl+A, then F9, twice:
