@@ -92,11 +92,18 @@ main_session:
     points to it: no research-agent, no extracts, no Phase A and B.
     - The agents do the steps that name them. Never do their work yourself:
       slide text, speaker notes and companion text and their revisions, the
-      quotes of the source registry, source and format checks, style
-      resolution. If the Agent tool is missing, tell the user and stop.
+      quotes of the source registry, source and format checks (also of a
+      data file against its source), style resolution. A change to slide
+      text, speaker notes or companion text that the user asks for or a
+      styleguide answer brings, such as a citation form, goes to the
+      writer, also when it is format-only, and a round of step 2 checks
+      what it changed (no iteration: orchestrator.md, "Feedback loop
+      control"). If the Agent tool is missing, tell the user and stop.
     - Yours: step 0.0 and workspace/state.md, except the rows of its source
       registry, which the writer adds, changes and removes; recording the
-      answers to open styleguide questions; the companion's budget and word
+      answers to open styleguide questions and, for a rule an agent names as
+      missing, its entry under "Open questions" or a note to the user
+      (step 1); the companion's budget and word
       counts; building the deck from the writer's files, as the user decides
       (step 1); running scripts/verbatim_check.py on the companion and
       saving the source-verifier's reports (step 2); naming the
@@ -170,6 +177,22 @@ phases:
           size and margins, pagination); a layout neither gives is asked of
           the user, not chosen. After a revision of slide text or speaker
           notes, the deck is built again the same way before the next check.
+          When the writer's answer comes in, a line in workspace/state.md
+          before a question to the user or the next agent call
+          (orchestrator.md, "Steps 1..N: Chapter assignment", after every
+          agent call). Each rule the answer names as not covered goes, when
+          the answer comes in and before a question to the user or the next
+          agent call, under "Open questions" in
+          styleguide.md if its gap names a rule of styleguide.md or a key of
+          its template, otherwise to the user as a note (style-resolver.md,
+          "Recording answers to open questions", item 6); a line under the
+          open issues of workspace/state.md does not replace either. The
+          line in workspace/state.md for each of the writer's answers, also
+          one to a revision (step 2, step 3, the three-way check), names
+          each such rule by its key or in two or three words and where it
+          went (`gaps: slides.chart_source → Open
+          questions; notes length → note to the user`), or says `gaps:
+          none`.
       
       - step: 2
         agent: source-verifier
