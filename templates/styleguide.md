@@ -32,7 +32,7 @@
 - **`no_date`:** [e.g., `o. J.` or `n.d.`]
 - **`no_page_locator`:** [sources without page numbers, such as web pages: section, paragraph or nothing]
 - **`secondary_citation`:** [e.g., `(Weber 1922, S. 31, zit. nach Keller 2018, S. 5)`; see also `bibliography.secondary_original`]
-- **`repeated_citation`:** [a source cited again right after its previous citation, on the same page or on another: repeat the full citation / `ebd.` or `ibid.`, with the page where it differs, e.g., `(ebd., S. 14)`]
+- **`repeated_citation`:** [a source cited again right after its previous citation, on the same page or on another: repeat the full citation / `ebd.` or `ibid.`, with the page where it differs, e.g., `(ebd., S. 14)`; and at the start of a new chapter, after the same source ended the one before: the full citation again / as anywhere else]
 
 ---
 

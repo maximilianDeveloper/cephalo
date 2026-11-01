@@ -249,10 +249,14 @@ phases:
           After each round, before any fix or question to the user, Claude
           (a) counts the report's "Status:" lines per symbol with Grep and
           writes the counts to workspace/state.md, and (b) reads the report
-          with the Read tool, whole (the same section of orchestrator.md);
-          it shows the user the report's Notes before the next round, in
-          its message on this round (with a question on its ❓, if it asks
-          one).
+          with the Read tool, whole (the same section of orchestrator.md).
+          Before the next round, it shows the user the report's Notes, asks
+          whether the guidelines or the supervisor rule on any Note no
+          earlier round asked about (the decision log of workspace/state.md
+          keeps the answer) and ends its turn with that question, with any
+          question on its ❓; the next round starts after the answer.
+          Without such a Note or a ❓ to ask about, it goes on without a
+          stop.
           Claude applies the companion's format-only findings with the Edit
           tool, without rewording. A finding in the slide text or speaker
           notes, or one that needs new wording, goes to the writer (copies
