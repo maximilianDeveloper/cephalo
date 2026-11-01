@@ -543,6 +543,63 @@ class TestS6StateCheckPipe(Base):
         self.deny(bash(cmd, off='S1'), 'S6')
 
 
+class TestCompoundCommands(Base):
+    """A command after a reserved word (if/then/else/elif/do/while/until/!) is checked as any other, and a
+    piped or redirected compound command (if ... fi, for/while ... done, case ... esac) as a { } group."""
+    DENIED = [
+        ('for f in a b; do python3 scripts/state_check.py $f | tail -3; done', 'S6'),
+        ('if true; then python3 scripts/state_check.py x | tail; fi', 'S6'),
+        ('for f in a b; do python3 scripts/state_check.py x; done | tail', 'S6'),
+        ('if true; then python3 scripts/state_check.py x; fi 2>&1 | tail', 'S6'),
+        ('while true; do\n  python3 scripts/state_check.py x\n  break\ndone | tail', 'S6'),
+        ('if a; then for x in y; do python3 scripts/state_check.py x; done; fi | tail', 'S6'),
+        ('case $x in (a|b) python3 scripts/state_check.py x ;; esac | tail', 'S6'),
+        ('! python3 scripts/state_check.py x | tail', 'S6'),
+        ("for f in scripts/state_check.py; do sed -i 's/a/b/' scripts/state_check.py; done", 'S5'),
+        ('if true; then rm -f .claude/settings.json; fi', 'S5'),
+        ('! cp x .claude/settings.json', 'S5'),
+        ('if true; then git checkout -- scripts/; fi', 'S5'),
+        ('while false; do mv scripts/a.py scripts/b.py; done', 'S5'),
+        ('if x; then y; elif z; then rm .claude/settings.json; else w; fi', 'S5'),
+        ('until false; do rm scripts/cephalo_guard.py; done', 'S5'),
+        ('case "$x" in a) rm scripts/x.py ;; esac', 'S5'),
+        ('( if true; then cp x scripts/a; fi )', 'S5'),
+        ('if true; then python3 -c "open(\'notes.md\', \'w\').write(\'x\')"; fi', 'S1'),
+        ('for f in a; do python3 -c "open(\'notes.md\', \'w\').write(\'x\')"; done', 'S1'),
+        ('for f in a b; do echo "$f"; done > list.md', 'S1'),
+        ('if true; then { echo a; } > f.md; fi', 'S1'),
+        ('if true; then python3 x.py || py x.py; fi', 'S3'),
+    ]
+    PASSING = [
+        'if [ -f x ]; then echo ok; fi', 'for f in a b; do wc -w "$f"; done', 'for f in a b; do wc -w "$f"; done | sort',
+        'while read -r l; do echo "$l"; done < in.txt', 'until [ -f x ]; do sleep 1; done',
+        'case "$OS" in Windows_NT) py x.py ;; *) python3 x.py ;; esac', 'case "$x" in rm) echo ok ;; esac',
+        'echo done; echo fi; echo then', 'git commit -m "if then fi"', 'if ! grep -q x f; then echo missing; fi',
+        'for f in workspace/output/chapters/*.md; do python3 scripts/verbatim_check.py --words "$f"; done | tail -5',
+        'for f in a b; do python3 scripts/state_check.py workspace/state.md; done',
+        'if true; then python3 scripts/state_check.py x > _scratch/orchestrator/s.txt; fi', 'fi | tail', '! true',
+    ]
+
+    def test_denied(self):
+        for cmd, rule in self.DENIED:
+            with self.subTest(cmd=cmd):
+                self.assertIn(rule, rules_of(bash(cmd)), cmd)
+
+    def test_passing(self):
+        for cmd in self.PASSING:
+            with self.subTest(cmd=cmd):
+                self.passes(bash(cmd))
+
+    def test_parse(self):
+        segs, pipes, _ = g.parse('if true; then rm x; fi | tail')
+        self.assertEqual([sg.words for sg in segs], [['true'], ['rm', 'x'], [], ['tail']])
+        self.assertEqual((segs[2].group, segs[2].sep), ((0, 2), '|'))
+        segs, _, _ = g.parse('case $x in\n  a|b) ls ;;\n  (c) cat f ;;\nesac')
+        self.assertEqual([sg.words for sg in segs if sg.words], [['ls'], ['cat', 'f']])
+        segs, _, _ = g.parse('for f in scripts/*.py; do wc -l "$f"; done')
+        self.assertEqual([sg.words for sg in segs if sg.words], [['wc', '-l', '$f']])
+
+
 # ------------------------------------------------------------------ R6, R5
 
 

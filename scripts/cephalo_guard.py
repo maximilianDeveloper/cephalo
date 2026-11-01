@@ -38,9 +38,9 @@ Rules (on, except P1)
       writes, moves or deletes them.  Denied: only the user changes them.
   S6  cephalo's state_check.py run with its output into a pipe (| tail,
       2>&1 | grep, in PowerShell | Select-Object), also in a ( ) or { }
-      group that is piped.  Denied: its whole output is read in the tool
-      result.  --help, its output redirected into a file, and a chain with
-      ;, && or || pass.
+      group, an if, a loop or a case that is piped.  Denied: its whole
+      output is read in the tool result.  --help, its output redirected
+      into a file, and a chain with ;, && or || pass.
   R5  The coordinator (main chat or an orchestrator) and a saved
       source-verifier report (verification/*_round_<n>.md,
       consistency_final.md): after a Write, asks for the read-back the
@@ -516,7 +516,8 @@ def tokenize(s, ps=False):
 class Seg:
     """One simple command: its words, redirects (fd, op, target), here-document
     numbers, here-strings, the operator after it, and the segments it groups
-    when it is the redirect part after '( ... )' or '{ ... }'."""
+    when it is the redirect part after '( ... )', '{ ... }' or a compound
+    command (if ... fi, for/while/until/select ... done, case ... esac)."""
     __slots__ = ('words', 'redirs', 'heredocs', 'herestrings', 'sep', 'group', 'subshell_end')
 
     def __init__(self):
@@ -529,9 +530,20 @@ class Seg:
         return not (self.words or self.redirs or self.heredocs or self.herestrings)
 
 
+# Bash's compound commands: the reserved word that opens one (and the kind of
+# word that closes it), the one that closes it, and the ones a command follows.
+# They count only where a command name stands.
+_COMPOUND_OPEN = {'if': 'if', 'while': 'do', 'until': 'do', 'for': 'do', 'select': 'do', 'case': 'case'}
+_COMPOUND_CLOSE = {'fi': 'if', 'done': 'do', 'esac': 'case'}
+_RESERVED = ('then', 'else', 'elif', 'do', '!')
+
+
 def parse(cmd, ps=False, pre=None):
     """Return (segments, pipelines, heredoc bodies).  pre: bodies already
-    taken out of the text by an enclosing command."""
+    taken out of the text by an enclosing command.  A reserved word is no
+    part of a command ('if true; then rm x; fi' holds the commands true and
+    rm x), the words of a for/select/case head and the case patterns are no
+    command, and a compound command groups its segments as { ... } does."""
     if pre is not None:
         text, bodies = cmd, pre
     else:
@@ -540,9 +552,10 @@ def parse(cmd, ps=False, pre=None):
     segs, stack = [], []
     cur = Seg()
     pending_group = None
+    skip = None                     # 'head': for/select/case words up to the segment's end; 'pattern': a case pattern
 
     def finish(sep):
-        nonlocal cur, pending_group
+        nonlocal cur, pending_group, skip
         if pending_group is not None and not cur.words:
             cur.group = pending_group
         pending_group = None
@@ -552,18 +565,34 @@ def parse(cmd, ps=False, pre=None):
         elif segs and sep:
             segs[-1].sep = sep
         cur = Seg()
+        if skip == 'head':
+            skip = None
 
     i = 0
     while i < len(toks):
         t = toks[i]
         if t[0] == 'w':
             w = t[1]
-            if not cur.words and not ps and w == '{':
+            top = stack[-1][0] if stack else None
+            if not cur.words and not ps and w in _COMPOUND_CLOSE and top == _COMPOUND_CLOSE[w]:
+                skip = None
+                finish(';')
+                pending_group = (stack.pop()[1], len(segs))
+            elif skip == 'head' and w == 'in' and top == 'case':
+                skip = 'pattern'
+            elif skip:
+                pass                                 # no command
+            elif not cur.words and not ps and w == '{':
                 finish('')
                 stack.append(('{', len(segs)))
             elif not cur.words and not ps and w == '}' and stack:
                 finish(';')
                 pending_group = (stack.pop()[1], len(segs))
+            elif not cur.words and not ps and w in _COMPOUND_OPEN:
+                stack.append((_COMPOUND_OPEN[w], len(segs)))
+                skip = 'head' if w in ('for', 'select', 'case') else None
+            elif not cur.words and not ps and w in _RESERVED + tuple(_COMPOUND_CLOSE):
+                pass                                 # then, do, else, elif, !, an unmatched fi, done or esac
             else:
                 cur.words.append(w)
         elif t[0] == 'r':
@@ -582,7 +611,17 @@ def parse(cmd, ps=False, pre=None):
                 cur.redirs.append((fd, op, target))
         else:
             op = t[1]
-            if op == '(':
+            top = stack[-1][0] if stack else None
+            if skip == 'pattern' and op in ('(', '|'):
+                pass                                 # case (a|b) ...
+            elif skip == 'pattern' and op == ')':
+                skip, cur = None, Seg()              # the pattern's end: the case's command follows
+            elif op == ')' and top == 'case':
+                finish(';')                          # a ')' that closes nothing
+            elif op in (';;', ';&') and top == 'case':
+                finish(op)
+                skip = 'pattern'
+            elif op == '(':
                 finish('')
                 stack.append(('(', len(segs)))
             elif op == ')':
@@ -1482,7 +1521,7 @@ def _state_check_run(c, args):
 def _pipe_detail(segs, si, how):
     """For a message: the pipe a segment's output goes into."""
     if how == 'group':
-        return 'from inside a ( ) or { } group whose output goes into a pipe'
+        return 'from inside a group, an if, a loop or a case whose output goes into a pipe'
     nxt = segs[si + 1].words if si + 1 < len(segs) else []
     words = ' '.join(_sh_quote(w) for w in nxt[:3])
     return '%s %s' % (segs[si].sep, words[:60] + ('...' if len(words) > 60 or len(nxt) > 3 else '') or '...')
