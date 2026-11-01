@@ -279,7 +279,7 @@ phases:
              counts and the loop count go to workspace/state.md, not into the
              report.
           The user may run the script instead and hand Claude the file.
-        feedback_loop_max: 2   # iterations, not verification rounds: up to 3 rounds
+        feedback_loop_max: 2   # iterations per part, not verification rounds: up to 3 rounds per part
       
       - step: 3
         agent: format-verifier
