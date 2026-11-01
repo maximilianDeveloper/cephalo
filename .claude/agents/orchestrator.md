@@ -133,7 +133,7 @@ When a feedback loop reaches `feedback_loop_max`, you stop automatic iteration a
 
 1. **Abort** — accept the current state as best effort; list outstanding items in the state file as open ⚠️ items (`- [ ] ⚠️ …`; accepting them does not resolve them) and continue to the next chapter / phase (in Phase A these items stay open: the A → B transition requires them to be resolved first)
 2. **Manual fix** — pause; user investigates and resolves the problematic item manually; resume when user confirms
-3. **Force continue** — explicitly raise the loop limit for this one item; use sparingly, document the exception in `workspace/state.md`. The recommended raised limit depends on the workflow: `5` for bachelor/master (content-heavy), `3` for seminar/presentation (short works). The workflow file may override this via `force_continue_suggested_limit:`. Where the count already stands at that limit or above it (after an earlier Force continue), suggest the count plus 1.
+3. **Force continue** — explicitly raise the loop limit for this one item; use sparingly, document the exception in `workspace/state.md`. The recommended raised limit depends on the workflow: `5` for bachelor/master (content-heavy), `3` for seminar/presentation (short works). The workflow file may override this via `force_continue_suggested_limit:`. Where the count already stands at the suggested raised limit or above it (after an earlier Force continue), suggest the count plus 1.
 
 Present the outstanding items as a numbered list with source citations so the user can decide informed.
 
