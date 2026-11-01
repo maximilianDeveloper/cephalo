@@ -838,6 +838,21 @@ class TestR5BeforeAgentCall(Base):
         self.passes(self.agent(self.write(error=True, ts='not a time')))
         self.passes(self.agent(self.write(error=True, ts='2026-11-01T15:22:33')))   # no zone: unknown
 
+    def test_read_through_a_link(self):
+        # the same report by another spelling, a link to a folder above it: the same file
+        link = os.path.join(os.path.dirname(self.tr), 'link')
+        os.symlink(self.root, link)
+        via = self.rep.replace(self.root, link)
+        self.passes(self.agent(self.write() + self.read(path=via)))
+        self.deny(self.agent(self.write() + self.read(path=via, offset=300)), 'R5')
+        self.deny(self.agent(self.write(via) + self.read(offset=300)), 'R5')
+        self.passes(self.agent(self.write(via) + self.read()))
+        # another file of the same name is another report
+        other = os.path.join(self.root, 'copy')
+        os.makedirs(other)
+        shutil.copy(self.rep, other)
+        self.deny(self.agent(self.write() + self.read(path=os.path.join(other, os.path.basename(self.rep)))), 'R5')
+
     def test_written_again_after_the_read(self):
         self.deny(self.agent(self.write() + self.read() + self.write()), 'R5')
         self.passes(self.agent(self.write() + self.read() + self.write() + self.read()))

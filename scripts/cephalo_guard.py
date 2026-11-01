@@ -53,9 +53,10 @@ Rules (on, except P1)
       since its last Write.  The guard sees this in the session transcript
       (transcript_path), in the main chat's own calls in its last
       MAX_TRANSCRIPT bytes.  Whole: a Read without offset and limit, or Reads
-      that together cover every line the file now has; a Read whose result
-      was an error does not count, nor does a Write whose result was an error
-      unless the file changed after it all the same.
+      that together cover every line the file now has, also by another
+      spelling of its path (a link: the same device and inode); a Read whose
+      result was an error does not count, nor does a Write whose result was
+      an error unless the file changed after it all the same.
   R6  The coordinator writes or edits a report the format-verifier writes:
       denied, except a Write of a file that does not exist yet (the
       definitions' fallback).  That fallback Write is checked before the
@@ -1966,6 +1967,34 @@ def _spans_text(spans, lines):
     return 'read: lines %s of %d' % (', '.join('%d\u2013%d' % (a, b) for a, b in merged), lines)
 
 
+def _file_id(n, path, ctx):
+    """(device, inode) of a file, by its normalized path or else as written;
+    None when neither can be read or the file system gives no inode."""
+    for p in (n, path):
+        if p and _fs_ok(n, ctx):
+            try:
+                st = os.stat(p)
+            except (OSError, ValueError, TypeError):
+                continue
+            return (st.st_dev, st.st_ino) if st.st_ino else None
+    return None
+
+
+def _same_report(n, path, saved, ids, ctx):
+    """The saved report that a Read names by another spelling (a link to a
+    folder above it): one of the same file name that is the same file.  ids
+    keeps each report's file id; None when there is none or it is unknown."""
+    base = n.rsplit('/', 1)[-1]
+    names = [m for m in saved if m.rsplit('/', 1)[-1] == base]
+    me = _file_id(n, path, ctx) if names else None
+    for m in names if me else ():
+        if m not in ids:
+            ids[m] = _file_id(m, saved[m][0], ctx)
+        if ids[m] == me:
+            return m
+    return None
+
+
 def unread_reports(data, ctx):
     """R5 and R6 before an Agent, Task or SendMessage call of the main chat:
     each report the main chat saved (those readback() asks to read back) whose
@@ -1979,6 +2008,7 @@ def unread_reports(data, ctx):
         return []
     calls, failed = _main_calls(lines, ctx)
     saved = {}                      # normalized path -> [path as written, rule, spans of the Reads since]
+    ids = {}                        # normalized path of a saved report -> its file id (_same_report)
     for k, (tool, cid, tin, when) in enumerate(calls):
         if not k % 256:
             ctx.budget.tick()
@@ -1990,8 +2020,10 @@ def unread_reports(data, ctx):
             fmt = bool(_FORMAT_REPORT.search(n))
             if (fmt or _VERIFIER_REPORT.search(n)) and (cid not in failed or _written_since(path, n, when, ctx)):
                 saved[n] = [path, 'R6' if fmt else 'R5', []]
-        elif n in saved and cid not in failed:
-            saved[n][2].append(_read_span(tin))
+        elif cid not in failed:
+            m = n if n in saved else _same_report(n, path, saved, ids, ctx)
+            if m:
+                saved[m][2].append(_read_span(tin))
     hits = []
     for n, (path, rule, spans) in saved.items():
         if not ctx.enabled(rule):
