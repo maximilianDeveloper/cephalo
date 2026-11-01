@@ -189,14 +189,14 @@ phases:
           give one, and from a rule styleguide.md gives for slides, not from
           its rules for the written companion (body text, headings, page
           size and margins, pagination); a layout neither gives is asked of
-          the user, not chosen: before the first build, list for the user
-          each position, size, colour or label form the script sets that
-          neither the template nor styleguide.md gives (where the short
-          citation stands, the size of a chart, a line under it, how its
-          data labels read), each with a proposal, and build after the
-          answer, which goes into styleguide.md as the answer to an open
-          question does (style-resolver.md, "Recording answers to open
-          questions"). After a revision of slide text or speaker
+          the user, not chosen: before a build that first sets one, list for
+          the user each position, size, colour or label form that neither
+          the template nor styleguide.md gives (where the short citations
+          stand, the size of a chart, a source line under it, how its data
+          labels read), each with a proposal, and build after the answer.
+          Each answer goes into the decision log of workspace/state.md, one
+          entry per value with the user's words, and the build takes it from
+          there; it is no styleguide entry. After a revision of slide text or speaker
           notes, the deck is built again the same way before the next check.
           When the writer's answer comes in, a line in workspace/state.md
           before a question to the user or the next agent call
