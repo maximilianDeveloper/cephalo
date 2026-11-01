@@ -173,6 +173,11 @@ phases:
           Define slide structure, content per slide, speaker notes.
           In parallel: written companion document if required.
         note: |
+          Before the companion's first draft, settle whether F.1 exports it
+          as a document (the guidelines, or the user, decide), record it in
+          the decision log and name it in the writer's task prompt: an
+          exported companion takes Pandoc's escaped space before a page
+          number (writer-agent.md, "Formatting rules").
           The writer writes slide text and speaker notes as text files in
           workspace/output/slides/; it cannot build a PPTX. Before step 3,
           workspace/output/slides/<deck>.pptx is built from them, as the user
@@ -311,7 +316,8 @@ phases:
           non-breaking space before a page number goes to the user as an
           open point: slides, speaker notes and a companion not exported
           with Pandoc have no notation for it (writer-agent.md, "Formatting
-          rules"). Then the next round checks the fixes.
+          rules"); in a companion that F.1 exports (step 1), Claude writes it
+          as `\ ` in its file. Then the next round checks the fixes.
   
   # ===========================================================
   # Three-way consistency check
@@ -358,23 +364,33 @@ phases:
         - Final PPTX export
         - Final PDF of the slides (for submission)
         - The companion as a document, where the guidelines or the user
-          want one (a handout as a PDF, for example), in format rounds:
-          build workspace/output/reference.docx with
-          scripts/build_reference_docx.py from the values in styleguide.md;
-          export workspace/output/<companion>.docx with Pandoc from the
-          companion's file (docs/reference_management.md, "Citation
-          processor pipeline"); after every export, run
-          scripts/docx_pagination.py where styleguide.md gives the
-          companion's page numbering in pagination.* and, if
-          document.hyphenation is automatic, scripts/docx_postprocess.sh.
-          Then the format-verifier checks that DOCX, now also against the
-          rules of the written document (format-verifier.md, "Workflows
-          without Phase B"), and writes
-          workspace/output/verification/<companion>_docx_format_round_<n>.md;
-          Claude handles the report as in step 3, a layout finding by
-          building the reference document again, and the next round checks
-          a new export. The PDF comes last, from the last checked DOCX, with
-          Word or LibreOffice, by Claude or the user, as the user decides.
+          want one (a handout as a PDF, for example). Before the first
+          export, ask the user which parts of a written document it has (a
+          title page, a table of contents, page numbers and how they run) and
+          record the answer in the decision log of workspace/state.md. Then
+          format rounds as the seminar workflow describes them
+          (workflows/seminar_2agent.yaml, F.1, items 4, 6 and 7, for the
+          parts the companion has), with workspace/output/<companion>.docx in
+          place of document.docx, the companion's file as the only chapter
+          file and workspace/output/verification/<companion>_docx_format_round_<n>.md
+          as the report: build workspace/output/reference.docx with
+          scripts/build_reference_docx.py; export with Pandoc; after every
+          export, run scripts/docx_pagination.py with the values of
+          pagination.front_matter, pagination.main_text and
+          pagination.back_matter (without a title page and table of contents:
+          --front-matter arabic --main-text continue, which changes nothing;
+          on its exit 2: orchestrator.md, "Phase A → B transition", item 5,
+          step (2)) and, if document.hyphenation is automatic,
+          scripts/docx_postprocess.sh. The format-verifier checks that DOCX as
+          a written document (format-verifier.md, "Workflows without Phase
+          B"). Claude handles its report as step 3 says, except that a layout
+          finding is fixed by building the reference document again and a
+          missing non-breaking space before a page number becomes `\ ` in the
+          companion's file (writer-agent.md, "Formatting rules"); the next
+          round checks a new export. The PDF comes last, from the last checked
+          DOCX, after the field update of the seminar's item 7 where it has a
+          table of contents: with Word or LibreOffice, by Claude or the user,
+          as the user decides.
         - Speaker notes export (if required)
         - Rehearsal with timing (target per assignment / styleguide.md, e.g. 15-20 min)
         - Before closing, run
