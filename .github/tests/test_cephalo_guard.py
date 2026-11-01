@@ -1527,24 +1527,27 @@ class TestFastPath(Base):
                     self.assertEqual(self.hook(raw, shell, project, extra), (want, not fast))
 
     def test_large_writes(self):
-        # 1 MB of text with many escaped quotes: the path first takes the fast path; the path after the text
-        # may go to the guard (bash reads the path only from the input's head); either way the same answer,
-        # and no check grows with the square of the input
+        # text with many escaped quotes: up to 256 KiB every shell takes the fast path, bash up to 2 MiB (it reads
+        # the path from the input's head), a larger input goes to the guard, and so may a path after the text;
+        # the same answer always, and no check grows with the square of the input
         import time
         ch = self.p('workspace/output/chapters/ch_2.md')
-        text = ('Er sagte "ja" „x“ (vgl. Keller 2018, S. 44).\n' * 25000)[:1000000]
-        first = self.raw('Write', {'file_path': ch, 'content': text})
-        late = self.raw('Write', {'content': text, 'file_path': ch})
-        late_scripts = self.raw('Write', {'content': text, 'file_path': self.p('scripts/x.py')})
+        line = 'Er sagte "ja" \u201ex\u201c (vgl. Keller 2018, S. 44).\n'
+        small, big, huge = ((line * (n // len(line) + 1))[:n] for n in (200000, 1000000, 3000000))
+        self.assertLess(len(self.raw('Write', {'file_path': ch, 'content': small})), 262144)
+        late_scripts = self.raw('Write', {'content': big, 'file_path': self.p('scripts/x.py')})
         want = self.direct(late_scripts)
         self.assertIn('cephalo guard S5', want)
         for shell in self.bins:
             with self.subTest(shell=shell):
                 t = time.monotonic()
-                self.assertEqual(self.hook(first, shell), ('', False))
-                self.assertEqual(self.hook(late, shell)[0], '')
+                self.assertEqual(self.hook(self.raw('Write', {'file_path': ch, 'content': small}), shell), ('', False))
+                for text in (big, huge):
+                    self.assertEqual(self.hook(self.raw('Write', {'file_path': ch, 'content': text}), shell)[0], '')
+                    self.assertEqual(self.hook(self.raw('Write', {'content': text, 'file_path': ch}), shell)[0], '')
+                self.assertEqual(self.hook(self.raw('Write', {'file_path': ch, 'content': huge}), shell), ('', True))
                 self.assertEqual(self.hook(late_scripts, shell), (want, True))
-                self.assertLess(time.monotonic() - t, 10)
+                self.assertLess(time.monotonic() - t, 20)
 
     def test_unicode_letters_match_as_in_the_guard(self):
         # ı, İ, ſ and K are no i, s or k for the report names, in the guard as in the fast path

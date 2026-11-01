@@ -56,6 +56,14 @@ squash() {
 # Write (bash's ${x%%y*} or ${x#*y} on it would not); other expansions work on
 # short strings.
 harmless() {
+    # a large input goes to the guard, which reads it faster than the patterns
+    # below scan it (bash takes the path from the input's head, another shell
+    # splits the whole input)
+    if [ -n "${BASH_VERSINFO:-}" ]; then
+        [ "${#json}" -le 2097152 ] || return 1
+    else
+        [ "${#json}" -le 262144 ] || return 1
+    fi
     case $json in
         *'"tool_name":"Write"'[',}']* | *'"tool_name":"Edit"'[',}']* | \
         *'"tool_name":"MultiEdit"'[',}']*) ;;
