@@ -98,7 +98,10 @@ main_session:
       styleguide answer brings, such as a citation form, goes to the
       writer, also when it is format-only, and a round of step 2 checks
       what it changed (no iteration: orchestrator.md, "Feedback loop
-      control"). If the Agent tool is missing, tell the user and stop.
+      control"). A format-only finding of a format-verifier report on the
+      companion (step 3, F.1) is yours to apply, also one that follows from
+      a styleguide answer. If the Agent tool is missing, tell the user and
+      stop.
     - Yours: step 0.0 and workspace/state.md, except the rows of its source
       registry, which the writer adds, changes and removes; recording the
       answers to open styleguide questions and, for a rule an agent names as
