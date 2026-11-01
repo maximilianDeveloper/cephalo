@@ -149,9 +149,15 @@ phases:
         name: Define data basis
         manual: true
         task: |
-          If the presentation contains charts or numbers: place data sources 
-          in workspace/data/. One file per source or chart, so consistency 
-          between slides and companion can be checked.
+          If the presentation contains charts or numbers: place data sources
+          in workspace/data/. One file per source or chart, so consistency
+          between slides and companion can be checked. Claude records each
+          file and the source it comes from in the decision log of
+          workspace/state.md, and does not compare it with the source
+          itself: the source-verifier does, in step 2. A correction of the
+          file that the user approves after its report Claude makes with the
+          Edit tool; slide, notes or companion text that changes with it goes
+          to the writer (main_session), and the deck is built again.
   
   # ===========================================================
   # Slides + Companion
@@ -226,8 +232,10 @@ phases:
              (docs/scripts.md). Exit code 0 or 1: the report is finished;
              2: tell the user what the file says. Without Python, the
              source-verifier counts the runs by eye.
-          2. Give the source-verifier the slides, the companion file and that
-             report file; from round 2 on, call a new one with the Agent tool,
+          2. Give the source-verifier the slides, the companion file, that
+             report file and each data file of workspace/data/ that slide or
+             companion numbers come from, with the source it names; from
+             round 2 on, call a new one with the Agent tool,
              not a message to the one of the round before, which would judge
              its own proposals, and give it also the previous round's report
              and the sentences the revision changed, found by comparing with
