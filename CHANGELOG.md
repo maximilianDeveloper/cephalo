@@ -13,7 +13,7 @@ Dates follow ISO 8601 (`YYYY-MM-DD`).
 ### Added
 
 - **A note on `ANTHROPIC_API_KEY`** (`README.md`, "Requirements"; `docs/QUICKSTART.md`, "Troubleshooting"): when the variable is set, Claude Code outside the desktop app uses the key (in an interactive session once the user approves it, with `claude -p` always), and usage is then billed to that API account, not to the subscription. The entry names `/status`, where to remove the variable, and the setting in `/config` that turns the key off for interactive sessions.
-- **Guard rule S6: `state_check.py` through a pipe** (`docs/scripts.md`, "cephalo guard"): a Bash or PowerShell command that runs `scripts/state_check.py` and sends its output into a pipe is denied, as the closing check reads the whole output; `--help`, a redirect into a file and a chain with `;`, `&&` or `||` pass. In the first presentation trial run, 25 of 28 calls went through `grep` or `tail`, the closing run of F.1 among them, and stale open items stayed in `workspace/state.md`.
+- **Guard rule S6: `state_check.py` through a pipe** (`docs/scripts.md`, "cephalo guard"): a Bash or PowerShell command that runs `scripts/state_check.py` and sends its output into a pipe, or throws it away (`> /dev/null`, `> NUL`, `> $null`), is denied, as the closing check reads the whole output; `--help`, a redirect into a file and a chain with `;`, `&&` or `||` pass. In the first presentation trial run, 25 of 28 calls went through `grep` or `tail`, the closing run of F.1 among them, and stale open items stayed in `workspace/state.md`; one chat sent the output to `/dev/null` and read only `$?`.
 
 ### Changed
 
