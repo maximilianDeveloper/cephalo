@@ -1240,6 +1240,259 @@ class TestSettingsCommand(Base):
         self.assertTrue(Path(log).read_text(encoding='ascii').startswith('-3 -I -S '))
 
 
+def _shells():
+    """The shells cephalo_guard.sh is tested under: sh, and dash and bash (as sh, in POSIX mode, as Git Bash
+    runs it) where they are installed."""
+    out, seen = [('sh', '/bin/sh')], {os.path.realpath('/bin/sh')}
+    for name in ('dash', 'bash'):
+        p = shutil.which(name)
+        if p and os.path.realpath(p) not in seen:          # sh is dash on Debian and Ubuntu
+            seen.add(os.path.realpath(p))
+            out.append((name, p))
+    return out
+
+
+class TestFastPath(Base):
+    """cephalo_guard.sh answers an Edit, MultiEdit or Write of a harmless file inside the project itself,
+    without starting Python; every other call reaches the guard and gets the answer it got before."""
+
+    def setUp(self):
+        self.top = tempfile.mkdtemp(prefix='guard-fast-')
+        self.proj = os.path.join(self.top, 'Projekt \u00dcbung')
+        for d in ('scripts', '.claude', 'workspace/output/chapters', 'workspace/output/verification'):
+            os.makedirs(os.path.join(self.proj, d))
+        shutil.copy(str(GUARD), os.path.join(self.proj, 'scripts', 'cephalo_guard.py'))
+        shutil.copy(str(WRAPPER), os.path.join(self.proj, 'scripts', 'cephalo_guard.sh'))
+        self.cmd = json.loads(SETTINGS.read_text(encoding='utf-8'))['hooks']['PreToolUse'][0]['hooks'][0]['command']
+        self.log = os.path.join(self.top, 'started.log')
+        self.state = tempfile.mkdtemp(prefix='guard-fast-state-')
+        self.bins = {}
+        for name, shell in _shells():
+            b = os.path.join(self.top, 'bin-' + name)
+            os.makedirs(b)
+            Path(b, 'python3').write_text('#!/bin/sh\necho started >> "%s"\nexec "%s" "$@"\n'
+                                          % (self.log, sys.executable), encoding='ascii')
+            os.chmod(os.path.join(b, 'python3'), 0o755)
+            os.symlink(shell, os.path.join(b, 'sh'))        # the hook command's 'sh' (bash as sh: POSIX mode)
+            self.bins[name] = b
+
+    def tearDown(self):
+        shutil.rmtree(self.top)
+        shutil.rmtree(self.state)
+
+    def env(self, project=None, extra=None):
+        e = {'HOME': '/home/u', 'CLAUDE_PROJECT_DIR': self.proj if project is None else project,
+             'CEPHALO_GUARD_STATE_DIR': self.state}
+        e.update({k: os.environ[k] for k in ('LANG', 'LC_ALL') if k in os.environ})   # a locale of this machine
+        e.update(extra or {})
+        return e
+
+    def hook(self, raw, shell, project=None, extra=None):
+        """(output, Python started) of the hook command, run as Claude Code runs it (sh -c); with another
+        project folder than the one that holds the scripts, the wrapper as the hook command runs it."""
+        if os.path.exists(self.log):
+            os.remove(self.log)
+        e = self.env(project, extra)
+        e['PATH'] = self.bins[shell] + ':/usr/bin:/bin'
+        args = ['/bin/sh', '-c', self.cmd] if project is None else \
+            ['sh', os.path.join(self.proj, 'scripts', 'cephalo_guard.sh')]
+        p = subprocess.run(args, input=raw, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=e, timeout=30,
+                           cwd=self.proj, executable=os.path.join(self.bins[shell], 'sh') if project is not None
+                           else None)
+        self.assertEqual((p.returncode, p.stderr), (0, b''))
+        out = p.stdout.decode('ascii')
+        if out.strip():
+            check_shape(json.loads(out))
+        return out, os.path.exists(self.log)
+
+    def direct(self, raw, project=None, extra=None):
+        """The guard's own answer, Python run on the input directly (as before the fast path)."""
+        e = dict(os.environ)
+        e.update(self.env(project, extra))
+        p = subprocess.run([sys.executable, '-I', '-S', str(GUARD)], input=raw, stdout=subprocess.PIPE,
+                           stderr=subprocess.PIPE, env=e, timeout=30, cwd=self.proj)
+        return p.stdout.decode('ascii')
+
+    def raw(self, tool, tin, event='PreToolUse', compact=True, **extra):
+        d = payload(tool, tin, event=event, cwd=self.proj)
+        d.update(extra)
+        return json.dumps(d, ensure_ascii=False, separators=(',', ':') if compact else None).encode('utf-8')
+
+    def p(self, rel):
+        return os.path.join(self.proj, rel)
+
+    def harmless(self):
+        ch = self.p('workspace/output/chapters/ch_1_einleitung.md')
+        return [
+            ('Edit', self.raw('Edit', {'file_path': ch, 'old_string': 'a', 'new_string': 'b', 'replace_all': False})),
+            ('Write', self.raw('Write', {'file_path': ch, 'content': 'Er sagte "ja" \u201ex\u201c.\n' * 3000})),
+            ('Write PostToolUse', self.raw('Write', {'file_path': ch, 'content': 'x'}, event='PostToolUse')),
+            ('MultiEdit', self.raw('MultiEdit', {'file_path': self.p('workspace/state.md'),
+                                                 'edits': [{'old_string': 'a', 'new_string': 'b'}]})),
+            ('content first', self.raw('Write', {'content': 'x "y" ' * 50, 'file_path': ch})),
+            ('subagent', self.raw('Edit', {'file_path': ch, 'old_string': 'a', 'new_string': 'b'},
+                                  agent_id='a01', agent_type='writer-agent')),
+            ('_scratch', self.raw('Write', {'file_path': self.p('_scratch/orchestrator/n.md'), 'content': 'x'})),
+            ('data script', self.raw('Write', {'file_path': self.p('workspace/data/scripts/fit.py'), 'content': 'x'})),
+        ]
+
+    def excluded(self):
+        p, ver = self.p, self.p('workspace/output/verification/')
+        fmt = ver + 'document_format_round_1.md'
+        Path(fmt).write_text('x', encoding='utf-8')
+        e = lambda path, **k: self.raw('Edit', {'file_path': path, 'old_string': 'a', 'new_string': 'b'}, **k)
+        two = (b'{"session_id":"s","cwd":"%s","hook_event_name":"PreToolUse","tool_name":"Write","tool_input":'
+               b'{"file_path":"%s","file_path":"%s","content":"x"}}'
+               % (self.proj.encode(), p('a.md').encode(), p('scripts/x.py').encode()))
+        return [
+            ('outside', e(os.path.join(self.top, 'x.md'))),
+            ('tmp', self.raw('Write', {'file_path': '/tmp/x.md', 'content': 'x'})),
+            ('..', e(p('workspace/../scripts/x.py'))),
+            ('.. harmless', e(p('workspace/../a.md'))),
+            ('/./', e(p('./scripts/x.py').replace('/./', '//./'))),
+            ('scripts', e(p('scripts/cephalo_guard.py'))),
+            ('Scripts', e(p('Scripts/x.py'))),
+            ('scripts folder', e(p('scripts'))),
+            ('.Claude', self.raw('Write', {'file_path': p('.Claude/settings.json'), 'content': '{}'})),
+            ('settings.local', self.raw('Write', {'file_path': p('.claude/settings.local.json'), 'content': '{}'})),
+            ('.claude/agents', e(p('.claude/agents/notes.md'))),
+            ('report Edit', e(ver + 'ch_1_round_1.md')),
+            ('report MultiEdit', self.raw('MultiEdit', {'file_path': ver + 'consistency_final.md',
+                                                        'edits': [{'old_string': 'a', 'new_string': 'b'}]})),
+            ('format report', e(fmt)),
+            ('format Write', self.raw('Write', {'file_path': fmt, 'content': 'x'})),
+            ('format_reports', e(p('08_Formal_Review/format_reports/round_2.md'))),
+            ('second file_path', two),
+            ('spaces', self.raw('Edit', {'file_path': p('a.md'), 'old_string': 'a', 'new_string': 'b'}, compact=False)),
+            ('escape', self.raw('Write', {'file_path': p('Kapitel \u00fc.md'), 'content': 'x'}).replace(
+                '\u00fc'.encode('utf-8'), b'\\u00fc')),
+            ('ends in backslash', e(p('a') + '\\')),
+            ('stream', e(p('a.md:s'))),
+            ('tilde', e(p('A~1/x.md'))),
+            ('scratchpad', e(p('a.md'), scratchpad_dir=p('pad'))),
+            ('Bash', self.raw('Bash', {'command': 'echo x >> workspace/state.md'})),
+            ('NotebookEdit', self.raw('NotebookEdit', {'notebook_path': p('scripts/n.ipynb'), 'new_source': 'x'})),
+            ('Agent', self.raw('Agent', {'prompt': 'x', 'subagent_type': 'writer-agent'})),
+            ('Edit PostToolUse in scripts', e(p('scripts/x.py'), hook_event_name='PostToolUse')),
+            ('no event', e(p('a.md'), hook_event_name='Stop')),
+            ('SendMessage with a nested key', self.raw('SendMessage', {'to': 'a', 'message': {
+                'tool_name': 'Edit', 'file_path': p('a.md')}})),
+        ]
+
+    def test_harmless_calls_start_no_python(self):
+        for shell in self.bins:
+            for name, raw in self.harmless():
+                with self.subTest(shell=shell, call=name):
+                    self.assertEqual(self.direct(raw), '')                      # the guard's answer too
+                    self.assertEqual(self.hook(raw, shell), ('', False))
+
+    def test_other_calls_reach_the_guard_unchanged(self):
+        cases = self.excluded()
+        want = {name: self.direct(raw) for name, raw in cases}
+        for name in ('outside', 'tmp', '..', 'scripts', 'settings.local', 'report Edit', 'report MultiEdit',
+                     'format report', 'format Write', 'format_reports', 'second file_path', 'scripts folder', 'Bash'):
+            self.assertIn('"deny"', want[name], name)                    # each kind of deny the fast path must not hide
+        for shell in self.bins:
+            for name, raw in cases:
+                with self.subTest(shell=shell, call=name):
+                    self.assertEqual(self.hook(raw, shell), (want[name], True))
+
+    def test_project_folder_forms(self):
+        ch = 'workspace/output/chapters/ch_1.md'
+        win = 'C:\\Users\\u\\Projekt \u00dcbung'
+        cases = []
+        for project, path, fast in ((self.proj + '/', self.p(ch), True),
+                                    ('/' + self.proj[1:].replace('/', '//'), self.p(ch), True),
+                                    (self.proj.replace('/', '//'), self.p(ch), False),  # // first: the guard
+                                    (win, win + '\\' + ch.replace('/', '\\'), True),
+                                    (win, win.replace('\\', '/') + '/' + ch, True),
+                                    (win, win.lower() + '\\' + ch, False),     # another letter case: the guard
+                                    (win + '\\scripts', win + '\\scripts\\a.md', False),
+                                    ('workspace', self.p(ch), False), ('', self.p(ch), False),
+                                    (self.proj + ' ', self.p(ch), False), ('/', self.p(ch), False),
+                                    (self.proj, '//' + self.p(ch).lstrip('/'), False)):
+            raw = self.raw('Edit', {'file_path': path, 'old_string': 'a', 'new_string': 'b'})
+            for plat in ('posix', 'windows'):
+                extra = {'CEPHALO_GUARD_OS': plat}
+                want = self.direct(raw, project, extra)
+                if fast:
+                    self.assertEqual(want, '', (project, path, plat))
+                cases.append((project, path, plat, raw, extra, want, fast))
+        for shell in self.bins:
+            for project, path, plat, raw, extra, want, fast in cases:
+                with self.subTest(shell=shell, project=project, path=path, plat=plat):
+                    self.assertEqual(self.hook(raw, shell, project, extra), (want, not fast))
+
+    def test_large_writes(self):
+        # 1 MB of text with many escaped quotes: the path first takes the fast path; the path after the text
+        # may go to the guard (bash reads the path only from the input's head); either way the same answer,
+        # and no check grows with the square of the input
+        import time
+        ch = self.p('workspace/output/chapters/ch_2.md')
+        text = ('Er sagte "ja" „x“ (vgl. Keller 2018, S. 44).\n' * 25000)[:1000000]
+        first = self.raw('Write', {'file_path': ch, 'content': text})
+        late = self.raw('Write', {'content': text, 'file_path': ch})
+        late_scripts = self.raw('Write', {'content': text, 'file_path': self.p('scripts/x.py')})
+        want = self.direct(late_scripts)
+        self.assertIn('cephalo guard S5', want)
+        for shell in self.bins:
+            with self.subTest(shell=shell):
+                t = time.monotonic()
+                self.assertEqual(self.hook(first, shell), ('', False))
+                self.assertEqual(self.hook(late, shell)[0], '')
+                self.assertEqual(self.hook(late_scripts, shell), (want, True))
+                self.assertLess(time.monotonic() - t, 10)
+
+    def test_bash_version_in_the_environment(self):
+        # another shell than bash with BASH_VERSION set (exported by hand) still answers
+        ch = self.p('workspace/output/chapters/ch_1.md')
+        edit = self.raw('Edit', {'file_path': ch, 'old_string': 'a', 'new_string': 'b'})
+        slip = self.raw('Bash', {'command': 'echo x >> workspace/state.md'})
+        for shell in self.bins:
+            with self.subTest(shell=shell):
+                self.assertEqual(self.hook(edit, shell, extra={'BASH_VERSION': '5.2.0'}), ('', False))
+                out, started = self.hook(slip, shell, extra={'BASH_VERSION': '5.2.0'})
+                self.assertTrue(started)
+                self.assertIn('cephalo guard S1', out)
+
+    def test_post_tool_use_write_of_a_report_still_asks_for_the_read_back(self):
+        rep = self.p('workspace/output/verification/ch_1_round_1.md')
+        Path(rep).write_text('| 1 | a |\nStatus: ok\n', encoding='utf-8')
+        raw = self.raw('Write', {'file_path': rep, 'content': 'x'}, event='PostToolUse')
+        for shell in self.bins:
+            with self.subTest(shell=shell):
+                out, started = self.hook(raw, shell)
+                self.assertTrue(started)
+                self.assertEqual(json.loads(out)['decision'], 'block')
+                self.assertIn('cephalo guard R5: workspace/output/verification/ch_1_round_1.md is saved', out)
+
+    def test_locale_reaches_python_unchanged(self):
+        probe = os.path.join(self.top, 'locale.txt')
+        for shell, b in self.bins.items():
+            Path(b, 'python3').write_text('#!/bin/sh\necho "${LC_ALL-unset}" > "%s"\ncat > /dev/null\n' % probe,
+                                          encoding='ascii')
+            raw = self.raw('Bash', {'command': 'ls'})
+            for lc in ('POSIX', None):
+                e = self.env()
+                e.update(PATH=b + ':/usr/bin:/bin', LC_ALL=lc)
+                if lc is None:
+                    del e['LC_ALL']
+                with self.subTest(shell=shell, lc=lc):
+                    subprocess.run(['/bin/sh', '-c', self.cmd], input=raw, env=e, timeout=30, cwd=self.proj,
+                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    self.assertEqual(Path(probe).read_text(encoding='ascii').strip(), lc or 'unset')
+
+    def test_no_stdin(self):
+        for shell, b in self.bins.items():
+            e = self.env(extra={'CEPHALO_GUARD_STATE_DIR': tempfile.mkdtemp(prefix='guard-fast-note-')})
+            e['PATH'] = b + ':/usr/bin:/bin'
+            with self.subTest(shell=shell):
+                p = subprocess.run(['/bin/sh', '-c', 'exec <&-; ' + self.cmd], stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE, env=e, timeout=30, cwd=self.proj)
+                self.assertEqual(p.returncode, 0)
+                self.assertIn('nothing was checked', p.stdout.decode('ascii'))     # the guard's note, as before
+
+
 # ------------------------------------------------------------------ switches, S5, R5 Edit, scripts
 
 

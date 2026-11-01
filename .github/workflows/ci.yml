@@ -3257,3 +3257,30 @@ jobs:
           rm -r "$M/00_Shared_Materials"
           out="$(CLAUDE_PROJECT_DIR="$M/02_Main_Work" "$SH" -c "$CMD" < "$M/02_Main_Work.json")"
           test -z "$out"
+          # The fast path of cephalo_guard.sh: an Edit inside the project that no rule concerns gets no answer;
+          # an Edit of scripts/ still gets the guard's deny, also with \ in the path.
+          edit() { python -c "import json, sys; sys.stdout.buffer.write(json.dumps({'session_id': 'ci', 'hook_event_name': 'PreToolUse', 'tool_name': 'Edit', 'tool_input': {'file_path': sys.argv[1], 'old_string': 'a', 'new_string': 'b'}, 'cwd': sys.argv[2]}, ensure_ascii=False, separators=(',', ':')).encode('utf-8'))" "$1" "$P" > "$P.edit.json"; }
+          for f in "$P/workspace/a.md" "$P\\workspace\\a.md"; do
+            edit "$f"
+            out="$(CLAUDE_PROJECT_DIR="$P" "$SH" -c "$CMD" < "$P.edit.json")"
+            test -z "$out"
+          done
+          for f in "$P/scripts/cephalo_guard.py" "$P\\scripts\\x.py"; do
+            edit "$f"
+            out="$(CLAUDE_PROJECT_DIR="$P" "$SH" -c "$CMD" < "$P.edit.json")"
+            if [ "$want" = deny ]; then
+              printf '%s\n' "$out" | python -c "import json, sys; o = json.load(sys.stdin); assert o['hookSpecificOutput']['permissionDecision'] == 'deny' and 'cephalo guard S5' in o['hookSpecificOutput']['permissionDecisionReason'], o"
+            else
+              test -z "$out"
+            fi
+          done
+          # Time per call, for information (EPOCHREALTIME: bash 5): the fast path, and a call the guard checks.
+          if [ -n "${EPOCHREALTIME:-}" ]; then
+            edit "$P/workspace/a.md"
+            for kind in 'an Edit (fast path)' 'a Bash call (the guard)'; do
+              f="$P.edit.json"; case $kind in *Bash*) f="$P.json" ;; esac
+              t0=$EPOCHREALTIME
+              for i in 1 2 3 4 5 6 7 8 9 10; do CLAUDE_PROJECT_DIR="$P" "$SH" -c "$CMD" < "$f" > /dev/null; done
+              python -c "import sys; print('%s: %.0f ms a call' % (sys.argv[3], (float(sys.argv[2]) - float(sys.argv[1])) * 100))" "$t0" "$EPOCHREALTIME" "$kind"
+            done
+          fi

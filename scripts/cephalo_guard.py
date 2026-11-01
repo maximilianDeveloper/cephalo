@@ -6,7 +6,10 @@ without it works the same.
 
 templates/claude_settings.json runs it, through scripts/cephalo_guard.sh,
 for PreToolUse (Bash, PowerShell, Write, Edit, MultiEdit, NotebookEdit,
-Agent, Task, SendMessage) and PostToolUse (Write).
+Agent, Task, SendMessage) and PostToolUse (Write).  cephalo_guard.sh answers
+an Edit, MultiEdit or Write of a file inside the project that none of the
+rules below concerns itself, without starting Python: a rule that comes to
+concern such a file needs its exclusion there too.
 
 Rules (on, except P1)
   S1  A shell command writes a file's text: an inline Python program
