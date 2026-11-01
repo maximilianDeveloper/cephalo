@@ -7,9 +7,9 @@ project, workspace/state.md, in full: a Grep leaves out every line over
 about 500 characters, and a Read in parts leaves out what lies between them.
 It only reads; it changes nothing.
 
-The report starts with a summary line (open and ticked items, chapter files
-counted, the lines over 500 characters), then gives, each with its line
-number:
+After a line naming the state file, the report gives a summary line (open
+and ticked items, chapter files counted, the lines over 500 characters, and
+the exit code), then, each with its line number:
   - every line of "Current state";
   - every line of "Chapter status" (its table and anything else in it);
   - every open item ("- [ ] ...", in any section), with its section, and the
@@ -19,6 +19,8 @@ number:
     cannot count is listed as not counted, with the reason;
   - the lines of "Current state" and "Chapter status" over 500 characters,
     which "State file format" in .claude/agents/orchestrator.md keeps short.
+Its last line is "Exit code: 0" or "Exit code: 1"; exit code 2 prints
+neither, only an "Error:" line.
 A section runs from its heading (any level, "## Chapter status" or
 "### Chapter status (2026-10-28)", for example) to the next heading. Whether
 an open item is resolved, and whether the sections agree, is for whoever
@@ -37,11 +39,14 @@ A Word chapter needs python-docx (requirements.txt).
 Exit codes: 0 = no line of "Current state" or "Chapter status" over 500
 characters, 1 = at least one, 2 = bad arguments, a state file that cannot be
 read, or one without a "Current state" or "Chapter status" section. A
-chapter that cannot be counted does not change the exit code.
+chapter that cannot be counted does not change the exit code, and neither
+does a pipe that closes before the report ends (| head).
 """
 
 import contextlib
+import errno
 import io
+import os
 import re
 import sys
 from pathlib import Path
@@ -58,6 +63,9 @@ for stream in (sys.stdout, sys.stderr):
         pass
 
 USAGE = "Usage: python scripts/state_check.py <state file> [<chapter file or folder> ...]"
+# the exit code the report gives, set before its first line: a pipe that closes early (| head) ends
+# the script with it
+planned_code = None
 LONG = 500                     # characters; a Grep result leaves out longer lines
 CHAPTER_SUFFIXES = {".md", ".markdown", ".txt", ".docx"}
 FOLDER_SUFFIXES = {".md", ".markdown", ".docx"}
@@ -190,12 +198,15 @@ def report(args: list) -> int:
              + ': is it the state file of a flat project (orchestrator.md, "State file format")?')
 
     counted = counts(files)
+    global planned_code
+    code = planned_code = 1 if long_lines else 0
     rows = [t for _, t in status if t.lstrip().startswith("|") and not SEPARATOR.match(t)]
     print(f"State check for: {state} ({len(lines)} lines)")
     where = ", ".join(f"l. {no} ({n} characters)" for no, _, n in long_lines)
     print(f"Summary: open items {len(open_items)}, ticked {ticked}; chapter files counted "
           f"{sum(1 for c in counted if c[2])} of {len(counted)}; lines over {LONG} characters in "
-          f"Current state and Chapter status: {len(long_lines)}" + (f" ({where})" if where else ""))
+          f"Current state and Chapter status: {len(long_lines)}" + (f" ({where})" if where else "")
+          + f"; exit code {code}")
     print()
     print(f"Current state (l. {seen['current state']}):")
     for no, text in current:
@@ -225,7 +236,15 @@ def report(args: list) -> int:
         print(f"  l. {no} [{sec}], {n} characters (in full above)")
     if long_lines:
         print('  Shorten each as "State file format" in .claude/agents/orchestrator.md says, then run this again.')
-    return 1 if long_lines else 0
+    # the exit code in the summary line and in the last line, so that a shortened view (| head, | tail) shows it
+    print()
+    print(f"Exit code: {code}")
+    return code
+
+
+def closed_pipe(exc: OSError) -> bool:
+    """A write to a pipe whose reader has closed it; on Windows that can show as EINVAL."""
+    return isinstance(exc, BrokenPipeError) or (os.name == "nt" and exc.errno == errno.EINVAL)
 
 
 def main() -> None:
@@ -238,8 +257,16 @@ def main() -> None:
         sys.exit(2)
     try:
         code = report(args)
+        sys.stdout.flush()  # inside the try: a pipe closed early fails here, not at exit
     except SystemExit:
         raise
+    except OSError as exc:
+        if not closed_pipe(exc):
+            fail(f"{type(exc).__name__}: {' '.join(str(exc).split())}")
+        # the reader of a pipe (| head) closed it before the report ended: no error, the report's own
+        # exit code; stdout goes to devnull, so that the flush at exit raises nothing either
+        os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
+        sys.exit(2 if planned_code is None else planned_code)
     except Exception as exc:  # an unexpected error is no finding: exit 2, not 1
         fail(f"{type(exc).__name__}: {' '.join(str(exc).split())}")
     sys.exit(code)

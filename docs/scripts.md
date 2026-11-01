@@ -159,12 +159,14 @@ python3 scripts/state_check.py workspace/state.md workspace/output/chapters/
 python3 scripts/state_check.py workspace/state.md workspace/output/chapters/ch_2_basics.md
 ```
 
-The report starts with a summary line: the open and ticked items, the chapter files counted, and the lines over 500 characters with their numbers. Then it gives, each with its line number:
+After a line naming the state file, the report gives a summary line: the open and ticked items, the chapter files counted, the lines over 500 characters with their numbers, and the script's exit code. Then it gives, each with its line number:
 - every line of "Current state";
 - every line of "Chapter status", its table and anything else in it;
 - every open item (`- [ ] …`, in any section) with its section, and the number of ticked ones;
 - the word count of each chapter file named, as `verbatim_check.py --words` counts it (a folder: its `.md` and `.docx` files, not those in subfolders and no hidden file). A chapter it cannot count (a Word file without `python-docx`, or one that is broken) and an argument that is no chapter or does not exist are listed with the reason, and the report goes on;
 - the lines of "Current state" and "Chapter status" over 500 characters, which "State file format" in `orchestrator.md` keeps short.
+
+Its last line is `Exit code: 0` or `Exit code: 1`; exit code 2 prints neither, only the `Error:` line. With the summary line, it gives the exit code also where only part of the output is shown: after a pipe, the exit code the Bash tool shows, and `$?`, are those of the pipe's last command. A pipe that closes before the report ends, such as `| head`, does not change the script's exit code.
 
 A section runs from its heading, at any level and with more words after its name (`### Chapter status (2026-10-28)`), to the next heading. The source registry, the decision log and the pre-check result are not listed: their rows may be long. Whether an open item is resolved, and whether the sections agree, is for whoever reads the report to judge; the script compares no wording.
 

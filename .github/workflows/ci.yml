@@ -1221,7 +1221,8 @@ jobs:
           printf 'not a chapter\n' > "$W/ch/.gitkeep"
           expect 0 python scripts/state_check.py "$W/state.md" "$W/ch"
           has '(17 lines)'
-          has 'Summary: open items 1, ticked 1; chapter files counted 1 of 1; lines over 500 characters in Current state and Chapter status: 0'
+          has 'Summary: open items 1, ticked 1; chapter files counted 1 of 1; lines over 500 characters in Current state and Chapter status: 0; exit code 0'
+          tail -n 1 "$W/out.txt" | grep -qxF 'Exit code: 0' || { echo 'last line is not Exit code: 0'; cat "$W/out.txt"; exit 1; }
           has 'l. 4: - Workflow: seminar_2agent'
           has '1 row(s) below the table'
           has 'l. 10: | 2 Body | ✅ ch_2_body.md, 4 of 600 words | ✅ R1: ✅ 3; loop 0 |'
@@ -1234,6 +1235,8 @@ jobs:
           expect 1 python scripts/state_check.py "$W/long.md"
           has 'l. 4 [Current state], 534 characters'
           has 'Shorten each'
+          has 'Current state and Chapter status: 1 (l. 4 (534 characters)); exit code 1'
+          tail -n 1 "$W/out.txt" | grep -qxF 'Exit code: 1' || { echo 'last line is not Exit code: 1'; cat "$W/out.txt"; exit 1; }
           sed "s/^| 2 Body | /| 2 Body $long | /" "$W/state.md" > "$W/longrow.md"
           expect 1 python scripts/state_check.py "$W/longrow.md"
           has 'l. 10 [Chapter status]'
@@ -1269,10 +1272,23 @@ jobs:
           printf '# Notes\n' > "$W/notes.md"
           expect 2 python scripts/state_check.py "$W/notes.md"
           has 'no "Current state" heading'
+          hasnt 'Exit code:'
           expect 2 python scripts/state_check.py "$W/missing.md"
           expect 2 python scripts/state_check.py
           expect 0 python scripts/state_check.py --help
           has 'Exit codes:'
+          # a pipe that closes before the report ends (| head): the report's exit code, no Error line
+          { printf '%s\n' '## Current state' '- Stage: open' '## Chapter status' '## Open issues'
+            for i in $(seq 1 3000); do echo "- [ ] Item $i, a line long enough to fill the pipe"; done; } > "$W/big.md"
+          set +e; python scripts/state_check.py "$W/big.md" 2> "$W/err.txt" | head -n 3 > /dev/null; got=${PIPESTATUS[0]}; set -e
+          [ "$got" = 0 ] || { echo "through | head: expected exit 0, got $got"; cat "$W/err.txt"; exit 1; }
+          [ ! -s "$W/err.txt" ] || { echo 'through | head: output on stderr'; cat "$W/err.txt"; exit 1; }
+          # about 11 KB: the last part is written when the script ends, so it is run 30 times, with stdout buffered
+          head -n 144 "$W/big.md" > "$W/mid.md"
+          for i in $(seq 1 30); do
+            set +e; env -u PYTHONUNBUFFERED python scripts/state_check.py "$W/mid.md" 2> "$W/err.txt" | head -n 3 > /dev/null; got=${PIPESTATUS[0]}; set -e
+            [ "$got" = 0 ] && [ ! -s "$W/err.txt" ] || { echo "through | head, run $i: exit $got"; cat "$W/err.txt"; exit 1; }
+          done
 
       - name: repeated_citations.py on chapter files (pairs, footnotes, reference list, order, errors)
         run: |
