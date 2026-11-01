@@ -1736,9 +1736,11 @@ def _dedupe(hits):
 
 # --------------------------------------------------------------- reports (R5, R6)
 
+# (ASCII letters in either case, as cephalo_guard.sh's fast path matches them: with re.I alone, \u0131,
+# \u0130, \u017f and \u212a would match i, s and k)
 _FORMAT_REPORT = re.compile(r'(?:/verification/[^/]+_format_round_\d+\.md|/format_reports/round_\d+\.md'
-                            r'|/format_report_round_\d+\.md)$', re.I)
-_VERIFIER_REPORT = re.compile(r'/verification/(?:[^/]+_round_\d+|consistency_final)\.md$', re.I)
+                            r'|/format_report_round_\d+\.md)$', re.I | re.A)
+_VERIFIER_REPORT = re.compile(r'/verification/(?:[^/]+_round_\d+|consistency_final)\.md$', re.I | re.A)
 
 
 def check_file_write(tool, tin, ctx):

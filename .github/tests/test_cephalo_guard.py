@@ -1531,6 +1531,31 @@ class TestFastPath(Base):
                 self.assertEqual(self.hook(late_scripts, shell), (want, True))
                 self.assertLess(time.monotonic() - t, 10)
 
+    def test_unicode_letters_match_as_in_the_guard(self):
+        # ı, İ, ſ and K are no i, s or k for the report names, in the guard as in the fast path
+        for name in ('verıfication/ch_1_round_1.md', 'verİfication/ch_1_round_1.md',
+                     'verificatıon/consistency_final.md', 'verification/ch_1_round_1.ⅿd'):
+            self.assertIsNone(g._VERIFIER_REPORT.search('/p/' + name))
+        self.assertIsNone(g._FORMAT_REPORT.search('/p/format_reports/round_1.ⅿd'))
+        cases = []
+        for rel in ('workspace/output/verıfication/ch_1_round_1.md', 'workspace/output/verİfication/x_round_1.md',
+                    'workspace/output/verification/ch_1_round_1.md'):
+            for event, tin in (('PreToolUse', {'file_path': self.p(rel), 'old_string': 'a', 'new_string': 'b'}),
+                               ('PostToolUse', {'file_path': self.p(rel), 'content': 'x'})):
+                raw = self.raw('Edit' if event == 'PreToolUse' else 'Write', tin, event=event)
+                for plat in ('posix', 'windows'):
+                    extra = {'CEPHALO_GUARD_OS': plat}
+                    cases.append((rel, event, plat, raw, extra, self.direct(raw, extra=extra)))
+        os.makedirs(self.p('workspace/output/verification'), exist_ok=True)
+        for shell in self.bins:
+            for rel, event, plat, raw, extra, want in cases:
+                with self.subTest(shell=shell, rel=rel, event=event, plat=plat):
+                    out, started = self.hook(raw, shell, extra=extra)
+                    self.assertEqual(out, want)
+                    self.assertEqual(bool(want), 'verı' not in rel and 'verİ' not in rel)
+                    if not started:
+                        self.assertEqual(want, '')
+
     def test_bash_version_in_the_environment(self):
         # another shell than bash with BASH_VERSION set (exported by hand) still answers
         ch = self.p('workspace/output/chapters/ch_1.md')
