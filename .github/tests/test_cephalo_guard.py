@@ -633,13 +633,23 @@ class TestReports(Base):
                                  'new_string': 'b'}, event='PostToolUse', root=self.root))
 
 
-def tr_call(name, tin, tid, side=False):
+def tr_call(name, tin, tid, side=False, ts=None):
     """A transcript entry with one tool call, as Claude Code writes it (one compact JSON object per line)."""
-    return {'parentUuid': None, 'isSidechain': side, 'userType': 'external', 'cwd': '/x', 'sessionId': 'sess-1',
-            'type': 'assistant', 'uuid': 'u-' + tid,
-            'message': {'id': 'msg-' + tid, 'type': 'message', 'role': 'assistant', 'model': 'm',
-                        'content': [{'type': 'tool_use', 'id': tid, 'name': name, 'input': tin,
-                                     'caller': {'type': 'direct'}}]}}
+    e = {'parentUuid': None, 'isSidechain': side, 'userType': 'external', 'cwd': '/x', 'sessionId': 'sess-1',
+         'type': 'assistant', 'uuid': 'u-' + tid,
+         'message': {'id': 'msg-' + tid, 'type': 'message', 'role': 'assistant', 'model': 'm',
+                     'content': [{'type': 'tool_use', 'id': tid, 'name': name, 'input': tin,
+                                  'caller': {'type': 'direct'}}]}}
+    if ts is not None:
+        e['timestamp'] = ts
+    return e
+
+
+def tr_time(seconds):
+    """A transcript timestamp, as Claude Code writes it (UTC, milliseconds, Z)."""
+    import datetime
+    t = datetime.datetime.fromtimestamp(seconds, datetime.timezone.utc)
+    return t.strftime('%Y-%m-%dT%H:%M:%S.') + '%03dZ' % (t.microsecond // 1000)
 
 
 def tr_result(tid, error=False, side=False):
@@ -675,9 +685,9 @@ class TestR5BeforeAgentCall(Base):
         self.n += 1
         return 'toolu_%03d' % self.n
 
-    def write(self, path=None, side=False, error=False):
+    def write(self, path=None, side=False, error=False, ts=None):
         t = self.tid()
-        return [tr_call('Write', {'file_path': path or self.rep, 'content': '| 1 |'}, t, side),
+        return [tr_call('Write', {'file_path': path or self.rep, 'content': '| 1 |'}, t, side, ts),
                 tr_result(t, error, side)]
 
     def read(self, path=None, side=False, error=False, **span):
@@ -749,6 +759,27 @@ class TestR5BeforeAgentCall(Base):
         out = g.evaluate(d, env(root=self.root))
         self.deny(out, 'R5')
         self.assertIn('.claude/agents/orchestrator-longform.md', self.reason(out))
+
+    def test_failed_write(self):
+        import time
+        now = time.time()
+        fmt = os.path.join(self.ver, 'document_format_round_1.md')
+        Path(fmt).write_text('# Format\nStatus: ok\n', encoding='utf-8')
+        for p in (fmt, self.rep):
+            os.utime(p, (now - 100, now - 100))         # written before the calls below
+        # the coordinator's Write over the format-verifier's report, denied by R6: nothing was saved
+        self.passes(self.agent(self.write(fmt, error=True, ts=tr_time(now))))
+        self.passes(self.agent(self.write(fmt, error=True)))                # no time in the entry: passes
+        # a second Write of the report, rejected in the permission prompt after the read-back
+        self.passes(self.agent(self.write(ts=tr_time(now - 200)) + self.read() +
+                               self.write(error=True, ts=tr_time(now))))
+        # a Write with an error result whose file changed after it (written all the same): still read back
+        os.utime(self.rep, (now, now))
+        self.deny(self.agent(self.write(error=True, ts=tr_time(now - 1))), 'R5')
+        self.deny(self.agent(self.write(ts=tr_time(now - 200)) + self.read() +
+                             self.write(error=True, ts=tr_time(now))), 'R5')
+        self.passes(self.agent(self.write(error=True, ts='not a time')))
+        self.passes(self.agent(self.write(error=True, ts='2026-11-01T15:22:33')))   # no zone: unknown
 
     def test_written_again_after_the_read(self):
         self.deny(self.agent(self.write() + self.read() + self.write()), 'R5')

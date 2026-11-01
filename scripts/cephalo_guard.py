@@ -53,7 +53,8 @@ Rules (on, except P1)
       (transcript_path), in the main chat's own calls in its last
       MAX_TRANSCRIPT bytes.  Whole: a Read without offset and limit, or Reads
       that together cover every line the file now has; a Read whose result
-      was an error does not count.
+      was an error does not count, nor does a Write whose result was an error
+      unless the file changed after it all the same.
   R6  The coordinator writes or edits a report the format-verifier writes:
       denied, except a Write of a file that does not exist yet (the
       definitions' fallback).  That fallback Write is checked before the
@@ -1831,9 +1832,9 @@ def _tail_lines(path, limit):
 
 def _main_calls(lines, ctx):
     """The main chat's Write and Read calls in transcript lines (Claude Code's
-    session JSONL), in order, as (tool, id, input); and the ids of the calls
-    whose result was an error.  Entries of subagents (isSidechain) and lines
-    that are not JSON in that shape are left out."""
+    session JSONL), in order, as (tool, id, input, timestamp of the entry);
+    and the ids of the calls whose result was an error.  Entries of subagents
+    (isSidechain) and lines that are not JSON in that shape are left out."""
     calls, failed = [], set()
     for k, line in enumerate(lines):
         if not k % 256:
@@ -1853,10 +1854,28 @@ def _main_calls(lines, ctx):
                 continue
             if e.get('type') == 'assistant' and c.get('type') == 'tool_use' and \
                     c.get('name') in ('Write', 'Read') and isinstance(c.get('input'), dict):
-                calls.append((c['name'], c.get('id'), c['input']))
-            elif e.get('type') == 'user' and c.get('type') == 'tool_result' and c.get('is_error') is True:
-                failed.add(c.get('tool_use_id'))
+                cid = c.get('id')
+                calls.append((c['name'], cid if isinstance(cid, str) else None, c['input'], e.get('timestamp')))
+            elif e.get('type') == 'user' and c.get('type') == 'tool_result' and c.get('is_error') is True and \
+                    isinstance(c.get('tool_use_id'), str):
+                failed.add(c['tool_use_id'])
     return calls, failed
+
+
+def _written_since(path, n, when, ctx):
+    """A Write whose result was an error (denied, rejected in the permission
+    prompt, or, it may be, blocked by its PostToolUse hook after it wrote):
+    the file was written all the same when it changed at or after the time of
+    the call's entry (when, '2026-11-01T15:22:33.123Z') less 2 s.  False when
+    the time or the file's cannot be read."""
+    if not isinstance(when, str) or not _fs_ok(n, ctx):
+        return False
+    import datetime
+    try:
+        t = datetime.datetime.fromisoformat(when.replace('Z', '+00:00'))
+        return t.tzinfo is not None and os.stat(path).st_mtime >= t.timestamp() - 2
+    except (ValueError, TypeError, OverflowError, OSError):
+        return False
 
 
 def _read_span(tin):
@@ -1907,7 +1926,7 @@ def unread_reports(data, ctx):
         return []
     calls, failed = _main_calls(lines, ctx)
     saved = {}                      # normalized path -> [path as written, rule, spans of the Reads since]
-    for k, (tool, cid, tin) in enumerate(calls):
+    for k, (tool, cid, tin, when) in enumerate(calls):
         if not k % 256:
             ctx.budget.tick()
         path = tin.get('file_path')
@@ -1916,7 +1935,7 @@ def unread_reports(data, ctx):
         n = norm_path(path, ctx, ctx.cwd) or ''
         if tool == 'Write':
             fmt = bool(_FORMAT_REPORT.search(n))
-            if fmt or _VERIFIER_REPORT.search(n):
+            if (fmt or _VERIFIER_REPORT.search(n)) and (cid not in failed or _written_since(path, n, when, ctx)):
                 saved[n] = [path, 'R6' if fmt else 'R5', []]
         elif n in saved and cid not in failed:
             saved[n][2].append(_read_span(tin))
