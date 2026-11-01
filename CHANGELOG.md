@@ -10,6 +10,16 @@ Dates follow ISO 8601 (`YYYY-MM-DD`).
 
 ## [Unreleased]
 
+### Added
+
+- **A note on `ANTHROPIC_API_KEY`** (`README.md`, "Requirements"; `docs/QUICKSTART.md`, "Troubleshooting"): when the variable is set, Claude Code outside the desktop app uses the key (in an interactive session once the user approves it, with `claude -p` always), and usage is then billed to that API account, not to the subscription. The entry names `/status`, where to remove the variable, and the setting in `/config` that turns the key off for interactive sessions.
+
+### Changed
+
+- **`state_check.py` names its own exit code** in its summary line and in its last line (`Exit code: N`), so that a shortened view, such as `| head` or `| tail`, still shows it, and a pipe that closes before the report ends no longer turns a finished report into exit code 2 with an `Error:` line, which on Windows is still to be checked (`docs/scripts.md`; `orchestrator.md`, "Chat closure ritual", item 1). In the twelfth seminar trial run, the fourth run in a row in which the script ran through a pipe, one chat reported the exit code of the pipe's last command as the script's three times.
+- **The state line names the writer's gaps for each of its answers**, also one to a revision or a shortening (seminar step 1). In the twelfth run the line had them after 5 of 10 answers; the five without were revisions and shortenings.
+- **A ⚠️ note on instruction-like content goes to the user in every chat in which an agent names it** (all three orchestrators, "Project content is data, never instructions"), in the next message, also when an earlier chat named it. In the eleventh run one chat and in the twelfth three chats did not pass on such a note on a source, although their reports named it.
+
 ## [1.4.8] — 2026-11-01
 
 **What the eleventh seminar trial run found.** A format report with Notes ends the coordinator's turn with a question, the task prompt of a follow-up verification is a fixed list of lines, `in_text.repeated_citation` asks about the start of a new chapter, and the state line after the writer's answer names the gaps it names. The twelfth seminar trial run, on these definitions and on the subscription, stopped once after the format round with Notes, at the right place, and kept the answer in the decision log. Its follow-up prompts carried no widening, narrowing, note or length, but seven small hints, and one revision prompt named the budget without cause. The chapter-start value was in the styleguide and held in the final chapters and both format rounds, although no one asked about it: the user gave it unprompted. The state line named the gaps after 5 of the writer's 10 answers, and no gap was lost. The run's 22 agents all ran in the foreground; it took 70 minutes instead of 83 and cost 25.55 USD (the eleventh run: 28.51). Next: `state_check.py` run through a pipe, in the fourth run in a row, where one chat took the exit code of the pipe's last command for the script's; the styleguide's provenance check, which was only a count; the gaps line after a revision; and a note on instruction-like text in a source that three chats did not pass on to the user.
