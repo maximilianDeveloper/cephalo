@@ -43,9 +43,18 @@ Rules (on, except P1)
       consistency_final.md): after a Write, asks for the read-back the
       definitions require and gives the saved file's counts to compare with
       the verifier's answer; an Edit is denied (the copy is written again).
+      An Agent, Task or SendMessage call of the main chat (no agent_id: an
+      orchestrator run as a subagent has its calls in a transcript of its
+      own) is denied while a report it saved has not been read back whole
+      since its last Write.  The guard sees this in the session transcript
+      (transcript_path), in the main chat's own calls in its last
+      MAX_TRANSCRIPT bytes.  Whole: a Read without offset and limit, or Reads
+      that together cover every line the file now has; a Read whose result
+      was an error does not count.
   R6  The coordinator writes or edits a report the format-verifier writes:
       denied, except a Write of a file that does not exist yet (the
-      definitions' fallback).
+      definitions' fallback).  That fallback Write is checked before the
+      next agent call as R5 checks a saved report.
   P1  Off unless switched on.  Agent / SendMessage: a task prompt with a
       phrase that narrows the check, tells the agent to leave out a finding,
       rates in advance or states the project's state is denied once; the
@@ -62,7 +71,10 @@ Contract: reads the hook's JSON from stdin, prints at most one JSON object
 permissionDecision "deny" (PreToolUse) or decision "block" (PostToolUse) and
 never answers "allow", which would skip the user's permission prompts.  Input
 it does not understand, and any error of its own, let the call pass with a
-one-line note to the user (systemMessage), once per session.  It writes
+one-line note to the user (systemMessage), once per session.  The session
+transcript is Claude Code's own file, read only for R5/R6 before an agent
+call: when it is missing, unreadable, or not in the shape the guard knows,
+the call passes without a note (past the deadline, with the note).  It writes
 nothing but a small file per session in a folder of its own in the system's
 temporary folder (cephalo-guard-<user id>/, on Windows cephalo-guard/), for
 P1 when it is on and for that note, and uses no network.  Python 3.9 or later, standard library only.
@@ -102,6 +114,7 @@ MAX_COMMAND = 1 << 19           # characters of one Bash/PowerShell command
 MAX_READ = 1 << 21              # bytes of all scripts and patches read for one call
 MAX_SCAN = 1 << 23              # characters of shell text and programs scanned for one call
 MAX_EXPAND = 1 << 20            # characters a $var substitution adds to one inline program
+MAX_TRANSCRIPT = 1 << 22        # bytes read from the end of the session transcript (R5, R6 before an agent call)
 
 
 class OverBudget(Exception):
@@ -1780,6 +1793,170 @@ def readback(tin, ctx):
     return msg
 
 
+# a transcript line that may hold a Write or Read call, or a tool result that is an error
+_TR_CALL = re.compile(rb'"name"\s*:\s*"(?:Write|Read)"')
+_TR_ERROR = re.compile(rb'"is_error"\s*:\s*true')
+
+
+def _tail_lines(path, limit):
+    """The complete lines (bytes) in the last limit bytes of a regular file, or None.
+    Opened as _read_regular opens a file; a line cut by the start of that part
+    and a last line still being written are left out."""
+    try:
+        fd = os.open(path, os.O_RDONLY | getattr(os, 'O_NONBLOCK', 0) | getattr(os, 'O_BINARY', 0))
+    except (OSError, ValueError, TypeError):
+        return None
+    try:
+        st = os.fstat(fd)
+        if not stat.S_ISREG(st.st_mode):
+            return None
+        start = max(0, st.st_size - limit)
+        os.lseek(fd, start, os.SEEK_SET)
+        with os.fdopen(fd, 'rb') as fh:
+            fd = None
+            data = fh.read(limit)
+    except (OSError, ValueError):
+        return None
+    finally:
+        if fd is not None:
+            os.close(fd)
+    data = data[:data.rfind(b'\n') + 1]
+    if start:
+        data = data[data.find(b'\n') + 1:]
+    return data.split(b'\n')[:-1]
+
+
+def _main_calls(lines, ctx):
+    """The main chat's Write and Read calls in transcript lines (Claude Code's
+    session JSONL), in order, as (tool, id, input); and the ids of the calls
+    whose result was an error.  Entries of subagents (isSidechain) and lines
+    that are not JSON in that shape are left out."""
+    calls, failed = [], set()
+    for k, line in enumerate(lines):
+        if not k % 256:
+            ctx.budget.tick()
+        if not _TR_CALL.search(line) and not _TR_ERROR.search(line):
+            continue
+        try:
+            e = json.loads(line)            # bytes: UTF-8 (a line that is not raises a ValueError)
+        except (ValueError, RecursionError):
+            continue
+        if not isinstance(e, dict) or e.get('isSidechain') is True:
+            continue
+        m = e.get('message')
+        content = m.get('content') if isinstance(m, dict) else None
+        for c in content if isinstance(content, list) else ():
+            if not isinstance(c, dict):
+                continue
+            if e.get('type') == 'assistant' and c.get('type') == 'tool_use' and \
+                    c.get('name') in ('Write', 'Read') and isinstance(c.get('input'), dict):
+                calls.append((c['name'], c.get('id'), c['input']))
+            elif e.get('type') == 'user' and c.get('type') == 'tool_result' and c.get('is_error') is True:
+                failed.add(c.get('tool_use_id'))
+    return calls, failed
+
+
+def _read_span(tin):
+    """The lines a Read call shows: (first, last), last None for the rest of
+    the file.  An input it does not know counts as the whole file."""
+    vals = []
+    for key in ('offset', 'limit'):
+        v = tin.get(key)
+        if isinstance(v, float) and v.is_integer():
+            v = int(v)
+        elif isinstance(v, str) and v.strip().isdigit():
+            v = int(v)
+        if v is not None and (isinstance(v, bool) or not isinstance(v, int)):
+            return 1, None
+        vals.append(v)
+    first = max(vals[0] or 1, 1)
+    return first, (first + vals[1] - 1 if vals[1] and vals[1] > 0 else None)
+
+
+def _spans_text(spans, lines):
+    """For a message: the lines the Reads since the last Write showed."""
+    merged = []
+    for first, last in sorted(spans):
+        last = lines if last is None else min(last, lines)
+        if first > last:
+            continue
+        if merged and first <= merged[-1][1] + 1:
+            merged[-1][1] = max(merged[-1][1], last)
+        else:
+            merged.append([first, last])
+    if not spans:
+        return 'not read'
+    if not merged:
+        return 'read: none of its %d lines' % lines
+    return 'read: lines %s of %d' % (', '.join('%d\u2013%d' % (a, b) for a, b in merged), lines)
+
+
+def unread_reports(data, ctx):
+    """R5 and R6 before an Agent, Task or SendMessage call of the main chat:
+    each report the main chat saved (those readback() asks to read back) whose
+    last Write no whole Read followed, [(rule, path relative to the root,
+    what was read)].  Whatever it cannot read or does not know passes."""
+    tp = data.get('transcript_path')
+    if not isinstance(tp, str) or not tp or not _fs_ok(norm_path(tp, ctx, ctx.cwd), ctx):
+        return []
+    lines = _tail_lines(tp, MAX_TRANSCRIPT)
+    if not lines:
+        return []
+    calls, failed = _main_calls(lines, ctx)
+    saved = {}                      # normalized path -> [path as written, rule, spans of the Reads since]
+    for k, (tool, cid, tin) in enumerate(calls):
+        if not k % 256:
+            ctx.budget.tick()
+        path = tin.get('file_path')
+        if not isinstance(path, str) or not path or (tool == 'Read' and not saved):
+            continue
+        n = norm_path(path, ctx, ctx.cwd) or ''
+        if tool == 'Write':
+            fmt = bool(_FORMAT_REPORT.search(n))
+            if fmt or _VERIFIER_REPORT.search(n):
+                saved[n] = [path, 'R6' if fmt else 'R5', []]
+        elif n in saved and cid not in failed:
+            saved[n][2].append(_read_span(tin))
+    hits = []
+    for n, (path, rule, spans) in saved.items():
+        if not ctx.enabled(rule):
+            continue
+        text = _read_regular(path, 1 << 22) if _fs_ok(n, ctx) else None   # as readback() reads it
+        if text is None:
+            continue                # gone, or not readable: nothing to read back
+        rows = text.decode('utf-8', 'replace').replace('\r\n', '\n').split('\n')
+        while rows and not rows[-1].strip():
+            rows.pop()
+        covered = 0                 # the lines 1..covered were shown
+        for first, last in sorted(spans):
+            if first > covered + 1:
+                break
+            covered = len(rows) if last is None else max(covered, last)
+        if not spans or covered < len(rows):
+            hits.append((rule, _rel(n, ctx), _spans_text(spans, len(rows))))
+    return hits
+
+
+def agent_reason(hits, ctx):
+    """The deny message for unread_reports()."""
+    out = []
+    for rule in ('R5', 'R6'):
+        mine = [(rel, what) for r, rel, what in hits if r == rule]
+        if not mine:
+            continue
+        files = ' '.join('%s was saved%s, but not read back whole since (%s).'
+                         % (rel, ' as the format-verifier\'s answer' if rule == 'R6' else '', what)
+                         for rel, what in mine[:3])
+        whole = 'the whole file' if len(mine) == 1 else 'each of these files whole'
+        out.append('cephalo guard %s: not run. %s Read %s back with the Read tool (no offset or limit; a file too '
+                   'large for one Read in parts that together cover every line) and compare it with the %s (%s, %s), '
+                   'then call the agent again.'
+                   % (rule, files, whole, 'agent\'s answer' if rule == 'R5' else 'answer', report_definition(ctx),
+                      '"Save every source-verifier report as a file"' if rule == 'R5'
+                      else '"The format-verifier writes its report itself"'))
+    return ' '.join(out)
+
+
 # --------------------------------------------------------------- task prompts (P1)
 
 _P1 = [(k, re.compile(p, re.I)) for k, p in [
@@ -2092,6 +2269,14 @@ def evaluate(data, env=None):
     if tool in _FILE_TOOLS:
         hits = [h for h in check_file_write(tool, tin, ctx) if ctx.enabled(h[0])]
         return deny(shell_reason(hits, ctx).replace('not run.', 'not done.')) if hits else None
+    # R5, R6: a report the main chat saved is read back before its next agent call
+    if not ctx.agent_id and ctx.coordinator and (ctx.enabled('R5') or ctx.enabled('R6')):
+        try:
+            hits = unread_reports(data, ctx)
+        except OverBudget as exc:
+            return note('the session transcript is too large to check for the %s call (%s)' % (tool, exc), data, env)
+        if hits:
+            return deny(agent_reason(hits, ctx))
     if not ctx.enabled('P1'):
         return None
     res = check_prompt(tool, tin, ctx)

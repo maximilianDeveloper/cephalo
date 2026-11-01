@@ -633,6 +633,220 @@ class TestReports(Base):
                                  'new_string': 'b'}, event='PostToolUse', root=self.root))
 
 
+def tr_call(name, tin, tid, side=False):
+    """A transcript entry with one tool call, as Claude Code writes it (one compact JSON object per line)."""
+    return {'parentUuid': None, 'isSidechain': side, 'userType': 'external', 'cwd': '/x', 'sessionId': 'sess-1',
+            'type': 'assistant', 'uuid': 'u-' + tid,
+            'message': {'id': 'msg-' + tid, 'type': 'message', 'role': 'assistant', 'model': 'm',
+                        'content': [{'type': 'tool_use', 'id': tid, 'name': name, 'input': tin,
+                                     'caller': {'type': 'direct'}}]}}
+
+
+def tr_result(tid, error=False, side=False):
+    return {'parentUuid': 'u-' + tid, 'isSidechain': side, 'type': 'user', 'uuid': 'r-' + tid,
+            'message': {'role': 'user', 'content': [{'tool_use_id': tid, 'type': 'tool_result',
+                                                     'content': 'error' if error else 'ok', 'is_error': error}]}}
+
+
+def tr_text(text):
+    return {'isSidechain': False, 'type': 'assistant', 'message': {'role': 'assistant',
+                                                                    'content': [{'type': 'text', 'text': text}]}}
+
+
+class TestR5BeforeAgentCall(Base):
+    """A report the main chat saved is read back whole before its next agent call
+    (the session transcript shows its calls)."""
+
+    def setUp(self):
+        self.root = tempfile.mkdtemp(prefix='guard-r5a-')
+        self.ver = os.path.join(self.root, 'workspace', 'output', 'verification')
+        os.makedirs(self.ver)
+        self.rep = os.path.join(self.ver, 'ch_1_einleitung_round_1.md')
+        Path(self.rep).write_text(''.join('| %d | Satz | \u2705 |\n' % i for i in range(1, 412)) + 'Gesamt: 411\n\n',
+                                  encoding='utf-8')
+        self.tr = os.path.join(tempfile.mkdtemp(prefix='guard-r5a-tr-'), 'sess-1.jsonl')
+        self.n = 0
+
+    def tearDown(self):
+        shutil.rmtree(self.root)
+        shutil.rmtree(os.path.dirname(self.tr))
+
+    def tid(self):
+        self.n += 1
+        return 'toolu_%03d' % self.n
+
+    def write(self, path=None, side=False, error=False):
+        t = self.tid()
+        return [tr_call('Write', {'file_path': path or self.rep, 'content': '| 1 |'}, t, side),
+                tr_result(t, error, side)]
+
+    def read(self, path=None, side=False, error=False, **span):
+        t = self.tid()
+        tin = {'file_path': path or self.rep}
+        tin.update(span)
+        return [tr_call('Read', tin, t, side), tr_result(t, error, side)]
+
+    def save(self, entries, tail=''):
+        with open(self.tr, 'w', encoding='utf-8', newline='\n') as fh:
+            for e in entries:
+                fh.write((e if isinstance(e, str) else json.dumps(e, separators=(',', ':'), ensure_ascii=False)) + '\n')
+            fh.write(tail)
+
+    def agent(self, entries, tool='Agent', agent=None, transcript=None, plat='posix', **kw):
+        if entries is not None:
+            self.save(entries)
+        tin = {'description': 'Kapitel 1', 'prompt': 'Revise ch_1.md.', 'subagent_type': 'writer-agent'}
+        if tool == 'SendMessage':
+            tin = {'to': 'a8', 'message': 'Weiter.'}
+        d = payload(tool, tin, agent=agent, cwd=self.root, plat=plat)
+        d['transcript_path'] = self.tr if transcript is None else transcript
+        return g.evaluate(d, env(plat, root=self.root, **kw))
+
+    def reason(self, out):
+        return out['hookSpecificOutput']['permissionDecisionReason']
+
+    def test_whole_read_passes(self):
+        self.passes(self.agent(self.write() + self.read()))
+        self.passes(self.agent(self.write() + self.read(offset=1, limit=412)))   # the blank last line aside
+        self.passes(self.agent(self.write() + self.read(offset=0, limit=2000)))
+        # in parts that together cover every line (a report too large for one Read)
+        self.passes(self.agent(self.write() + self.read(offset=1, limit=200) + self.read(offset=201)))
+        self.passes(self.agent(self.write() + self.read(offset=150) + self.read(limit=160)))
+        # the path spelled another way
+        self.passes(self.agent(self.write() + self.read(path=self.rep.replace('/workspace/', '/workspace//'))))
+
+    def test_partial_read_denied(self):
+        out = self.agent(self.write() + self.read(offset=380))
+        self.deny(out, 'R5')
+        r = self.reason(out)
+        for part in ('cephalo guard R5: not run.', 'workspace/output/verification/ch_1_einleitung_round_1.md was saved',
+                     'not read back whole since (read: lines 380\u2013412 of 412)', 'no offset or limit',
+                     'Save every source-verifier report as a file', '.claude/agents/orchestrator.md',
+                     'then call the agent again'):
+            self.assertIn(part, r)
+        self.assertNotIn(self.root, r)
+        r = self.reason(self.agent(self.write() + self.read(offset=90, limit=70) + self.read(offset=225)))
+        self.assertIn('(read: lines 90\u2013159, 225\u2013412 of 412)', r)
+        r = self.reason(self.agent(self.write() + self.read(offset=1, limit=411)))
+        self.assertIn('(read: lines 1\u2013411 of 412)', r)
+        r = self.reason(self.agent(self.write() + self.read(offset=900)))
+        self.assertIn('(read: none of its 412 lines)', r)
+
+    def test_not_read_denied(self):
+        out = self.agent(self.write())
+        self.deny(out, 'R5')
+        self.assertIn('was saved, but not read back whole since (not read)', self.reason(out))
+        for tool in ('Task', 'SendMessage'):
+            with self.subTest(tool=tool):
+                self.deny(self.agent(self.write(), tool=tool), 'R5')
+        # read before the Write, or a Read that failed (a file over the Read tool's limit), does not count
+        self.deny(self.agent(self.read() + self.write()), 'R5')
+        self.deny(self.agent(self.write() + self.read(error=True)), 'R5')
+        # a long-form orchestrator chat (claude --agent orchestrator-longform): its definition
+        d = payload('Agent', {'prompt': 'x', 'subagent_type': 'writer-agent'}, cwd=self.root)
+        d['agent_type'] = 'orchestrator-longform'
+        d['transcript_path'] = self.tr
+        out = g.evaluate(d, env(root=self.root))
+        self.deny(out, 'R5')
+        self.assertIn('.claude/agents/orchestrator-longform.md', self.reason(out))
+
+    def test_written_again_after_the_read(self):
+        self.deny(self.agent(self.write() + self.read() + self.write()), 'R5')
+        self.passes(self.agent(self.write() + self.read() + self.write() + self.read()))
+        # each report on its own
+        other = os.path.join(self.ver, 'extracts_round_2.md')
+        Path(other).write_text('| a |\n', encoding='utf-8')
+        out = self.agent(self.write() + self.write(other) + self.read())
+        self.deny(out, 'R5')
+        self.assertIn('extracts_round_2.md was saved', self.reason(out))
+        self.assertNotIn('einleitung', self.reason(out))
+        out = self.agent(self.write() + self.write(other))
+        self.assertIn('each of these files whole', self.reason(out))
+
+    def test_sidechain_entries_ignored(self):
+        self.passes(self.agent(self.write(side=True)))                 # a subagent's Write
+        self.deny(self.agent(self.write() + self.read(side=True)), 'R5')   # a subagent's Read
+        self.passes(self.agent(self.write() + self.write(side=True) + self.read()))
+
+    def test_unreadable_transcript_passes(self):
+        self.passes(self.agent(None, transcript=os.path.join(self.root, 'missing.jsonl')))
+        self.passes(self.agent(None, transcript=''))
+        self.passes(self.agent(None, transcript=self.root))             # a folder
+        for garbage in (['not json', '{"type": "assistant", "message": ', '[1, 2]', '{"message": "x"}',
+                         '{"type":"assistant","message":{"content":"text"}}',
+                         '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Write","input":"x"}]}}',
+                         '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Write",'
+                         '"input":{"file_path":5}}]}}'],):
+            self.passes(self.agent(garbage))
+        with open(self.tr, 'wb') as fh:
+            fh.write(b'\xff\xfe\x00 "name":"Write" \x80\n' * 50)
+        self.passes(self.agent(None))
+        # a last line still being written (no line end yet) is left out
+        self.save([tr_text('x')], tail=json.dumps(self.write()[0], separators=(',', ':')))
+        self.passes(self.agent(None))
+        d = payload('Agent', {'prompt': 'x'}, cwd=self.root)
+        del d['transcript_path']
+        self.passes(g.evaluate(d, env(root=self.root)))
+        # the report is gone: nothing to read back
+        entries = self.write()
+        os.remove(self.rep)
+        self.passes(self.agent(entries))
+
+    def test_only_the_main_chat_and_switch(self):
+        entries = self.write()
+        self.passes(self.agent(entries, agent='orchestrator'))       # a subagent: its calls are elsewhere
+        self.passes(self.agent(entries, agent='writer-agent'))
+        self.passes(self.agent(entries, off='R5'))
+        self.passes(self.agent(entries, off='all'))
+        self.deny(self.agent(entries, off='R6'), 'R5')
+
+    def test_format_report_fallback(self):
+        fmt = os.path.join(self.ver, 'document_format_round_1.md')
+        Path(fmt).write_text('# Format\nStatus: \u2705\n', encoding='utf-8')
+        out = self.agent(self.write(fmt))
+        self.deny(out, 'R6')
+        r = self.reason(out)
+        for part in ('cephalo guard R6: not run.', 'document_format_round_1.md was saved as the format-verifier\'s '
+                     'answer, but not read back whole since (not read)', 'The format-verifier writes its report itself'):
+            self.assertIn(part, r)
+        self.passes(self.agent(self.write(fmt) + self.read(fmt)))
+        self.deny(self.agent(self.write(fmt) + self.read(fmt, limit=1)), 'R6')
+        self.passes(self.agent(self.write(fmt), off='R6'))
+        self.deny(self.agent(self.write(fmt), off='R5'), 'R6')
+        # other files the main chat writes are not reports
+        for name in ('ch_1_round_1_verbatim.txt', 'notes.md'):
+            p = os.path.join(self.ver, name)
+            Path(p).write_text('x\n', encoding='utf-8')
+            self.passes(self.agent(self.write(p)))
+        both = self.agent(self.write(fmt) + self.write())
+        self.assertEqual(rules_of(both), {'R5', 'R6'})
+
+    def test_windows_letter_case(self):
+        out = self.agent(self.write() + self.read(path=self.rep.upper()), plat='windows')
+        self.passes(out)
+        self.deny(self.agent(self.write() + self.read(path=self.rep.upper(), offset=2), plat='windows'), 'R5')
+
+    def test_only_the_end_of_a_long_transcript(self):
+        filler = [tr_text('x' * 1000) for _ in range(40)]
+        old, g.MAX_TRANSCRIPT = g.MAX_TRANSCRIPT, 1 << 14
+        try:
+            self.passes(self.agent(self.write() + filler))              # its Write is before the part read
+            self.deny(self.agent(filler + self.write()), 'R5')
+            self.passes(self.agent(filler + self.write() + filler + self.read()))
+        finally:
+            g.MAX_TRANSCRIPT = old
+
+    def test_over_the_deadline_passes_with_the_note(self):
+        old = g.DEADLINE_S
+        g.DEADLINE_S = -1.0
+        try:
+            out = self.agent(self.write() + [tr_text('x')] * 300, state=tempfile.mkdtemp(prefix='guard-r5a-note-'))
+        finally:
+            g.DEADLINE_S = old
+        self.assertEqual(list(out), ['systemMessage'])
+        self.assertIn('session transcript', out['systemMessage'])
+
+
 # ------------------------------------------------------------------ P1
 
 
@@ -798,7 +1012,12 @@ class TestRobustness(Base):
         Path(fmt).write_text('x', encoding='utf-8')
         e = {'CLAUDE_PROJECT_DIR': root, 'CEPHALO_GUARD_OS': 'posix', 'HOME': '/home/u',
              'CEPHALO_GUARD_STATE_DIR': tempfile.mkdtemp(prefix='guard-e2e-state-'), 'CEPHALO_GUARD_ON': 'P1'}
+        unread = payload('Agent', {'prompt': 'Revise ch_1.md.', 'subagent_type': 'writer-agent'}, cwd=root)
+        unread['transcript_path'] = os.path.join(root, 'sess.jsonl')
+        Path(unread['transcript_path']).write_text(json.dumps(tr_call('Write', {'file_path': rep, 'content': 'x'}, 't1'),
+                                                              separators=(',', ':')) + '\n', encoding='utf-8')
         cases = [
+            (unread, 'deny', 'R5'),
             (payload('Bash', {'command': 'py -c "open(\'a.md\',\'w\').write(\'x\')"'}, cwd=root), 'deny', 'S1'),
             (payload('Bash', {'command': 'pandoc a.md -o /tmp/a.docx'}, cwd=root), 'deny', 'S2'),
             (payload('Bash', {'command': 'python3 scripts/a.py || py scripts/a.py'}, cwd=root), 'deny', 'S3'),
@@ -1284,6 +1503,19 @@ class TestMessagesPointToRules(Base):
                 text = hso.get('permissionDecisionReason') or out.get('reason') or ''
                 with self.subTest(agent=agent, text=text[:60]):
                     self.check(text)
+        # R5 and R6 before an agent call of the main chat: a report saved and not read back
+        tr = os.path.join(root, 'sess.jsonl')
+        Path(tr).write_text(''.join(json.dumps(tr_call('Write', {'file_path': p, 'content': 'x'}, 't%d' % k)) + '\n'
+                                    for k, p in enumerate((rep, fmt))), encoding='utf-8')
+        for agent_type in (None, 'orchestrator', 'orchestrator-longform', 'orchestrator-defense'):
+            d = payload('Agent', {'prompt': 'x', 'subagent_type': 'writer-agent'}, cwd=root)
+            d['transcript_path'] = tr
+            if agent_type:
+                d['agent_type'] = agent_type                  # claude --agent <name>: no agent_id
+            out = g.evaluate(d, env(root=root))
+            self.assertEqual(rules_of(out), {'R5', 'R6'})
+            with self.subTest(agent=agent_type, call='Agent'):
+                self.check(out['hookSpecificOutput']['permissionDecisionReason'])
         shutil.rmtree(root)
 
     def test_docs_section(self):
