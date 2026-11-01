@@ -392,7 +392,7 @@ def ignored(rel):
     """Hidden files, Office lock files and the folder files of Windows."""
     parts = rel.split('/')
     name = parts[-1].lower()
-    return (any(part.startswith('.') for part in parts) or name.startswith('~$')
+    return (any(part.startswith(('.', '~$')) for part in parts)
             or name in ('desktop.ini', 'thumbs.db'))
 
 

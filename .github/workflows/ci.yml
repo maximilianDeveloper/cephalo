@@ -3212,7 +3212,7 @@ jobs:
           cmp link.docx link.orig
           # A ZIP disguised as a PDF is unpacked by the script's own safe extractor.
           echo x > "$W/good/template.pptx"
-          "$SH" "$R/scripts/extract_styleguide.sh" "$W/good" "$W/out_good" > out.txt 2>&1
+          "$SH" "$R/scripts/extract_styleguide.sh" "$W/good" "$W/out_good" > out.txt 2>&1 || { cat out.txt; exit 1; }
           grep -q "Example rule text" "$W/out_good/guide.txt"
           grep -q "skipped (not a PDF): template.pptx" out.txt
 
