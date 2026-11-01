@@ -33,6 +33,11 @@ Rules (on, except P1)
       .claude/settings.local.json, the project's or the user's) or to
       cephalo's scripts/ folder: a Write or Edit, or a shell command that
       writes, moves or deletes them.  Denied: only the user changes them.
+  S6  cephalo's state_check.py run with its output into a pipe (| tail,
+      2>&1 | grep, in PowerShell | Select-Object), also in a ( ) or { }
+      group that is piped.  Denied: its whole output is read in the tool
+      result.  --help, its output redirected into a file, and a chain with
+      ;, && or || pass.
   R5  The coordinator (main chat or an orchestrator) and a saved
       source-verifier report (verification/*_round_<n>.md,
       consistency_final.md): after a Write, asks for the read-back the
@@ -183,7 +188,12 @@ class Ctx:
     def definition(self, rule):
         """The agent definition to name in a message: the agent's own for the
         shell rules S1/S2 where it has them under "Principles", otherwise the
-        coordinator's."""
+        coordinator's.  S6 is the flat orchestrator's in every context:
+        state_check.py reads a flat project's state file, and only
+        orchestrator.md's "Chat closure ritual" runs it (in the seminar and
+        presentation workflows through the main chat)."""
+        if rule == 'S6':
+            return '.claude/agents/orchestrator.md'
         own = ('research-agent', 'style-resolver', 'format-verifier', 'data-agent', 'methods-agent')
         if self.agent_type.startswith('orchestrator') or (rule in ('S1', 'S2') and self.agent_type in own):
             return '.claude/agents/%s.md' % self.agent_type
@@ -1189,6 +1199,17 @@ def check_shell(cmd, tool, ctx, depth=0, pre=None, data=False):
     assigns = {}               # name=value words seen so far (for python3 -c "$code")
     scratch_made = set()       # _scratch files this command fills by an exempt producer
     restore = []               # (end, folder) of the ( ... ) subshells the loop is in
+    # the segments whose output goes into a pipe: 'a | b', and each one in a '( ... ) | b' or '{ ...; } | b'
+    # (the groups' ranges counted in one pass, so that nested groups stay linear)
+    piped, opened = [seg.sep in ('|', '|&') and not seg.group for seg in segs], [0] * (len(segs) + 1)
+    for seg in segs:
+        if seg.sep in ('|', '|&') and seg.group:
+            opened[seg.group[0]] += 1
+            opened[seg.group[1]] -= 1
+    in_group = 0
+    for k in range(len(segs)):
+        in_group += opened[k]
+        piped[k] = piped[k] or (in_group > 0 and 'group')
     for si, seg in enumerate(segs):
         if not si % 256:
             ctx.budget.tick()
@@ -1279,6 +1300,11 @@ def check_shell(cmd, tool, ctx, depth=0, pre=None, data=False):
             if ctx.windows and re.match(r'^python3(\.\d+)?$', c) and mode != 'probe' and ctx.has_py():
                 hits.append(('S3', 'python3 on Windows'))
         prev_script = (c, py_mode(args)[1]) if is_script and seg.sep == '||' else False
+        # S6: cephalo's state_check.py with its output into a pipe
+        if piped[si] and _state_check_run(c, args) and not any(
+                op in _STDOUT_OPS and fd in (None, '1', '&', '*') and t and not t.startswith('&')
+                for fd, op, t in seg.redirs):
+            hits.append(('S6', _pipe_detail(segs, si, piped[si])))
         # S1 (g): a patch typed into git apply / patch
         if (c == 'patch' or (c == 'git' and args[:1] == ['apply'])) and '--check' not in args and \
                 '--stat' not in args and (seg.heredocs or seg.herestrings or
@@ -1421,6 +1447,28 @@ def check_shell(cmd, tool, ctx, depth=0, pre=None, data=False):
         for sub in _substitutions(text):
             hits += check_shell(sub, 'Bash', ctx, depth + 1, pre=bodies, data=data)
     return _dedupe(hits)
+
+
+def _state_check_run(c, args):
+    """The command runs cephalo's state_check.py, by a Python interpreter or by
+    its path (c: the command's base name), and not for its --help."""
+    if _PYNAME.match(c):
+        mode, val = py_mode(args)
+        if mode != 'script' or base_name(val) != 'state_check.py':
+            return False
+        args = args[args.index(val) + 1:]
+    elif c != 'state_check.py':
+        return False
+    return not any(a in ('-h', '--help') for a in args)
+
+
+def _pipe_detail(segs, si, how):
+    """For a message: the pipe a segment's output goes into."""
+    if how == 'group':
+        return 'from inside a ( ) or { } group whose output goes into a pipe'
+    nxt = segs[si + 1].words if si + 1 < len(segs) else []
+    words = ' '.join(_sh_quote(w) for w in nxt[:3])
+    return '%s %s' % (segs[si].sep, words[:60] + ('...' if len(words) > 60 or len(nxt) > 3 else '') or '...')
 
 
 def _expander(assigns):
@@ -1981,6 +2029,11 @@ def shell_reason(hits, ctx, cmd=''):
                    'scripts in scripts/ are changed only by the user, by hand (docs/scripts.md, "cephalo '
                    'guard"). If the change is needed, tell the user what to change and why; do not get around '
                    'this check.' % '; '.join(by['S5'][:3]))
+    if 'S6' in by:
+        out.append('cephalo guard S6: not run. This command sends the output of state_check.py into a pipe (%s). '
+                   'Its output goes to you whole: run it without a pipe (%s, "Chat closure ritual", item 1; '
+                   'docs/scripts.md, "state_check.py"). Its summary line and its last line give its exit code; '
+                   'read the whole output in the tool result.' % (by['S6'][0], ctx.definition('S6')))
     if 'R5' in by:
         out.append('cephalo guard R5: not done (%s). A saved source-verifier report stays as the agent\'s '
                    'answer (%s, "Save every source-verifier report as a file"): if your copy differs from the '

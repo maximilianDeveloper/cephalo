@@ -471,6 +471,78 @@ class TestS4PowerShellRedirect(Base):
                 self.passes(ps(cmd))
 
 
+class TestS6StateCheckPipe(Base):
+    RUN = 'python3 scripts/state_check.py workspace/state.md workspace/output/chapters/'
+    DENIED = [
+        # the trial run's forms
+        RUN + ' | tail -5',
+        RUN + ' 2>&1 | grep -E "Summary|Exit code"',
+        'py scripts/state_check.py workspace/state.md workspace/output/chapters/ 2>&1 | tail -20',
+        RUN + ' |& tail', RUN + ' | head -40; echo "exit=$?"',
+        'cd /home/u/proj && py -3 scripts/state_check.py workspace/state.md | tail -3',
+        'cd scripts && python3 state_check.py ../workspace/state.md | tail',
+        'env PYTHONIOENCODING=utf-8 python3 scripts/state_check.py workspace/state.md | tail',
+        'timeout 60 python3 -X utf8 scripts/state_check.py workspace/state.md | cat',
+        './scripts/state_check.py workspace/state.md | tail',
+        'python3 /home/u/proj/scripts/state_check.py workspace/state.md | tee _scratch/orchestrator/s.txt',
+        '{ python3 scripts/state_check.py workspace/state.md; echo "exit=$?"; } | tail -5',
+        '(python3 scripts/state_check.py workspace/state.md) 2>&1 | tail -5',
+        'bash -c "python3 scripts/state_check.py workspace/state.md | tail -5"',
+    ]
+    PASSING = [
+        RUN, RUN + '; echo "exit=$?"', RUN + ' && echo ok || echo failed', RUN + ' 2>&1',
+        RUN + ' > _scratch/orchestrator/state_check.txt 2>&1; echo $?',
+        RUN + ' > _scratch/orchestrator/s.txt | cat',            # stdout goes to the file, not into the pipe
+        'python3 scripts/state_check.py --help | head', 'py scripts/state_check.py -h | head -5',
+        'cat scripts/state_check.py | head', 'grep -n Exit scripts/state_check.py | head',
+        'python3 scripts/verbatim_check.py --words workspace/output/chapters/ch_1.md | tail -3',
+        'git diff scripts/state_check.py | head', 'python3 scripts/state_checks.py a | tail',
+        'cat workspace/state.md | python3 scripts/state_check.py workspace/state.md',
+    ]
+
+    def test_denied(self):
+        for cmd in self.DENIED:
+            with self.subTest(cmd=cmd):
+                self.assertEqual(rules_of(bash(cmd)), {'S6'}, cmd)
+        out = bash(self.RUN + ' 2>&1 | grep -E "Summary|Exit code"')
+        reason = out['hookSpecificOutput']['permissionDecisionReason']
+        for part in ('cephalo guard S6: not run.', "(| grep -E 'Summary|Exit code')", 'without a pipe',
+                     '.claude/agents/orchestrator.md, "Chat closure ritual", item 1', 'docs/scripts.md, "state_check.py"',
+                     'exit code', 'whole output'):
+            self.assertIn(part, reason)
+
+    def test_denied_on_windows_and_for_agents(self):
+        for cmd in ('py scripts/state_check.py workspace/state.md workspace/output/chapters/ | tail -5',
+                    'py "C:\\Home\\u\\Projekt Arbeit\\scripts\\state_check.py" workspace\\state.md | tail',
+                    'py "/c/Home/u/Projekt Arbeit/scripts/STATE_CHECK.PY" workspace/state.md | tail',
+                    'py.exe scripts/state_check.py workspace/state.md 2>&1 | grep Exit',
+                    'cmd /c "py scripts\\state_check.py workspace\\state.md | more"'):
+            with self.subTest(cmd=cmd):
+                self.assertEqual(rules_of(bash(cmd, plat='windows')), {'S6'}, cmd)
+        for cmd in ('py scripts\\state_check.py workspace\\state.md | Select-Object -Last 5',
+                    'py scripts/state_check.py workspace/state.md 2>&1 | Select-String Exit'):
+            with self.subTest(cmd=cmd):
+                self.assertEqual(rules_of(ps(cmd)), {'S6'}, cmd)
+        self.passes(ps('py scripts\\state_check.py workspace\\state.md workspace\\output\\chapters\\'))
+        for agent in ('orchestrator', 'orchestrator-longform', 'writer-agent', 'format-verifier'):
+            with self.subTest(agent=agent):
+                out = bash(self.RUN + ' | tail -5', agent=agent)
+                self.assertEqual(rules_of(out), {'S6'})
+                self.assertIn('.claude/agents/orchestrator.md', out['hookSpecificOutput']['permissionDecisionReason'])
+
+    def test_passing(self):
+        for cmd in self.PASSING:
+            with self.subTest(cmd=cmd):
+                self.assertFalse(rules_of(bash(cmd)) & {'S6'}, cmd)
+                self.passes(bash(cmd))
+
+    def test_switch(self):
+        cmd = self.RUN + ' | tail -5'
+        self.passes(bash(cmd, off='S6'))
+        self.passes(bash(cmd, off='s1, s6'))
+        self.deny(bash(cmd, off='S1'), 'S6')
+
+
 # ------------------------------------------------------------------ R6, R5
 
 
@@ -731,6 +803,8 @@ class TestRobustness(Base):
             (payload('Bash', {'command': 'pandoc a.md -o /tmp/a.docx'}, cwd=root), 'deny', 'S2'),
             (payload('Bash', {'command': 'python3 scripts/a.py || py scripts/a.py'}, cwd=root), 'deny', 'S3'),
             (payload('PowerShell', {'command': 'py scripts/a.py > out.txt'}, cwd=root), 'deny', 'S4'),
+            (payload('Bash', {'command': 'py scripts/state_check.py workspace/state.md | tail -5'}, cwd=root),
+             'deny', 'S6'),
             (payload('Edit', {'file_path': fmt, 'old_string': 'x', 'new_string': 'y'}, cwd=root), 'deny', 'R6'),
             (payload('Agent', {'prompt': 'Prüfe nur Satz 2.', 'subagent_type': 'source-verifier'}, cwd=root),
              'deny', 'P1'),
@@ -1197,6 +1271,7 @@ class TestMessagesPointToRules(Base):
                     bash('python3 scripts/a.py', plat='windows', agent=agent),
                     ps('py scripts/a.py > out.txt', agent=agent),
                     bash('rm scripts/cephalo_guard.py', agent=agent, root=root, cwd=root),
+                    bash('python3 scripts/state_check.py workspace/state.md | tail -5', agent=agent, root=root, cwd=root),
                     run('Edit', {'file_path': fmt, 'old_string': 'a', 'new_string': 'b'}, agent=agent, root=root),
                     run('Edit', {'file_path': rep, 'old_string': 'a', 'new_string': 'b'}, agent=agent, root=root),
                     run('Agent', {'prompt': 'Prüfe nur Satz 2.', 'subagent_type': 'source-verifier'}, agent=agent,
