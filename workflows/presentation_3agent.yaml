@@ -45,7 +45,7 @@ constraints:
   slides_min: 15
   slides_max: 25
   companion_pages: 5-10        # if applicable
-  feedback_loop_max: 2   # for source verification (step 2); an iteration is a revision followed by a new verification, counted in workspace/state.md
+  feedback_loop_max: 2   # for source verification (step 2); an iteration is a revision followed by a new verification, counted in workspace/state.md per part (slides with speaker notes; companion)
   # slides and companion pass when no ⚠️, ❌ or ❓ is left; 🟡 does not block (orchestrator.md, "Feedback loop control")
   feedback_loop_escalation:
     # See orchestrator.md -> "Feedback-loop escalation" for the full behavior.
