@@ -35,7 +35,8 @@ Rules (on, except P1)
   S5  A change to the hook settings (.claude/settings.json and
       .claude/settings.local.json, the project's or the user's) or to
       cephalo's scripts/ folder: a Write or Edit, or a shell command that
-      writes, moves or deletes them.  Denied: only the user changes them.
+      writes, moves or deletes them (on Windows and macOS in any letter
+      case).  Denied: only the user changes them.
   S6  cephalo's state_check.py run with its output into a pipe (| tail,
       2>&1 | grep, in PowerShell | Select-Object), also in a ( ) or { }
       group, an if, a loop or a case that is piped.  Denied: its whole
@@ -951,16 +952,26 @@ def _data_script(n, ctx):
 _SETTINGS = ('/.claude/settings.json', '/.claude/settings.local.json')
 
 
+def _case(p, ctx):
+    """p as protected() compares it: macOS's own file systems (APFS, HFS+)
+    ignore letter case by default, so Scripts/ is scripts/ there (on a volume
+    that does not, the guard denies a change it need not, which does no
+    harm).  Windows paths are in lower case already (_fold).  A Windows short
+    name (SCRIPT~1) is not resolved."""
+    return p.lower() if ctx.macos else p
+
+
 def protected(n, ctx):
     """What a normalized path is, if only the user changes it: the hook
     settings (the project's, a sub-project's or the user's) or cephalo's
     scripts/ folder.  None otherwise."""
     if not n or n in (DEVICE, TEMPVAR):
         return None
-    if any(n.endswith(x) for x in _SETTINGS):
+    k = _case(n, ctx)
+    if any(k.endswith(x) for x in _SETTINGS):
         return 'the hook settings ' + n.rsplit('/', 2)[-2] + '/' + n.rsplit('/', 1)[-1]
     for d in (ctx.project + '/scripts', ctx.root + '/scripts'):
-        if inside(n, d):
+        if inside(k, _case(d, ctx)):
             return "cephalo's scripts/ folder"
     return None
 
@@ -971,7 +982,8 @@ def holds_protected(n, ctx):
     multi-project setup also a sibling sub-project)."""
     if not n or n in (DEVICE, TEMPVAR):
         return None
-    if n.rsplit('/', 1)[-1] == '.claude':
+    k = _case(n, ctx)
+    if k.rsplit('/', 1)[-1] == '.claude':
         return 'a folder that holds hook settings'
     anchors = [ctx.project + '/scripts', ctx.root + '/scripts']
     bases = {ctx.project, ctx.root, ctx.home}
@@ -987,9 +999,9 @@ def holds_protected(n, ctx):
         if base:
             anchors += [base + x for x in _SETTINGS]
     for a in anchors:
-        if inside(a, n):
+        if inside(_case(a, ctx), k):
             why = protected(a, ctx) or "cephalo's scripts/ folder"
-            return why if a == n else 'a folder that holds ' + why
+            return why if _case(a, ctx) == k else 'a folder that holds ' + why
     return None
 
 

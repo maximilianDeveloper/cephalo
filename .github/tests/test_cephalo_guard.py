@@ -1692,6 +1692,23 @@ class TestS5Protected(Base):
         self.assertIn('S5', rules_of(bash('rm "/c/Home/u/Projekt Arbeit/.CLAUDE/Settings.Local.json"',
                                           plat='windows')))
 
+    def test_letter_case_on_macos_and_windows(self):
+        # macOS's own file systems ignore letter case by default, as NTFS does; Linux keeps it
+        for plat, root in (('macos', POSIX_ROOT), ('windows', WIN_ROOT)):
+            sep = '\\' if plat == 'windows' else '/'
+            for rel in ('Scripts/cephalo_guard.py', '.Claude/Settings.json', '.CLAUDE/settings.LOCAL.json'):
+                path = root + sep + rel.replace('/', sep)
+                with self.subTest(plat=plat, rel=rel):
+                    self.deny(run('Edit', {'file_path': path, 'old_string': 'a', 'new_string': 'b'}, plat=plat), 'S5')
+            for cmd in ('rm -rf .CLAUDE', 'rm SCRIPTS/x.py', 'mv Scripts old'):
+                with self.subTest(plat=plat, cmd=cmd):
+                    self.assertIn('S5', rules_of(bash(cmd, plat=plat)))
+        self.passes(run('Edit', {'file_path': POSIX_ROOT + '/Scripts/cephalo_guard.py', 'old_string': 'a',
+                                 'new_string': 'b'}))
+        self.passes(bash('rm -rf .CLAUDE'))
+        self.passes(run('Edit', {'file_path': POSIX_ROOT + '/workspace/Scripts.md', 'old_string': 'a',
+                                 'new_string': 'b'}, plat='macos'))
+
     def test_multi_project_root_scripts(self):
         top = tempfile.mkdtemp(prefix='guard-multi5-')
         os.makedirs(os.path.join(top, '00_Shared_Materials'))
