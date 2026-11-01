@@ -1502,7 +1502,7 @@ class TestFastPath(Base):
 
     def test_project_folder_forms(self):
         ch = 'workspace/output/chapters/ch_1.md'
-        win = 'C:\\Users\\u\\Projekt \u00dcbung'
+        win = 'C:\\Arbeit\\Projekt \u00dcbung'
         cases = []
         for project, path, fast in ((self.proj + '/', self.p(ch), True),
                                     ('/' + self.proj[1:].replace('/', '//'), self.p(ch), True),
