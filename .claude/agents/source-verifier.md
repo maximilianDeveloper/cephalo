@@ -115,6 +115,8 @@ From the second verification of a chapter on, the orchestrator gives you the pre
 
 Your report is your final message. You cannot write files: the orchestrator (in the seminar and presentation workflows, Claude in the main chat) saves it as a file as it is, so keep it compact. Name files by their path relative to the project, never by an absolute path: that would carry the user's name into the project files. Add no closing list of the files you read or of relevant files, which Claude Code asks subagents for, with absolute paths: the report ends with its own last part, and a file is named where a finding or note needs it.
 
+In a presentation, a sentence of the slides is a bullet point or line of one slide and a sentence of the speaker notes is a sentence of one slide's notes: number them by slide (`Slide 13.2`, `Notes 13.1`), rate each, and give each its own row or entry, also when two on one slide share a source.
+
 Name an extract entry by its file name and quote ID, the `### Q<n>` heading above the entry (`keller2018.md Q3`); where there is none (no extracts, as in the seminar workflow, or an extract from before quote IDs), give author and page alone.
 
 ### Chapter verification
