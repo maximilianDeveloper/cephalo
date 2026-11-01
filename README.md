@@ -79,6 +79,7 @@ Used this way, cephalo makes you a more rigorous writer. Used to hand in text yo
 ## Requirements
 
 - **Claude Code** (desktop app or CLI) with a paid Anthropic subscription
+  - With the environment variable `ANTHROPIC_API_KEY` set, Claude Code outside the desktop app uses that key instead (after you approve it once; `claude -p` without asking), and usage is billed to that API account (see "Troubleshooting" in `docs/QUICKSTART.md`)
 - **Git** installed (for versioning, recommended for theses)
 - **Pandoc** for the Word export in the formatting phase (free; on Windows `winget install --id JohnMacFarlane.Pandoc`, on macOS `brew install pandoc`)
 - **Optional:** Zotero or Citavi for bibliographic data (recommended for 15+ sources)

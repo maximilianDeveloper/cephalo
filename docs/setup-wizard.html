@@ -145,6 +145,7 @@
   .doc p{margin:0 0 12px}
   .doc ul,.doc ol{margin:0 0 12px; padding-left:22px}
   .doc li{margin-bottom:5px}
+.doc li ul{margin:4px 0 0}
   .doc code{font-family:var(--mono); font-size:12.5px; background:#e2e9e8; padding:1px 5px; border-radius:4px}
   .doc pre{background:var(--term-bg); border-radius:8px; padding:14px 16px; overflow-x:auto; margin:0 0 14px}
   .doc pre code{background:none; color:var(--term-fg); padding:0; font-size:12.5px; line-height:1.6}
@@ -286,7 +287,7 @@
 <p>Used this way, cephalo makes you a more rigorous writer. Used to hand in text you cannot stand behind, it will not serve you well — and neither will the examiner.</p>
 <hr>
 <h2>Requirements</h2>
-<ul><li><strong>Claude Code</strong> (desktop app or CLI) with a paid Anthropic subscription</li><li><strong>Git</strong> installed (for versioning, recommended for theses)</li><li><strong>Pandoc</strong> for the Word export in the formatting phase (free; on Windows <code>winget install --id JohnMacFarlane.Pandoc</code>, on macOS <code>brew install pandoc</code>)</li><li><strong>Optional:</strong> Zotero or Citavi for bibliographic data (recommended for 15+ sources)</li></ul>
+<ul><li><strong>Claude Code</strong> (desktop app or CLI) with a paid Anthropic subscription<ul><li>With the environment variable <code>ANTHROPIC_API_KEY</code> set, Claude Code outside the desktop app uses that key instead (after you approve it once; <code>claude -p</code> without asking), and usage is billed to that API account (see &quot;Troubleshooting&quot; in <code>docs/QUICKSTART.md</code>)</li></ul></li><li><strong>Git</strong> installed (for versioning, recommended for theses)</li><li><strong>Pandoc</strong> for the Word export in the formatting phase (free; on Windows <code>winget install --id JohnMacFarlane.Pandoc</code>, on macOS <code>brew install pandoc</code>)</li><li><strong>Optional:</strong> Zotero or Citavi for bibliographic data (recommended for 15+ sources)</li></ul>
 <p>No programming knowledge required for basic use. Scripts are optional.</p>
 <hr>
 <h2>Quick start</h2>
@@ -479,6 +480,7 @@ List any open questions for me to resolve before we proceed.</code></pre>
 .\setup.ps1</code></pre>
 <p><strong><code>git: command not found</code></strong> (or <code>! Git not installed.</code> / <code>! Git not available</code> in the setup output) — install Git. On Windows: download Git for Windows (includes Git Bash, which is needed for the <code>.sh</code> helper scripts). On Linux/macOS: <code>apt install git</code> / <code>brew install git</code>. Setup creates no repository without Git (<code>git add .</code> then fails with <code>not a git repository</code>): afterwards, re-run setup with the same choices in the project folder (for multi-project, the root, not a sub-project).</p>
 <p><strong><code>Error: python-docx not installed.</code></strong> (or <code>ModuleNotFoundError: No module named &#x27;docx&#x27;</code>) — the Python utility scripts need their dependencies. From the project root: <code>pip install -r requirements.txt</code>. If you installed <code>docx</code> instead, that is a different, abandoned package: run <code>pip uninstall docx</code>, then <code>pip install python-docx</code>.</p>
+<p><strong>Usage is billed to an API account, not to your subscription</strong> (or <code>This organization has been disabled</code>, although your subscription is active) — the environment variable <code>ANTHROPIC_API_KEY</code> is set. Claude Code outside the desktop app then uses that key: in an interactive session once you approve it, with <code>claude -p</code> always. In a session, <code>/status</code> shows which login is in use. To use your subscription, remove the variable (on Windows from the user or system environment variables and from your PowerShell profile, <code>$PROFILE</code>; on macOS and Linux, the <code>export ANTHROPIC_API_KEY=…</code> line from your shell profile, such as <code>~/.zshrc</code> or <code>~/.bashrc</code>) and open a new terminal. While the variable is still set, &quot;Use custom API key&quot; in <code>/config</code> turns the key off for interactive sessions; <code>claude -p</code> still uses it.</p>
 <p><strong>Setup finishes but no workflow is mentioned</strong> — check the script output. The last lines name the active workflow. Invalid arguments make the script exit with an error message naming the valid options — fix the argument and re-run.</p>
 <p><strong>Something else went wrong</strong> — re-run with verbose output: <code>bash -x setup.sh</code> (Linux/macOS) or add <code>-Verbose</code> to the PowerShell invocation. Open an issue with the output.</p>
 <hr>

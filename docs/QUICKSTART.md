@@ -177,6 +177,8 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 
 **`Error: python-docx not installed.`** (or `ModuleNotFoundError: No module named 'docx'`) — the Python utility scripts need their dependencies. From the project root: `pip install -r requirements.txt`. If you installed `docx` instead, that is a different, abandoned package: run `pip uninstall docx`, then `pip install python-docx`.
 
+**Usage is billed to an API account, not to your subscription** (or `This organization has been disabled`, although your subscription is active) — the environment variable `ANTHROPIC_API_KEY` is set. Claude Code outside the desktop app then uses that key: in an interactive session once you approve it, with `claude -p` always. In a session, `/status` shows which login is in use. To use your subscription, remove the variable (on Windows from the user or system environment variables and from your PowerShell profile, `$PROFILE`; on macOS and Linux, the `export ANTHROPIC_API_KEY=…` line from your shell profile, such as `~/.zshrc` or `~/.bashrc`) and open a new terminal. While the variable is still set, "Use custom API key" in `/config` turns the key off for interactive sessions; `claude -p` still uses it.
+
 **Setup finishes but no workflow is mentioned** — check the script output. The last lines name the active workflow. Invalid arguments make the script exit with an error message naming the valid options — fix the argument and re-run.
 
 **Something else went wrong** — re-run with verbose output: `bash -x setup.sh` (Linux/macOS) or add `-Verbose` to the PowerShell invocation. Open an issue with the output.
