@@ -213,11 +213,10 @@ phases:
           "Recording answers to open questions", item 6); a line under the
           open issues of workspace/state.md does not replace either. The
           line in workspace/state.md for each of the writer's answers, also
-          one to a revision (step 2, step 3, the three-way check), names
+          one to a revision (step 2, step 3, the three-way check, F.1), names
           each such rule by its key or in two or three words and where it
-          went (`gaps: slides.chart_source → Open
-          questions; notes length → note to the user`), or says `gaps:
-          none`.
+          went (`gaps: captions.source_position → Open questions; thousands
+          separator → note to the user`), or says `gaps: none`.
       
       - step: 2
         agent: source-verifier
