@@ -136,7 +136,8 @@ phases:
           and all sources are accessible. The other documents of the
           checklist's section 1 are recommended: for each one missing, ask the
           user whether the institution provides it, note the gap and continue.
-          Claude in the main chat runs it and then creates workspace/state.md
+          Claude in the main chat runs it and then creates workspace/state.md,
+          with the pre-check result, before step 0.5 starts
           (main_session, "State file format").
       
       - step: 0.5
