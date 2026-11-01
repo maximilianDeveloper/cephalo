@@ -352,7 +352,25 @@ phases:
         - No open ❓ entries left under Open questions in styleguide.md, and no
           styleguide question left under the open issues of workspace/state.md
         - Final PPTX export
-        - Final PDF (for submission)
+        - Final PDF of the slides (for submission)
+        - The companion as a document, where the guidelines or the user
+          want one (a handout as a PDF, for example), in format rounds:
+          build workspace/output/reference.docx with
+          scripts/build_reference_docx.py from the values in styleguide.md;
+          export workspace/output/<companion>.docx with Pandoc from the
+          companion's file (docs/reference_management.md, "Citation
+          processor pipeline"); after every export, run
+          scripts/docx_pagination.py where styleguide.md gives the
+          companion's page numbering in pagination.* and, if
+          document.hyphenation is automatic, scripts/docx_postprocess.sh.
+          Then the format-verifier checks that DOCX, now also against the
+          rules of the written document (format-verifier.md, "Workflows
+          without Phase B"), and writes
+          workspace/output/verification/<companion>_docx_format_round_<n>.md;
+          Claude handles the report as in step 3, a layout finding by
+          building the reference document again, and the next round checks
+          a new export. The PDF comes last, from the last checked DOCX, with
+          Word or LibreOffice, by Claude or the user, as the user decides.
         - Speaker notes export (if required)
         - Rehearsal with timing (target per assignment / styleguide.md, e.g. 15-20 min)
         - Before closing, run
