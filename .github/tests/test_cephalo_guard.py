@@ -488,11 +488,15 @@ class TestS6StateCheckPipe(Base):
         '{ python3 scripts/state_check.py workspace/state.md; echo "exit=$?"; } | tail -5',
         '(python3 scripts/state_check.py workspace/state.md) 2>&1 | tail -5',
         'bash -c "python3 scripts/state_check.py workspace/state.md | tail -5"',
+        # its output thrown away, as in a chat of the first presentation trial run
+        RUN + ' > /dev/null; echo $?', RUN + ' >/dev/null 2>&1; echo "exit=$?"', RUN + ' &> /dev/null',
+        RUN + ' 1>/dev/null', 'py scripts/state_check.py workspace/state.md > NUL',
     ]
     PASSING = [
         RUN, RUN + '; echo "exit=$?"', RUN + ' && echo ok || echo failed', RUN + ' 2>&1',
         RUN + ' > _scratch/orchestrator/state_check.txt 2>&1; echo $?',
         RUN + ' > _scratch/orchestrator/s.txt | cat',            # stdout goes to the file, not into the pipe
+        RUN + ' 2>/dev/null', RUN + ' 2>/dev/null; echo $?',     # only its error output thrown away
         'python3 scripts/state_check.py --help | head', 'py scripts/state_check.py -h | head -5',
         'cat scripts/state_check.py | head', 'grep -n Exit scripts/state_check.py | head',
         'python3 scripts/verbatim_check.py --words workspace/output/chapters/ch_1.md | tail -3',
@@ -524,6 +528,10 @@ class TestS6StateCheckPipe(Base):
             with self.subTest(cmd=cmd):
                 self.assertEqual(rules_of(ps(cmd)), {'S6'}, cmd)
         self.passes(ps('py scripts\\state_check.py workspace\\state.md workspace\\output\\chapters\\'))
+        self.assertEqual(rules_of(ps('py scripts\\state_check.py workspace\\state.md | Out-Null')), {'S6'})
+        self.assertIn('S6', rules_of(ps('py scripts\\state_check.py workspace\\state.md > $null')))
+        out = bash(self.RUN + ' > /dev/null; echo $?')
+        self.assertIn('its output goes to /dev/null', out['hookSpecificOutput']['permissionDecisionReason'])
         for agent in ('orchestrator', 'orchestrator-longform', 'writer-agent', 'format-verifier'):
             with self.subTest(agent=agent):
                 out = bash(self.RUN + ' | tail -5', agent=agent)

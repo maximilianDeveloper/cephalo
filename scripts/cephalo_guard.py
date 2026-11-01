@@ -39,7 +39,8 @@ Rules (on, except P1)
       case).  Denied: only the user changes them.
   S6  cephalo's state_check.py run with its output into a pipe (| tail,
       2>&1 | grep, in PowerShell | Select-Object), also in a ( ) or { }
-      group, an if, a loop or a case that is piped.  Denied: its whole
+      group, an if, a loop or a case that is piped, or with its output
+      thrown away (> /dev/null, > NUL, > $null).  Denied: its whole
       output is read in the tool result.  --help, its output redirected
       into a file, and a chain with ;, && or || pass.
   R5  The coordinator (main chat or an orchestrator) and a saved
@@ -1369,11 +1370,15 @@ def check_shell(cmd, tool, ctx, depth=0, pre=None, data=False):
             if ctx.windows and re.match(r'^python3(\.\d+)?$', c) and mode != 'probe' and ctx.has_py():
                 hits.append(('S3', 'python3 on Windows'))
         prev_script = (c, py_mode(args)[1]) if is_script and seg.sep == '||' else False
-        # S6: cephalo's state_check.py with its output into a pipe
-        if piped[si] and _state_check_run(c, args) and not any(
-                op in _STDOUT_OPS and fd in (None, '1', '&', '*') and t and not t.startswith('&')
-                for fd, op, t in seg.redirs):
-            hits.append(('S6', _pipe_detail(segs, si, piped[si])))
+        # S6: cephalo's state_check.py with its output into a pipe, or thrown away (/dev/null, NUL, $null)
+        if _state_check_run(c, args):
+            outs = [t for fd, op, t in seg.redirs
+                    if op in _STDOUT_OPS and fd in (None, '1', '&', '*') and t and not t.startswith('&')]
+            null = [t for t in outs if _null_device(t)]
+            if null:
+                hits.append(('S6', 'its output goes to %s' % null[0]))
+            elif piped[si] and not outs:
+                hits.append(('S6', _pipe_detail(segs, si, piped[si])))
         # S1 (g): a patch typed into git apply / patch
         if (c == 'patch' or (c == 'git' and args[:1] == ['apply'])) and '--check' not in args and \
                 '--stat' not in args and (seg.heredocs or seg.herestrings or
@@ -1529,6 +1534,12 @@ def _state_check_run(c, args):
     elif c != 'state_check.py':
         return False
     return not any(a in ('-h', '--help') for a in args)
+
+
+def _null_device(t):
+    """A redirect target that throws the output away."""
+    low = t.strip('"\'').replace('\\', '/').lower()
+    return low in ('/dev/null', 'nul', 'nul:', '$null', '//./nul')
 
 
 def _pipe_detail(segs, si, how):
@@ -2314,8 +2325,9 @@ def shell_reason(hits, ctx, cmd=''):
                    'guard"). If the change is needed, tell the user what to change and why; do not get around '
                    'this check.' % '; '.join(by['S5'][:3]))
     if 'S6' in by:
-        out.append('cephalo guard S6: not run. This command sends the output of state_check.py into a pipe (%s). '
-                   'Its output goes to you whole: run it without a pipe (%s, "Chat closure ritual", item 1; '
+        out.append('cephalo guard S6: not run. This command keeps the output of state_check.py from you (%s). '
+                   'Its output goes to you whole: run it without a pipe and without throwing its output away (%s, '
+                   '"Chat closure ritual", item 1; '
                    'docs/scripts.md, "state_check.py"). Its summary line and its last line give its exit code; '
                    'read the whole output in the tool result.' % (by['S6'][0], ctx.definition('S6')))
     if 'R5' in by:
