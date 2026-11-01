@@ -65,7 +65,7 @@ When multiple documents contain rules, apply this priority:
 2. **Institutional style guide** (citation guide, formatting rules)
 3. **Default fallback** (university-wide academic writing guidelines)
 
-Document contradictions do not self-resolve. Log them as `❓` items for the user to clarify.
+Document contradictions do not self-resolve. Log them as `❓` items for the user to clarify. A value a guideline gives for one element (the size of a citation on a slide, for example) contradicts its general rule for the same medium (a minimum text size for the slides) unless the guideline names the exception: that, too, is a contradiction.
 
 ### 3. Extract into `styleguide.md`
 
