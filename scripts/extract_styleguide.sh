@@ -33,6 +33,10 @@
 # at all, a limited pdftotext-only shell mode runs; in that mode disguised
 # ZIP archives are not unpacked and are reported as errors instead.
 #
+# Other files in the folder (a slide template, a Word document) are not
+# extracted: the script names each one as "skipped (not a PDF)", leaving out
+# hidden files, Office lock files (~$...), desktop.ini and Thumbs.db.
+#
 # Exit codes:
 #   0 - at least one document processed, no errors
 #   1 - wrong usage, missing tools, extraction errors, or nothing processed
@@ -158,6 +162,26 @@ if [ -z "$PYTHON_BIN" ]; then
         fi
     # -H: a guidelines folder given as a link is searched too (as by rglob).
     done < <(find -H "$base" \( -type f -o -type l \) -iname '*.pdf' -print0 | sort -z)
+
+    # Other files are not extracted: name each one, so a guideline that is no
+    # PDF (a slide template, a Word document) is not taken for a missing one.
+    skipped=0
+    while IFS= read -r -d '' other; do
+        [ -f "$other" ] || continue
+        rel="${other#"$base"}"
+        rel="${rel#/}"
+        case "/$rel" in
+            */.*|*/'~$'*) continue ;;
+        esac
+        case "${rel##*/}" in
+            [Dd][Ee][Ss][Kk][Tt][Oo][Pp].[Ii][Nn][Ii]|[Tt][Hh][Uu][Mm][Bb][Ss].[Dd][Bb]) continue ;;
+        esac
+        echo "  skipped (not a PDF): $rel"
+        skipped=$((skipped + 1))
+    done < <(find -H "$base" \( -type f -o -type l \) ! -iname '*.pdf' -print0 | sort -z)
+    if [ "$skipped" -gt 0 ]; then
+        echo "      This script extracts PDFs only: the files above have no text file in $OUT_DIR."
+    fi
 
     echo ""
     echo "Done."
@@ -363,6 +387,22 @@ pdf_files = sorted(
 if not pdf_files:
     print(f"Warning: no PDF files found in {guidelines_label}", file=sys.stderr)
 
+
+def ignored(rel):
+    """Hidden files, Office lock files and the folder files of Windows."""
+    parts = rel.split('/')
+    name = parts[-1].lower()
+    return (any(part.startswith('.') for part in parts) or name.startswith('~$')
+            or name in ('desktop.ini', 'thumbs.db'))
+
+
+# Other files are not extracted: name each one after the PDFs, so a guideline
+# that is no PDF (a slide template, a Word document) is not taken for a
+# missing one.
+other_files = [rel for rel in sorted(
+    p.relative_to(guidelines_dir).as_posix() for p in guidelines_dir.rglob('*')
+    if p.is_file() and p.suffix.lower() != '.pdf') if not ignored(rel)]
+
 used_names = set()
 written = set()
 
@@ -461,6 +501,11 @@ for pdf in pdf_files:
     else:
         print(f"  ?   {rel_path} - unrecognized file type", file=sys.stderr)
         errors += 1
+
+for rel in other_files:
+    print(f"  skipped (not a PDF): {rel}")
+if other_files:
+    print(f"      This script extracts PDFs only: the files above have no text file in {out_label}.")
 
 print()
 print("Done.")

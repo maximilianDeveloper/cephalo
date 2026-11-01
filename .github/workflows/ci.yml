@@ -1166,6 +1166,26 @@ jobs:
           grep -q "Example rule text" "$W/out_badzip/c_guide.txt"
           expect 0 bash scripts/extract_styleguide.sh "$W/aes" "$W/out_aes"
           grep -q "Encrypted rule text" "$W/out_aes/guide.txt"
+          # a file that is no PDF is named, not extracted; hidden files, Office lock
+          # files, desktop.ini and Thumbs.db are left out, in both modes
+          cp -r "$W/good" "$W/other"; mkdir -p "$W/other/sub/.git"
+          for f in template.pptx sub/notes.docx .DS_Store sub/.git/config '~$lock.docx' Thumbs.db desktop.ini; do echo x > "$W/other/$f"; done
+          expect 0 bash scripts/extract_styleguide.sh "$W/other" "$W/out_other"
+          test "$(grep -c 'skipped (not a PDF)' "$W/out.txt")" -eq 2
+          grep -qx '  skipped (not a PDF): sub/notes.docx' "$W/out.txt"
+          grep -qx '  skipped (not a PDF): template.pptx' "$W/out.txt"
+          grep -q 'extracts PDFs only' "$W/out.txt"
+          test "$(ls "$W/out_other")" = guide.txt
+          rm "$W/other/guide.pdf"; printf '%%PDF-1.4 stub' > "$W/other/a.pdf"
+          expect 0 env PATH="$W/nopy" bash scripts/extract_styleguide.sh "$W/other" "$W/out_other_nopy"
+          grep -q 'pdftotext-only' "$W/out.txt"
+          test "$(grep -c 'skipped (not a PDF)' "$W/out.txt")" -eq 2
+          grep -qx '  skipped (not a PDF): sub/notes.docx' "$W/out.txt"
+          grep -qx '  skipped (not a PDF): template.pptx' "$W/out.txt"
+          test "$(ls "$W/out_other_nopy")" = a.txt
+          # without other files, no such line
+          expect 0 bash scripts/extract_styleguide.sh "$W/good" "$W/out_good"
+          if grep -q 'skipped (not a PDF)\|extracts PDFs only' "$W/out.txt"; then cat "$W/out.txt"; exit 1; fi
           # cross_session_audit.py: 0 = clean, 1 = findings, 2 = not a repository
           g() { git -c user.name=ci -c user.email=ci@example.com "$@"; }
           g init -q "$W/repo" && g -C "$W/repo" commit -q --allow-empty -m init
@@ -3191,8 +3211,10 @@ jobs:
           grep -q "symbolic links" out.txt
           cmp link.docx link.orig
           # A ZIP disguised as a PDF is unpacked by the script's own safe extractor.
-          "$SH" "$R/scripts/extract_styleguide.sh" "$W/good" "$W/out_good"
+          echo x > "$W/good/template.pptx"
+          "$SH" "$R/scripts/extract_styleguide.sh" "$W/good" "$W/out_good" > out.txt 2>&1
           grep -q "Example rule text" "$W/out_good/guide.txt"
+          grep -q "skipped (not a PDF): template.pptx" out.txt
 
       - name: cephalo guard tests on macOS (all of them, and its own file system with a folder name with an umlaut in either form)
         if: runner.os == 'macOS'
