@@ -84,6 +84,8 @@ A count by eye misses runs, so do not report one as a check result ("no run of f
 
 **A non-breaking space before the page number:** where `in_text.nbsp_before_page` asks for one (also before the page range of a reference-list entry, unless `styleguide.md` says otherwise), write it in a chapter file as Pandoc's escaped space, a backslash before the space (`S.\ 12`), which the export turns into a non-breaking space; never type the invisible character itself, which cannot be told from a space. With citekeys, the CSL style sets the space only after the label of a citekey's locator; a page number in plain text, such as the original's page in a secondary citation's prefix (`[Weber 1922, S.\ 31, zit. nach @keller2018, S. 5]`), takes the escaped space as above. Slide text, speaker notes and a presentation's companion that is not exported with Pandoc take no backslash: without Pandoc's Markdown reader the backslash stays in the text, and the deck takes slide text and speaker notes as written.
 
+**The head of a document without a title page:** where the guidelines want a document's head on its first page instead of a title page (the lines of a presentation's companion that is exported, such as institution, seminar, title, name and date), write each line as a paragraph of its own inside `::: {custom-style="Header Block"}` at the top of the file (`docs/reference_management.md`, "The head of a document without a title page"): in justified body text, short lines with line breaks are stretched across the line.
+
 The styleguide is extracted per-project from the institution's guidelines. It may differ between projects.
 
 ## Chapter structure

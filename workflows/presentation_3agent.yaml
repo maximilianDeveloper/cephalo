@@ -184,10 +184,12 @@ phases:
           as a document (the guidelines, or the user, decide), record it in
           the decision log and name it in the writer's task prompt: an
           exported companion takes Pandoc's escaped space before a page
-          number (writer-agent.md, "Formatting rules"), and, without citekeys,
-          its reference list inside the Bibliography div
-          (docs/reference_management.md, "The reference list"), so that step
-          2 checks its entries.
+          number (writer-agent.md, "Formatting rules"), its head, where it has
+          one instead of a title page, inside the Header Block div, and,
+          without citekeys, its reference list inside the Bibliography div
+          (docs/reference_management.md, "The head of a document without a
+          title page", "The reference list"), so that step 2 checks its
+          entries.
           The writer writes slide text and speaker notes as text files in
           workspace/output/slides/; it cannot build a PPTX. Before step 3,
           workspace/output/slides/<deck>.pptx is built from them, as the user
