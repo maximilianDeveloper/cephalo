@@ -349,6 +349,36 @@ The end of the front matter is the page break that carries the hidden bookmark `
 
 Exit code 0 = written, or nothing to change; 2 = not written (no bookmark, the bookmark twice or not on the page break that ends the front matter, the back matter's bookmark missing, twice, not on its page break or before the end of the front matter, `roman-continue` with no front matter count to continue, `--back-matter-start` without `roman-continue`, not a DOCX, a damaged document; one line says which).
 
+### A PDF from Word (Windows)
+
+No script of cephalo makes the PDF: Word does, from the last checked DOCX, through COM in Claude Code's PowerShell tool (a presentation's companion: `workflows/presentation_3agent.yaml`, F.1). In the second presentation trial run, a call without a time limit hung twice, and the turn ended while Word still ran; a call with the paths as plain strings worked. Run it in a job of its own with a limit of 90 seconds, below the tool's two minutes, so that the call ends in the same turn either way:
+
+```powershell
+$docx = [string](Resolve-Path 'workspace\output\handout.docx')
+$pdf = [string](Join-Path (Split-Path $docx) 'handout.pdf')
+$job = Start-Job -ArgumentList $docx, $pdf -ScriptBlock {
+    param([string]$docx, [string]$pdf)
+    $word = New-Object -ComObject Word.Application
+    $word.Visible = $false
+    $word.DisplayAlerts = 0
+    try {
+        $doc = $word.Documents.Open($docx, $false, $true)
+        $doc.SaveAs2($pdf, 17)
+        $doc.Close(0)
+    } finally { $word.Quit() }
+}
+if (Wait-Job $job -Timeout 90) { Receive-Job $job; "exported: $pdf" } else {
+    Stop-Job $job
+    Get-CimInstance Win32_Process -Filter "Name='WINWORD.EXE'" |
+        Where-Object { "$($_.CommandLine)" -match 'Embedding|Automation' } |
+        ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
+    'timed out: the Word that this call started was stopped'
+}
+Remove-Job $job -Force
+```
+
+Put the file names of your project in the first two lines. The job stops only a Word started through COM (its command line holds `-Embedding` or `/Automation`), not one the user opened. On a timeout, try once more; if it times out again, tell the user, who exports the PDF in Word (File, Save as, PDF). Do not end a turn while an export still runs. Word needs no field update for a document without fields; with a table of contents, the user updates the fields in Word before the export (`workflows/seminar_2agent.yaml`, F.1, item 7). The recipe as a whole is still to be checked on Windows: the trial run ran its parts, not the job with its limit.
+
 ### `cross_session_audit.py`
 
 Audits a multi-worktree repository for information that exists in a worktree or past session but never made it into the main worktree (the first entry of `git worktree list`, whatever branch it has checked out). Useful for projects that use `.claude/worktrees` (or any `git worktree`) to run agent sessions in parallel.
