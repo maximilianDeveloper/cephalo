@@ -16,6 +16,7 @@ Dates follow ISO 8601 (`YYYY-MM-DD`).
 
 ### Changed
 
+- **The guard compares a saved source-verifier report with the agent's answer** (`docs/scripts.md`, "cephalo guard", R5): after the main chat's Write of a report, R5's read-back message says whether the file matches the source-verifier's answer in the session transcript, or names the first difference and asks for the file to be written again. It compares only with the answers of the report's own round, and only where the answer and the file share at least 80 % of their lines; otherwise, or without a transcript, the message is as before. In the second presentation trial run one of 11 saved reports lacked the answer's last line, and the main chat called it a match after reading it whole.
 - **The provenance check as a list in all three orchestrators** (`orchestrator-longform.md` and `orchestrator-defense.md`, as `orchestrator.md` since 1.4.9): each provenance the user's answers wrote into `styleguide.md` is checked against the message it rests on, and the result is a list, one line per provenance.
 
 ## [1.4.9] — 2026-11-06
