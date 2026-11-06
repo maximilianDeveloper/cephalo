@@ -304,10 +304,14 @@ phases:
         note: |
           Before the first format-verifier pass, Claude asks the user every
           open ❓ [format] entry of styleguide.md that step 1 did not settle,
-          those of the companion's layout too, in one message, each with a
-          proposal where the guidelines suggest one, records the answers
-          (style-resolver.md, "Recording answers to open questions") and
-          starts the pass after them; F.1 asks only what comes up later.
+          in one message, one line per key with its proposal where the
+          guidelines suggest one, records the answers (style-resolver.md,
+          "Recording answers to open questions") and starts the pass after
+          them. For a companion that F.1 exports (step 1), the same message
+          asks F.1's question on the parts it has (recorded in the decision
+          log) and leaves out the entries of a part it does not have, which
+          the user may close with the n/a value (style-resolver.md, the same
+          section, item 4). F.1 asks only what comes up later.
           Claude in the main chat runs this step (main_session). The task
           prompt names the PPTX, its PDF export (three_way_check), the
           companion and the report file, from round 2 on also the previous
@@ -384,9 +388,10 @@ phases:
         - Final PDF of the slides (for submission)
         - The companion as a document, where the guidelines or the user
           want one (a handout as a PDF, for example). Before the first
-          export, ask the user which parts of a written document it has (a
-          title page, a table of contents, page numbers and how they run) and
-          record the answer in the decision log of workspace/state.md. Then
+          export, unless step 3 asked it, ask the user which parts of a
+          written document it has (a title page, a table of contents, page
+          numbers and how they run) and record the answer in the decision log
+          of workspace/state.md. Then
           format rounds as the seminar workflow describes them
           (workflows/seminar_2agent.yaml, F.1, items 2, 4, 6 and 7, for the
           parts the companion has; the writer writes the companion's
