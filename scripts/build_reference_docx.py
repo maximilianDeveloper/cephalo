@@ -461,6 +461,15 @@ def build(args):
         level.set(qn("w:val"), "9")  # body text
         ppr.append(num)  # w:numPr before w:outlineLvl, the order Word expects
         ppr.append(level)
+    # The head of a document without a title page, such as a handout's lines at the top of its first page: Body Text,
+    # but left-aligned and without a first-line indent, so that justified text does not stretch its short lines
+    # (docs/reference_management.md, "The head of a document without a title page"). A starting document's own style
+    # of that name stays as it is.
+    if existing(doc, "Header Block") is None:
+        hb = style(doc, "Header Block", based_on=body)
+        hb.next_paragraph_style = body
+        hb.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        hb.paragraph_format.first_line_indent = Cm(0)
 
     # Table of contents: the styles Word sets its entries in when it fills the field in, named as
     # Word names them. A new one gets Word's own layout; one the starting document has keeps its
