@@ -375,7 +375,7 @@ if (Wait-Job $job -Timeout 90) {
     } else { "not exported: the job ended $($job.State)" }
 } else {
     Get-CimInstance Win32_Process -Filter "Name='WINWORD.EXE'" |
-        Where-Object { $before -notcontains $_.ProcessId -and "$($_.CommandLine)" -match '\s[-/](Embedding|Automation)\b' } |
+        Where-Object { $before -notcontains $_.ProcessId -and "$($_.CommandLine)" -match '\s(-|/)(Embedding|Automation)\b' } |
         ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
     'timed out: the Word started through COM during this call was stopped'
 }
