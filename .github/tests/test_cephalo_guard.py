@@ -958,6 +958,284 @@ class TestR5BeforeAgentCall(Base):
         self.assertIn('session transcript', out['systemMessage'])
 
 
+def tr_handback(text, agent='a0f8f41a8b48d208', name='source-verifier', side=False):
+    """A background agent's report as Claude Code 2.1.31x hands it back to the main chat: a peer message whose
+    origin carries the report verbatim (handbackReportText) and, indented, in its body."""
+    body = ('[Subagent hand-back] The text below is the final report of a subagent this session delegated to. '
+            'The report follows:\n' + '\n'.join('  ' + ln for ln in text.split('\n')))
+    return {'parentUuid': None, 'isSidechain': side, 'type': 'user', 'isMeta': True, 'promptSource': 'system',
+            'turnOrigin': 'peer',
+            'origin': {'kind': 'peer', 'from': agent, 'senderTaskId': agent, 'name': name, 'body': body,
+                       'handback': True, 'handbackReportText': text},
+            'message': {'role': 'user', 'content': 'Another Claude session sent a message:\n<agent-message from="%s">'
+                                                   '\n%s\n</agent-message>' % (agent, body)}}
+
+
+def tr_launch(tid, subagent='source-verifier', agent='a0f8f41a8b48d208'):
+    """An Agent call that Claude Code starts in the background, and its result."""
+    call = tr_call('Agent', {'description': 'Kapitel 1 Runde 1', 'prompt': 'Verify.', 'subagent_type': subagent}, tid)
+    res = tr_result(tid)
+    res['message']['content'][0]['content'] = [{'type': 'text', 'text': (
+        'Async agent launched successfully. (This tool result is internal metadata.)\nagentId: %s (internal ID)\n'
+        'The agent is working in the background.' % agent)}]
+    res['toolUseResult'] = {'isAsync': True, 'status': 'async_launched', 'agentId': agent, 'description': 'x',
+                            'prompt': 'Verify.', 'canContinueAgent': True}
+    return [call, res]
+
+
+def tr_foreground(tid, answer, trailer_block=True, subagent='source-verifier', error=False):
+    """An Agent call in the foreground: its result is the answer, with Claude Code's trailer."""
+    call = tr_call('Agent', {'description': 'Kapitel 1 Runde 1', 'prompt': 'Verify.', 'subagent_type': subagent}, tid)
+    trailer = 'agentId: a5e1 (for resuming to continue this agent\'s work if needed)\n<usage>total_tokens: 38949\n' \
+              'tool_uses: 6\nduration_ms: 56146</usage>'
+    res = tr_result(tid, error)
+    res['message']['content'][0]['content'] = [{'type': 'text', 'text': answer}, {'type': 'text', 'text': trailer}] \
+        if trailer_block else [{'type': 'text', 'text': answer + '\n\n' + trailer}]
+    res['toolUseResult'] = {'status': 'completed', 'agentId': 'a5e1', 'totalTokens': 38949}
+    return [call, res]
+
+
+def verifier_report(chapter=1, rows=30, changed=()):
+    lines = ['# Verifikation Kapitel %d, Runde 1: `workspace/output/chapters/ch_%d.md`' % (chapter, chapter), '',
+             '| # | Satz | Status |', '|---|---|---|']
+    for i in range(1, rows + 1):
+        word = 'neu' if i in changed else 'alt'
+        lines.append('| %d | \u201eZitat %d aus Kapitel %d, %s\u201c (Keller 2018, S. %d) | \u2705 |'
+                     % (i, i, chapter, word, i + 3))
+    lines += ['', '**Status:** \u2705 %d' % rows, 'Gesamt: %d \u2705, 0 \u26a0\ufe0f' % rows]
+    return '\n'.join(lines) + '\n'
+
+
+class TestR5AnswerComparison(Base):
+    """After a Write of a source-verifier report, R5's message says whether the saved file is the
+    source-verifier's answer in the session transcript."""
+
+    def setUp(self):
+        self.root = tempfile.mkdtemp(prefix='guard-r5c-')
+        self.ver = os.path.join(self.root, 'workspace', 'output', 'verification')
+        os.makedirs(self.ver)
+        self.rep = os.path.join(self.ver, 'ch_1_round_1.md')
+        self.tr = os.path.join(tempfile.mkdtemp(prefix='guard-r5c-tr-'), 'sess-1.jsonl')
+        self.n = 0
+
+    def tearDown(self):
+        shutil.rmtree(self.root)
+        shutil.rmtree(os.path.dirname(self.tr))
+
+    def tid(self):
+        self.n += 1
+        return 'toolu_%03d' % self.n
+
+    def write(self, path, text):
+        t = self.tid()
+        return t, [tr_call('Write', {'file_path': path, 'content': text}, t), tr_result(t)]
+
+    def saved(self, saved, entries, path=None, wid=None, plat='posix', root=None, transcript=None, **kw):
+        """The PostToolUse message for the Write wid of path (saved holds what is in the file)."""
+        path = path or self.rep
+        if plat == 'posix':
+            Path(path).write_text(saved, encoding='utf-8')
+        with open(self.tr, 'w', encoding='utf-8', newline='\n') as fh:
+            for e in entries:
+                fh.write(json.dumps(e, separators=(',', ':'), ensure_ascii=False) + '\n')
+        d = payload('Write', {'file_path': path, 'content': saved}, event='PostToolUse', cwd=root or self.root,
+                    plat=plat)
+        d['transcript_path'] = self.tr if transcript is None else transcript
+        if wid:
+            d['tool_use_id'] = wid
+        out = g.evaluate(d, env(plat, root=root or self.root, **kw))
+        return out['reason'] if out else None
+
+    def round(self, answer, saved=None, path=None, foreground=False, **kw):
+        """A source-verifier's answer, then the Write of its report."""
+        entries = tr_foreground(self.tid(), answer) if foreground else tr_launch(self.tid()) + [tr_handback(answer)]
+        wid, w = self.write(path or self.rep, answer if saved is None else saved)
+        return self.saved(answer if saved is None else saved, entries + w, path=path, wid=wid, **kw)
+
+    def test_match(self):
+        r = self.round(verifier_report())
+        self.assertIn('cephalo guard R5:', r)
+        self.assertIn('Now read the whole file back', r)                       # the definition's read-back stays
+        self.assertIn('it matches (line ends, trailing blanks', r)
+        self.assertNotIn('it differs', r)
+        # CRLF, trailing blanks and blank lines at the ends are no difference
+        rep = verifier_report()
+        self.assertIn('it matches', self.round(rep, saved='\n\n' + rep.replace('\n', '  \r\n') + '\n\n'))
+
+    def test_missing_last_line(self):
+        # the second presentation trial run: the Write dropped the answer's last line
+        rep = verifier_report()
+        cut = rep.rstrip('\n').rsplit('\n', 1)[0] + '\n'
+        r = self.round(rep, saved=cut)
+        self.assertIn('it differs; the first difference: the saved file ends after line 36, the answer has 1 more '
+                      'line, from: \u00abGesamt: 30 \u2705, 0 \u26a0\ufe0f\u00bb. Write the file again with the Write '
+                      'tool, the answer unchanged.', r)
+        self.assertNotIn('it matches', r)
+
+    def test_one_changed_quote_mark(self):
+        rep = verifier_report()
+        bad = rep.replace('\u201eZitat 7 aus Kapitel 1, alt\u201c', '\u201eZitat 7 aus Kapitel 1, alt"')
+        r = self.round(rep, saved=bad)
+        self.assertIn('the first difference: line 11 of the saved file: \u00ab| 7 | \u201eZitat 7 aus Kapitel 1, '
+                      'alt" (Keller 2018, S. 10) | \u2705 |\u00bb; in the answer: \u00ab| 7 | \u201eZitat 7 aus '
+                      'Kapitel 1, alt\u201c (Keller 2018, S. 10) | \u2705 |\u00bb', r)
+        # the line number is the saved file's, also after blank lines at its start
+        r = self.round(rep, saved='\n\n' + bad)
+        self.assertIn('the first difference: line 13 of the saved file', r)
+        # a long line is cut around the difference
+        long = rep.replace('Zitat 7 aus', 'Zitat 7 ' + 'sehr ' * 60 + 'aus')
+        r = self.round(long, saved=long.replace('aus Kapitel 1, alt\u201c (Keller 2018, S. 10)',
+                                                'aus Kapitel 1, alt" (Keller 2018, S. 10)'))
+        first = r.split('the first difference: ', 1)[1]
+        self.assertIn('alt"', first.split('; in the answer:')[0])
+        self.assertLess(len(first.split('; in the answer:')[0]), 175)
+
+    def test_foreground_answer_and_its_trailer(self):
+        rep = verifier_report()
+        for block in (True, False):
+            with self.subTest(trailer_block=block):
+                entries = tr_foreground(self.tid(), rep, trailer_block=block)
+                wid, w = self.write(self.rep, rep)
+                self.assertIn('it matches', self.saved(rep, entries + w, wid=wid))
+        entries = tr_foreground(self.tid(), rep)
+        wid, w = self.write(self.rep, rep.replace('alt', 'ALT', 1))
+        self.assertIn('it differs', self.saved(rep.replace('alt', 'ALT', 1), entries + w, wid=wid))
+        # a result that is an error is no answer
+        entries = tr_foreground(self.tid(), rep, error=True)
+        wid, w = self.write(self.rep, rep)
+        self.assertNotIn('The guard compared', self.saved(rep, entries + w, wid=wid))
+
+    def test_absolute_paths_made_relative(self):
+        rep = verifier_report()
+        answer = rep + 'Quelle: %s/workspace/sources/a.pdf\n' % self.root
+        r = self.round(answer, saved=rep + 'Quelle: workspace/sources/a.pdf\n')
+        self.assertIn('it matches', r)
+        self.assertNotIn('still contains an absolute path', r)
+        # Windows: the folder as CLAUDE_PROJECT_DIR gives it, with \ or /, and as Git Bash writes it
+        win = 'C:\\Home\\u\\Projekt Arbeit'
+        rep_win = os.path.join(win, 'workspace\\output\\verification\\ch_1_round_1.md')
+        for absolute, relative in ((win + '\\workspace\\sources\\a.pdf', 'workspace\\sources\\a.pdf'),
+                                   (win + '\\workspace\\sources\\a.pdf', 'workspace/sources/a.pdf'),
+                                   ('C:/Home/u/Projekt Arbeit/workspace/sources/a.pdf', 'workspace/sources/a.pdf'),
+                                   ('/c/Home/u/Projekt Arbeit/workspace/sources/a.pdf', 'workspace/sources/a.pdf')):
+            with self.subTest(absolute=absolute):
+                r = self.round(rep + 'Quelle: %s\n' % absolute, saved=rep + 'Quelle: %s\n' % relative, path=rep_win,
+                               plat='windows', root=win)
+                self.assertIn('it matches', r)
+        # another absolute path is no project path: a difference
+        r = self.round(rep + 'Quelle: /home/other/a.pdf\n', saved=rep + 'Quelle: a.pdf\n')
+        self.assertIn('it differs', r)
+
+    def test_two_reports_of_one_round(self):
+        one, two = verifier_report(1), verifier_report(2)
+        rep2 = os.path.join(self.ver, 'ch_2_round_1.md')
+        entries = tr_launch(self.tid(), agent='a1') + tr_launch(self.tid(), agent='a2') + \
+            [tr_handback(one, agent='a1'), tr_handback(two, agent='a2')]
+        w1, e1 = self.write(self.rep, one)
+        self.assertIn('it matches', self.saved(one, entries + e1, wid=w1))
+        cut = two.rstrip('\n').rsplit('\n', 1)[0] + '\n'
+        w2, e2 = self.write(rep2, cut)
+        r = self.saved(cut, entries + e1 + e2, path=rep2, wid=w2)
+        self.assertIn('the saved file ends after line 36, the answer has 1 more line', r)
+        # the first report saved before the second answer came
+        entries = tr_launch(self.tid(), agent='a1') + tr_launch(self.tid(), agent='a2') + [tr_handback(one, agent='a1')]
+        w1, e1 = self.write(self.rep, one)
+        w2, e2 = self.write(rep2, two)
+        self.assertIn('it matches', self.saved(two, entries + e1 + [tr_handback(two, agent='a2')] + e2, path=rep2,
+                                               wid=w2))
+
+    def test_answer_of_another_round_not_used(self):
+        old, new = verifier_report(), verifier_report(changed=range(1, 31))
+        rep2 = os.path.join(self.ver, 'ch_1_round_2.md')
+        entries = tr_launch(self.tid()) + [tr_handback(old)]
+        w1, e1 = self.write(self.rep, old)
+        entries += e1 + tr_launch(self.tid(), agent='a2') + [tr_handback(new, agent='a2')]
+        # round 2's report saved with round 1's text: not compared with round 1's answer, and too unlike
+        # round 2's for a statement
+        w2, e2 = self.write(rep2, old)
+        r = self.saved(old, entries + e2, path=rep2, wid=w2)
+        self.assertNotIn('The guard compared', r)
+        w3, e3 = self.write(rep2, new)
+        self.assertIn('it matches', self.saved(new, entries + e3, path=rep2, wid=w3))
+
+    def test_an_answer_saved_already_is_not_compared_again(self):
+        # round 2 by a message to round 1's verifier (left out): round 1's answer, saved as round 1's report,
+        # is no answer for round 2's report, however alike
+        one, two = verifier_report(), verifier_report(changed=(3, 9, 20))
+        rep2 = os.path.join(self.ver, 'ch_1_round_2.md')
+        entries = tr_launch(self.tid(), agent='a9') + [tr_handback(one, agent='a9')]
+        w1, e1 = self.write(self.rep, one)
+        entries += e1 + [tr_call('SendMessage', {'to': 'a9', 'message': 'Round 2: sentences 3, 9, 20.'}, self.tid()),
+                         tr_handback(two, agent='a9')]
+        w2, e2 = self.write(rep2, two[:-60])
+        self.assertNotIn('The guard compared', self.saved(two[:-60], entries + e2, path=rep2, wid=w2))
+        # the same report saved again after a difference: compared with its answer again
+        entries = tr_launch(self.tid()) + [tr_handback(one)]
+        w1, e1 = self.write(self.rep, one[:-30])
+        w2, e2 = self.write(self.rep, one)
+        self.assertIn('it matches', self.saved(one, entries + e1 + e2, wid=w2))
+
+    def test_another_report_gets_no_statement(self):
+        r = self.round(verifier_report(2, changed=range(1, 31)), saved=verifier_report(1))
+        self.assertNotIn('The guard compared', r)
+
+    def test_what_is_no_answer(self):
+        rep = verifier_report()
+        cut = rep.rstrip('\n').rsplit('\n', 1)[0] + '\n'
+        for name, entries in (
+                ('writer', tr_launch(self.tid(), subagent='writer-agent') + [tr_handback(rep, name='writer-agent')]),
+                ('sidechain', tr_launch(self.tid()) + [tr_handback(rep, side=True)]),
+                ('launch only', tr_launch(self.tid())),
+                ('continued', tr_launch(self.tid(), agent='a9') +
+                 [tr_call('SendMessage', {'to': 'a9', 'message': 'Check sentence 3 again.'}, self.tid()),
+                  tr_handback(rep, agent='a9')]),
+                ('foreground writer', tr_foreground(self.tid(), rep, subagent='writer-agent'))):
+            wid, w = self.write(self.rep, cut)
+            with self.subTest(case=name):
+                self.assertNotIn('The guard compared', self.saved(cut, entries + w, wid=wid))
+
+    def test_unchanged_without_a_transcript(self):
+        rep = verifier_report()
+        want = self.saved(rep, [], transcript=os.path.join(self.root, 'missing.jsonl'))
+        self.assertIn('cephalo guard R5:', want)
+        self.assertNotIn('The guard compared', want)
+        wid, w = self.write(self.rep, rep)
+        for transcript in ('', self.root, os.path.join(self.root, 'missing.jsonl')):
+            self.assertEqual(self.saved(rep, tr_launch(self.tid()) + [tr_handback(rep)] + w, wid=wid,
+                                        transcript=transcript), want)
+        self.assertEqual(self.saved(rep, ['not json', '{"type": "user"', '[]'], wid=wid), want)
+        self.assertEqual(self.saved(rep, w, wid=wid), want)                    # no source-verifier call
+        d = payload('Write', {'file_path': self.rep, 'content': rep}, event='PostToolUse', cwd=self.root)
+        del d['transcript_path']
+        self.assertEqual(g.evaluate(d, env(root=self.root))['reason'], want)
+
+    def test_over_the_deadline_no_statement(self):
+        rep = verifier_report()
+        old = g.DEADLINE_S
+        g.DEADLINE_S = -1.0
+        try:
+            r = self.round(rep, saved=rep[:-40])
+        finally:
+            g.DEADLINE_S = old
+        self.assertIn('cephalo guard R5:', r)
+        self.assertNotIn('The guard compared', r)
+
+    def test_format_report_unchanged(self):
+        fmt = os.path.join(self.ver, 'document_format_round_1.md')
+        rep = verifier_report()
+        r = self.round(rep, saved=rep[:-40], path=fmt)
+        self.assertIn('cephalo guard R6:', r)
+        self.assertNotIn('The guard compared', r)
+
+    def test_a_large_report_is_quick(self):
+        import time
+        rep = verifier_report(rows=4000)
+        t = time.perf_counter()
+        r = self.round(rep, saved=rep.replace('Zitat 3999 aus', 'Zitat 3999 auf'))
+        self.assertIn('line 4003 of the saved file', r)
+        self.assertLess(time.perf_counter() - t, 2.0)
+
+
 # ------------------------------------------------------------------ P1
 
 

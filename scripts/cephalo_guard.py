@@ -48,6 +48,9 @@ Rules (on, except P1)
       consistency_final.md): after a Write, asks for the read-back the
       definitions require and gives the saved file's counts to compare with
       the verifier's answer; an Edit is denied (the copy is written again).
+      The main chat's report it also compares with the answer in the session
+      transcript (answer_check): that it matches, or the first difference
+      when the answer is clearly this report's; otherwise nothing.
       An Agent, Task or SendMessage call of the main chat (no agent_id: an
       orchestrator run as a subagent has its calls in a transcript of its
       own) is denied while a report it saved has not been read back whole
@@ -80,8 +83,10 @@ never answers "allow", which would skip the user's permission prompts.  Input
 it does not understand, and any error of its own, let the call pass with a
 one-line note to the user (systemMessage), once per session.  The session
 transcript is Claude Code's own file, read only for R5/R6 before an agent
-call: when it is missing, unreadable, or not in the shape the guard knows,
-the call passes without a note (past the deadline, with the note).  It writes
+call and for R5 after a report's Write: when it is missing, unreadable, or
+not in the shape the guard knows, the call passes without a note (before an
+agent call past the deadline, with the note), and the read-back message has
+no statement on the answer.  It writes
 nothing but a small file per session in a folder of its own in the system's
 temporary folder (cephalo-guard-<user id>/, on Windows cephalo-guard/), for
 P1 when it is on and for that note, and uses no network.  Python 3.9 or later, standard library only.
@@ -1806,7 +1811,10 @@ _QUOTE_MARKS = '\u201e\u201c\u201d\u201a\u2018\u2019\u00ab\u00bb"'
 _GERMAN_QUOTE = re.compile('\u201e[^\u201e\u201c\u201d"]*(?:"[^\u201e\u201c\u201d"\n]*"[^\u201e\u201c\u201d"]*)*\u201c')
 
 
-def readback(tin, ctx):
+def readback(tin, ctx, data=None):
+    """The PostToolUse message after the coordinator's Write of a saved report
+    (R5, R6), or None.  data: the hook's input (R5 compares the report with
+    the answer in its session transcript)."""
     path = tin.get('file_path')
     if not isinstance(path, str) or not ctx.coordinator:
         return None
@@ -1816,9 +1824,9 @@ def readback(tin, ctx):
         return None
     if not ctx.enabled('R6' if fmt else 'R5'):
         return None
-    data = _read_regular(path, 1 << 22) if _fs_ok(n, ctx) else None   # a report is far smaller than 4 MiB
-    if data is not None:
-        text = data.decode('utf-8', 'replace')
+    raw = _read_regular(path, 1 << 22) if _fs_ok(n, ctx) else None   # a report is far smaller than 4 MiB
+    if raw is not None:
+        text = raw.decode('utf-8', 'replace')
     else:
         text = tin.get('content') if isinstance(tin.get('content'), str) else ''
     lines = text.replace('\r\n', '\n').split('\n')
@@ -1859,7 +1867,7 @@ def readback(tin, ctx):
     if any(x in nfc for x in absolute):
         msg += (' It still contains an absolute path of this machine: write the file again with the Write tool, '
                 'the path made project-relative (an Edit of the saved report is denied).')
-    return msg
+    return msg + answer_check(text, n, data, ctx)
 
 
 # a transcript line that may hold a Write or Read call, or a tool result that is an error
@@ -2073,6 +2081,244 @@ def agent_reason(hits, ctx):
                       '"Save every source-verifier report as a file"' if rule == 'R5'
                       else '"The format-verifier writes its report itself"'))
     return ' '.join(out)
+
+
+# --------------------------------------------------------------- R5: the saved report against the answer
+
+# a transcript line that may hold a source-verifier call or its hand-back, a Write, or a SendMessage
+_TR_VERIFIER = re.compile(rb'"subagent_type"\s*:\s*"source-verifier"|"handbackReportText"'
+                          rb'|"name"\s*:\s*"(?:Write|SendMessage)"')
+_VERIFICATION_DIR = re.compile(r'/verification/', re.I | re.A)
+SIMILAR = 0.8                   # share of lines two texts have in common to be the same report (_compare)
+MAX_COMPARE = 5000              # lines of a report the guard compares, at most
+
+
+def _agent_result_text(c, e):
+    """The answer in the result c (of entry e) of a source-verifier called in
+    the foreground, without Claude Code's trailer ('agentId: ...' and a
+    '<usage>...</usage>' block); None for a background start, an error, or a
+    result in another shape."""
+    tur = e.get('toolUseResult')
+    if c.get('is_error') is True or (isinstance(tur, dict) and (tur.get('isAsync') is True or
+                                                                 tur.get('status') == 'async_launched')):
+        return None
+    content = c.get('content')
+    if isinstance(content, str):
+        blocks = [content]
+    elif isinstance(content, list) and all(isinstance(b, dict) and b.get('type') == 'text' and
+                                           isinstance(b.get('text'), str) for b in content):
+        blocks = [b['text'] for b in content]
+    else:
+        return None
+    text = '\n'.join(b for b in blocks if not b.lstrip().startswith('agentId:'))
+    if 'Async agent launched' in text:
+        return None
+    tail = [m.start() for m in re.finditer(r'(?m)^[ \t]*agentId:', text)]
+    if tail and len(text) - tail[-1] < 1000:
+        text = text[:tail[-1]]
+    text = re.sub(r'\s*<usage>.*?</usage>\s*\Z', '', text, flags=re.S)
+    return text.strip() or None
+
+
+def _verifier_events(lines, ctx):
+    """The source-verifier's answers to the main chat and the main chat's
+    Writes into a verification/ folder, in order: [('answer', text) |
+    ('write', tool id, normalized path, text written)].  An answer is the
+    result of a call in the foreground or the report a background one hands
+    back (origin.handbackReportText of a peer message, as Claude Code 2.1.31x
+    writes it); an agent the main chat sent a message to after its start
+    (SendMessage) is left out from then on."""
+    events, due, sent = [], {}, set()       # due: tool id (bytes) of a foreground call -> its id
+    for k, line in enumerate(lines):
+        if not k % 256:
+            ctx.budget.tick()
+        if not _TR_VERIFIER.search(line) and not (due and any(i in line for i in due)):
+            continue
+        try:
+            e = json.loads(line)
+        except (ValueError, RecursionError):
+            continue
+        if not isinstance(e, dict) or e.get('isSidechain') is True:
+            continue
+        origin = e.get('origin')
+        if e.get('type') == 'user' and isinstance(origin, dict) and origin.get('handback') is True:
+            if origin.get('kind') == 'peer' and origin.get('name') == 'source-verifier' and \
+                    isinstance(origin.get('handbackReportText'), str) and origin.get('from') not in sent:
+                events.append(('answer', origin['handbackReportText']))
+            continue
+        m = e.get('message')
+        content = m.get('content') if isinstance(m, dict) else None
+        for c in content if isinstance(content, list) else ():
+            if not isinstance(c, dict):
+                continue
+            tin = c.get('input')
+            if e.get('type') == 'assistant' and c.get('type') == 'tool_use' and isinstance(tin, dict):
+                name, cid = c.get('name'), c.get('id')
+                if name in ('Agent', 'Task') and tin.get('subagent_type') == 'source-verifier' and \
+                        tin.get('run_in_background') is not True and isinstance(cid, str):
+                    due[cid.encode('utf-8', 'replace')] = cid
+                elif name == 'SendMessage' and isinstance(tin.get('to'), str):
+                    sent.add(tin['to'])
+                elif name == 'Write' and isinstance(tin.get('file_path'), str):
+                    n = norm_path(tin['file_path'], ctx, ctx.cwd) or ''
+                    if _VERIFICATION_DIR.search(n):
+                        events.append(('write', cid, n, tin.get('content')))
+            elif e.get('type') == 'user' and c.get('type') == 'tool_result' and isinstance(c.get('tool_use_id'), str):
+                key = c['tool_use_id'].encode('utf-8', 'replace')
+                if key in due:
+                    del due[key]
+                    text = _agent_result_text(c, e)
+                    if text:
+                        events.append(('answer', text))
+    return events
+
+
+def _round_answers(events, write_id, n, ctx, prefixes):
+    """The answers (as _report_lines) that the report n, saved by the Write
+    write_id, may be the copy of: those of its round, after the last Write
+    into verification/ before the latest answer (an earlier round's report),
+    less each one that an earlier Write of another report in the round has
+    taken (the answer it is, or is most like), at most the last 6."""
+    stop = next((i for i, ev in enumerate(events) if ev[0] == 'write' and ev[1] == write_id), len(events)) \
+        if write_id else len(events)
+    events = events[:stop]
+    last = max((i for i, ev in enumerate(events) if ev[0] == 'answer'), default=None)
+    if last is None:
+        return []
+    start = max((i for i, ev in enumerate(events[:last]) if ev[0] == 'write'), default=-1)
+    free = []
+    for ev in events[start + 1:]:
+        ctx.budget.tick()
+        if ev[0] == 'answer':
+            free.append(_report_lines(ev[1], prefixes, ctx))
+        elif ev[2] != n and isinstance(ev[3], str) and free:
+            k = _match(_report_lines(ev[3], prefixes, ctx), free, ctx)
+            if k is not None:
+                del free[k[0]]
+    return free[-6:]
+
+
+def _project_prefixes(ctx):
+    """The project folder as an absolute path can name it in a report: as
+    CLAUDE_PROJECT_DIR gives it, with / or \\, and in Git Bash's /c/... form."""
+    p = ctx.project_raw.rstrip('/\\')
+    forms = {p, p.replace('\\', '/'), p.replace('/', '\\')}
+    m = re.match(r'^([A-Za-z]):[\\/](.*)$', p)
+    if m:
+        rest = m.group(2).replace('\\', '/')
+        forms |= {'/%s/%s' % (m.group(1).lower(), rest), '/%s/%s' % (m.group(1).upper(), rest)}
+    return sorted((f for f in forms if len(f) > 3), key=len, reverse=True)
+
+
+def _report_lines(text, prefixes, ctx):
+    """A report's lines as the guard compares them: line ends as \\n, no
+    trailing blanks, no blank lines at the start and the end, and each
+    absolute path of the project made project-relative."""
+    for p in prefixes:
+        text = re.sub(re.escape(p) + r'[\\/]', '', text, flags=re.I if ctx.windows else 0)
+    lines = [ln.rstrip() for ln in text.replace('\r\n', '\n').replace('\r', '\n').split('\n')]
+    while lines and not lines[0]:
+        lines.pop(0)
+    while lines and not lines[-1]:
+        lines.pop()
+    return lines
+
+
+def _same_line(a, b):
+    return a == b or a.replace('\\', '/') == b.replace('\\', '/')     # the separators of a relative path
+
+
+def _skeleton(lines):
+    """The letters and digits of each line that has any: what two copies of one
+    report share although quotation marks, symbols or spacing differ."""
+    return [s for s in (re.sub(r'\W+', '', ln).casefold() for ln in lines) if s]
+
+
+def _cut(line, at):
+    """A line for a message: about 120 characters around position at."""
+    if len(line) <= 120:
+        return line
+    start = max(0, min(at - 40, len(line) - 120))
+    return ('\u2026' if start else '') + line[start:start + 120] + ('\u2026' if start + 120 < len(line) else '')
+
+
+def _match(mine, answers, ctx):
+    """(index, same) of the answer (as _report_lines) that the report mine is:
+    the same text (same True), or else the most similar one with at least
+    SIMILAR of its lines alike in letters and digits; None when none is."""
+    import difflib
+    if not mine or len(mine) > MAX_COMPARE:
+        return None
+    best, best_ratio = None, 0.0
+    for k, theirs in enumerate(answers):
+        ctx.budget.tick()
+        if len(theirs) == len(mine) and all(_same_line(a, b) for a, b in zip(mine, theirs)):
+            return k, True
+        if not theirs or len(theirs) > MAX_COMPARE:
+            continue
+        sm = difflib.SequenceMatcher(None, _skeleton(mine), _skeleton(theirs), autojunk=False)
+        if sm.quick_ratio() >= max(SIMILAR, best_ratio):
+            ratio = sm.ratio()
+            if ratio >= SIMILAR and ratio > best_ratio:
+                best, best_ratio = k, ratio
+    return None if best is None else (best, False)
+
+
+def _compare(mine, answers, ctx, lead=0):
+    """The guard's comparison of a saved report (as _report_lines) with the
+    answers of its round: ('same', None) when one is the same text,
+    ('differs', what) for the first difference from the one it is most like
+    when that is the same report (_match), None otherwise.  lead: the blank
+    lines the saved file starts with (for its line numbers)."""
+    found = _match(mine, answers, ctx)
+    if found is None:
+        return None
+    if found[1]:
+        return 'same', None
+    best = answers[found[0]]
+    k = next((i for i, (a, b) in enumerate(zip(mine, best)) if not _same_line(a, b)), min(len(mine), len(best)))
+    if k == len(mine):
+        more = len(best) - k
+        return 'differs', ('the saved file ends after line %d, the answer has %d more line%s, from: \u00ab%s\u00bb'
+                           % (k + lead, more, '' if more == 1 else 's', _cut(best[k], 0)))
+    if k == len(best):
+        more = len(mine) - k
+        return 'differs', ('the answer ends after line %d, the saved file has %d more line%s, from line %d: '
+                           '\u00ab%s\u00bb' % (k, more, '' if more == 1 else 's', k + 1 + lead, _cut(mine[k], 0)))
+    a, b = mine[k], best[k]
+    at = next((i for i, (x, y) in enumerate(zip(a, b)) if x != y), min(len(a), len(b)))
+    return 'differs', ('line %d of the saved file: \u00ab%s\u00bb; in the answer: \u00ab%s\u00bb'
+                       % (k + 1 + lead, _cut(a, at), _cut(b, at)))
+
+
+def answer_check(saved, n, data, ctx):
+    """R5 after a Write of a source-verifier report: the guard's comparison of
+    the saved text (of the report n, a normalized path) with the
+    source-verifier's answer in the session transcript, as a sentence for the
+    read-back message, or '' when it cannot tell (no transcript or answer,
+    another report, its limits reached)."""
+    tp = data.get('transcript_path') if isinstance(data, dict) else None
+    if not isinstance(tp, str) or not tp or not _fs_ok(norm_path(tp, ctx, ctx.cwd), ctx):
+        return ''
+    try:
+        lines = _tail_lines(tp, MAX_TRANSCRIPT)
+        if not lines:
+            return ''
+        wid = data.get('tool_use_id')
+        prefixes = _project_prefixes(ctx)
+        answers = _round_answers(_verifier_events(lines, ctx), wid if isinstance(wid, str) else None, n, ctx, prefixes)
+        rows = saved.replace('\r\n', '\n').replace('\r', '\n').split('\n')
+        lead = next((i for i, ln in enumerate(rows) if ln.strip()), 0)
+        found = _compare(_report_lines(saved, prefixes, ctx), answers, ctx, lead)
+    except OverBudget:
+        return ''
+    if not found:
+        return ''
+    if found[0] == 'same':
+        return (' The guard compared it with the source-verifier\'s answer in the session transcript: it matches '
+                '(line ends, trailing blanks and the project\'s absolute paths aside).')
+    return (' The guard compared it with the source-verifier\'s answer in the session transcript: it differs; '
+            'the first difference: %s. Write the file again with the Write tool, the answer unchanged.' % found[1])
 
 
 # --------------------------------------------------------------- task prompts (P1)
@@ -2372,7 +2618,7 @@ def evaluate(data, env=None):
     if event == 'PostToolUse':
         if tool != 'Write':
             return None
-        msg = readback(tin, ctx)
+        msg = readback(tin, ctx, data)
         return {'decision': 'block', 'reason': msg} if msg else None
     if tool in _SHELL_TOOLS:
         cmd = tin.get('command')
