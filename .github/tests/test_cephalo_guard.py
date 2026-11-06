@@ -1250,6 +1250,25 @@ class TestR5AnswerComparison(Base):
         self.assertIn('it matches', self.saved(two, entries + e1 + [tr_handback(two, agent='a2')] + e2, path=rep2,
                                                wid=w2))
 
+    def test_report_of_an_earlier_round_written_again(self):
+        # round 1's report saved with a difference, round 2's answer came, then round 1's report written again:
+        # its answer is no longer the round's, so the guard says nothing, whether the copy is right or not
+        old, new = verifier_report(), verifier_report(changed=(3,)).replace('Runde 1', 'Runde 2')
+        rep2 = os.path.join(self.ver, 'ch_1_round_2.md')
+        bad = old.replace('alt', 'ALT', 1)
+        w1, e1 = self.write(self.rep, bad)
+        entries = tr_launch(self.tid()) + [tr_handback(old)] + e1 + tr_launch(self.tid(), agent='a2') + \
+            [tr_handback(new, agent='a2')]
+        for saved in (old, bad):
+            with self.subTest(saved=saved[:60]):
+                wid, w = self.write(self.rep, saved)
+                self.assertNotIn('The guard compared', self.saved(saved, entries + w, wid=wid))
+        # round 2's report is still compared, also after that
+        wid, w = self.write(self.rep, old)
+        w2, e2 = self.write(rep2, new.replace('neu', 'NEU'))
+        r = self.saved(new.replace('neu', 'NEU'), entries + w + e2, path=rep2, wid=w2)
+        self.assertIn('it differs; the first difference: line 7', r)
+
     def test_answer_of_another_round_not_used(self):
         old, new = verifier_report(), verifier_report(changed=range(1, 31))
         rep2 = os.path.join(self.ver, 'ch_1_round_2.md')

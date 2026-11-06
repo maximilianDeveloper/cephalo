@@ -2225,9 +2225,12 @@ def _round_answers(events, write_id, n, ctx, paths):
     and after the last answer the guard does not compare with ('opaque',
     which may be a later version of one before it), less each one an earlier
     Write in the round has taken (another report: the answer it is or is
-    most like; this report: the answer it is), at most the last 6, each with
-    its place in the events; none when the latest answer is one the guard
-    does not compare with.  Also the events before the Write."""
+    most like; this report: the answer it is; a report written before the
+    round takes none), at most the last 6, each with its place in the
+    events; none when the latest answer is one the guard does not compare
+    with, and none when this report was written before its round (an
+    earlier round's report written again: its answer may be one the guard
+    no longer counts).  Also the events before the Write."""
     stop = next((i for i, ev in enumerate(events) if ev[0] == 'write' and ev[1] == write_id), len(events)) \
         if write_id else len(events)
     events = events[:stop]
@@ -2235,6 +2238,9 @@ def _round_answers(events, write_id, n, ctx, paths):
     if last is None or events[last][0] == 'opaque':
         return [], events
     start = max((i for i, ev in enumerate(events[:last]) if ev[0] == 'write'), default=-1)
+    old = {ev[2] for ev in events[:start + 1] if ev[0] == 'write'}
+    if n in old:
+        return [], events
     free = []
     for i in range(start + 1, len(events)):
         ctx.budget.tick()
@@ -2243,7 +2249,7 @@ def _round_answers(events, write_id, n, ctx, paths):
             free = []
         elif ev[0] == 'answer':
             free.append(_answer(ev[1], paths, ctx) + (i,))
-        elif ev[0] == 'write' and isinstance(ev[3], str) and free:
+        elif ev[0] == 'write' and isinstance(ev[3], str) and free and ev[2] not in old:
             k = _match(_report_lines(ev[3]), free, ctx)
             if k is not None and (ev[2] != n or k[1]):
                 del free[k[0]]
