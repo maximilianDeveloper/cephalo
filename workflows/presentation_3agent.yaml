@@ -386,8 +386,10 @@ phases:
           title page, a table of contents, page numbers and how they run) and
           record the answer in the decision log of workspace/state.md. Then
           format rounds as the seminar workflow describes them
-          (workflows/seminar_2agent.yaml, F.1, items 4, 6 and 7, for the
-          parts the companion has), with workspace/output/<companion>.docx in
+          (workflows/seminar_2agent.yaml, F.1, items 2, 4, 6 and 7, for the
+          parts the companion has; the writer writes the companion's
+          reference list, item 2, also its custom-style block for the
+          export), with workspace/output/<companion>.docx in
           place of document.docx, the companion's file as the only chapter
           file and workspace/output/verification/<companion>_docx_format_round_<n>.md
           as the report: build workspace/output/reference.docx with
@@ -400,7 +402,9 @@ phases:
           step (2)) and, if document.hyphenation is automatic,
           scripts/docx_postprocess.sh. The format-verifier checks that DOCX as
           a written document (format-verifier.md, "Workflows without Phase
-          B"). Claude handles its report as step 3 says, except that a layout
+          B"); its task prompt names the decision-log entry on the parts the
+          companion has, so that the rules of a part it does not have go under
+          Not applicable. Claude handles its report as step 3 says, except that a layout
           finding is fixed by building the reference document again and a
           missing non-breaking space before a page number becomes `\ ` in the
           companion's file (writer-agent.md, "Formatting rules"); the next
