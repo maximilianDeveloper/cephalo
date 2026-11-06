@@ -1198,6 +1198,37 @@ class TestR5AnswerComparison(Base):
                 self.assertIn(verdict, self.round(answer, saved=rep + 'Quelle: %s\n' % saved, path=rep_win,
                                                   plat='windows', root=win))
 
+    def test_the_place_of_a_difference_on_a_long_path_line(self):
+        # found by a walk along both lines, in a time linear in their length (difflib took 41 s on one line)
+        import time
+        for plat, root in (('posix', self.root), ('windows', WIN_ROOT)):
+            ctx = g.Ctx(payload('Write', {'file_path': 'x', 'content': ''}, plat=plat, cwd=root),
+                        env(plat, root=root))
+            paths = g._machine_paths(ctx)
+            rx = g._path_re(paths, ctx)
+            r = root if plat == 'posix' else root.replace('\\', '\\\\')      # an answer with doubled backslashes
+            cases = [('| %s/workspace/a.md | S. 10 | \u26a0\ufe0f |' % r, '| workspace/a.md | S. 10 | \u2705 |',
+                      '\u2705 |'),
+                     ('Quelle: %s/workspace/a.pdf, S. 3' % r, 'Quelle: ../../workspace/a.pdf, S. 4', '4'),
+                     ('Projekt %s. Satz \u26a0\ufe0f' % r, 'Projekt .. Satz \u2705', '\u2705')]
+            if plat == 'posix':
+                cases += [(' '.join('%s/w%d/a' % (r, i) for i in range(300)),
+                           ' '.join('w%d/a' % i for i in range(299)) + ' w299/b', 'b'),
+                          ('%s/workspace/%s' % (r, 'x' * 20000), 'workspace/%sy' % ('x' * 19999), 'y')]
+            for b, a, rest in cases:
+                with self.subTest(plat=plat, b=b[:40]):
+                    pat, parts = g._path_line(b, rx, paths, ctx)
+                    self.assertIsNone(pat.fullmatch(a))
+                    t = time.monotonic()
+                    ia, ib = g._diff_at(a, b, parts, ctx)
+                    self.assertLess(time.monotonic() - t, 2)
+                    self.assertEqual(a[ia:], rest)
+        # the whole message, on a line of 300 paths
+        rep = verifier_report()
+        line = ' '.join('%s/w%d/a' % (self.root, i) for i in range(300))
+        r = self.round(rep + line + '\n', saved=rep + ' '.join('w%d/a' % i for i in range(299)) + ' w299/b\n')
+        self.assertIn('w298/a w299/b\u00bb; in the answer: \u00ab\u2026', r)
+
     def test_backslash_and_slash_differ(self):
         # outside a path of this machine a backslash is text: Pandoc's 'S.\\ 12', a relative path as written
         rep = verifier_report()

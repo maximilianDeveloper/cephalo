@@ -2304,6 +2304,7 @@ def _machine_paths(ctx):
 
 
 _PATH_SEP = r'(?:\\\\|[\\/])'          # \\, \ or /
+_SEP_RX = re.compile(_PATH_SEP)
 _PATH_END = '\\s|\\[\\]()`\'"\u00ab\u00bb,;'    # what ends a path in a report line (a character class)
 
 
@@ -2336,38 +2337,61 @@ def _path_line(line, rx, paths, ctx):
     path, which may be 00_Shared_Materials/...; the bare folder may become
     .), the separators in the rest of the path \\ or /, the line's other
     text as it is; and the parts of the line that the paths and their
-    separators take, (start, end)."""
-    alt, out, pos, parts = _paths_alt(paths, ctx), [], 0, []
+    separators take, {start: (end, what a copy may have there)}."""
+    alt, out, pos, parts = _paths_alt(paths, ctx), [], 0, {}
+    lead, bare = '(?:%s%s|(?:\\.\\.?%s)+|~%s)' % (alt, _PATH_SEP, _PATH_SEP, _PATH_SEP), '(?:%s|\\.)' % alt
+    lead_rx, bare_rx = re.compile(lead), re.compile(bare)
     for m in rx.finditer(line):
         if m.start() < pos:
             continue
         out.append(re.escape(line[pos:m.start()]))
         j = m.end()
         sep = re.match(_PATH_SEP, line[j:])
-        parts.append((m.start(), j + (sep.end() if sep else 0)))
         if sep:
             j += sep.end()
+            parts[m.start()] = (j, lead_rx)
             rest = re.match('[^%s]*' % _PATH_END, line[j:]).group(0)
-            out.append('(?:%s%s|(?:\\.\\.?%s)+|~%s)?' % (alt, _PATH_SEP, _PATH_SEP, _PATH_SEP))
+            out.append(lead + '?')
             out.append(''.join(_PATH_SEP if k % 2 else re.escape(part)
                                for k, part in enumerate(re.split(r'(\\\\|[\\/])', rest))))
             j += len(rest)
         else:
-            out.append('(?:%s|\\.)' % alt)
+            parts[m.start()] = (j, bare_rx)
+            out.append(bare)
         pos = j
     out.append(re.escape(line[pos:]))
     return re.compile(''.join(out)), parts
 
 
-def _diff_at(a, b, parts):
-    """Where the copy a of the answer's line b first differs from it outside
-    the parts of b an absolute path takes: (position in a, position in b)."""
-    import difflib
-    ops = difflib.SequenceMatcher(None, a, b, autojunk=False).get_opcodes()
-    for tag, i1, i2, j1, j2 in ops:
-        if tag != 'equal' and not any(s <= j1 and j2 <= e for s, e in parts):
-            return i1, j1
-    return 0, 0
+def _diff_at(a, b, parts, ctx):
+    """Where the copy a of the answer's line b first differs from it, the
+    absolute paths of b aside (parts, as _path_line gives them): (position
+    in a, position in b).  A walk along both lines, in a time linear in
+    their length (no difflib: a long line would outrun the hook's timeout),
+    with any separator (\\, \\\\ or /) as good as another."""
+    i = j = steps = 0
+    while True:
+        steps += 1
+        if not steps % 4096:
+            ctx.budget.tick()
+        if j in parts:
+            end, may = parts[j]
+            m = may.match(a, i)
+            i, j = (m.end() if m else i), end
+            continue
+        if i >= len(a) or j >= len(b):
+            break
+        sa, sb = _SEP_RX.match(a, i), _SEP_RX.match(b, j)
+        if sa and sb:
+            i, j = sa.end(), sb.end()
+        elif a[i] != b[j]:
+            return i, j
+        else:
+            i, j = i + 1, j + 1
+    if i < len(a) or j < len(b):
+        return i, j
+    at = next((k for k, (x, y) in enumerate(zip(a, b)) if x != y), min(len(a), len(b)))
+    return at, at                  # (a difference the walk passed over, such as \\ for /)
 
 
 def _report_lines(text):
@@ -2470,7 +2494,7 @@ def _compare(mine, answers, ctx, lead=0):
             found[0]
     a, b, pats = mine[k], best[k], answers[found[0]][1]
     if k in pats:
-        ia, ib = _diff_at(a, b, pats[k][1])
+        ia, ib = _diff_at(a, b, pats[k][1], ctx)
         return 'differs', ('line %d of the saved file: \u00ab%s\u00bb; in the answer: \u00ab%s\u00bb'
                            % (k + 1 + lead, _cut(a, ia), _cut(b, ib))), found[0]
     at = next((i for i, (x, y) in enumerate(zip(a, b)) if x != y), min(len(a), len(b)))
