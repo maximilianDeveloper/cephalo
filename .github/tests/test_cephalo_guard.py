@@ -1269,6 +1269,29 @@ class TestR5AnswerComparison(Base):
         r = self.saved(new.replace('neu', 'NEU'), entries + w + e2, path=rep2, wid=w2)
         self.assertIn('it differs; the first difference: line 7', r)
 
+    def test_report_written_again_in_its_round(self):
+        # two verifiers started together: report 1 saved with a difference, report 2's answer came, then
+        # report 1 written again; with no agent call since its Write, the answers are of its round
+        one, two = verifier_report(1), verifier_report(2)
+        cut = one.rstrip('\n').rsplit('\n', 1)[0] + '\n'
+        for launches in (tr_launch(self.tid(), agent='a1') + tr_launch(self.tid(), agent='a2'),
+                         []):                               # the calls no longer in the transcript's tail
+            with self.subTest(calls=bool(launches)):
+                w1, e1 = self.write(self.rep, cut)
+                entries = launches + [tr_handback(one, agent='a1')] + e1 + [tr_handback(two, agent='a2')]
+                w2, e2 = self.write(self.rep, one)
+                self.assertIn('it matches', self.saved(one, entries + e2, wid=w2))
+                w2, e2 = self.write(self.rep, cut)
+                r = self.saved(cut, entries + e2, wid=w2)
+                self.assertIn('it differs as after an earlier Write of this file (the first difference: the saved '
+                              'file ends after line 36', r)
+        # an agent call between the Write and the latest answer: another round, no statement
+        w1, e1 = self.write(self.rep, cut)
+        entries = tr_launch(self.tid(), agent='a1') + [tr_handback(one, agent='a1')] + e1 + \
+            tr_launch(self.tid(), agent='a2') + [tr_handback(two, agent='a2')]
+        w2, e2 = self.write(self.rep, one)
+        self.assertNotIn('The guard compared', self.saved(one, entries + e2, wid=w2))
+
     def test_written_again_after_an_exact_copy(self):
         # the answer an exact copy took stays the one a later Write of the same report is compared with: a
         # source-verifier answers only a call or a message, which the guard sees (Read, Glob and Grep are its
