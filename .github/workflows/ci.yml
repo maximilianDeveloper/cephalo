@@ -11,7 +11,9 @@ permissions:
 jobs:
   lint-and-smoke:
     name: Lint & setup smoke (Ubuntu, Python ${{ matrix.python-version }})
-    runs-on: ubuntu-latest
+    # actions/setup-python has no Python 3.9 for Ubuntu 26.04, the image behind
+    # ubuntu-latest since November 2026: the 3.9 job stays on Ubuntu 24.04.
+    runs-on: ${{ matrix.python-version == '3.9' && 'ubuntu-24.04' || 'ubuntu-latest' }}
     timeout-minutes: 15
     # "shell: bash" runs each step with -e -o pipefail; the default for run:
     # is bash -e only, so a failing setup.sh before "| tee" went unnoticed.
