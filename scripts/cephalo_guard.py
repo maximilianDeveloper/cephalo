@@ -2251,10 +2251,6 @@ def _answer(text, paths, ctx):
     return lines, frozenset(i for i, ln in enumerate(lines) if _holds_path(ln, paths, ctx))
 
 
-def _same_line(a, b):
-    return a == b or a.replace('\\', '/') == b.replace('\\', '/')     # the separators of a relative path
-
-
 def _skeleton(lines):
     """The letters and digits of each line that has any: what two copies of one
     report share although quotation marks, symbols or spacing differ."""
@@ -2274,8 +2270,7 @@ def _first_difference(mine, answer):
     an answer (as _answer) differ, its lines with an absolute path aside;
     None when they do not."""
     theirs, free = answer
-    k = next((i for i, (a, b) in enumerate(zip(mine, theirs)) if i not in free and not _same_line(a, b)),
-             None)
+    k = next((i for i, (a, b) in enumerate(zip(mine, theirs)) if i not in free and a != b), None)
     if k is None and len(mine) != len(theirs):
         k = min(len(mine), len(theirs))
     return k

@@ -1154,6 +1154,13 @@ class TestR5AnswerComparison(Base):
         r = self.round(rep + 'Quelle: %s/a.pdf\n' % self.root, saved=rep.replace('alt', 'ALT', 1) + 'Quelle: a.pdf\n')
         self.assertIn('it differs', r)
 
+    def test_backslash_and_slash_differ(self):
+        # outside a path of this machine a backslash is text: Pandoc's 'S.\\ 12', a relative path as written
+        rep = verifier_report()
+        for answer, saved in (('S.\\ 12', 'S./ 12'), ('Quelle: sources\\a.pdf', 'Quelle: sources/a.pdf')):
+            with self.subTest(answer=answer):
+                self.assertIn('it differs', self.round(rep + answer + '\n', saved=rep + saved + '\n'))
+
     def test_multi_project_root(self):
         top = tempfile.mkdtemp(prefix='guard-r5c-multi-')
         os.makedirs(os.path.join(top, '00_Shared_Materials'))
