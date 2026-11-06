@@ -1877,28 +1877,33 @@ def _tail_lines(path, limit):
     """The complete lines (bytes) in the last limit bytes of a regular file, or None.
     Opened as _read_regular opens a file; a line cut by the start of that part
     and a last line still being written are left out."""
+    return _tail(path, limit)[0]
+
+
+def _tail(path, limit):
+    """_tail_lines, and whether the file is longer than limit (its start left out)."""
     try:
         fd = os.open(path, os.O_RDONLY | getattr(os, 'O_NONBLOCK', 0) | getattr(os, 'O_BINARY', 0))
     except (OSError, ValueError, TypeError):
-        return None
+        return None, False
     try:
         st = os.fstat(fd)
         if not stat.S_ISREG(st.st_mode):
-            return None
+            return None, False
         start = max(0, st.st_size - limit)
         os.lseek(fd, start, os.SEEK_SET)
         with os.fdopen(fd, 'rb') as fh:
             fd = None
             data = fh.read(limit)
     except (OSError, ValueError):
-        return None
+        return None, False
     finally:
         if fd is not None:
             os.close(fd)
     data = data[:data.rfind(b'\n') + 1]
     if start:
         data = data[data.find(b'\n') + 1:]
-    return data.split(b'\n')[:-1]
+    return data.split(b'\n')[:-1], start > 0
 
 
 def _main_calls(lines, ctx):
@@ -2253,18 +2258,20 @@ def _round_answers(events, write_id, n, ctx, paths):
     report was written before its round, with an agent call between that
     Write and the latest answer (an earlier round's report written again:
     its answer may be one the guard no longer counts).  Also the events
-    before the Write."""
+    before the Write, and whether the round's start is among the events (a
+    Write that an agent call followed before the latest answer): if not,
+    the round may begin before them."""
     stop = next((i for i, ev in enumerate(events) if ev[0] == 'write' and ev[1] == write_id), len(events)) \
         if write_id else len(events)
     events = events[:stop]
     last = max((i for i, ev in enumerate(events) if ev[0] in ('answer', 'opaque')), default=None)
     if last is None or events[last][0] == 'opaque':
-        return [], events
+        return [], events, False
     call = max((i for i, ev in enumerate(events[:last]) if ev[0] == 'call'), default=0)
     start = max((i for i, ev in enumerate(events[:call]) if ev[0] == 'write'), default=-1)
     old = {ev[2] for ev in events[:start + 1] if ev[0] == 'write'}
     if n in old:
-        return [], events
+        return [], events, True
     free, held = [], None          # held: the answer an exact copy of this report took (False: no longer sure)
     for i in range(start + 1, len(events)):
         ctx.budget.tick()
@@ -2286,8 +2293,8 @@ def _round_answers(events, write_id, n, ctx, paths):
                 if ev[2] == n:
                     held = taken
     if held is False:
-        return [], events
-    return free[-6:] + ([held] if held else []), events
+        return [], events, start >= 0
+    return free[-6:] + ([held] if held else []), events, start >= 0
 
 
 def _machine_paths(ctx):
@@ -2558,19 +2565,21 @@ def _answer_check(saved, n, data, ctx, absolute):
     tp = data.get('transcript_path') if isinstance(data, dict) else None
     if not isinstance(tp, str) or not tp or not _fs_ok(norm_path(tp, ctx, ctx.cwd), ctx):
         return ''
-    lines = _tail_lines(tp, MAX_TRANSCRIPT)
+    lines, cut = _tail(tp, MAX_TRANSCRIPT)
     if not lines:
         return ''
     wid = data.get('tool_use_id')
     paths = _machine_paths(ctx)
-    answers, before = _round_answers(_verifier_events(lines, ctx), wid if isinstance(wid, str) else None, n, ctx,
-                                     paths)
+    answers, before, begun = _round_answers(_verifier_events(lines, ctx), wid if isinstance(wid, str) else None,
+                                            n, ctx, paths)
     rows = unicodedata.normalize('NFC', saved).lstrip('\ufeff').replace('\r\n', '\n').replace('\r', '\n').split('\n')
     lead = next((i for i, ln in enumerate(rows) if ln.strip()), 0)
     mine = _report_lines(saved)
     found = _compare(mine, answers, ctx, lead)
     if not found or (found[0] == 'same' and absolute):
         return ''
+    if found[0] == 'differs' and cut and not begun:
+        return ''                  # the round may begin before the part of the transcript read: its answer unseen
     after = before[answers[found[2]][3] + 1:]
     if any(ev[0] == 'compact' for ev in after):
         return ''                  # the answer is no longer in the main chat's context as it was

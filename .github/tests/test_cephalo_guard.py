@@ -1527,6 +1527,30 @@ class TestR5AnswerComparison(Base):
                       'answer has it, leave the file as it is and tell the user.', r)
         self.assertNotIn('Write the file again with the Write tool', r)
 
+    def test_a_round_that_may_begin_before_the_transcript_read(self):
+        # the guard reads the transcript's last MAX_TRANSCRIPT bytes: when an answer of the round may lie before
+        # them, a difference from the answers it sees may be one from another report's, so it says nothing then;
+        # an exact copy of an answer it sees still matches
+        one = verifier_report()
+        two = one.replace('Runde 1', 'Runde 1, Teil B', 1)
+        cut = one.rstrip('\n').rsplit('\n', 1)[0] + '\n'
+        filler = {'type': 'progress', 'isSidechain': False, 'data': 'x' * g.MAX_TRANSCRIPT}
+        early = tr_launch(self.tid(), agent='a1') + [tr_handback(one, agent='a1')]
+        late = tr_launch(self.tid(), agent='a2') + [tr_handback(two, agent='a2')]
+        w, e = self.write(self.rep, cut)
+        r = self.saved(cut, early + late + e, wid=w)                              # both answers read
+        self.assertIn('it differs; the first difference: the saved file ends after line 36', r)
+        self.assertNotIn('The guard compared', self.saved(cut, early + [filler] + late + e, wid=w))
+        w, e = self.write(self.rep, two)
+        self.assertIn('it matches', self.saved(two, early + [filler] + late + e, wid=w))
+        # the round's start read: a Write that an agent call followed, before the answer
+        rep0 = os.path.join(self.ver, 'ch_0_round_1.md')
+        w0, e0 = self.write(rep0, verifier_report(3))
+        w, e = self.write(self.rep, cut)
+        entries = early + [filler] + e0 + tr_launch(self.tid(), agent='a3') + [tr_handback(one, agent='a3')] + e
+        self.assertIn('it differs; the first difference: the saved file ends after line 36',
+                      self.saved(cut, entries, wid=w))
+
     def test_a_compaction_after_the_answer(self):
         rep = verifier_report()
         cut = rep.rstrip('\n').rsplit('\n', 1)[0] + '\n'
