@@ -2535,11 +2535,18 @@ def _answer_check(saved, n, data, ctx, absolute):
     if found[0] == 'same':
         return (' The guard compared it with the source-verifier\'s answer in the session transcript: it matches '
                 '(line ends, trailing blanks and absolute paths of this machine made relative aside).')
-    again = [ev for ev in after if ev[0] == 'write' and ev[2] == n and isinstance(ev[3], str)]
-    if again and _report_lines(again[-1][3]) == mine:
+    # the rewrite is asked for once per text: not again for a text an earlier Write of this file since the answer
+    # had, and not after two of them (two versions in turn)
+    again = [ev[3] for ev in after if ev[0] == 'write' and ev[2] == n and isinstance(ev[3], str)]
+    if any(_report_lines(t) == mine for t in again):
         return (' The guard compared it with the source-verifier\'s answer in the session transcript: it differs as '
-                'after the last Write of this file (the first difference: %s). If you cannot write it as the answer '
+                'after an earlier Write of this file (the first difference: %s). If you cannot write it as the answer '
                 'has it, leave the file as it is and tell the user.' % found[1])
+    if len(again) >= 2:
+        return (' The guard compared it with the source-verifier\'s answer in the session transcript: it differs '
+                '(the first difference: %s), and the file was written %d times before since the answer. If you '
+                'cannot write it as the answer has it, leave the file as it is and tell the user.'
+                % (found[1], len(again)))
     return (' The guard compared it with the source-verifier\'s answer in the session transcript: it differs; '
             'the first difference: %s. Write the file again with the Write tool, the answer unchanged.' % found[1])
 

@@ -1417,12 +1417,34 @@ class TestR5AnswerComparison(Base):
             entries += e1
             e1 = e2
             r = self.saved(rep, entries + e2, wid=w2)
-            self.assertIn('it differs as after the last Write of this file (the first difference: line 11', r)
+            self.assertIn('it differs as after an earlier Write of this file (the first difference: line 11', r)
             self.assertIn('If you cannot write it as the answer has it, leave the file as it is and tell the user', r)
             self.assertNotIn('Write the file again with the Write tool, the answer unchanged', r)
         # written as the answer has it: it matches
         w3, e3 = self.write(self.rep, answer)
         self.assertIn('it matches', self.saved(answer, entries + e1 + e3, wid=w3))
+
+    def test_two_versions_in_turn_ask_for_no_rewrite_again(self):
+        # the main chat writes two wrong versions in turn: each is asked for again only once
+        rep = verifier_report()
+        answer = rep.replace('S. 10)', 'S.\u00a010)')
+        one, two = rep, rep.replace('S. 10)', 'S.&nbsp;10)')
+        entries = tr_launch(self.tid()) + [tr_handback(answer)]
+        verdicts = []
+        for text in (one, two, one, two):
+            w, e = self.write(self.rep, text)
+            r = self.saved(text, entries + e, wid=w)
+            entries += e
+            verdicts.append('Write the file again with the Write tool' in r)
+            if len(verdicts) > 2:
+                self.assertIn('it differs as after an earlier Write of this file (the first difference: line 11', r)
+        self.assertEqual(verdicts, [True, True, False, False])
+        # a third version after the first two: no request either
+        w, e = self.write(self.rep, rep.replace('S. 10)', 'S.10)'))
+        r = self.saved(rep.replace('S. 10)', 'S.10)'), entries[:7] + e, wid=w)    # the answer, one, two
+        self.assertIn('and the file was written 2 times before since the answer. If you cannot write it as the '
+                      'answer has it, leave the file as it is and tell the user.', r)
+        self.assertNotIn('Write the file again with the Write tool', r)
 
     def test_a_compaction_after_the_answer(self):
         rep = verifier_report()
