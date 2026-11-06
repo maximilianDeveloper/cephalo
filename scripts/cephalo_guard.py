@@ -2083,23 +2083,23 @@ def agent_reason(hits, ctx):
 
 # --------------------------------------------------------------- R5: the saved report against the answer
 
-# a transcript line that may hold a source-verifier call or its hand-back, a Write, or a SendMessage
-_TR_VERIFIER = re.compile(rb'"subagent_type"\s*:\s*"source-verifier"|"handbackReportText"'
-                          rb'|"name"\s*:\s*"(?:Write|SendMessage)"')
+# a transcript line that may hold an agent's call or hand-back, a Write, or a SendMessage
+_TR_VERIFIER = re.compile(rb'"handback"\s*:\s*true|"handbackReportText"'
+                          rb'|"name"\s*:\s*"(?:Write|SendMessage|Agent|Task)"')
 _VERIFICATION_DIR = re.compile(r'/verification/', re.I | re.A)
 SIMILAR = 0.8                   # share of lines two texts have in common to be the same report (_compare)
 MAX_COMPARE = 5000              # lines of a report the guard compares, at most
 
 
-def _agent_result_text(c, e):
-    """The answer in the result c (of entry e) of a source-verifier called in
-    the foreground, without Claude Code's trailer ('agentId: ...' and a
-    '<usage>...</usage>' block); None for a background start, an error, or a
-    result in another shape."""
+def _agent_result(c, e):
+    """What the result c (of entry e) of an Agent or Task call holds:
+    ('launch', None, agent id) for a start in the background, ('answer',
+    text, agent id) for the answer of a call in the foreground, without
+    Claude Code's trailer ('agentId: ...' and a '<usage>...</usage>' block),
+    ('opaque', None, agent id) for an error or a result in another shape.
+    The agent id is None when the result names none."""
     tur = e.get('toolUseResult')
-    if c.get('is_error') is True or (isinstance(tur, dict) and (tur.get('isAsync') is True or
-                                                                 tur.get('status') == 'async_launched')):
-        return None
+    aid = tur.get('agentId') if isinstance(tur, dict) and isinstance(tur.get('agentId'), str) else None
     content = c.get('content')
     if isinstance(content, str):
         blocks = [content]
@@ -2107,30 +2107,47 @@ def _agent_result_text(c, e):
                                            isinstance(b.get('text'), str) for b in content):
         blocks = [b['text'] for b in content]
     else:
-        return None
+        blocks = None
+    named = re.findall(r'(?m)^[ \t]*agentId:[ \t]*([\w-]+)', '\n'.join(blocks or ()))
+    aid = aid or (named[-1] if named else None)
+    if isinstance(tur, dict) and (tur.get('isAsync') is True or tur.get('status') == 'async_launched'):
+        return 'launch', None, aid
+    if c.get('is_error') is True or blocks is None:
+        return 'opaque', None, aid
     text = '\n'.join(b for b in blocks if not b.lstrip().startswith('agentId:'))
     if 'Async agent launched' in text:
-        return None
+        return 'launch', None, aid
     tail = [m.start() for m in re.finditer(r'(?m)^[ \t]*agentId:', text)]
     if tail and len(text) - tail[-1] < 1000:
         text = text[:tail[-1]]
-    text = re.sub(r'\s*<usage>.*?</usage>\s*\Z', '', text, flags=re.S)
-    return text.strip() or None
+    text = re.sub(r'\s*<usage>.*?</usage>\s*\Z', '', text, flags=re.S).strip()
+    return ('answer', text, aid) if text else ('opaque', None, aid)
+
+
+_TR_RESULT_ID = re.compile(rb'"tool_use_id"\s*:\s*"([^"\\]{1,200})"')
 
 
 def _verifier_events(lines, ctx):
     """The source-verifier's answers to the main chat and the main chat's
     Writes into a verification/ folder, in order: [('answer', text) |
-    ('write', tool id, normalized path, text written)].  An answer is the
-    result of a call in the foreground or the report a background one hands
-    back (origin.handbackReportText of a peer message, as Claude Code 2.1.31x
-    writes it); an agent the main chat sent a message to after its start
-    (SendMessage) is left out from then on."""
-    events, due, sent = [], {}, set()       # due: tool id (bytes) of a foreground call -> its id
+    ('opaque',) | ('write', tool id, normalized path, text written)].  An
+    answer is the result of a call in the foreground or the report a
+    background one hands back (origin.handbackReportText of a peer message,
+    as Claude Code 2.1.31x writes it).  'opaque' is an answer the guard does
+    not compare with: one it cannot read (an error, a result or hand-back in
+    another shape), and one an agent gives after a message of the main chat
+    (SendMessage) to it, or to an agent the guard does not know: there the
+    main chat holds an answer the guard does not see.  A Write whose result
+    is an error (denied, rejected) is left out."""
+    events, calls, sent = [], {}, set()   # calls: tool id (bytes) of an Agent or Task call -> its subagent_type
+    writes = {}                           # tool id (bytes) of a Write in events -> its event
+    verifiers, others = set(), set()      # agent ids of source-verifiers and of other agents
     for k, line in enumerate(lines):
         if not k % 256:
             ctx.budget.tick()
-        if not _TR_VERIFIER.search(line) and not (due and any(i in line for i in due)):
+        due = [x for x in _TR_RESULT_ID.findall(line) if x in calls or x in writes] \
+            if (calls or writes) and b'"tool_use_id"' in line else ()
+        if not due and not _TR_VERIFIER.search(line):
             continue
         try:
             e = json.loads(line)
@@ -2140,10 +2157,15 @@ def _verifier_events(lines, ctx):
             continue
         origin = e.get('origin')
         if e.get('type') == 'user' and isinstance(origin, dict) and origin.get('handback') is True:
-            frm = origin.get('from')
-            if origin.get('kind') == 'peer' and origin.get('name') == 'source-verifier' and \
-                    isinstance(origin.get('handbackReportText'), str) and isinstance(frm, str) and frm not in sent:
+            name, frm = origin.get('name'), origin.get('from')
+            mine = name == 'source-verifier' or (isinstance(frm, str) and frm in verifiers)
+            if not mine and isinstance(name, str):
+                continue                                  # another agent's report
+            if mine and name == 'source-verifier' and origin.get('kind') == 'peer' and isinstance(frm, str) and \
+                    frm not in sent and isinstance(origin.get('handbackReportText'), str):
                 events.append(('answer', origin['handbackReportText']))
+            else:
+                events.append(('opaque',))
             continue
         m = e.get('message')
         content = m.get('content') if isinstance(m, dict) else None
@@ -2153,46 +2175,70 @@ def _verifier_events(lines, ctx):
             tin = c.get('input')
             if e.get('type') == 'assistant' and c.get('type') == 'tool_use' and isinstance(tin, dict):
                 name, cid = c.get('name'), c.get('id')
-                if name in ('Agent', 'Task') and tin.get('subagent_type') == 'source-verifier' and \
-                        tin.get('run_in_background') is not True and isinstance(cid, str):
-                    due[cid.encode('utf-8', 'replace')] = cid
-                elif name == 'SendMessage' and isinstance(tin.get('to'), str):
-                    sent.add(tin['to'])
+                if name in ('Agent', 'Task') and isinstance(cid, str):
+                    calls[cid.encode('utf-8', 'replace')] = tin.get('subagent_type')
+                elif name == 'SendMessage':
+                    to = tin.get('to')
+                    if not (isinstance(to, str) and to in others and to not in verifiers):
+                        events.append(('opaque',))
+                        if isinstance(to, str):
+                            sent.add(to)
                 elif name == 'Write' and isinstance(tin.get('file_path'), str):
                     n = norm_path(tin['file_path'], ctx, ctx.cwd) or ''
                     if _VERIFICATION_DIR.search(n):
                         events.append(('write', cid, n, tin.get('content')))
+                        if isinstance(cid, str):
+                            writes[cid.encode('utf-8', 'replace')] = events[-1]
             elif e.get('type') == 'user' and c.get('type') == 'tool_result' and isinstance(c.get('tool_use_id'), str):
                 key = c['tool_use_id'].encode('utf-8', 'replace')
-                if key in due:
-                    del due[key]
-                    text = _agent_result_text(c, e)
-                    if text:
-                        events.append(('answer', text))
+                if key in writes:
+                    ev = writes.pop(key)
+                    if c.get('is_error') is True and ev in events:
+                        events.remove(ev)
+                    continue
+                if key not in calls:
+                    continue
+                kind = calls.pop(key)
+                what, text, aid = _agent_result(c, e)
+                if kind != 'source-verifier':
+                    if aid:
+                        others.add(aid)
+                    continue
+                if aid:
+                    verifiers.add(aid)
+                if what == 'answer':
+                    events.append(('answer', text))
+                elif what == 'opaque':
+                    events.append(('opaque',))
     return events
 
 
 def _round_answers(events, write_id, n, ctx, paths):
     """The answers (as _answer) that the report n, saved by the Write
     write_id, may be the copy of: those of its round, after the last Write
-    into verification/ before the latest answer (an earlier round's report),
-    less each one that an earlier Write of another report in the round has
-    taken (the answer it is, or is most like), at most the last 6."""
+    into verification/ before the latest answer (an earlier round's report)
+    and after the last answer the guard does not compare with ('opaque',
+    which may be a later version of one before it), less each one an earlier
+    Write in the round has taken (another report: the answer it is or is
+    most like; this report: the answer it is), at most the last 6.  None
+    when the latest answer is one the guard does not compare with."""
     stop = next((i for i, ev in enumerate(events) if ev[0] == 'write' and ev[1] == write_id), len(events)) \
         if write_id else len(events)
     events = events[:stop]
-    last = max((i for i, ev in enumerate(events) if ev[0] == 'answer'), default=None)
-    if last is None:
+    last = max((i for i, ev in enumerate(events) if ev[0] in ('answer', 'opaque')), default=None)
+    if last is None or events[last][0] == 'opaque':
         return []
     start = max((i for i, ev in enumerate(events[:last]) if ev[0] == 'write'), default=-1)
     free = []
     for ev in events[start + 1:]:
         ctx.budget.tick()
-        if ev[0] == 'answer':
+        if ev[0] == 'opaque':
+            free = []
+        elif ev[0] == 'answer':
             free.append(_answer(ev[1], paths, ctx))
-        elif ev[2] != n and isinstance(ev[3], str) and free:
+        elif isinstance(ev[3], str) and free:
             k = _match(_report_lines(ev[3]), free, ctx)
-            if k is not None:
+            if k is not None and (ev[2] != n or k[1]):
                 del free[k[0]]
     return free[-6:]
 
@@ -2347,6 +2393,8 @@ def answer_check(saved, n, data, ctx, absolute=False):
 
 
 def _answer_check(saved, n, data, ctx, absolute):
+    if ctx.agent_id:
+        return ''                  # an orchestrator run as a subagent: its calls are in a transcript of its own
     tp = data.get('transcript_path') if isinstance(data, dict) else None
     if not isinstance(tp, str) or not tp or not _fs_ok(norm_path(tp, ctx, ctx.cwd), ctx):
         return ''

@@ -1030,7 +1030,7 @@ class TestR5AnswerComparison(Base):
         t = self.tid()
         return t, [tr_call('Write', {'file_path': path, 'content': text}, t), tr_result(t)]
 
-    def saved(self, saved, entries, path=None, wid=None, plat='posix', root=None, transcript=None, **kw):
+    def saved(self, saved, entries, path=None, wid=None, plat='posix', root=None, transcript=None, agent=None, **kw):
         """The PostToolUse message for the Write wid of path (saved holds what is in the file)."""
         path = path or self.rep
         if plat == 'posix':
@@ -1039,7 +1039,7 @@ class TestR5AnswerComparison(Base):
             for e in entries:
                 fh.write(json.dumps(e, separators=(',', ':'), ensure_ascii=False) + '\n')
         d = payload('Write', {'file_path': path, 'content': saved}, event='PostToolUse', cwd=root or self.root,
-                    plat=plat)
+                    plat=plat, agent=agent)
         d['transcript_path'] = self.tr if transcript is None else transcript
         if wid:
             d['tool_use_id'] = wid
@@ -1239,6 +1239,70 @@ class TestR5AnswerComparison(Base):
         w1, e1 = self.write(self.rep, one[:-30])
         w2, e2 = self.write(self.rep, one)
         self.assertIn('it matches', self.saved(one, entries + e1 + e2, wid=w2))
+
+    def test_continued_or_unreadable_answers_give_no_statement(self):
+        cf = os.path.join(self.ver, 'consistency_final.md')
+        old, new = verifier_report(), verifier_report(changed=(4, 9))
+        # the same verifier asked again with SendMessage: its new answer is left out, and the old one,
+        # taken by the first Write of the file, is no answer for the second
+        entries = tr_launch(self.tid(), agent='a9') + [tr_handback(old, agent='a9')]
+        w1, e1 = self.write(cf, old)
+        entries += e1 + [tr_call('Read', {'file_path': cf}, self.tid()),
+                         tr_call('SendMessage', {'to': 'a9', 'message': 'Check B.2 again, the whole report.'},
+                                 self.tid()), tr_handback(new, agent='a9')]
+        w2, e2 = self.write(cf, new)
+        self.assertNotIn('The guard compared', self.saved(new, entries + e2, path=cf, wid=w2))
+        # the new answer not in the transcript at all: the same
+        entries = tr_launch(self.tid(), agent='a9') + [tr_handback(old, agent='a9')]
+        w1, e1 = self.write(cf, old)
+        w2, e2 = self.write(cf, new)
+        self.assertNotIn('The guard compared', self.saved(new, entries + e1 + e2, path=cf, wid=w2))
+        # round 2's answer in a shape the guard does not read, round 1's report never saved
+        rep2 = os.path.join(self.ver, 'ch_1_round_2.md')
+        t = self.tid()
+        unknown = tr_foreground(t, new)
+        unknown[1]['message']['content'][0]['content'].append({'type': 'tool_reference', 'tool_name': 'x'})
+        entries = tr_launch(self.tid()) + [tr_handback(old)] + unknown
+        w, e = self.write(rep2, new[:-30])
+        self.assertNotIn('The guard compared', self.saved(new[:-30], entries + e, path=rep2, wid=w))
+        # an error result, or a hand-back that does not name its agent, after an answer
+        for after in (tr_foreground(self.tid(), new, error=True), [dict(tr_handback(new), origin={'handback': True})]):
+            w, e = self.write(self.rep, old[:-30])
+            entries = tr_launch(self.tid()) + [tr_handback(old)] + after
+            with self.subTest(after=json.dumps(after)[:60]):
+                self.assertNotIn('The guard compared', self.saved(old[:-30], entries + e, wid=w))
+
+    def test_messages_to_other_agents_and_their_reports(self):
+        rep = verifier_report()
+        cut = rep.rstrip('\n').rsplit('\n', 1)[0] + '\n'
+        writer = tr_launch(self.tid(), subagent='writer-agent', agent='w1')
+        # a message to a writer the guard knows, and a writer's report, leave the comparison as it is
+        for between in ([tr_call('SendMessage', {'to': 'w1', 'message': 'Go on.'}, self.tid())],
+                        [tr_handback('Kapitel 2 ist geschrieben.', agent='w1', name='writer-agent')]):
+            w, e = self.write(self.rep, cut)
+            entries = writer + tr_launch(self.tid()) + [tr_handback(rep)] + between
+            with self.subTest(between=between[0]['type']):
+                self.assertIn('it differs', self.saved(cut, entries + e, wid=w))
+        # a message to an agent it does not know: no statement
+        w, e = self.write(self.rep, cut)
+        entries = tr_launch(self.tid()) + [tr_handback(rep), tr_call('SendMessage', {'to': 'zz', 'message': 'x'},
+                                                                     self.tid())]
+        self.assertNotIn('The guard compared', self.saved(cut, entries + e, wid=w))
+
+    def test_only_the_main_chat(self):
+        # an orchestrator run as a subagent has its calls in a transcript of its own
+        rep = verifier_report()
+        entries = tr_launch(self.tid()) + [tr_handback(rep)]
+        w, e = self.write(self.rep, rep[:-30])
+        self.assertNotIn('The guard compared', self.saved(rep[:-30], entries + e, wid=w, agent='orchestrator-longform'))
+        self.assertIn('it differs', self.saved(rep[:-30], entries + e, wid=w))
+
+    def test_a_denied_write_takes_no_answer(self):
+        rep = verifier_report()
+        t = self.tid()
+        denied = [tr_call('Write', {'file_path': self.rep, 'content': rep}, t), tr_result(t, error=True)]
+        w, e = self.write(self.rep, rep)
+        self.assertIn('it matches', self.saved(rep, tr_launch(self.tid()) + [tr_handback(rep)] + denied + e, wid=w))
 
     def test_another_report_gets_no_statement(self):
         r = self.round(verifier_report(2, changed=range(1, 31)), saved=verifier_report(1))
