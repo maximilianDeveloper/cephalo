@@ -184,7 +184,10 @@ phases:
           as a document (the guidelines, or the user, decide), record it in
           the decision log and name it in the writer's task prompt: an
           exported companion takes Pandoc's escaped space before a page
-          number (writer-agent.md, "Formatting rules").
+          number (writer-agent.md, "Formatting rules"), and, without citekeys,
+          its reference list inside the Bibliography div
+          (docs/reference_management.md, "The reference list"), so that step
+          2 checks its entries.
           The writer writes slide text and speaker notes as text files in
           workspace/output/slides/; it cannot build a PPTX. Before step 3,
           workspace/output/slides/<deck>.pptx is built from them, as the user
@@ -393,10 +396,9 @@ phases:
           numbers and how they run) and record the answer in the decision log
           of workspace/state.md. Then
           format rounds as the seminar workflow describes them
-          (workflows/seminar_2agent.yaml, F.1, items 2, 4, 6 and 7, for the
-          parts the companion has; the writer writes the companion's
-          reference list, item 2, also its custom-style block for the
-          export), with workspace/output/<companion>.docx in
+          (workflows/seminar_2agent.yaml, F.1, items 4, 6 and 7, for the
+          parts the companion has; a Bibliography div missing around the
+          reference list is a format-only fix, main_session), with workspace/output/<companion>.docx in
           place of document.docx, the companion's file as the only chapter
           file and workspace/output/verification/<companion>_docx_format_round_<n>.md
           as the report: build workspace/output/reference.docx with
