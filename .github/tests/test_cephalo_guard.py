@@ -1209,6 +1209,24 @@ class TestR5AnswerComparison(Base):
         del d['transcript_path']
         self.assertEqual(g.evaluate(d, env(root=self.root))['reason'], want)
 
+    def test_odd_entries_and_errors_keep_the_read_back(self):
+        # an entry of an unknown shape, or an error of the comparison, leaves R5's message as it is
+        rep = verifier_report()
+        want = self.saved(rep, [], transcript=os.path.join(self.root, 'missing.jsonl'))
+        for frm in (['a0f8'], {'id': 'x'}, None, 5):
+            h = tr_handback(rep)
+            h['origin']['from'] = frm
+            wid, w = self.write(self.rep, rep)
+            with self.subTest(frm=frm):
+                self.assertEqual(self.saved(rep, tr_launch(self.tid()) + [h] + w, wid=wid), want)
+        orig = g._verifier_events
+        g._verifier_events = lambda *a: 1 / 0
+        try:
+            wid, w = self.write(self.rep, rep)
+            self.assertEqual(self.saved(rep, tr_launch(self.tid()) + [tr_handback(rep)] + w, wid=wid), want)
+        finally:
+            g._verifier_events = orig
+
     def test_over_the_deadline_no_statement(self):
         rep = verifier_report()
         old = g.DEADLINE_S

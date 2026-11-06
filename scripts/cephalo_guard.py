@@ -2142,8 +2142,9 @@ def _verifier_events(lines, ctx):
             continue
         origin = e.get('origin')
         if e.get('type') == 'user' and isinstance(origin, dict) and origin.get('handback') is True:
+            frm = origin.get('from')
             if origin.get('kind') == 'peer' and origin.get('name') == 'source-verifier' and \
-                    isinstance(origin.get('handbackReportText'), str) and origin.get('from') not in sent:
+                    isinstance(origin.get('handbackReportText'), str) and isinstance(frm, str) and frm not in sent:
                 events.append(('answer', origin['handbackReportText']))
             continue
         m = e.get('message')
@@ -2296,22 +2297,27 @@ def answer_check(saved, n, data, ctx):
     the saved text (of the report n, a normalized path) with the
     source-verifier's answer in the session transcript, as a sentence for the
     read-back message, or '' when it cannot tell (no transcript or answer,
-    another report, its limits reached)."""
+    another report, its limits reached, an error of its own: the read-back
+    message stays as it is)."""
+    try:
+        return _answer_check(saved, n, data, ctx)
+    except Exception:              # OverBudget too
+        return ''
+
+
+def _answer_check(saved, n, data, ctx):
     tp = data.get('transcript_path') if isinstance(data, dict) else None
     if not isinstance(tp, str) or not tp or not _fs_ok(norm_path(tp, ctx, ctx.cwd), ctx):
         return ''
-    try:
-        lines = _tail_lines(tp, MAX_TRANSCRIPT)
-        if not lines:
-            return ''
-        wid = data.get('tool_use_id')
-        prefixes = _project_prefixes(ctx)
-        answers = _round_answers(_verifier_events(lines, ctx), wid if isinstance(wid, str) else None, n, ctx, prefixes)
-        rows = saved.replace('\r\n', '\n').replace('\r', '\n').split('\n')
-        lead = next((i for i, ln in enumerate(rows) if ln.strip()), 0)
-        found = _compare(_report_lines(saved, prefixes, ctx), answers, ctx, lead)
-    except OverBudget:
+    lines = _tail_lines(tp, MAX_TRANSCRIPT)
+    if not lines:
         return ''
+    wid = data.get('tool_use_id')
+    prefixes = _project_prefixes(ctx)
+    answers = _round_answers(_verifier_events(lines, ctx), wid if isinstance(wid, str) else None, n, ctx, prefixes)
+    rows = saved.replace('\r\n', '\n').replace('\r', '\n').split('\n')
+    lead = next((i for i, ln in enumerate(rows) if ln.strip()), 0)
+    found = _compare(_report_lines(saved, prefixes, ctx), answers, ctx, lead)
     if not found:
         return ''
     if found[0] == 'same':
