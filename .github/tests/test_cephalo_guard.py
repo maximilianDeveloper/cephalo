@@ -1180,7 +1180,7 @@ class TestR5AnswerComparison(Base):
 
     def test_macos_folder_named_in_finder(self):
         # the project folder in NFD (Finder), the path in the answer in NFC (typed)
-        nfd = os.path.join(self.root, unicodedata.normalize('NFD', 'Masterarbeit Übung'))
+        nfd = os.path.join(self.root, unicodedata.normalize('NFD', 'Masterarbeit \u00dcbung'))
         ver = os.path.join(nfd, 'workspace', 'output', 'verification')
         os.makedirs(ver)
         rep, path = verifier_report(), os.path.join(ver, 'ch_1_round_1.md')
@@ -1303,6 +1303,57 @@ class TestR5AnswerComparison(Base):
         denied = [tr_call('Write', {'file_path': self.rep, 'content': rep}, t), tr_result(t, error=True)]
         w, e = self.write(self.rep, rep)
         self.assertIn('it matches', self.saved(rep, tr_launch(self.tid()) + [tr_handback(rep)] + denied + e, wid=w))
+
+    def test_forms_of_one_text_and_look_alikes(self):
+        rep = verifier_report()
+        quote = rep.replace('Zitat 7 aus', '\u201e\u00dcbergangsphase\u201c aus')
+        # NFD in the answer (a quotation from a PDF), NFC in the copy; a byte order mark on either side
+        for answer, saved in ((unicodedata.normalize('NFD', quote), unicodedata.normalize('NFC', quote)),
+                              (rep, '\ufeff' + rep), ('\ufeff' + rep, rep)):
+            with self.subTest(saved=ascii(saved[:3])):
+                self.assertIn('it matches', self.round(answer, saved=saved))
+        # characters that look alike: the code points are named
+        for answer, part in ((rep.replace('S. 10)', 'S.\u00a010)'), 'the file has U+0020, the answer U+00A0'),
+                             (rep.replace('| 7 |', '|\t7 |'), 'the file has U+0020, the answer U+0009'),
+                             (rep.replace('0 \u26a0\ufe0f', '0 \u26a0'), 'the file has U+FE0F, the answer nothing')):
+            with self.subTest(part=part):
+                r = self.round(answer, saved=rep)
+                self.assertIn('they look alike: at character', r)
+                self.assertIn(part, r)
+                self.assertIn('Write the file again', r)
+
+    def test_the_same_difference_again_asks_for_no_rewrite(self):
+        rep = verifier_report()
+        answer = rep.replace('S. 10)', 'S.\u00a010)')
+        entries = tr_launch(self.tid()) + [tr_handback(answer)]
+        w1, e1 = self.write(self.rep, rep)
+        self.assertIn('Write the file again', self.saved(rep, entries + e1, wid=w1))
+        for _ in range(2):                                # written again as before: the same difference
+            w2, e2 = self.write(self.rep, rep)
+            entries += e1
+            e1 = e2
+            r = self.saved(rep, entries + e2, wid=w2)
+            self.assertIn('it differs as after the last Write of this file (the first difference: line 11', r)
+            self.assertIn('If you cannot write it as the answer has it, leave the file as it is and tell the user', r)
+            self.assertNotIn('Write the file again with the Write tool, the answer unchanged', r)
+        # written as the answer has it: it matches
+        w3, e3 = self.write(self.rep, answer)
+        self.assertIn('it matches', self.saved(answer, entries + e1 + e3, wid=w3))
+
+    def test_a_compaction_after_the_answer(self):
+        rep = verifier_report()
+        cut = rep.rstrip('\n').rsplit('\n', 1)[0] + '\n'
+        compact = [{'type': 'system', 'subtype': 'compact_boundary', 'isSidechain': False, 'content': 'Compacted'},
+                   {'type': 'user', 'isSidechain': False, 'isCompactSummary': True,
+                    'message': {'role': 'user', 'content': 'Summary: the verifier found 30 sentences OK.'}}]
+        for between in (compact[:1], compact[1:]):
+            w, e = self.write(self.rep, cut)
+            with self.subTest(between=between[0]['type']):
+                self.assertNotIn('The guard compared',
+                                 self.saved(cut, tr_launch(self.tid()) + [tr_handback(rep)] + between + e, wid=w))
+        # before the answer: the comparison as always
+        w, e = self.write(self.rep, cut)
+        self.assertIn('it differs', self.saved(cut, compact + tr_launch(self.tid()) + [tr_handback(rep)] + e, wid=w))
 
     def test_another_report_gets_no_statement(self):
         r = self.round(verifier_report(2, changed=range(1, 31)), saved=verifier_report(1))

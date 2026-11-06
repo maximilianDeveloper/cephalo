@@ -2084,8 +2084,8 @@ def agent_reason(hits, ctx):
 # --------------------------------------------------------------- R5: the saved report against the answer
 
 # a transcript line that may hold an agent's call or hand-back, a Write, or a SendMessage
-_TR_VERIFIER = re.compile(rb'"handback"\s*:\s*true|"handbackReportText"'
-                          rb'|"name"\s*:\s*"(?:Write|SendMessage|Agent|Task)"')
+_TR_VERIFIER = re.compile(rb'"handback"\s*:\s*true|"handbackReportText"|"compact_boundary"'
+                          rb'|"isCompactSummary"\s*:\s*true|"name"\s*:\s*"(?:Write|SendMessage|Agent|Task)"')
 _VERIFICATION_DIR = re.compile(r'/verification/', re.I | re.A)
 SIMILAR = 0.8                   # share of lines two texts have in common to be the same report (_compare)
 MAX_COMPARE = 5000              # lines of a report the guard compares, at most
@@ -2138,7 +2138,9 @@ def _verifier_events(lines, ctx):
     another shape), and one an agent gives after a message of the main chat
     (SendMessage) to it, or to an agent the guard does not know: there the
     main chat holds an answer the guard does not see.  A Write whose result
-    is an error (denied, rejected) is left out."""
+    is an error (denied, rejected) is left out.  ('compact',): the
+    conversation was compacted there; what came before it, the main chat no
+    longer sees as it was."""
     events, calls, sent = [], {}, set()   # calls: tool id (bytes) of an Agent or Task call -> its subagent_type
     writes = {}                           # tool id (bytes) of a Write in events -> its event
     verifiers, others = set(), set()      # agent ids of source-verifiers and of other agents
@@ -2154,6 +2156,9 @@ def _verifier_events(lines, ctx):
         except (ValueError, RecursionError):
             continue
         if not isinstance(e, dict) or e.get('isSidechain') is True:
+            continue
+        if (e.get('type') == 'system' and e.get('subtype') == 'compact_boundary') or e.get('isCompactSummary') is True:
+            events.append(('compact',))
             continue
         origin = e.get('origin')
         if e.get('type') == 'user' and isinstance(origin, dict) and origin.get('handback') is True:
@@ -2220,27 +2225,29 @@ def _round_answers(events, write_id, n, ctx, paths):
     and after the last answer the guard does not compare with ('opaque',
     which may be a later version of one before it), less each one an earlier
     Write in the round has taken (another report: the answer it is or is
-    most like; this report: the answer it is), at most the last 6.  None
-    when the latest answer is one the guard does not compare with."""
+    most like; this report: the answer it is), at most the last 6, each with
+    its place in the events; none when the latest answer is one the guard
+    does not compare with.  Also the events before the Write."""
     stop = next((i for i, ev in enumerate(events) if ev[0] == 'write' and ev[1] == write_id), len(events)) \
         if write_id else len(events)
     events = events[:stop]
     last = max((i for i, ev in enumerate(events) if ev[0] in ('answer', 'opaque')), default=None)
     if last is None or events[last][0] == 'opaque':
-        return []
+        return [], events
     start = max((i for i, ev in enumerate(events[:last]) if ev[0] == 'write'), default=-1)
     free = []
-    for ev in events[start + 1:]:
+    for i in range(start + 1, len(events)):
         ctx.budget.tick()
+        ev = events[i]
         if ev[0] == 'opaque':
             free = []
         elif ev[0] == 'answer':
-            free.append(_answer(ev[1], paths, ctx))
-        elif isinstance(ev[3], str) and free:
+            free.append(_answer(ev[1], paths, ctx) + (i,))
+        elif ev[0] == 'write' and isinstance(ev[3], str) and free:
             k = _match(_report_lines(ev[3]), free, ctx)
             if k is not None and (ev[2] != n or k[1]):
                 del free[k[0]]
-    return free[-6:]
+    return free[-6:], events
 
 
 def _machine_paths(ctx):
@@ -2278,8 +2285,10 @@ def _holds_path(text, paths, ctx):
 
 
 def _report_lines(text):
-    """A report's lines as the guard compares them: line ends as \\n, no
-    trailing blanks, no blank lines at the start and the end."""
+    """A report's lines as the guard compares them: in NFC, without a byte
+    order mark, line ends as \\n, no trailing blanks, no blank lines at the
+    start and the end."""
+    text = unicodedata.normalize('NFC', text).lstrip('\ufeff')
     lines = [ln.rstrip() for ln in text.replace('\r\n', '\n').replace('\r', '\n').split('\n')]
     while lines and not lines[0]:
         lines.pop(0)
@@ -2308,14 +2317,14 @@ def _cut(line, at):
     if len(line) <= 120:
         return line
     start = max(0, min(at - 40, len(line) - 120))
-    return ('…' if start else '') + line[start:start + 120] + ('…' if start + 120 < len(line) else '')
+    return ('\u2026' if start else '') + line[start:start + 120] + ('\u2026' if start + 120 < len(line) else '')
 
 
 def _first_difference(mine, answer):
     """The first line number at which the report mine (as _report_lines) and
     an answer (as _answer) differ, its lines with an absolute path aside;
     None when they do not."""
-    theirs, free = answer
+    theirs, free = answer[0], answer[1]
     k = next((i for i, (a, b) in enumerate(zip(mine, theirs)) if i not in free and a != b), None)
     if k is None and len(mine) != len(theirs):
         k = min(len(mine), len(theirs))
@@ -2358,23 +2367,47 @@ def _compare(mine, answers, ctx, lead=0):
     if found is None:
         return None
     if found[1]:
-        return 'same', None
-    best, free = answers[found[0]]
+        return 'same', None, found[0]
+    best, free = answers[found[0]][0], answers[found[0]][1]
     k = _first_difference(mine, answers[found[0]])
     if k == len(mine):
         if k in free:
             return None
         more = len(best) - k
-        return 'differs', ('the saved file ends after line %d, the answer has %d more line%s, from: «%s»'
-                           % (k + lead, more, '' if more == 1 else 's', _cut(best[k], 0)))
+        return 'differs', ('the saved file ends after line %d, the answer has %d more line%s, from: \u00ab%s\u00bb'
+                           % (k + lead, more, '' if more == 1 else 's', _cut(best[k], 0))), found[0]
     if k == len(best):
         more = len(mine) - k
         return 'differs', ('the answer ends after line %d, the saved file has %d more line%s, from line %d: '
-                           '«%s»' % (k, more, '' if more == 1 else 's', k + 1 + lead, _cut(mine[k], 0)))
+                           '\u00ab%s\u00bb' % (k, more, '' if more == 1 else 's', k + 1 + lead, _cut(mine[k], 0))), \
+            found[0]
     a, b = mine[k], best[k]
     at = next((i for i, (x, y) in enumerate(zip(a, b)) if x != y), min(len(a), len(b)))
-    return 'differs', ('line %d of the saved file: «%s»; in the answer: «%s»'
-                       % (k + 1 + lead, _cut(a, at), _cut(b, at)))
+    what = 'line %d of the saved file: \u00ab%s\u00bb; in the answer: \u00ab%s\u00bb' % (k + 1 + lead, _cut(a, at),
+                                                                                       _cut(b, at))
+    if _looks(a) == _looks(b):
+        suf = 0
+        while suf < min(len(a), len(b)) - at and a[len(a) - 1 - suf] == b[len(b) - 1 - suf]:
+            suf += 1
+        what += ('; they look alike: at character %d the file has %s, the answer %s'
+                 % (at + 1, _code_points(a[at:len(a) - suf]), _code_points(b[at:len(b) - suf])))
+    return 'differs', what, found[0]
+
+
+def _looks(text):
+    """text as it looks: any blank as a space, without format characters
+    (zero-width space, byte order mark) and variation selectors (U+FE0F after
+    \u26a0), compatibility forms as their plain letters (NFKC)."""
+    t = ''.join(' ' if ch.isspace() else ch for ch in text
+                if unicodedata.category(ch) != 'Cf' and not 0xFE00 <= ord(ch) <= 0xFE0F)
+    return unicodedata.normalize('NFKC', t)
+
+
+def _code_points(part):
+    """For a message: the code points of a short piece of a line."""
+    if not part:
+        return 'nothing'
+    return ' '.join('U+%04X' % ord(ch) for ch in part[:6]) + (' \u2026' if len(part) > 6 else '')
 
 
 def answer_check(saved, n, data, ctx, absolute=False):
@@ -2403,15 +2436,25 @@ def _answer_check(saved, n, data, ctx, absolute):
         return ''
     wid = data.get('tool_use_id')
     paths = _machine_paths(ctx)
-    answers = _round_answers(_verifier_events(lines, ctx), wid if isinstance(wid, str) else None, n, ctx, paths)
-    rows = saved.replace('\r\n', '\n').replace('\r', '\n').split('\n')
+    answers, before = _round_answers(_verifier_events(lines, ctx), wid if isinstance(wid, str) else None, n, ctx,
+                                     paths)
+    rows = unicodedata.normalize('NFC', saved).lstrip('\ufeff').replace('\r\n', '\n').replace('\r', '\n').split('\n')
     lead = next((i for i, ln in enumerate(rows) if ln.strip()), 0)
-    found = _compare(_report_lines(saved), answers, ctx, lead)
+    mine = _report_lines(saved)
+    found = _compare(mine, answers, ctx, lead)
     if not found or (found[0] == 'same' and absolute):
         return ''
+    after = before[answers[found[2]][2] + 1:]
+    if any(ev[0] == 'compact' for ev in after):
+        return ''                  # the answer is no longer in the main chat's context as it was
     if found[0] == 'same':
         return (' The guard compared it with the source-verifier\'s answer in the session transcript: it matches '
                 '(line ends, trailing blanks and the lines with an absolute path of this machine aside).')
+    again = [ev for ev in after if ev[0] == 'write' and ev[2] == n and isinstance(ev[3], str)]
+    if again and _report_lines(again[-1][3]) == mine:
+        return (' The guard compared it with the source-verifier\'s answer in the session transcript: it differs as '
+                'after the last Write of this file (the first difference: %s). If you cannot write it as the answer '
+                'has it, leave the file as it is and tell the user.' % found[1])
     return (' The guard compared it with the source-verifier\'s answer in the session transcript: it differs; '
             'the first difference: %s. Write the file again with the Write tool, the answer unchanged.' % found[1])
 
