@@ -354,30 +354,35 @@ Exit code 0 = written, or nothing to change; 2 = not written (no bookmark, the b
 No script of cephalo makes the PDF: Word does, from the last checked DOCX, through COM in Claude Code's PowerShell tool (a presentation's companion: `workflows/presentation_3agent.yaml`, F.1). In the second presentation trial run, a call without a time limit hung twice, and the turn ended while Word still ran; a call with the paths as plain strings worked. Run it in a job of its own with a limit of 90 seconds, below the tool's two minutes, so that the call ends in the same turn either way:
 
 ```powershell
-$docx = [string](Resolve-Path 'workspace\output\handout.docx')
-$pdf = [string](Join-Path (Split-Path $docx) 'handout.pdf')
+$docx = (Resolve-Path -LiteralPath 'workspace\output\handout.docx').ProviderPath
+$pdf = Join-Path (Split-Path $docx) 'handout.pdf'
+$before = @(Get-Process WINWORD -ErrorAction SilentlyContinue | ForEach-Object Id)
+$t0 = Get-Date
 $job = Start-Job -ArgumentList $docx, $pdf -ScriptBlock {
     param([string]$docx, [string]$pdf)
+    $ErrorActionPreference = 'Stop'
     $word = New-Object -ComObject Word.Application
-    $word.Visible = $false
-    $word.DisplayAlerts = 0
     try {
-        $doc = $word.Documents.Open($docx, $false, $true)
+        $word.DisplayAlerts = 0
+        $doc = $word.Documents.Open($docx, $false, $true, $false)
         $doc.SaveAs2($pdf, 17)
-        $doc.Close(0)
-    } finally { $word.Quit() }
+    } finally { $word.Quit(0) }
 }
-if (Wait-Job $job -Timeout 90) { Receive-Job $job; "exported: $pdf" } else {
-    Stop-Job $job
+if (Wait-Job $job -Timeout 90) {
+    Receive-Job $job
+    if ($job.State -eq 'Completed' -and (Test-Path -LiteralPath $pdf) -and (Get-Item -LiteralPath $pdf).LastWriteTime -ge $t0) {
+        "exported: $pdf"
+    } else { "not exported: the job ended $($job.State)" }
+} else {
     Get-CimInstance Win32_Process -Filter "Name='WINWORD.EXE'" |
-        Where-Object { "$($_.CommandLine)" -match 'Embedding|Automation' } |
+        Where-Object { $before -notcontains $_.ProcessId -and "$($_.CommandLine)" -match '\s[-/](Embedding|Automation)\b' } |
         ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
-    'timed out: the Word that this call started was stopped'
+    'timed out: the Word started through COM during this call was stopped'
 }
 Remove-Job $job -Force
 ```
 
-Put the file names of your project in the first two lines. The job stops only a Word started through COM (its command line holds `-Embedding` or `/Automation`), not one the user opened. On a timeout, try once more; if it times out again, tell the user, who exports the PDF in Word (File, Save as, PDF). Do not end a turn while an export still runs. Word needs no field update for a document without fields; with a table of contents, the user updates the fields in Word before the export (`workflows/seminar_2agent.yaml`, F.1, item 7). The recipe as a whole is still to be checked on Windows: the trial run ran its parts, not the job with its limit.
+Put the file names of your project in the first two lines. The call reports `exported` only when the job ended without an error and the PDF is newer than the call; otherwise it names how the job ended, and the PDF on disk, if there is one, is an older one. On a timeout it stops only a Word started through COM during this call (its command line holds `-Embedding` or `/Automation`), not one the user opened, and not one that ran before; it stops Word before it removes the job, since a job held in a hanging Word would not stop. On a timeout, try once more; if it times out again, tell the user, who exports the PDF in Word (File, Save as, PDF). Do not end a turn while an export still runs. With a table of contents, the user updates the fields (`workflows/seminar_2agent.yaml`, F.1, item 7 (a)), saves and closes the DOCX in Word; then the export. The recipe is for Word only: PowerPoint runs as one program for all callers, so a copy of it for PowerPoint would close the user's own presentations. The recipe as a whole is still to be checked on Windows: the trial run ran its parts, not the job with its limit.
 
 ### `cross_session_audit.py`
 
