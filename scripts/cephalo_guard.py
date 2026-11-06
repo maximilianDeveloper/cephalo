@@ -1861,13 +1861,11 @@ def readback(tin, ctx, data=None):
            'the Write tool\'s note that you need not read it back does not apply here). %s If anything differs '
            'from the answer, write the file again with the Write tool, the answer unchanged; only an absolute '
            'path becomes project-relative.') % (rel, report_definition(ctx), counts)
-    nfc = unicodedata.normalize('NFC', text)
-    absolute = [unicodedata.normalize('NFC', x) for x in {ctx.project_raw, ctx.project_raw.replace('\\', '/'),
-                                                          ctx.home_raw} if len(x) > 3]
-    if any(x in nfc for x in absolute):
+    absolute = _holds_path(text, _machine_paths(ctx), ctx)
+    if absolute:
         msg += (' It still contains an absolute path of this machine: write the file again with the Write tool, '
                 'the path made project-relative (an Edit of the saved report is denied).')
-    return msg + answer_check(text, n, data, ctx)
+    return msg + answer_check(text, n, data, ctx, absolute)
 
 
 # a transcript line that may hold a Write or Read call, or a tool result that is an error
@@ -2174,8 +2172,8 @@ def _verifier_events(lines, ctx):
     return events
 
 
-def _round_answers(events, write_id, n, ctx, prefixes):
-    """The answers (as _report_lines) that the report n, saved by the Write
+def _round_answers(events, write_id, n, ctx, paths):
+    """The answers (as _answer) that the report n, saved by the Write
     write_id, may be the copy of: those of its round, after the last Write
     into verification/ before the latest answer (an earlier round's report),
     less each one that an earlier Write of another report in the round has
@@ -2191,38 +2189,66 @@ def _round_answers(events, write_id, n, ctx, prefixes):
     for ev in events[start + 1:]:
         ctx.budget.tick()
         if ev[0] == 'answer':
-            free.append(_report_lines(ev[1], prefixes, ctx))
+            free.append(_answer(ev[1], paths, ctx))
         elif ev[2] != n and isinstance(ev[3], str) and free:
-            k = _match(_report_lines(ev[3], prefixes, ctx), free, ctx)
+            k = _match(_report_lines(ev[3]), free, ctx)
             if k is not None:
                 del free[k[0]]
     return free[-6:]
 
 
-def _project_prefixes(ctx):
-    """The project folder as an absolute path can name it in a report: as
-    CLAUDE_PROJECT_DIR gives it, with / or \\, and in Git Bash's /c/... form."""
-    p = ctx.project_raw.rstrip('/\\')
-    forms = {p, p.replace('\\', '/'), p.replace('/', '\\')}
-    m = re.match(r'^([A-Za-z]):[\\/](.*)$', p)
-    if m:
-        rest = m.group(2).replace('\\', '/')
-        forms |= {'/%s/%s' % (m.group(1).lower(), rest), '/%s/%s' % (m.group(1).upper(), rest)}
-    return sorted((f for f in forms if len(f) > 3), key=len, reverse=True)
+def _machine_paths(ctx):
+    """The absolute paths of this machine that a saved report must not hold
+    (readback() asks for them to become project-relative): the project
+    folder, the multi-project root above it and the home folder, each with /
+    or \\, as Git Bash writes it (/c/...) and with doubled backslashes; in
+    NFC (macOS: Finder names a folder in NFD, a typed path is NFC) and, on
+    Windows, in lower case (see _holds_path)."""
+    raw = [ctx.project_raw, ctx.home_raw]
+    if ctx.root != ctx.project:
+        raw.append(os.path.dirname(os.path.normpath(ctx.project_raw)))
+    out = set()
+    for p in raw:
+        p = (p or '').rstrip('/\\')
+        forms = {p, p.replace('\\', '/'), p.replace('/', '\\'), p.replace('/', '\\').replace('\\', '\\\\')}
+        m = re.match(r'^([A-Za-z]):[\\/](.*)$', p)
+        if m:
+            rest = m.group(2).replace('\\', '/')
+            forms |= {'/%s/%s' % (m.group(1).lower(), rest), '/%s/%s' % (m.group(1).upper(), rest)}
+        for f in forms:
+            f = unicodedata.normalize('NFC', f)
+            if len(f) > 3:
+                out.add(f.lower() if ctx.windows else f)
+    return sorted(out)
 
 
-def _report_lines(text, prefixes, ctx):
+def _holds_path(text, paths, ctx):
+    """Whether text holds one of _machine_paths (compared in NFC, on Windows
+    in any letter case)."""
+    t = unicodedata.normalize('NFC', text)
+    if ctx.windows:
+        t = t.lower()
+    return any(p in t for p in paths)
+
+
+def _report_lines(text):
     """A report's lines as the guard compares them: line ends as \\n, no
-    trailing blanks, no blank lines at the start and the end, and each
-    absolute path of the project made project-relative."""
-    for p in prefixes:
-        text = re.sub(re.escape(p) + r'[\\/]', '', text, flags=re.I if ctx.windows else 0)
+    trailing blanks, no blank lines at the start and the end."""
     lines = [ln.rstrip() for ln in text.replace('\r\n', '\n').replace('\r', '\n').split('\n')]
     while lines and not lines[0]:
         lines.pop(0)
     while lines and not lines[-1]:
         lines.pop()
     return lines
+
+
+def _answer(text, paths, ctx):
+    """An answer as the guard compares a report with it: its lines, and the
+    numbers of those that hold an absolute path of this machine (the saved
+    copy makes it project-relative, as it likes: such a line is no
+    difference)."""
+    lines = _report_lines(text)
+    return lines, frozenset(i for i, ln in enumerate(lines) if _holds_path(ln, paths, ctx))
 
 
 def _same_line(a, b):
@@ -2240,20 +2266,33 @@ def _cut(line, at):
     if len(line) <= 120:
         return line
     start = max(0, min(at - 40, len(line) - 120))
-    return ('\u2026' if start else '') + line[start:start + 120] + ('\u2026' if start + 120 < len(line) else '')
+    return ('…' if start else '') + line[start:start + 120] + ('…' if start + 120 < len(line) else '')
+
+
+def _first_difference(mine, answer):
+    """The first line number at which the report mine (as _report_lines) and
+    an answer (as _answer) differ, its lines with an absolute path aside;
+    None when they do not."""
+    theirs, free = answer
+    k = next((i for i, (a, b) in enumerate(zip(mine, theirs)) if i not in free and not _same_line(a, b)),
+             None)
+    if k is None and len(mine) != len(theirs):
+        k = min(len(mine), len(theirs))
+    return k
 
 
 def _match(mine, answers, ctx):
-    """(index, same) of the answer (as _report_lines) that the report mine is:
-    the same text (same True), or else the most similar one with at least
+    """(index, same) of the answer (as _answer) that the report mine is: the
+    same text (same True), or else the most similar one with at least
     SIMILAR of its lines alike in letters and digits; None when none is."""
     import difflib
     if not mine or len(mine) > MAX_COMPARE:
         return None
     best, best_ratio = None, 0.0
-    for k, theirs in enumerate(answers):
+    for k, answer in enumerate(answers):
         ctx.budget.tick()
-        if len(theirs) == len(mine) and all(_same_line(a, b) for a, b in zip(mine, theirs)):
+        theirs = answer[0]
+        if _first_difference(mine, answer) is None:
             return k, True
         if not theirs or len(theirs) > MAX_COMPARE:
             continue
@@ -2267,45 +2306,52 @@ def _match(mine, answers, ctx):
 
 def _compare(mine, answers, ctx, lead=0):
     """The guard's comparison of a saved report (as _report_lines) with the
-    answers of its round: ('same', None) when one is the same text,
+    answers of its round: ('same', None) when one is the same text (the
+    lines of the answer with an absolute path of this machine aside),
     ('differs', what) for the first difference from the one it is most like
-    when that is the same report (_match), None otherwise.  lead: the blank
-    lines the saved file starts with (for its line numbers)."""
+    when that is the same report (_match), None otherwise, and also when
+    the first difference is a line with an absolute path that the saved file
+    lacks.  lead: the blank lines the saved file starts with (for its line
+    numbers)."""
     found = _match(mine, answers, ctx)
     if found is None:
         return None
     if found[1]:
         return 'same', None
-    best = answers[found[0]]
-    k = next((i for i, (a, b) in enumerate(zip(mine, best)) if not _same_line(a, b)), min(len(mine), len(best)))
+    best, free = answers[found[0]]
+    k = _first_difference(mine, answers[found[0]])
     if k == len(mine):
+        if k in free:
+            return None
         more = len(best) - k
-        return 'differs', ('the saved file ends after line %d, the answer has %d more line%s, from: \u00ab%s\u00bb'
+        return 'differs', ('the saved file ends after line %d, the answer has %d more line%s, from: «%s»'
                            % (k + lead, more, '' if more == 1 else 's', _cut(best[k], 0)))
     if k == len(best):
         more = len(mine) - k
         return 'differs', ('the answer ends after line %d, the saved file has %d more line%s, from line %d: '
-                           '\u00ab%s\u00bb' % (k, more, '' if more == 1 else 's', k + 1 + lead, _cut(mine[k], 0)))
+                           '«%s»' % (k, more, '' if more == 1 else 's', k + 1 + lead, _cut(mine[k], 0)))
     a, b = mine[k], best[k]
     at = next((i for i, (x, y) in enumerate(zip(a, b)) if x != y), min(len(a), len(b)))
-    return 'differs', ('line %d of the saved file: \u00ab%s\u00bb; in the answer: \u00ab%s\u00bb'
+    return 'differs', ('line %d of the saved file: «%s»; in the answer: «%s»'
                        % (k + 1 + lead, _cut(a, at), _cut(b, at)))
 
 
-def answer_check(saved, n, data, ctx):
+def answer_check(saved, n, data, ctx, absolute=False):
     """R5 after a Write of a source-verifier report: the guard's comparison of
     the saved text (of the report n, a normalized path) with the
     source-verifier's answer in the session transcript, as a sentence for the
     read-back message, or '' when it cannot tell (no transcript or answer,
     another report, its limits reached, an error of its own: the read-back
-    message stays as it is)."""
+    message stays as it is).  absolute: the saved text still holds an absolute
+    path of this machine, which readback() asks to make project-relative; it
+    then says no "it matches"."""
     try:
-        return _answer_check(saved, n, data, ctx)
+        return _answer_check(saved, n, data, ctx, absolute)
     except Exception:              # OverBudget too
         return ''
 
 
-def _answer_check(saved, n, data, ctx):
+def _answer_check(saved, n, data, ctx, absolute):
     tp = data.get('transcript_path') if isinstance(data, dict) else None
     if not isinstance(tp, str) or not tp or not _fs_ok(norm_path(tp, ctx, ctx.cwd), ctx):
         return ''
@@ -2313,16 +2359,16 @@ def _answer_check(saved, n, data, ctx):
     if not lines:
         return ''
     wid = data.get('tool_use_id')
-    prefixes = _project_prefixes(ctx)
-    answers = _round_answers(_verifier_events(lines, ctx), wid if isinstance(wid, str) else None, n, ctx, prefixes)
+    paths = _machine_paths(ctx)
+    answers = _round_answers(_verifier_events(lines, ctx), wid if isinstance(wid, str) else None, n, ctx, paths)
     rows = saved.replace('\r\n', '\n').replace('\r', '\n').split('\n')
     lead = next((i for i, ln in enumerate(rows) if ln.strip()), 0)
-    found = _compare(_report_lines(saved, prefixes, ctx), answers, ctx, lead)
-    if not found:
+    found = _compare(_report_lines(saved), answers, ctx, lead)
+    if not found or (found[0] == 'same' and absolute):
         return ''
     if found[0] == 'same':
         return (' The guard compared it with the source-verifier\'s answer in the session transcript: it matches '
-                '(line ends, trailing blanks and the project\'s absolute paths aside).')
+                '(line ends, trailing blanks and the lines with an absolute path of this machine aside).')
     return (' The guard compared it with the source-verifier\'s answer in the session transcript: it differs; '
             'the first difference: %s. Write the file again with the Write tool, the answer unchanged.' % found[1])
 

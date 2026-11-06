@@ -1117,14 +1117,72 @@ class TestR5AnswerComparison(Base):
         for absolute, relative in ((win + '\\workspace\\sources\\a.pdf', 'workspace\\sources\\a.pdf'),
                                    (win + '\\workspace\\sources\\a.pdf', 'workspace/sources/a.pdf'),
                                    ('C:/Home/u/Projekt Arbeit/workspace/sources/a.pdf', 'workspace/sources/a.pdf'),
-                                   ('/c/Home/u/Projekt Arbeit/workspace/sources/a.pdf', 'workspace/sources/a.pdf')):
+                                   ('/c/Home/u/Projekt Arbeit/workspace/sources/a.pdf', 'workspace/sources/a.pdf'),
+                                   (win.replace('\\', '\\\\') + '\\\\workspace\\\\a.pdf', 'workspace/a.pdf'),
+                                   ('c:\\home\\u\\projekt arbeit\\workspace\\a.pdf', 'workspace\\a.pdf')):
             with self.subTest(absolute=absolute):
                 r = self.round(rep + 'Quelle: %s\n' % absolute, saved=rep + 'Quelle: %s\n' % relative, path=rep_win,
                                plat='windows', root=win)
                 self.assertIn('it matches', r)
-        # another absolute path is no project path: a difference
+        # Git Bash's form of the project folder kept in the copy: readback() asks to make it relative too
+        r = self.round(rep + 'Quelle: /c/Home/u/Projekt Arbeit/a.pdf\n', path=rep_win, plat='windows', root=win)
+        self.assertIn('still contains an absolute path', r)
+        self.assertNotIn('The guard compared', r)
+        # another absolute path is no path of this machine: a difference
         r = self.round(rep + 'Quelle: /home/other/a.pdf\n', saved=rep + 'Quelle: a.pdf\n')
         self.assertIn('it differs', r)
+
+    def test_paths_of_this_machine_as_readback_asks(self):
+        # the rule readback() enforces: every absolute path of this machine (project, multi-project root, home)
+        # becomes project-relative, as the copy likes; such a line of the answer is no difference, and no
+        # "it matches" goes out with the warning about an absolute path
+        rep = verifier_report()
+        for absolute, relative in (('/home/u/Zotero/storage/keller2018.pdf', '../Zotero/storage/keller2018.pdf'),
+                                   ('/home/u/Zotero/storage/keller2018.pdf', '~/Zotero/storage/keller2018.pdf'),
+                                   (self.root, '.'), (self.root + '/workspace/sources/a.pdf', 'a.pdf')):
+            with self.subTest(absolute=absolute, relative=relative):
+                r = self.round(rep + 'Quelle: %s\n' % absolute, saved=rep + 'Quelle: %s\n' % relative)
+                self.assertIn('it matches (line ends, trailing blanks and the lines with an absolute path', r)
+                self.assertNotIn('still contains an absolute path', r)
+                r = self.round(rep + 'Quelle: %s\n' % absolute)                  # saved with the path kept
+                self.assertIn('still contains an absolute path', r)
+                self.assertNotIn('The guard compared', r)
+        # a line with an absolute path that the copy lacks at its end: no statement
+        r = self.round(rep + 'Quelle: %s/workspace/sources/a.pdf\n' % self.root, saved=rep)
+        self.assertNotIn('The guard compared', r)
+        # another difference is still named
+        r = self.round(rep + 'Quelle: %s/a.pdf\n' % self.root, saved=rep.replace('alt', 'ALT', 1) + 'Quelle: a.pdf\n')
+        self.assertIn('it differs', r)
+
+    def test_multi_project_root(self):
+        top = tempfile.mkdtemp(prefix='guard-r5c-multi-')
+        os.makedirs(os.path.join(top, '00_Shared_Materials'))
+        sub = os.path.join(top, '02_Main_Work')
+        ver = os.path.join(sub, '03_Theory_chapters', 'verification')
+        os.makedirs(ver)
+        rep, path = verifier_report(), os.path.join(ver, 'ch_1_round_1.md')
+        answer = rep + 'Regel aus %s/00_Shared_Materials/styleguide.md\n' % top
+        try:
+            r = self.round(answer, saved=rep + 'Regel aus ../00_Shared_Materials/styleguide.md\n', path=path, root=sub)
+            self.assertIn('it matches', r)
+            r = self.round(answer, path=path, root=sub)
+            self.assertIn('still contains an absolute path', r)
+            self.assertNotIn('The guard compared', r)
+        finally:
+            shutil.rmtree(top)
+
+    def test_macos_folder_named_in_finder(self):
+        # the project folder in NFD (Finder), the path in the answer in NFC (typed)
+        nfd = os.path.join(self.root, unicodedata.normalize('NFD', 'Masterarbeit Übung'))
+        ver = os.path.join(nfd, 'workspace', 'output', 'verification')
+        os.makedirs(ver)
+        rep, path = verifier_report(), os.path.join(ver, 'ch_1_round_1.md')
+        answer = rep + 'Quelle: %s/workspace/sources/a.pdf\n' % unicodedata.normalize('NFC', nfd)
+        r = self.round(answer, saved=rep + 'Quelle: workspace/sources/a.pdf\n', path=path, root=nfd, plat='macos')
+        self.assertIn('it matches', r)
+        r = self.round(answer, path=path, root=nfd, plat='macos')
+        self.assertIn('still contains an absolute path', r)
+        self.assertNotIn('The guard compared', r)
 
     def test_two_reports_of_one_round(self):
         one, two = verifier_report(1), verifier_report(2)
