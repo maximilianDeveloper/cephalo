@@ -216,9 +216,11 @@ phases:
           the answer comes in and before a question to the user or the next
           agent call, under "Open questions" in
           styleguide.md if its gap names a rule of styleguide.md or a key of
-          its template, otherwise to the user as a note (style-resolver.md,
-          "Recording answers to open questions", item 6); a line under the
-          open issues of workspace/state.md does not replace either. The
+          its template, with its row in the version history, otherwise to the
+          user as a note in your next message, not only in the closing one
+          (style-resolver.md, "Recording answers to open questions", item 6);
+          a line under the open issues of workspace/state.md does not replace
+          either. The
           line in workspace/state.md for each of the writer's answers, also
           one to a revision (step 2, step 3, the three-way check, F.1), names
           each such rule by its key or in two or three words and where it
