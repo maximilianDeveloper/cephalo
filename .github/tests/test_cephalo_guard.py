@@ -1355,6 +1355,30 @@ class TestR5AnswerComparison(Base):
         w2, e2 = self.write(self.rep, cut)
         self.assertNotIn('The guard compared', self.saved(cut, entries + e1 + call + e2, wid=w2))
 
+    def test_a_message_from_the_user_after_an_exact_copy(self):
+        # the user may ask for a change the guard does not know: after an exact copy, no statement on the next
+        # Write; a message marked isMeta (hook feedback) is none from the user
+        rep = verifier_report()
+        changed = rep.replace('S. 7) | \u2705', 'S. 7) | \u26a0\ufe0f')            # row 4
+        self.assertNotEqual(changed, rep)
+        text = 'In row 4 the verifier was wrong: make it \u26a0\ufe0f.'
+        human = {'type': 'user', 'isSidechain': False, 'message': {'role': 'user', 'content': text}}
+        sdk = {'type': 'user', 'isSidechain': False, 'message': {'role': 'user', 'content': [{'type': 'text',
+                                                                                         'text': text}]},
+               'origin': {'kind': 'human'}, 'promptSource': 'sdk', 'turnOrigin': 'human'}
+        queued = {'type': 'attachment', 'isSidechain': False, 'attachment': {'type': 'queued_command', 'prompt': text}}
+        meta = {'type': 'user', 'isSidechain': False, 'isMeta': True,
+                'message': {'role': 'user', 'content': 'Stop hook feedback:\n[check.sh]: ok'}}
+        for between, verdict in ((human, None), (sdk, None), (queued, None), (meta, 'it differs')):
+            with self.subTest(between=json.dumps(between)[:70]):
+                w1, e1 = self.write(self.rep, rep)
+                w2, e2 = self.write(self.rep, changed)
+                r = self.saved(changed, tr_launch(self.tid()) + [tr_handback(rep)] + e1 + [between] + e2, wid=w2)
+                if verdict:
+                    self.assertIn(verdict, r)
+                else:
+                    self.assertNotIn('The guard compared', r)
+
     def test_answer_of_another_round_not_used(self):
         old, new = verifier_report(), verifier_report(changed=range(1, 31))
         rep2 = os.path.join(self.ver, 'ch_1_round_2.md')

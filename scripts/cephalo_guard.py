@@ -2085,7 +2085,9 @@ def agent_reason(hits, ctx):
 
 # a transcript line that may hold an agent's call or hand-back, a Write, or a SendMessage
 _TR_VERIFIER = re.compile(rb'"handback"\s*:\s*true|"handbackReportText"|"compact_boundary"'
-                          rb'|"isCompactSummary"\s*:\s*true|"name"\s*:\s*"(?:Write|SendMessage|Agent|Task)"')
+                          rb'|"isCompactSummary"\s*:\s*true|"name"\s*:\s*"(?:Write|SendMessage|Agent|Task)"'
+                          rb'|"role"\s*:\s*"user"\s*,\s*"content"\s*:\s*(?:"|\[\s*\{\s*"type"\s*:\s*"(?:text|image)")'
+                          rb'|"turnOrigin"\s*:\s*"human"|"kind"\s*:\s*"human"|"queued_command"')
 _VERIFICATION_DIR = re.compile(r'/verification/', re.I | re.A)
 SIMILAR = 0.8                   # share of lines two texts have in common to be the same report (_compare)
 MAX_COMPARE = 5000              # lines of a report the guard compares, at most
@@ -2131,7 +2133,9 @@ def _verifier_events(lines, ctx):
     """The source-verifier's answers to the main chat and the main chat's
     Writes into a verification/ folder, in order: [('answer', text) |
     ('opaque',) | ('write', tool id, normalized path, text written) |
-    ('call',), an Agent or Task call of the main chat].  An
+    ('call',), an Agent or Task call of the main chat | ('user',), a
+    message from the user (typed, or queued while the main chat worked), or
+    another one that is neither a tool result nor marked isMeta].  An
     answer is the result of a call in the foreground or the report a
     background one hands back (origin.handbackReportText of a peer message,
     as Claude Code 2.1.31x writes it).  'opaque' is an answer the guard does
@@ -2175,6 +2179,13 @@ def _verifier_events(lines, ctx):
             continue
         m = e.get('message')
         content = m.get('content') if isinstance(m, dict) else None
+        att = e.get('attachment')
+        if (e.get('type') == 'attachment' and isinstance(att, dict) and att.get('type') == 'queued_command') or \
+                (e.get('type') == 'user' and e.get('isMeta') is not True and
+                 (isinstance(content, str) or isinstance(content, list) and
+                  not any(isinstance(c, dict) and c.get('type') == 'tool_result' for c in content))):
+            events.append(('user',))
+            continue
         for c in content if isinstance(content, list) else ():
             if not isinstance(c, dict):
                 continue
@@ -2234,9 +2245,10 @@ def _round_answers(events, write_id, n, ctx, paths):
     Write in the round has taken (another report: the answer it is or is
     most like; a report written before the round takes none), at most the
     last 6, each with its place in the events; and the answer an earlier
-    Write of this report was the exact copy of, unless an agent call or an
-    answer the guard does not compare with came after that Write (then
-    none: the main chat may know a later version).  None when the latest
+    Write of this report was the exact copy of, unless an agent call, a
+    message from the user or an answer the guard does not compare with came
+    after that Write (then none: the main chat may know a later version, or
+    a change the user asked for).  None when the latest
     answer is one the guard does not compare with, and none when this
     report was written before its round, with an agent call between that
     Write and the latest answer (an earlier round's report written again:
@@ -2257,7 +2269,7 @@ def _round_answers(events, write_id, n, ctx, paths):
     for i in range(start + 1, len(events)):
         ctx.budget.tick()
         ev = events[i]
-        if ev[0] in ('opaque', 'call'):
+        if ev[0] in ('opaque', 'call', 'user'):
             if ev[0] == 'opaque':
                 free = []
             if held:
