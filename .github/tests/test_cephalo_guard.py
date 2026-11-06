@@ -1425,6 +1425,23 @@ class TestR5AnswerComparison(Base):
         self.assertIn('cephalo guard R6:', r)
         self.assertNotIn('The guard compared', r)
 
+    def test_many_like_lines_are_quick(self):
+        # 4900 lines from five: difflib would take seconds for each of six answers
+        import random
+        import time
+        rnd = random.Random(1)
+        vals = ['Status: \u2705', 'Status: \u26a0\ufe0f', 'Comment: ok', 'Source: Keller', 'Note']
+        text = lambda: '\n'.join(rnd.choice(vals) for _ in range(4900)) + '\n'
+        entries = []
+        for k in range(6):
+            entries += tr_launch(self.tid(), agent='a%d' % k) + [tr_handback(text(), agent='a%d' % k)]
+        saved = text()
+        w, e = self.write(self.rep, saved)
+        t = time.perf_counter()
+        r = self.saved(saved, entries + e, wid=w)
+        self.assertLess(time.perf_counter() - t, 2.0)
+        self.assertNotIn('The guard compared', r)
+
     def test_a_large_report_is_quick(self):
         import time
         rep = verifier_report(rows=4000)

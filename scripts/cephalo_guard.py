@@ -2346,7 +2346,10 @@ def _match(mine, answers, ctx):
             return k, True
         if not theirs or len(theirs) > MAX_COMPARE:
             continue
-        sm = difflib.SequenceMatcher(None, _skeleton(mine), _skeleton(theirs), autojunk=False)
+        # (a long report with many like lines makes difflib slow: there it leaves out lines that recur often,
+        # which can only lower the ratio)
+        sm = difflib.SequenceMatcher(None, _skeleton(mine), _skeleton(theirs),
+                                     autojunk=len(mine) * len(theirs) > 1000000)
         if sm.quick_ratio() >= max(SIMILAR, best_ratio):
             ratio = sm.ratio()
             if ratio >= SIMILAR and ratio > best_ratio:
