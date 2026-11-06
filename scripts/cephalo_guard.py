@@ -2332,11 +2332,11 @@ def _holds_path(text, paths, ctx):
 def _path_line(line, rx, paths, ctx):
     """A line of an answer that holds an absolute path of this machine, as a
     regular expression a copy matches whole: each such path as it is or made
-    relative as the copy likes (nothing, ../00_Shared_Materials/, ~/ before
-    the rest, but no other absolute path; the bare folder may become .), the
-    separators in the rest of
-    the path \\ or /, the line's other text as it is; and the parts of the
-    line that the paths and their separators take, (start, end)."""
+    relative (nothing, ./, ../ once or more, or ~/ before the rest of the
+    path, which may be 00_Shared_Materials/...; the bare folder may become
+    .), the separators in the rest of the path \\ or /, the line's other
+    text as it is; and the parts of the line that the paths and their
+    separators take, (start, end)."""
     alt, out, pos, parts = _paths_alt(paths, ctx), [], 0, []
     for m in rx.finditer(line):
         if m.start() < pos:
@@ -2348,7 +2348,7 @@ def _path_line(line, rx, paths, ctx):
         if sep:
             j += sep.end()
             rest = re.match('[^%s]*' % _PATH_END, line[j:]).group(0)
-            out.append('(?:%s%s|(?![\\\\/]|[A-Za-z]:)[^%s]*%s)?' % (alt, _PATH_SEP, _PATH_END, _PATH_SEP))
+            out.append('(?:%s%s|(?:\\.\\.?%s)+|~%s)?' % (alt, _PATH_SEP, _PATH_SEP, _PATH_SEP))
             out.append(''.join(_PATH_SEP if k % 2 else re.escape(part)
                                for k, part in enumerate(re.split(r'(\\\\|[\\/])', rest))))
             j += len(rest)

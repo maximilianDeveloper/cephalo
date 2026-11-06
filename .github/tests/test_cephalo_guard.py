@@ -1139,6 +1139,7 @@ class TestR5AnswerComparison(Base):
         rep = verifier_report()
         for absolute, relative in (('/home/u/Zotero/storage/keller2018.pdf', '../Zotero/storage/keller2018.pdf'),
                                    ('/home/u/Zotero/storage/keller2018.pdf', '~/Zotero/storage/keller2018.pdf'),
+                                   ('/home/u/Zotero/storage/keller2018.pdf', '../../Zotero/storage/keller2018.pdf'),
                                    (self.root, '.'),
                                    (self.root + '/workspace/sources/a.pdf', 'workspace/sources/a.pdf'),
                                    (self.root + '/workspace/sources/a.pdf', './workspace/sources/a.pdf')):
@@ -1153,8 +1154,10 @@ class TestR5AnswerComparison(Base):
         # the rest of the path stays: a.pdf is not the project-relative form of .../workspace/sources/a.pdf
         r = self.round(rep + 'Quelle: %s/workspace/sources/a.pdf\n' % self.root, saved=rep + 'Quelle: a.pdf\n')
         self.assertIn('it differs; the first difference: line 38 of the saved file: \u00abQuelle: a.pdf\u00bb', r)
-        # nor is another absolute path in its place
-        for other in ('/home/other/workspace/sources/a.pdf', 'C:/workspace/sources/a.pdf'):
+        # nor is another absolute path in its place, or a folder or text before the rest of the path
+        for other in ('/home/other/workspace/sources/a.pdf', 'C:/workspace/sources/a.pdf',
+                      '02_Literature/workspace/sources/a.pdf', 'S.11/workspace/sources/a.pdf',
+                      '.../workspace/sources/a.pdf', '~/../workspace/sources/a.pdf'):
             with self.subTest(other=other):
                 r = self.round(rep + 'Quelle: %s/workspace/sources/a.pdf\n' % self.root,
                                saved=rep + 'Quelle: %s\n' % other)
