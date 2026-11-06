@@ -196,11 +196,15 @@ phases:
           the user, not chosen: before a build that first sets one, list for
           the user each position, size, colour or label form that neither
           the template nor styleguide.md gives (where the short citations
-          stand, the size of a chart, a source line under it, how its data
-          labels read), each with a proposal, and build after the answer.
-          Each answer goes into the decision log of workspace/state.md, one
-          entry per value with the user's words, and the build takes it from
-          there; it is no styleguide entry. After a revision of slide text or speaker
+          stand, the size and position of a chart, the slide layout of the
+          template that each kind of slide uses, a source line under a chart,
+          how its data labels read), each with a proposal, and build after
+          the answer. Each answer goes into the decision log of
+          workspace/state.md, one entry per value with the user's words, and
+          the build takes it from there; it is no styleguide entry. The deck
+          script sets no such value that neither the template, styleguide.md
+          nor the decision log gives: a value it needs beyond them is asked
+          first, as above. After a revision of slide text or speaker
           notes, the deck is built again the same way before the next check.
           When the writer's answer comes in, a line in workspace/state.md
           before a question to the user or the next agent call
