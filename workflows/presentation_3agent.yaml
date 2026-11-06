@@ -293,6 +293,12 @@ phases:
           without a companion: slides_format_round_<n>.md; <n>: 1, then +1
           after each fix).
         note: |
+          Before the first format-verifier pass, Claude asks the user every
+          open ❓ [format] entry of styleguide.md that step 1 did not settle,
+          those of the companion's layout too, in one message, each with a
+          proposal where the guidelines suggest one, records the answers
+          (style-resolver.md, "Recording answers to open questions") and
+          starts the pass after them; F.1 asks only what comes up later.
           Claude in the main chat runs this step (main_session). The task
           prompt names the PPTX, its PDF export (three_way_check), the
           companion and the report file, from round 2 on also the previous
