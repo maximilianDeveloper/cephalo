@@ -471,6 +471,143 @@ class TestS4PowerShellRedirect(Base):
                 self.passes(ps(cmd))
 
 
+class TestS6StateCheckPipe(Base):
+    RUN = 'python3 scripts/state_check.py workspace/state.md workspace/output/chapters/'
+    DENIED = [
+        # the trial run's forms
+        RUN + ' | tail -5',
+        RUN + ' 2>&1 | grep -E "Summary|Exit code"',
+        'py scripts/state_check.py workspace/state.md workspace/output/chapters/ 2>&1 | tail -20',
+        RUN + ' |& tail', RUN + ' | head -40; echo "exit=$?"',
+        'cd /home/u/proj && py -3 scripts/state_check.py workspace/state.md | tail -3',
+        'cd scripts && python3 state_check.py ../workspace/state.md | tail',
+        'env PYTHONIOENCODING=utf-8 python3 scripts/state_check.py workspace/state.md | tail',
+        'timeout 60 python3 -X utf8 scripts/state_check.py workspace/state.md | cat',
+        './scripts/state_check.py workspace/state.md | tail',
+        'python3 /home/u/proj/scripts/state_check.py workspace/state.md | tee _scratch/orchestrator/s.txt',
+        '{ python3 scripts/state_check.py workspace/state.md; echo "exit=$?"; } | tail -5',
+        '(python3 scripts/state_check.py workspace/state.md) 2>&1 | tail -5',
+        'bash -c "python3 scripts/state_check.py workspace/state.md | tail -5"',
+        # its output thrown away, as in a chat of the first presentation trial run
+        RUN + ' > /dev/null; echo $?', RUN + ' >/dev/null 2>&1; echo "exit=$?"', RUN + ' &> /dev/null',
+        RUN + ' 1>/dev/null', 'py scripts/state_check.py workspace/state.md > NUL',
+    ]
+    PASSING = [
+        RUN, RUN + '; echo "exit=$?"', RUN + ' && echo ok || echo failed', RUN + ' 2>&1',
+        RUN + ' > _scratch/orchestrator/state_check.txt 2>&1; echo $?',
+        RUN + ' > _scratch/orchestrator/s.txt | cat',            # stdout goes to the file, not into the pipe
+        RUN + ' 2>/dev/null', RUN + ' 2>/dev/null; echo $?',     # only its error output thrown away
+        'python3 scripts/state_check.py --help | head', 'py scripts/state_check.py -h | head -5',
+        'cat scripts/state_check.py | head', 'grep -n Exit scripts/state_check.py | head',
+        'python3 scripts/verbatim_check.py --words workspace/output/chapters/ch_1.md | tail -3',
+        'git diff scripts/state_check.py | head', 'python3 scripts/state_checks.py a | tail',
+        'cat workspace/state.md | python3 scripts/state_check.py workspace/state.md',
+    ]
+
+    def test_denied(self):
+        for cmd in self.DENIED:
+            with self.subTest(cmd=cmd):
+                self.assertEqual(rules_of(bash(cmd)), {'S6'}, cmd)
+        out = bash(self.RUN + ' 2>&1 | grep -E "Summary|Exit code"')
+        reason = out['hookSpecificOutput']['permissionDecisionReason']
+        for part in ('cephalo guard S6: not run.', "(| grep -E 'Summary|Exit code')", 'without a pipe',
+                     '.claude/agents/orchestrator.md, "Chat closure ritual", item 1', 'docs/scripts.md, "state_check.py"',
+                     'exit code', 'whole output'):
+            self.assertIn(part, reason)
+
+    def test_denied_on_windows_and_for_agents(self):
+        for cmd in ('py scripts/state_check.py workspace/state.md workspace/output/chapters/ | tail -5',
+                    'py "C:\\Home\\u\\Projekt Arbeit\\scripts\\state_check.py" workspace\\state.md | tail',
+                    'py "/c/Home/u/Projekt Arbeit/scripts/STATE_CHECK.PY" workspace/state.md | tail',
+                    'py.exe scripts/state_check.py workspace/state.md 2>&1 | grep Exit',
+                    'cmd /c "py scripts\\state_check.py workspace\\state.md | more"'):
+            with self.subTest(cmd=cmd):
+                self.assertEqual(rules_of(bash(cmd, plat='windows')), {'S6'}, cmd)
+        for cmd in ('py scripts\\state_check.py workspace\\state.md | Select-Object -Last 5',
+                    'py scripts/state_check.py workspace/state.md 2>&1 | Select-String Exit'):
+            with self.subTest(cmd=cmd):
+                self.assertEqual(rules_of(ps(cmd)), {'S6'}, cmd)
+        self.passes(ps('py scripts\\state_check.py workspace\\state.md workspace\\output\\chapters\\'))
+        self.assertEqual(rules_of(ps('py scripts\\state_check.py workspace\\state.md | Out-Null')), {'S6'})
+        self.assertIn('S6', rules_of(ps('py scripts\\state_check.py workspace\\state.md > $null')))
+        out = bash(self.RUN + ' > /dev/null; echo $?')
+        self.assertIn('its output goes to /dev/null', out['hookSpecificOutput']['permissionDecisionReason'])
+        for agent in ('orchestrator', 'orchestrator-longform', 'writer-agent', 'format-verifier'):
+            with self.subTest(agent=agent):
+                out = bash(self.RUN + ' | tail -5', agent=agent)
+                self.assertEqual(rules_of(out), {'S6'})
+                self.assertIn('.claude/agents/orchestrator.md', out['hookSpecificOutput']['permissionDecisionReason'])
+
+    def test_passing(self):
+        for cmd in self.PASSING:
+            with self.subTest(cmd=cmd):
+                self.assertFalse(rules_of(bash(cmd)) & {'S6'}, cmd)
+                self.passes(bash(cmd))
+
+    def test_switch(self):
+        cmd = self.RUN + ' | tail -5'
+        self.passes(bash(cmd, off='S6'))
+        self.passes(bash(cmd, off='s1, s6'))
+        self.deny(bash(cmd, off='S1'), 'S6')
+
+
+class TestCompoundCommands(Base):
+    """A command after a reserved word (if/then/else/elif/do/while/until/!) is checked as any other, and a
+    piped or redirected compound command (if ... fi, for/while ... done, case ... esac) as a { } group."""
+    DENIED = [
+        ('for f in a b; do python3 scripts/state_check.py $f | tail -3; done', 'S6'),
+        ('if true; then python3 scripts/state_check.py x | tail; fi', 'S6'),
+        ('for f in a b; do python3 scripts/state_check.py x; done | tail', 'S6'),
+        ('if true; then python3 scripts/state_check.py x; fi 2>&1 | tail', 'S6'),
+        ('while true; do\n  python3 scripts/state_check.py x\n  break\ndone | tail', 'S6'),
+        ('if a; then for x in y; do python3 scripts/state_check.py x; done; fi | tail', 'S6'),
+        ('case $x in (a|b) python3 scripts/state_check.py x ;; esac | tail', 'S6'),
+        ('! python3 scripts/state_check.py x | tail', 'S6'),
+        ("for f in scripts/state_check.py; do sed -i 's/a/b/' scripts/state_check.py; done", 'S5'),
+        ('if true; then rm -f .claude/settings.json; fi', 'S5'),
+        ('! cp x .claude/settings.json', 'S5'),
+        ('if true; then git checkout -- scripts/; fi', 'S5'),
+        ('while false; do mv scripts/a.py scripts/b.py; done', 'S5'),
+        ('if x; then y; elif z; then rm .claude/settings.json; else w; fi', 'S5'),
+        ('until false; do rm scripts/cephalo_guard.py; done', 'S5'),
+        ('case "$x" in a) rm scripts/x.py ;; esac', 'S5'),
+        ('( if true; then cp x scripts/a; fi )', 'S5'),
+        ('if true; then python3 -c "open(\'notes.md\', \'w\').write(\'x\')"; fi', 'S1'),
+        ('for f in a; do python3 -c "open(\'notes.md\', \'w\').write(\'x\')"; done', 'S1'),
+        ('for f in a b; do echo "$f"; done > list.md', 'S1'),
+        ('if true; then { echo a; } > f.md; fi', 'S1'),
+        ('if true; then python3 x.py || py x.py; fi', 'S3'),
+    ]
+    PASSING = [
+        'if [ -f x ]; then echo ok; fi', 'for f in a b; do wc -w "$f"; done', 'for f in a b; do wc -w "$f"; done | sort',
+        'while read -r l; do echo "$l"; done < in.txt', 'until [ -f x ]; do sleep 1; done',
+        'case "$OS" in Windows_NT) py x.py ;; *) python3 x.py ;; esac', 'case "$x" in rm) echo ok ;; esac',
+        'echo done; echo fi; echo then', 'git commit -m "if then fi"', 'if ! grep -q x f; then echo missing; fi',
+        'for f in workspace/output/chapters/*.md; do python3 scripts/verbatim_check.py --words "$f"; done | tail -5',
+        'for f in a b; do python3 scripts/state_check.py workspace/state.md; done',
+        'if true; then python3 scripts/state_check.py x > _scratch/orchestrator/s.txt; fi', 'fi | tail', '! true',
+    ]
+
+    def test_denied(self):
+        for cmd, rule in self.DENIED:
+            with self.subTest(cmd=cmd):
+                self.assertIn(rule, rules_of(bash(cmd)), cmd)
+
+    def test_passing(self):
+        for cmd in self.PASSING:
+            with self.subTest(cmd=cmd):
+                self.passes(bash(cmd))
+
+    def test_parse(self):
+        segs, pipes, _ = g.parse('if true; then rm x; fi | tail')
+        self.assertEqual([sg.words for sg in segs], [['true'], ['rm', 'x'], [], ['tail']])
+        self.assertEqual((segs[2].group, segs[2].sep), ((0, 2), '|'))
+        segs, _, _ = g.parse('case $x in\n  a|b) ls ;;\n  (c) cat f ;;\nesac')
+        self.assertEqual([sg.words for sg in segs if sg.words], [['ls'], ['cat', 'f']])
+        segs, _, _ = g.parse('for f in scripts/*.py; do wc -l "$f"; done')
+        self.assertEqual([sg.words for sg in segs if sg.words], [['wc', '-l', '$f']])
+
+
 # ------------------------------------------------------------------ R6, R5
 
 
@@ -559,6 +696,266 @@ class TestReports(Base):
         self.passes(run('Write', {'file_path': p, 'content': 'x'}, event='PostToolUse', root=self.root))
         self.passes(run('Edit', {'file_path': os.path.join(self.ver, 'ch_1_round_1.md'), 'old_string': 'a',
                                  'new_string': 'b'}, event='PostToolUse', root=self.root))
+
+
+def tr_call(name, tin, tid, side=False, ts=None):
+    """A transcript entry with one tool call, as Claude Code writes it (one compact JSON object per line)."""
+    e = {'parentUuid': None, 'isSidechain': side, 'userType': 'external', 'cwd': '/x', 'sessionId': 'sess-1',
+         'type': 'assistant', 'uuid': 'u-' + tid,
+         'message': {'id': 'msg-' + tid, 'type': 'message', 'role': 'assistant', 'model': 'm',
+                     'content': [{'type': 'tool_use', 'id': tid, 'name': name, 'input': tin,
+                                  'caller': {'type': 'direct'}}]}}
+    if ts is not None:
+        e['timestamp'] = ts
+    return e
+
+
+def tr_time(seconds):
+    """A transcript timestamp, as Claude Code writes it (UTC, milliseconds, Z)."""
+    import datetime
+    t = datetime.datetime.fromtimestamp(seconds, datetime.timezone.utc)
+    return t.strftime('%Y-%m-%dT%H:%M:%S.') + '%03dZ' % (t.microsecond // 1000)
+
+
+def tr_result(tid, error=False, side=False):
+    return {'parentUuid': 'u-' + tid, 'isSidechain': side, 'type': 'user', 'uuid': 'r-' + tid,
+            'message': {'role': 'user', 'content': [{'tool_use_id': tid, 'type': 'tool_result',
+                                                     'content': 'error' if error else 'ok', 'is_error': error}]}}
+
+
+def tr_text(text):
+    return {'isSidechain': False, 'type': 'assistant', 'message': {'role': 'assistant',
+                                                                    'content': [{'type': 'text', 'text': text}]}}
+
+
+class TestR5BeforeAgentCall(Base):
+    """A report the main chat saved is read back whole before its next agent call
+    (the session transcript shows its calls)."""
+
+    def setUp(self):
+        self.root = tempfile.mkdtemp(prefix='guard-r5a-')
+        self.ver = os.path.join(self.root, 'workspace', 'output', 'verification')
+        os.makedirs(self.ver)
+        self.rep = os.path.join(self.ver, 'ch_1_einleitung_round_1.md')
+        Path(self.rep).write_text(''.join('| %d | Satz | \u2705 |\n' % i for i in range(1, 412)) + 'Gesamt: 411\n\n',
+                                  encoding='utf-8')
+        self.tr = os.path.join(tempfile.mkdtemp(prefix='guard-r5a-tr-'), 'sess-1.jsonl')
+        self.n = 0
+
+    def tearDown(self):
+        shutil.rmtree(self.root)
+        shutil.rmtree(os.path.dirname(self.tr))
+
+    def tid(self):
+        self.n += 1
+        return 'toolu_%03d' % self.n
+
+    def write(self, path=None, side=False, error=False, ts=None):
+        t = self.tid()
+        return [tr_call('Write', {'file_path': path or self.rep, 'content': '| 1 |'}, t, side, ts),
+                tr_result(t, error, side)]
+
+    def read(self, path=None, side=False, error=False, **span):
+        t = self.tid()
+        tin = {'file_path': path or self.rep}
+        tin.update(span)
+        return [tr_call('Read', tin, t, side), tr_result(t, error, side)]
+
+    def save(self, entries, tail=''):
+        with open(self.tr, 'w', encoding='utf-8', newline='\n') as fh:
+            for e in entries:
+                fh.write((e if isinstance(e, str) else json.dumps(e, separators=(',', ':'), ensure_ascii=False)) + '\n')
+            fh.write(tail)
+
+    def agent(self, entries, tool='Agent', agent=None, transcript=None, plat='posix', **kw):
+        if entries is not None:
+            self.save(entries)
+        tin = {'description': 'Kapitel 1', 'prompt': 'Revise ch_1.md.', 'subagent_type': 'writer-agent'}
+        if tool == 'SendMessage':
+            tin = {'to': 'a8', 'message': 'Weiter.'}
+        d = payload(tool, tin, agent=agent, cwd=self.root, plat=plat)
+        d['transcript_path'] = self.tr if transcript is None else transcript
+        return g.evaluate(d, env(plat, root=self.root, **kw))
+
+    def reason(self, out):
+        return out['hookSpecificOutput']['permissionDecisionReason']
+
+    def test_whole_read_passes(self):
+        self.passes(self.agent(self.write() + self.read()))
+        self.passes(self.agent(self.write() + self.read(offset=1, limit=412)))   # the blank last line aside
+        self.passes(self.agent(self.write() + self.read(offset=0, limit=2000)))
+        # in parts that together cover every line (a report too large for one Read)
+        self.passes(self.agent(self.write() + self.read(offset=1, limit=200) + self.read(offset=201)))
+        self.passes(self.agent(self.write() + self.read(offset=150) + self.read(limit=160)))
+        # the path spelled another way
+        self.passes(self.agent(self.write() + self.read(path=self.rep.replace('/workspace/', '/workspace//'))))
+
+    def test_partial_read_denied(self):
+        out = self.agent(self.write() + self.read(offset=380))
+        self.deny(out, 'R5')
+        r = self.reason(out)
+        for part in ('cephalo guard R5: not run.', 'workspace/output/verification/ch_1_einleitung_round_1.md was saved',
+                     'not read back whole since (read: lines 380\u2013412 of 412)', 'no offset or limit',
+                     'Save every source-verifier report as a file', '.claude/agents/orchestrator.md',
+                     'then call the agent again'):
+            self.assertIn(part, r)
+        self.assertNotIn(self.root, r)
+        r = self.reason(self.agent(self.write() + self.read(offset=90, limit=70) + self.read(offset=225)))
+        self.assertIn('(read: lines 90\u2013159, 225\u2013412 of 412)', r)
+        r = self.reason(self.agent(self.write() + self.read(offset=1, limit=411)))
+        self.assertIn('(read: lines 1\u2013411 of 412)', r)
+        r = self.reason(self.agent(self.write() + self.read(offset=900)))
+        self.assertIn('(read: none of its 412 lines)', r)
+
+    def test_not_read_denied(self):
+        out = self.agent(self.write())
+        self.deny(out, 'R5')
+        self.assertIn('was saved, but not read back whole since (not read)', self.reason(out))
+        for tool in ('Task', 'SendMessage'):
+            with self.subTest(tool=tool):
+                self.deny(self.agent(self.write(), tool=tool), 'R5')
+        # read before the Write, or a Read that failed (a file over the Read tool's limit), does not count
+        self.deny(self.agent(self.read() + self.write()), 'R5')
+        self.deny(self.agent(self.write() + self.read(error=True)), 'R5')
+        # a long-form orchestrator chat (claude --agent orchestrator-longform): its definition
+        d = payload('Agent', {'prompt': 'x', 'subagent_type': 'writer-agent'}, cwd=self.root)
+        d['agent_type'] = 'orchestrator-longform'
+        d['transcript_path'] = self.tr
+        out = g.evaluate(d, env(root=self.root))
+        self.deny(out, 'R5')
+        self.assertIn('.claude/agents/orchestrator-longform.md', self.reason(out))
+
+    def test_failed_write(self):
+        import time
+        now = time.time()
+        fmt = os.path.join(self.ver, 'document_format_round_1.md')
+        Path(fmt).write_text('# Format\nStatus: ok\n', encoding='utf-8')
+        for p in (fmt, self.rep):
+            os.utime(p, (now - 100, now - 100))         # written before the calls below
+        # the coordinator's Write over the format-verifier's report, denied by R6: nothing was saved
+        self.passes(self.agent(self.write(fmt, error=True, ts=tr_time(now))))
+        self.passes(self.agent(self.write(fmt, error=True)))                # no time in the entry: passes
+        # a second Write of the report, rejected in the permission prompt after the read-back
+        self.passes(self.agent(self.write(ts=tr_time(now - 200)) + self.read() +
+                               self.write(error=True, ts=tr_time(now))))
+        # a Write with an error result whose file changed after it (written all the same): still read back
+        os.utime(self.rep, (now, now))
+        self.deny(self.agent(self.write(error=True, ts=tr_time(now - 1))), 'R5')
+        self.deny(self.agent(self.write(ts=tr_time(now - 200)) + self.read() +
+                             self.write(error=True, ts=tr_time(now))), 'R5')
+        self.passes(self.agent(self.write(error=True, ts='not a time')))
+        self.passes(self.agent(self.write(error=True, ts='2026-11-01T15:22:33')))   # no zone: unknown
+
+    def test_read_through_a_link(self):
+        # the same report by another spelling, a link to a folder above it: the same file
+        link = os.path.join(os.path.dirname(self.tr), 'link')
+        os.symlink(self.root, link)
+        via = self.rep.replace(self.root, link)
+        self.passes(self.agent(self.write() + self.read(path=via)))
+        self.deny(self.agent(self.write() + self.read(path=via, offset=300)), 'R5')
+        self.deny(self.agent(self.write(via) + self.read(offset=300)), 'R5')
+        self.passes(self.agent(self.write(via) + self.read()))
+        # another file of the same name is another report
+        other = os.path.join(self.root, 'copy')
+        os.makedirs(other)
+        shutil.copy(self.rep, other)
+        self.deny(self.agent(self.write() + self.read(path=os.path.join(other, os.path.basename(self.rep)))), 'R5')
+
+    def test_written_again_after_the_read(self):
+        self.deny(self.agent(self.write() + self.read() + self.write()), 'R5')
+        self.passes(self.agent(self.write() + self.read() + self.write() + self.read()))
+        # each report on its own
+        other = os.path.join(self.ver, 'extracts_round_2.md')
+        Path(other).write_text('| a |\n', encoding='utf-8')
+        out = self.agent(self.write() + self.write(other) + self.read())
+        self.deny(out, 'R5')
+        self.assertIn('extracts_round_2.md was saved', self.reason(out))
+        self.assertNotIn('einleitung', self.reason(out))
+        out = self.agent(self.write() + self.write(other))
+        self.assertIn('each of these files whole', self.reason(out))
+
+    def test_sidechain_entries_ignored(self):
+        self.passes(self.agent(self.write(side=True)))                 # a subagent's Write
+        self.deny(self.agent(self.write() + self.read(side=True)), 'R5')   # a subagent's Read
+        self.passes(self.agent(self.write() + self.write(side=True) + self.read()))
+
+    def test_unreadable_transcript_passes(self):
+        self.passes(self.agent(None, transcript=os.path.join(self.root, 'missing.jsonl')))
+        self.passes(self.agent(None, transcript=''))
+        self.passes(self.agent(None, transcript=self.root))             # a folder
+        for garbage in (['not json', '{"type": "assistant", "message": ', '[1, 2]', '{"message": "x"}',
+                         '{"type":"assistant","message":{"content":"text"}}',
+                         '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Write","input":"x"}]}}',
+                         '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Write",'
+                         '"input":{"file_path":5}}]}}'],):
+            self.passes(self.agent(garbage))
+        with open(self.tr, 'wb') as fh:
+            fh.write(b'\xff\xfe\x00 "name":"Write" \x80\n' * 50)
+        self.passes(self.agent(None))
+        # a last line still being written (no line end yet) is left out
+        self.save([tr_text('x')], tail=json.dumps(self.write()[0], separators=(',', ':')))
+        self.passes(self.agent(None))
+        d = payload('Agent', {'prompt': 'x'}, cwd=self.root)
+        del d['transcript_path']
+        self.passes(g.evaluate(d, env(root=self.root)))
+        # the report is gone: nothing to read back
+        entries = self.write()
+        os.remove(self.rep)
+        self.passes(self.agent(entries))
+
+    def test_only_the_main_chat_and_switch(self):
+        entries = self.write()
+        self.passes(self.agent(entries, agent='orchestrator'))       # a subagent: its calls are elsewhere
+        self.passes(self.agent(entries, agent='writer-agent'))
+        self.passes(self.agent(entries, off='R5'))
+        self.passes(self.agent(entries, off='all'))
+        self.deny(self.agent(entries, off='R6'), 'R5')
+
+    def test_format_report_fallback(self):
+        fmt = os.path.join(self.ver, 'document_format_round_1.md')
+        Path(fmt).write_text('# Format\nStatus: \u2705\n', encoding='utf-8')
+        out = self.agent(self.write(fmt))
+        self.deny(out, 'R6')
+        r = self.reason(out)
+        for part in ('cephalo guard R6: not run.', 'document_format_round_1.md was saved as the format-verifier\'s '
+                     'answer, but not read back whole since (not read)', 'The format-verifier writes its report itself'):
+            self.assertIn(part, r)
+        self.passes(self.agent(self.write(fmt) + self.read(fmt)))
+        self.deny(self.agent(self.write(fmt) + self.read(fmt, limit=1)), 'R6')
+        self.passes(self.agent(self.write(fmt), off='R6'))
+        self.deny(self.agent(self.write(fmt), off='R5'), 'R6')
+        # other files the main chat writes are not reports
+        for name in ('ch_1_round_1_verbatim.txt', 'notes.md'):
+            p = os.path.join(self.ver, name)
+            Path(p).write_text('x\n', encoding='utf-8')
+            self.passes(self.agent(self.write(p)))
+        both = self.agent(self.write(fmt) + self.write())
+        self.assertEqual(rules_of(both), {'R5', 'R6'})
+
+    def test_windows_letter_case(self):
+        out = self.agent(self.write() + self.read(path=self.rep.upper()), plat='windows')
+        self.passes(out)
+        self.deny(self.agent(self.write() + self.read(path=self.rep.upper(), offset=2), plat='windows'), 'R5')
+
+    def test_only_the_end_of_a_long_transcript(self):
+        filler = [tr_text('x' * 1000) for _ in range(40)]
+        old, g.MAX_TRANSCRIPT = g.MAX_TRANSCRIPT, 1 << 14
+        try:
+            self.passes(self.agent(self.write() + filler))              # its Write is before the part read
+            self.deny(self.agent(filler + self.write()), 'R5')
+            self.passes(self.agent(filler + self.write() + filler + self.read()))
+        finally:
+            g.MAX_TRANSCRIPT = old
+
+    def test_over_the_deadline_passes_with_the_note(self):
+        old = g.DEADLINE_S
+        g.DEADLINE_S = -1.0
+        try:
+            out = self.agent(self.write() + [tr_text('x')] * 300, state=tempfile.mkdtemp(prefix='guard-r5a-note-'))
+        finally:
+            g.DEADLINE_S = old
+        self.assertEqual(list(out), ['systemMessage'])
+        self.assertIn('session transcript', out['systemMessage'])
 
 
 # ------------------------------------------------------------------ P1
@@ -726,11 +1123,18 @@ class TestRobustness(Base):
         Path(fmt).write_text('x', encoding='utf-8')
         e = {'CLAUDE_PROJECT_DIR': root, 'CEPHALO_GUARD_OS': 'posix', 'HOME': '/home/u',
              'CEPHALO_GUARD_STATE_DIR': tempfile.mkdtemp(prefix='guard-e2e-state-'), 'CEPHALO_GUARD_ON': 'P1'}
+        unread = payload('Agent', {'prompt': 'Revise ch_1.md.', 'subagent_type': 'writer-agent'}, cwd=root)
+        unread['transcript_path'] = os.path.join(root, 'sess.jsonl')
+        Path(unread['transcript_path']).write_text(json.dumps(tr_call('Write', {'file_path': rep, 'content': 'x'}, 't1'),
+                                                              separators=(',', ':')) + '\n', encoding='utf-8')
         cases = [
+            (unread, 'deny', 'R5'),
             (payload('Bash', {'command': 'py -c "open(\'a.md\',\'w\').write(\'x\')"'}, cwd=root), 'deny', 'S1'),
             (payload('Bash', {'command': 'pandoc a.md -o /tmp/a.docx'}, cwd=root), 'deny', 'S2'),
             (payload('Bash', {'command': 'python3 scripts/a.py || py scripts/a.py'}, cwd=root), 'deny', 'S3'),
             (payload('PowerShell', {'command': 'py scripts/a.py > out.txt'}, cwd=root), 'deny', 'S4'),
+            (payload('Bash', {'command': 'py scripts/state_check.py workspace/state.md | tail -5'}, cwd=root),
+             'deny', 'S6'),
             (payload('Edit', {'file_path': fmt, 'old_string': 'x', 'new_string': 'y'}, cwd=root), 'deny', 'R6'),
             (payload('Agent', {'prompt': 'Prüfe nur Satz 2.', 'subagent_type': 'source-verifier'}, cwd=root),
              'deny', 'P1'),
@@ -947,6 +1351,287 @@ class TestSettingsCommand(Base):
         self.assertTrue(Path(log).read_text(encoding='ascii').startswith('-3 -I -S '))
 
 
+def _shells():
+    """The shells cephalo_guard.sh is tested under: sh, and dash and bash (as sh, in POSIX mode, as Git Bash
+    runs it) where they are installed."""
+    out, seen = [('sh', '/bin/sh')], {os.path.realpath('/bin/sh')}
+    for name in ('dash', 'bash'):
+        p = shutil.which(name)
+        if p and os.path.realpath(p) not in seen:          # sh is dash on Debian and Ubuntu
+            seen.add(os.path.realpath(p))
+            out.append((name, p))
+    return out
+
+
+class TestFastPath(Base):
+    """cephalo_guard.sh answers an Edit, MultiEdit or Write of a harmless file inside the project itself,
+    without starting Python; every other call reaches the guard and gets the answer it got before."""
+
+    def setUp(self):
+        self.top = tempfile.mkdtemp(prefix='guard-fast-')
+        self.proj = os.path.join(self.top, 'Projekt \u00dcbung')
+        for d in ('scripts', '.claude', 'workspace/output/chapters', 'workspace/output/verification'):
+            os.makedirs(os.path.join(self.proj, d))
+        shutil.copy(str(GUARD), os.path.join(self.proj, 'scripts', 'cephalo_guard.py'))
+        shutil.copy(str(WRAPPER), os.path.join(self.proj, 'scripts', 'cephalo_guard.sh'))
+        self.cmd = json.loads(SETTINGS.read_text(encoding='utf-8'))['hooks']['PreToolUse'][0]['hooks'][0]['command']
+        self.log = os.path.join(self.top, 'started.log')
+        self.state = tempfile.mkdtemp(prefix='guard-fast-state-')
+        self.bins = {}
+        for name, shell in _shells():
+            b = os.path.join(self.top, 'bin-' + name)
+            os.makedirs(b)
+            Path(b, 'python3').write_text('#!/bin/sh\necho started >> "%s"\nexec "%s" "$@"\n'
+                                          % (self.log, sys.executable), encoding='ascii')
+            os.chmod(os.path.join(b, 'python3'), 0o755)
+            os.symlink(shell, os.path.join(b, 'sh'))        # the hook command's 'sh' (bash as sh: POSIX mode)
+            self.bins[name] = b
+
+    def tearDown(self):
+        shutil.rmtree(self.top)
+        shutil.rmtree(self.state)
+
+    def env(self, project=None, extra=None):
+        e = {'HOME': '/home/u', 'CLAUDE_PROJECT_DIR': self.proj if project is None else project,
+             'CEPHALO_GUARD_STATE_DIR': self.state}
+        e.update({k: os.environ[k] for k in ('LANG', 'LC_ALL') if k in os.environ})   # a locale of this machine
+        e.update(extra or {})
+        return e
+
+    def hook(self, raw, shell, project=None, extra=None):
+        """(output, Python started) of the hook command, run as Claude Code runs it (sh -c); with another
+        project folder than the one that holds the scripts, the wrapper as the hook command runs it."""
+        if os.path.exists(self.log):
+            os.remove(self.log)
+        e = self.env(project, extra)
+        e['PATH'] = self.bins[shell] + ':/usr/bin:/bin'
+        args = ['/bin/sh', '-c', self.cmd] if project is None else \
+            ['sh', os.path.join(self.proj, 'scripts', 'cephalo_guard.sh')]
+        p = subprocess.run(args, input=raw, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=e, timeout=30,
+                           cwd=self.proj, executable=os.path.join(self.bins[shell], 'sh') if project is not None
+                           else None)
+        self.assertEqual((p.returncode, p.stderr), (0, b''))
+        out = p.stdout.decode('ascii')
+        if out.strip():
+            check_shape(json.loads(out))
+        return out, os.path.exists(self.log)
+
+    def direct(self, raw, project=None, extra=None):
+        """The guard's own answer, Python run on the input directly (as before the fast path)."""
+        e = dict(os.environ)
+        e.update(self.env(project, extra))
+        p = subprocess.run([sys.executable, '-I', '-S', str(GUARD)], input=raw, stdout=subprocess.PIPE,
+                           stderr=subprocess.PIPE, env=e, timeout=30, cwd=self.proj)
+        return p.stdout.decode('ascii')
+
+    def raw(self, tool, tin, event='PreToolUse', compact=True, **extra):
+        d = payload(tool, tin, event=event, cwd=self.proj)
+        d.update(extra)
+        return json.dumps(d, ensure_ascii=False, separators=(',', ':') if compact else None).encode('utf-8')
+
+    def p(self, rel):
+        return os.path.join(self.proj, rel)
+
+    def harmless(self):
+        ch = self.p('workspace/output/chapters/ch_1_einleitung.md')
+        return [
+            ('Edit', self.raw('Edit', {'file_path': ch, 'old_string': 'a', 'new_string': 'b', 'replace_all': False})),
+            ('Write', self.raw('Write', {'file_path': ch, 'content': 'Er sagte "ja" \u201ex\u201c.\n' * 3000})),
+            ('Write PostToolUse', self.raw('Write', {'file_path': ch, 'content': 'x'}, event='PostToolUse')),
+            ('MultiEdit', self.raw('MultiEdit', {'file_path': self.p('workspace/state.md'),
+                                                 'edits': [{'old_string': 'a', 'new_string': 'b'}]})),
+            ('content first', self.raw('Write', {'content': 'x "y" ' * 50, 'file_path': ch})),
+            ('subagent', self.raw('Edit', {'file_path': ch, 'old_string': 'a', 'new_string': 'b'},
+                                  agent_id='a01', agent_type='writer-agent')),
+            ('_scratch', self.raw('Write', {'file_path': self.p('_scratch/orchestrator/n.md'), 'content': 'x'})),
+            ('data script', self.raw('Write', {'file_path': self.p('workspace/data/scripts/fit.py'), 'content': 'x'})),
+        ]
+
+    def excluded(self):
+        p, ver = self.p, self.p('workspace/output/verification/')
+        fmt = ver + 'document_format_round_1.md'
+        Path(fmt).write_text('x', encoding='utf-8')
+        e = lambda path, **k: self.raw('Edit', {'file_path': path, 'old_string': 'a', 'new_string': 'b'}, **k)
+        two = (b'{"session_id":"s","cwd":"%s","hook_event_name":"PreToolUse","tool_name":"Write","tool_input":'
+               b'{"file_path":"%s","file_path":"%s","content":"x"}}'
+               % (self.proj.encode(), p('a.md').encode(), p('scripts/x.py').encode()))
+        return [
+            ('outside', e(os.path.join(self.top, 'x.md'))),
+            ('tmp', self.raw('Write', {'file_path': '/tmp/x.md', 'content': 'x'})),
+            ('..', e(p('workspace/../scripts/x.py'))),
+            ('.. harmless', e(p('workspace/../a.md'))),
+            ('/./', e(p('./scripts/x.py').replace('/./', '//./'))),
+            ('scripts', e(p('scripts/cephalo_guard.py'))),
+            ('Scripts', e(p('Scripts/x.py'))),
+            ('scripts folder', e(p('scripts'))),
+            ('.Claude', self.raw('Write', {'file_path': p('.Claude/settings.json'), 'content': '{}'})),
+            ('settings.local', self.raw('Write', {'file_path': p('.claude/settings.local.json'), 'content': '{}'})),
+            ('.claude/agents', e(p('.claude/agents/notes.md'))),
+            ('report Edit', e(ver + 'ch_1_round_1.md')),
+            ('report MultiEdit', self.raw('MultiEdit', {'file_path': ver + 'consistency_final.md',
+                                                        'edits': [{'old_string': 'a', 'new_string': 'b'}]})),
+            ('format report', e(fmt)),
+            ('format Write', self.raw('Write', {'file_path': fmt, 'content': 'x'})),
+            ('format_reports', e(p('08_Formal_Review/format_reports/round_2.md'))),
+            ('second file_path', two),
+            ('spaces', self.raw('Edit', {'file_path': p('a.md'), 'old_string': 'a', 'new_string': 'b'}, compact=False)),
+            ('escape', self.raw('Write', {'file_path': p('Kapitel \u00fc.md'), 'content': 'x'}).replace(
+                '\u00fc'.encode('utf-8'), b'\\u00fc')),
+            ('ends in backslash', e(p('a') + '\\')),
+            ('stream', e(p('a.md:s'))),
+            ('tilde', e(p('A~1/x.md'))),
+            ('scratchpad', e(p('a.md'), scratchpad_dir=p('pad'))),
+            ('Bash', self.raw('Bash', {'command': 'echo x >> workspace/state.md'})),
+            ('NotebookEdit', self.raw('NotebookEdit', {'notebook_path': p('scripts/n.ipynb'), 'new_source': 'x'})),
+            ('Agent', self.raw('Agent', {'prompt': 'x', 'subagent_type': 'writer-agent'})),
+            ('Edit PostToolUse in scripts', e(p('scripts/x.py'), hook_event_name='PostToolUse')),
+            ('no event', e(p('a.md'), hook_event_name='Stop')),
+            ('SendMessage with a nested key', self.raw('SendMessage', {'to': 'a', 'message': {
+                'tool_name': 'Edit', 'file_path': p('a.md')}})),
+        ]
+
+    def test_harmless_calls_start_no_python(self):
+        for shell in self.bins:
+            for name, raw in self.harmless():
+                with self.subTest(shell=shell, call=name):
+                    self.assertEqual(self.direct(raw), '')                      # the guard's answer too
+                    self.assertEqual(self.hook(raw, shell), ('', False))
+
+    def test_other_calls_reach_the_guard_unchanged(self):
+        cases = self.excluded()
+        want = {name: self.direct(raw) for name, raw in cases}
+        for name in ('outside', 'tmp', '..', 'scripts', 'settings.local', 'report Edit', 'report MultiEdit',
+                     'format report', 'format Write', 'format_reports', 'second file_path', 'scripts folder', 'Bash'):
+            self.assertIn('"deny"', want[name], name)                    # each kind of deny the fast path must not hide
+        for shell in self.bins:
+            for name, raw in cases:
+                with self.subTest(shell=shell, call=name):
+                    self.assertEqual(self.hook(raw, shell), (want[name], True))
+
+    def test_project_folder_forms(self):
+        ch = 'workspace/output/chapters/ch_1.md'
+        win = 'C:\\Arbeit\\Projekt \u00dcbung'
+        cases = []
+        for project, path, fast in ((self.proj + '/', self.p(ch), True),
+                                    ('/' + self.proj[1:].replace('/', '//'), self.p(ch), True),
+                                    (self.proj.replace('/', '//'), self.p(ch), False),  # // first: the guard
+                                    (win, win + '\\' + ch.replace('/', '\\'), True),
+                                    (win, win.replace('\\', '/') + '/' + ch, True),
+                                    (win, win.lower() + '\\' + ch, False),     # another letter case: the guard
+                                    (win + '\\scripts', win + '\\scripts\\a.md', False),
+                                    ('workspace', self.p(ch), False), ('', self.p(ch), False),
+                                    (self.proj + ' ', self.p(ch), False), ('/', self.p(ch), False),
+                                    (self.proj, '//' + self.p(ch).lstrip('/'), False)):
+            raw = self.raw('Edit', {'file_path': path, 'old_string': 'a', 'new_string': 'b'})
+            for plat in ('posix', 'windows'):
+                extra = {'CEPHALO_GUARD_OS': plat}
+                want = self.direct(raw, project, extra)
+                if fast:
+                    self.assertEqual(want, '', (project, path, plat))
+                cases.append((project, path, plat, raw, extra, want, fast))
+        for shell in self.bins:
+            for project, path, plat, raw, extra, want, fast in cases:
+                with self.subTest(shell=shell, project=project, path=path, plat=plat):
+                    self.assertEqual(self.hook(raw, shell, project, extra), (want, not fast))
+
+    def test_large_writes(self):
+        # text with many escaped quotes: up to 256 KiB every shell takes the fast path, bash up to 2 MiB (it reads
+        # the path from the input's head), a larger input goes to the guard, and so may a path after the text;
+        # the same answer always, and no check grows with the square of the input
+        import time
+        ch = self.p('workspace/output/chapters/ch_2.md')
+        line = 'Er sagte "ja" \u201ex\u201c (vgl. Keller 2018, S. 44).\n'
+        small, big, huge = ((line * (n // len(line) + 1))[:n] for n in (200000, 1000000, 3000000))
+        self.assertLess(len(self.raw('Write', {'file_path': ch, 'content': small})), 262144)
+        late_scripts = self.raw('Write', {'content': big, 'file_path': self.p('scripts/x.py')})
+        want = self.direct(late_scripts)
+        self.assertIn('cephalo guard S5', want)
+        for shell in self.bins:
+            with self.subTest(shell=shell):
+                t = time.monotonic()
+                self.assertEqual(self.hook(self.raw('Write', {'file_path': ch, 'content': small}), shell), ('', False))
+                for text in (big, huge):
+                    self.assertEqual(self.hook(self.raw('Write', {'file_path': ch, 'content': text}), shell)[0], '')
+                    self.assertEqual(self.hook(self.raw('Write', {'content': text, 'file_path': ch}), shell)[0], '')
+                self.assertEqual(self.hook(self.raw('Write', {'file_path': ch, 'content': huge}), shell), ('', True))
+                self.assertEqual(self.hook(late_scripts, shell), (want, True))
+                self.assertLess(time.monotonic() - t, 20)
+
+    def test_unicode_letters_match_as_in_the_guard(self):
+        # ı, İ, ſ and K are no i, s or k for the report names, in the guard as in the fast path
+        for name in ('verıfication/ch_1_round_1.md', 'verİfication/ch_1_round_1.md',
+                     'verificatıon/consistency_final.md', 'verification/ch_1_round_1.ⅿd'):
+            self.assertIsNone(g._VERIFIER_REPORT.search('/p/' + name))
+        self.assertIsNone(g._FORMAT_REPORT.search('/p/format_reports/round_1.ⅿd'))
+        cases = []
+        for rel in ('workspace/output/verıfication/ch_1_round_1.md', 'workspace/output/verİfication/x_round_1.md',
+                    'workspace/output/verification/ch_1_round_1.md'):
+            for event, tin in (('PreToolUse', {'file_path': self.p(rel), 'old_string': 'a', 'new_string': 'b'}),
+                               ('PostToolUse', {'file_path': self.p(rel), 'content': 'x'})):
+                raw = self.raw('Edit' if event == 'PreToolUse' else 'Write', tin, event=event)
+                for plat in ('posix', 'windows'):
+                    extra = {'CEPHALO_GUARD_OS': plat}
+                    cases.append((rel, event, plat, raw, extra, self.direct(raw, extra=extra)))
+        os.makedirs(self.p('workspace/output/verification'), exist_ok=True)
+        for shell in self.bins:
+            for rel, event, plat, raw, extra, want in cases:
+                with self.subTest(shell=shell, rel=rel, event=event, plat=plat):
+                    out, started = self.hook(raw, shell, extra=extra)
+                    self.assertEqual(out, want)
+                    self.assertEqual(bool(want), 'verı' not in rel and 'verİ' not in rel)
+                    if not started:
+                        self.assertEqual(want, '')
+
+    def test_bash_version_in_the_environment(self):
+        # another shell than bash with BASH_VERSION set (exported by hand) still answers
+        ch = self.p('workspace/output/chapters/ch_1.md')
+        edit = self.raw('Edit', {'file_path': ch, 'old_string': 'a', 'new_string': 'b'})
+        slip = self.raw('Bash', {'command': 'echo x >> workspace/state.md'})
+        for shell in self.bins:
+            with self.subTest(shell=shell):
+                self.assertEqual(self.hook(edit, shell, extra={'BASH_VERSION': '5.2.0'}), ('', False))
+                out, started = self.hook(slip, shell, extra={'BASH_VERSION': '5.2.0'})
+                self.assertTrue(started)
+                self.assertIn('cephalo guard S1', out)
+
+    def test_post_tool_use_write_of_a_report_still_asks_for_the_read_back(self):
+        rep = self.p('workspace/output/verification/ch_1_round_1.md')
+        Path(rep).write_text('| 1 | a |\nStatus: ok\n', encoding='utf-8')
+        raw = self.raw('Write', {'file_path': rep, 'content': 'x'}, event='PostToolUse')
+        for shell in self.bins:
+            with self.subTest(shell=shell):
+                out, started = self.hook(raw, shell)
+                self.assertTrue(started)
+                self.assertEqual(json.loads(out)['decision'], 'block')
+                self.assertIn('cephalo guard R5: workspace/output/verification/ch_1_round_1.md is saved', out)
+
+    def test_locale_reaches_python_unchanged(self):
+        probe = os.path.join(self.top, 'locale.txt')
+        for shell, b in self.bins.items():
+            Path(b, 'python3').write_text('#!/bin/sh\necho "${LC_ALL-unset}" > "%s"\ncat > /dev/null\n' % probe,
+                                          encoding='ascii')
+            raw = self.raw('Bash', {'command': 'ls'})
+            for lc in ('POSIX', None):
+                e = self.env()
+                e.update(PATH=b + ':/usr/bin:/bin', LC_ALL=lc)
+                if lc is None:
+                    del e['LC_ALL']
+                with self.subTest(shell=shell, lc=lc):
+                    subprocess.run(['/bin/sh', '-c', self.cmd], input=raw, env=e, timeout=30, cwd=self.proj,
+                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    self.assertEqual(Path(probe).read_text(encoding='ascii').strip(), lc or 'unset')
+
+    def test_no_stdin(self):
+        for shell, b in self.bins.items():
+            e = self.env(extra={'CEPHALO_GUARD_STATE_DIR': tempfile.mkdtemp(prefix='guard-fast-note-')})
+            e['PATH'] = b + ':/usr/bin:/bin'
+            with self.subTest(shell=shell):
+                p = subprocess.run(['/bin/sh', '-c', 'exec <&-; ' + self.cmd], stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE, env=e, timeout=30, cwd=self.proj)
+                self.assertEqual(p.returncode, 0)
+                self.assertIn('nothing was checked', p.stdout.decode('ascii'))     # the guard's note, as before
+
+
 # ------------------------------------------------------------------ switches, S5, R5 Edit, scripts
 
 
@@ -1032,6 +1717,23 @@ class TestS5Protected(Base):
                                           plat='windows')))
         self.assertIn('S5', rules_of(bash('rm "/c/Home/u/Projekt Arbeit/.CLAUDE/Settings.Local.json"',
                                           plat='windows')))
+
+    def test_letter_case_on_macos_and_windows(self):
+        # macOS's own file systems ignore letter case by default, as NTFS does; Linux keeps it
+        for plat, root in (('macos', POSIX_ROOT), ('windows', WIN_ROOT)):
+            sep = '\\' if plat == 'windows' else '/'
+            for rel in ('Scripts/cephalo_guard.py', '.Claude/Settings.json', '.CLAUDE/settings.LOCAL.json'):
+                path = root + sep + rel.replace('/', sep)
+                with self.subTest(plat=plat, rel=rel):
+                    self.deny(run('Edit', {'file_path': path, 'old_string': 'a', 'new_string': 'b'}, plat=plat), 'S5')
+            for cmd in ('rm -rf .CLAUDE', 'rm SCRIPTS/x.py', 'mv Scripts old'):
+                with self.subTest(plat=plat, cmd=cmd):
+                    self.assertIn('S5', rules_of(bash(cmd, plat=plat)))
+        self.passes(run('Edit', {'file_path': POSIX_ROOT + '/Scripts/cephalo_guard.py', 'old_string': 'a',
+                                 'new_string': 'b'}))
+        self.passes(bash('rm -rf .CLAUDE'))
+        self.passes(run('Edit', {'file_path': POSIX_ROOT + '/workspace/Scripts.md', 'old_string': 'a',
+                                 'new_string': 'b'}, plat='macos'))
 
     def test_multi_project_root_scripts(self):
         top = tempfile.mkdtemp(prefix='guard-multi5-')
@@ -1197,6 +1899,7 @@ class TestMessagesPointToRules(Base):
                     bash('python3 scripts/a.py', plat='windows', agent=agent),
                     ps('py scripts/a.py > out.txt', agent=agent),
                     bash('rm scripts/cephalo_guard.py', agent=agent, root=root, cwd=root),
+                    bash('python3 scripts/state_check.py workspace/state.md | tail -5', agent=agent, root=root, cwd=root),
                     run('Edit', {'file_path': fmt, 'old_string': 'a', 'new_string': 'b'}, agent=agent, root=root),
                     run('Edit', {'file_path': rep, 'old_string': 'a', 'new_string': 'b'}, agent=agent, root=root),
                     run('Agent', {'prompt': 'Prüfe nur Satz 2.', 'subagent_type': 'source-verifier'}, agent=agent,
@@ -1209,6 +1912,19 @@ class TestMessagesPointToRules(Base):
                 text = hso.get('permissionDecisionReason') or out.get('reason') or ''
                 with self.subTest(agent=agent, text=text[:60]):
                     self.check(text)
+        # R5 and R6 before an agent call of the main chat: a report saved and not read back
+        tr = os.path.join(root, 'sess.jsonl')
+        Path(tr).write_text(''.join(json.dumps(tr_call('Write', {'file_path': p, 'content': 'x'}, 't%d' % k)) + '\n'
+                                    for k, p in enumerate((rep, fmt))), encoding='utf-8')
+        for agent_type in (None, 'orchestrator', 'orchestrator-longform', 'orchestrator-defense'):
+            d = payload('Agent', {'prompt': 'x', 'subagent_type': 'writer-agent'}, cwd=root)
+            d['transcript_path'] = tr
+            if agent_type:
+                d['agent_type'] = agent_type                  # claude --agent <name>: no agent_id
+            out = g.evaluate(d, env(root=root))
+            self.assertEqual(rules_of(out), {'R5', 'R6'})
+            with self.subTest(agent=agent_type, call='Agent'):
+                self.check(out['hookSpecificOutput']['permissionDecisionReason'])
         shutil.rmtree(root)
 
     def test_docs_section(self):

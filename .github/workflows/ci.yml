@@ -11,7 +11,9 @@ permissions:
 jobs:
   lint-and-smoke:
     name: Lint & setup smoke (Ubuntu, Python ${{ matrix.python-version }})
-    runs-on: ubuntu-latest
+    # actions/setup-python has no Python 3.9 for Ubuntu 26.04, the image behind
+    # ubuntu-latest since November 2026: the 3.9 job stays on Ubuntu 24.04.
+    runs-on: ${{ matrix.python-version == '3.9' && 'ubuntu-24.04' || 'ubuntu-latest' }}
     timeout-minutes: 15
     # "shell: bash" runs each step with -e -o pipefail; the default for run:
     # is bash -e only, so a failing setup.sh before "| tee" went unnoticed.
@@ -1166,6 +1168,26 @@ jobs:
           grep -q "Example rule text" "$W/out_badzip/c_guide.txt"
           expect 0 bash scripts/extract_styleguide.sh "$W/aes" "$W/out_aes"
           grep -q "Encrypted rule text" "$W/out_aes/guide.txt"
+          # a file that is no PDF is named, not extracted; hidden files, Office lock
+          # files, desktop.ini and Thumbs.db are left out, in both modes
+          cp -r "$W/good" "$W/other"; mkdir -p "$W/other/sub/.git"
+          for f in template.pptx sub/notes.docx .DS_Store sub/.git/config '~$lock.docx' Thumbs.db desktop.ini; do echo x > "$W/other/$f"; done
+          expect 0 bash scripts/extract_styleguide.sh "$W/other" "$W/out_other"
+          test "$(grep -c 'skipped (not a PDF)' "$W/out.txt")" -eq 2
+          grep -qx '  skipped (not a PDF): sub/notes.docx' "$W/out.txt"
+          grep -qx '  skipped (not a PDF): template.pptx' "$W/out.txt"
+          grep -q 'extracts PDFs only' "$W/out.txt"
+          test "$(ls "$W/out_other")" = guide.txt
+          rm "$W/other/guide.pdf"; printf '%%PDF-1.4 stub' > "$W/other/a.pdf"
+          expect 0 env PATH="$W/nopy" bash scripts/extract_styleguide.sh "$W/other" "$W/out_other_nopy"
+          grep -q 'pdftotext-only' "$W/out.txt"
+          test "$(grep -c 'skipped (not a PDF)' "$W/out.txt")" -eq 2
+          grep -qx '  skipped (not a PDF): sub/notes.docx' "$W/out.txt"
+          grep -qx '  skipped (not a PDF): template.pptx' "$W/out.txt"
+          test "$(ls "$W/out_other_nopy")" = a.txt
+          # without other files, no such line
+          expect 0 bash scripts/extract_styleguide.sh "$W/good" "$W/out_good"
+          if grep -q 'skipped (not a PDF)\|extracts PDFs only' "$W/out.txt"; then cat "$W/out.txt"; exit 1; fi
           # cross_session_audit.py: 0 = clean, 1 = findings, 2 = not a repository
           g() { git -c user.name=ci -c user.email=ci@example.com "$@"; }
           g init -q "$W/repo" && g -C "$W/repo" commit -q --allow-empty -m init
@@ -1221,7 +1243,8 @@ jobs:
           printf 'not a chapter\n' > "$W/ch/.gitkeep"
           expect 0 python scripts/state_check.py "$W/state.md" "$W/ch"
           has '(17 lines)'
-          has 'Summary: open items 1, ticked 1; chapter files counted 1 of 1; lines over 500 characters in Current state and Chapter status: 0'
+          has 'Summary: open items 1, ticked 1; chapter files counted 1 of 1; lines over 500 characters in Current state and Chapter status: 0; exit code 0'
+          tail -n 1 "$W/out.txt" | grep -qxF 'Exit code: 0' || { echo 'last line is not Exit code: 0'; cat "$W/out.txt"; exit 1; }
           has 'l. 4: - Workflow: seminar_2agent'
           has '1 row(s) below the table'
           has 'l. 10: | 2 Body | ✅ ch_2_body.md, 4 of 600 words | ✅ R1: ✅ 3; loop 0 |'
@@ -1234,6 +1257,8 @@ jobs:
           expect 1 python scripts/state_check.py "$W/long.md"
           has 'l. 4 [Current state], 534 characters'
           has 'Shorten each'
+          has 'Current state and Chapter status: 1 (l. 4 (534 characters)); exit code 1'
+          tail -n 1 "$W/out.txt" | grep -qxF 'Exit code: 1' || { echo 'last line is not Exit code: 1'; cat "$W/out.txt"; exit 1; }
           sed "s/^| 2 Body | /| 2 Body $long | /" "$W/state.md" > "$W/longrow.md"
           expect 1 python scripts/state_check.py "$W/longrow.md"
           has 'l. 10 [Chapter status]'
@@ -1269,10 +1294,23 @@ jobs:
           printf '# Notes\n' > "$W/notes.md"
           expect 2 python scripts/state_check.py "$W/notes.md"
           has 'no "Current state" heading'
+          hasnt 'Exit code:'
           expect 2 python scripts/state_check.py "$W/missing.md"
           expect 2 python scripts/state_check.py
           expect 0 python scripts/state_check.py --help
           has 'Exit codes:'
+          # a pipe that closes before the report ends (| head): the report's exit code, no Error line
+          { printf '%s\n' '## Current state' '- Stage: open' '## Chapter status' '## Open issues'
+            for i in $(seq 1 3000); do echo "- [ ] Item $i, a line long enough to fill the pipe"; done; } > "$W/big.md"
+          set +e; python scripts/state_check.py "$W/big.md" 2> "$W/err.txt" | head -n 3 > /dev/null; got=${PIPESTATUS[0]}; set -e
+          [ "$got" = 0 ] || { echo "through | head: expected exit 0, got $got"; cat "$W/err.txt"; exit 1; }
+          [ ! -s "$W/err.txt" ] || { echo 'through | head: output on stderr'; cat "$W/err.txt"; exit 1; }
+          # about 11 KB: the last part is written when the script ends, so it is run 30 times, with stdout buffered
+          head -n 144 "$W/big.md" > "$W/mid.md"
+          for i in $(seq 1 30); do
+            set +e; env -u PYTHONUNBUFFERED python scripts/state_check.py "$W/mid.md" 2> "$W/err.txt" | head -n 3 > /dev/null; got=${PIPESTATUS[0]}; set -e
+            [ "$got" = 0 ] && [ ! -s "$W/err.txt" ] || { echo "through | head, run $i: exit $got"; cat "$W/err.txt"; exit 1; }
+          done
 
       - name: repeated_citations.py on chapter files (pairs, footnotes, reference list, order, errors)
         run: |
@@ -3175,8 +3213,10 @@ jobs:
           grep -q "symbolic links" out.txt
           cmp link.docx link.orig
           # A ZIP disguised as a PDF is unpacked by the script's own safe extractor.
-          "$SH" "$R/scripts/extract_styleguide.sh" "$W/good" "$W/out_good"
+          echo x > "$W/good/template.pptx"
+          "$SH" "$R/scripts/extract_styleguide.sh" "$W/good" "$W/out_good" > out.txt 2>&1 || { cat out.txt; exit 1; }
           grep -q "Example rule text" "$W/out_good/guide.txt"
+          grep -q "skipped (not a PDF): template.pptx" out.txt
 
       - name: cephalo guard tests on macOS (all of them, and its own file system with a folder name with an umlaut in either form)
         if: runner.os == 'macOS'
@@ -3219,3 +3259,30 @@ jobs:
           rm -r "$M/00_Shared_Materials"
           out="$(CLAUDE_PROJECT_DIR="$M/02_Main_Work" "$SH" -c "$CMD" < "$M/02_Main_Work.json")"
           test -z "$out"
+          # The fast path of cephalo_guard.sh: an Edit inside the project that no rule concerns gets no answer;
+          # an Edit of scripts/ still gets the guard's deny, also with \ in the path.
+          edit() { python -c "import json, sys; sys.stdout.buffer.write(json.dumps({'session_id': 'ci', 'hook_event_name': 'PreToolUse', 'tool_name': 'Edit', 'tool_input': {'file_path': sys.argv[1], 'old_string': 'a', 'new_string': 'b'}, 'cwd': sys.argv[2]}, ensure_ascii=False, separators=(',', ':')).encode('utf-8'))" "$1" "$P" > "$P.edit.json"; }
+          for f in "$P/workspace/a.md" "$P\\workspace\\a.md"; do
+            edit "$f"
+            out="$(CLAUDE_PROJECT_DIR="$P" "$SH" -c "$CMD" < "$P.edit.json")"
+            test -z "$out"
+          done
+          for f in "$P/scripts/cephalo_guard.py" "$P\\scripts\\x.py"; do
+            edit "$f"
+            out="$(CLAUDE_PROJECT_DIR="$P" "$SH" -c "$CMD" < "$P.edit.json")"
+            if [ "$want" = deny ]; then
+              printf '%s\n' "$out" | python -c "import json, sys; o = json.load(sys.stdin); assert o['hookSpecificOutput']['permissionDecision'] == 'deny' and 'cephalo guard S5' in o['hookSpecificOutput']['permissionDecisionReason'], o"
+            else
+              test -z "$out"
+            fi
+          done
+          # Time per call, for information (EPOCHREALTIME: bash 5): the fast path, and a call the guard checks.
+          if [ -n "${EPOCHREALTIME:-}" ]; then
+            edit "$P/workspace/a.md"
+            for kind in 'an Edit (fast path)' 'a Bash call (the guard)'; do
+              f="$P.edit.json"; case $kind in *Bash*) f="$P.json" ;; esac
+              t0=$EPOCHREALTIME
+              for i in 1 2 3 4 5 6 7 8 9 10; do CLAUDE_PROJECT_DIR="$P" "$SH" -c "$CMD" < "$f" > /dev/null; done
+              python -c "import sys; print('%s: %.0f ms a call' % (sys.argv[3], (float(sys.argv[2]) - float(sys.argv[1])) * 100))" "$t0" "$EPOCHREALTIME" "$kind"
+            done
+          fi

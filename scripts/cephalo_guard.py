@@ -6,7 +6,10 @@ without it works the same.
 
 templates/claude_settings.json runs it, through scripts/cephalo_guard.sh,
 for PreToolUse (Bash, PowerShell, Write, Edit, MultiEdit, NotebookEdit,
-Agent, Task, SendMessage) and PostToolUse (Write).
+Agent, Task, SendMessage) and PostToolUse (Write).  cephalo_guard.sh answers
+an Edit, MultiEdit or Write of a file inside the project that none of the
+rules below concerns itself, without starting Python: a rule that comes to
+concern such a file needs its exclusion there too.
 
 Rules (on, except P1)
   S1  A shell command writes a file's text: an inline Python program
@@ -32,15 +35,33 @@ Rules (on, except P1)
   S5  A change to the hook settings (.claude/settings.json and
       .claude/settings.local.json, the project's or the user's) or to
       cephalo's scripts/ folder: a Write or Edit, or a shell command that
-      writes, moves or deletes them.  Denied: only the user changes them.
+      writes, moves or deletes them (on Windows and macOS in any letter
+      case).  Denied: only the user changes them.
+  S6  cephalo's state_check.py run with its output into a pipe (| tail,
+      2>&1 | grep, in PowerShell | Select-Object), also in a ( ) or { }
+      group, an if, a loop or a case that is piped, or with its output
+      thrown away (> /dev/null, > NUL, > $null).  Denied: its whole
+      output is read in the tool result.  --help, its output redirected
+      into a file, and a chain with ;, && or || pass.
   R5  The coordinator (main chat or an orchestrator) and a saved
       source-verifier report (verification/*_round_<n>.md,
       consistency_final.md): after a Write, asks for the read-back the
       definitions require and gives the saved file's counts to compare with
       the verifier's answer; an Edit is denied (the copy is written again).
+      An Agent, Task or SendMessage call of the main chat (no agent_id: an
+      orchestrator run as a subagent has its calls in a transcript of its
+      own) is denied while a report it saved has not been read back whole
+      since its last Write.  The guard sees this in the session transcript
+      (transcript_path), in the main chat's own calls in its last
+      MAX_TRANSCRIPT bytes.  Whole: a Read without offset and limit, or Reads
+      that together cover every line the file now has, also by another
+      spelling of its path (a link: the same device and inode); a Read whose
+      result was an error does not count, nor does a Write whose result was
+      an error unless the file changed after it all the same.
   R6  The coordinator writes or edits a report the format-verifier writes:
       denied, except a Write of a file that does not exist yet (the
-      definitions' fallback).
+      definitions' fallback).  That fallback Write is checked before the
+      next agent call as R5 checks a saved report.
   P1  Off unless switched on.  Agent / SendMessage: a task prompt with a
       phrase that narrows the check, tells the agent to leave out a finding,
       rates in advance or states the project's state is denied once; the
@@ -57,7 +78,10 @@ Contract: reads the hook's JSON from stdin, prints at most one JSON object
 permissionDecision "deny" (PreToolUse) or decision "block" (PostToolUse) and
 never answers "allow", which would skip the user's permission prompts.  Input
 it does not understand, and any error of its own, let the call pass with a
-one-line note to the user (systemMessage), once per session.  It writes
+one-line note to the user (systemMessage), once per session.  The session
+transcript is Claude Code's own file, read only for R5/R6 before an agent
+call: when it is missing, unreadable, or not in the shape the guard knows,
+the call passes without a note (past the deadline, with the note).  It writes
 nothing but a small file per session in a folder of its own in the system's
 temporary folder (cephalo-guard-<user id>/, on Windows cephalo-guard/), for
 P1 when it is on and for that note, and uses no network.  Python 3.9 or later, standard library only.
@@ -97,6 +121,7 @@ MAX_COMMAND = 1 << 19           # characters of one Bash/PowerShell command
 MAX_READ = 1 << 21              # bytes of all scripts and patches read for one call
 MAX_SCAN = 1 << 23              # characters of shell text and programs scanned for one call
 MAX_EXPAND = 1 << 20            # characters a $var substitution adds to one inline program
+MAX_TRANSCRIPT = 1 << 22        # bytes read from the end of the session transcript (R5, R6 before an agent call)
 
 
 class OverBudget(Exception):
@@ -183,7 +208,12 @@ class Ctx:
     def definition(self, rule):
         """The agent definition to name in a message: the agent's own for the
         shell rules S1/S2 where it has them under "Principles", otherwise the
-        coordinator's."""
+        coordinator's.  S6 is the flat orchestrator's in every context:
+        state_check.py reads a flat project's state file, and only
+        orchestrator.md's "Chat closure ritual" runs it (in the seminar and
+        presentation workflows through the main chat)."""
+        if rule == 'S6':
+            return '.claude/agents/orchestrator.md'
         own = ('research-agent', 'style-resolver', 'format-verifier', 'data-agent', 'methods-agent')
         if self.agent_type.startswith('orchestrator') or (rule in ('S1', 'S2') and self.agent_type in own):
             return '.claude/agents/%s.md' % self.agent_type
@@ -489,7 +519,8 @@ def tokenize(s, ps=False):
 class Seg:
     """One simple command: its words, redirects (fd, op, target), here-document
     numbers, here-strings, the operator after it, and the segments it groups
-    when it is the redirect part after '( ... )' or '{ ... }'."""
+    when it is the redirect part after '( ... )', '{ ... }' or a compound
+    command (if ... fi, for/while/until/select ... done, case ... esac)."""
     __slots__ = ('words', 'redirs', 'heredocs', 'herestrings', 'sep', 'group', 'subshell_end')
 
     def __init__(self):
@@ -502,9 +533,20 @@ class Seg:
         return not (self.words or self.redirs or self.heredocs or self.herestrings)
 
 
+# Bash's compound commands: the reserved word that opens one (and the kind of
+# word that closes it), the one that closes it, and the ones a command follows.
+# They count only where a command name stands.
+_COMPOUND_OPEN = {'if': 'if', 'while': 'do', 'until': 'do', 'for': 'do', 'select': 'do', 'case': 'case'}
+_COMPOUND_CLOSE = {'fi': 'if', 'done': 'do', 'esac': 'case'}
+_RESERVED = ('then', 'else', 'elif', 'do', '!')
+
+
 def parse(cmd, ps=False, pre=None):
     """Return (segments, pipelines, heredoc bodies).  pre: bodies already
-    taken out of the text by an enclosing command."""
+    taken out of the text by an enclosing command.  A reserved word is no
+    part of a command ('if true; then rm x; fi' holds the commands true and
+    rm x), the words of a for/select/case head and the case patterns are no
+    command, and a compound command groups its segments as { ... } does."""
     if pre is not None:
         text, bodies = cmd, pre
     else:
@@ -513,9 +555,10 @@ def parse(cmd, ps=False, pre=None):
     segs, stack = [], []
     cur = Seg()
     pending_group = None
+    skip = None                     # 'head': for/select/case words up to the segment's end; 'pattern': a case pattern
 
     def finish(sep):
-        nonlocal cur, pending_group
+        nonlocal cur, pending_group, skip
         if pending_group is not None and not cur.words:
             cur.group = pending_group
         pending_group = None
@@ -525,18 +568,34 @@ def parse(cmd, ps=False, pre=None):
         elif segs and sep:
             segs[-1].sep = sep
         cur = Seg()
+        if skip == 'head':
+            skip = None
 
     i = 0
     while i < len(toks):
         t = toks[i]
         if t[0] == 'w':
             w = t[1]
-            if not cur.words and not ps and w == '{':
+            top = stack[-1][0] if stack else None
+            if not cur.words and not ps and w in _COMPOUND_CLOSE and top == _COMPOUND_CLOSE[w]:
+                skip = None
+                finish(';')
+                pending_group = (stack.pop()[1], len(segs))
+            elif skip == 'head' and w == 'in' and top == 'case':
+                skip = 'pattern'
+            elif skip:
+                pass                                 # no command
+            elif not cur.words and not ps and w == '{':
                 finish('')
                 stack.append(('{', len(segs)))
             elif not cur.words and not ps and w == '}' and stack:
                 finish(';')
                 pending_group = (stack.pop()[1], len(segs))
+            elif not cur.words and not ps and w in _COMPOUND_OPEN:
+                stack.append((_COMPOUND_OPEN[w], len(segs)))
+                skip = 'head' if w in ('for', 'select', 'case') else None
+            elif not cur.words and not ps and w in _RESERVED + tuple(_COMPOUND_CLOSE):
+                pass                                 # then, do, else, elif, !, an unmatched fi, done or esac
             else:
                 cur.words.append(w)
         elif t[0] == 'r':
@@ -555,7 +614,17 @@ def parse(cmd, ps=False, pre=None):
                 cur.redirs.append((fd, op, target))
         else:
             op = t[1]
-            if op == '(':
+            top = stack[-1][0] if stack else None
+            if skip == 'pattern' and op in ('(', '|'):
+                pass                                 # case (a|b) ...
+            elif skip == 'pattern' and op == ')':
+                skip, cur = None, Seg()              # the pattern's end: the case's command follows
+            elif op == ')' and top == 'case':
+                finish(';')                          # a ')' that closes nothing
+            elif op in (';;', ';&') and top == 'case':
+                finish(op)
+                skip = 'pattern'
+            elif op == '(':
                 finish('')
                 stack.append(('(', len(segs)))
             elif op == ')':
@@ -885,16 +954,26 @@ def _data_script(n, ctx):
 _SETTINGS = ('/.claude/settings.json', '/.claude/settings.local.json')
 
 
+def _case(p, ctx):
+    """p as protected() compares it: macOS's own file systems (APFS, HFS+)
+    ignore letter case by default, so Scripts/ is scripts/ there (on a volume
+    that does not, the guard denies a change it need not, which does no
+    harm).  Windows paths are in lower case already (_fold).  A Windows short
+    name (SCRIPT~1) is not resolved."""
+    return p.lower() if ctx.macos else p
+
+
 def protected(n, ctx):
     """What a normalized path is, if only the user changes it: the hook
     settings (the project's, a sub-project's or the user's) or cephalo's
     scripts/ folder.  None otherwise."""
     if not n or n in (DEVICE, TEMPVAR):
         return None
-    if any(n.endswith(x) for x in _SETTINGS):
+    k = _case(n, ctx)
+    if any(k.endswith(x) for x in _SETTINGS):
         return 'the hook settings ' + n.rsplit('/', 2)[-2] + '/' + n.rsplit('/', 1)[-1]
     for d in (ctx.project + '/scripts', ctx.root + '/scripts'):
-        if inside(n, d):
+        if inside(k, _case(d, ctx)):
             return "cephalo's scripts/ folder"
     return None
 
@@ -905,7 +984,8 @@ def holds_protected(n, ctx):
     multi-project setup also a sibling sub-project)."""
     if not n or n in (DEVICE, TEMPVAR):
         return None
-    if n.rsplit('/', 1)[-1] == '.claude':
+    k = _case(n, ctx)
+    if k.rsplit('/', 1)[-1] == '.claude':
         return 'a folder that holds hook settings'
     anchors = [ctx.project + '/scripts', ctx.root + '/scripts']
     bases = {ctx.project, ctx.root, ctx.home}
@@ -921,9 +1001,9 @@ def holds_protected(n, ctx):
         if base:
             anchors += [base + x for x in _SETTINGS]
     for a in anchors:
-        if inside(a, n):
+        if inside(_case(a, ctx), k):
             why = protected(a, ctx) or "cephalo's scripts/ folder"
-            return why if a == n else 'a folder that holds ' + why
+            return why if _case(a, ctx) == k else 'a folder that holds ' + why
     return None
 
 
@@ -1189,6 +1269,17 @@ def check_shell(cmd, tool, ctx, depth=0, pre=None, data=False):
     assigns = {}               # name=value words seen so far (for python3 -c "$code")
     scratch_made = set()       # _scratch files this command fills by an exempt producer
     restore = []               # (end, folder) of the ( ... ) subshells the loop is in
+    # the segments whose output goes into a pipe: 'a | b', and each one in a '( ... ) | b' or '{ ...; } | b'
+    # (the groups' ranges counted in one pass, so that nested groups stay linear)
+    piped, opened = [seg.sep in ('|', '|&') and not seg.group for seg in segs], [0] * (len(segs) + 1)
+    for seg in segs:
+        if seg.sep in ('|', '|&') and seg.group:
+            opened[seg.group[0]] += 1
+            opened[seg.group[1]] -= 1
+    in_group = 0
+    for k in range(len(segs)):
+        in_group += opened[k]
+        piped[k] = piped[k] or (in_group > 0 and 'group')
     for si, seg in enumerate(segs):
         if not si % 256:
             ctx.budget.tick()
@@ -1279,6 +1370,15 @@ def check_shell(cmd, tool, ctx, depth=0, pre=None, data=False):
             if ctx.windows and re.match(r'^python3(\.\d+)?$', c) and mode != 'probe' and ctx.has_py():
                 hits.append(('S3', 'python3 on Windows'))
         prev_script = (c, py_mode(args)[1]) if is_script and seg.sep == '||' else False
+        # S6: cephalo's state_check.py with its output into a pipe, or thrown away (/dev/null, NUL, $null)
+        if _state_check_run(c, args):
+            outs = [t for fd, op, t in seg.redirs
+                    if op in _STDOUT_OPS and fd in (None, '1', '&', '*') and t and not t.startswith('&')]
+            null = [t for t in outs if _null_device(t)]
+            if null:
+                hits.append(('S6', 'its output goes to %s' % null[0]))
+            elif piped[si] and not outs:
+                hits.append(('S6', _pipe_detail(segs, si, piped[si])))
         # S1 (g): a patch typed into git apply / patch
         if (c == 'patch' or (c == 'git' and args[:1] == ['apply'])) and '--check' not in args and \
                 '--stat' not in args and (seg.heredocs or seg.herestrings or
@@ -1421,6 +1521,34 @@ def check_shell(cmd, tool, ctx, depth=0, pre=None, data=False):
         for sub in _substitutions(text):
             hits += check_shell(sub, 'Bash', ctx, depth + 1, pre=bodies, data=data)
     return _dedupe(hits)
+
+
+def _state_check_run(c, args):
+    """The command runs cephalo's state_check.py, by a Python interpreter or by
+    its path (c: the command's base name), and not for its --help."""
+    if _PYNAME.match(c):
+        mode, val = py_mode(args)
+        if mode != 'script' or base_name(val) != 'state_check.py':
+            return False
+        args = args[args.index(val) + 1:]
+    elif c != 'state_check.py':
+        return False
+    return not any(a in ('-h', '--help') for a in args)
+
+
+def _null_device(t):
+    """A redirect target that throws the output away."""
+    low = t.strip('"\'').replace('\\', '/').lower()
+    return low in ('/dev/null', 'nul', 'nul:', '$null', '//./nul')
+
+
+def _pipe_detail(segs, si, how):
+    """For a message: the pipe a segment's output goes into."""
+    if how == 'group':
+        return 'from inside a group, an if, a loop or a case whose output goes into a pipe'
+    nxt = segs[si + 1].words if si + 1 < len(segs) else []
+    words = ' '.join(_sh_quote(w) for w in nxt[:3])
+    return '%s %s' % (segs[si].sep, words[:60] + ('...' if len(words) > 60 or len(nxt) > 3 else '') or '...')
 
 
 def _expander(assigns):
@@ -1632,9 +1760,11 @@ def _dedupe(hits):
 
 # --------------------------------------------------------------- reports (R5, R6)
 
+# (ASCII letters in either case, as cephalo_guard.sh's fast path matches them: with re.I alone, \u0131,
+# \u0130, \u017f and \u212a would match i, s and k)
 _FORMAT_REPORT = re.compile(r'(?:/verification/[^/]+_format_round_\d+\.md|/format_reports/round_\d+\.md'
-                            r'|/format_report_round_\d+\.md)$', re.I)
-_VERIFIER_REPORT = re.compile(r'/verification/(?:[^/]+_round_\d+|consistency_final)\.md$', re.I)
+                            r'|/format_report_round_\d+\.md)$', re.I | re.A)
+_VERIFIER_REPORT = re.compile(r'/verification/(?:[^/]+_round_\d+|consistency_final)\.md$', re.I | re.A)
 
 
 def check_file_write(tool, tin, ctx):
@@ -1730,6 +1860,219 @@ def readback(tin, ctx):
         msg += (' It still contains an absolute path of this machine: write the file again with the Write tool, '
                 'the path made project-relative (an Edit of the saved report is denied).')
     return msg
+
+
+# a transcript line that may hold a Write or Read call, or a tool result that is an error
+_TR_CALL = re.compile(rb'"name"\s*:\s*"(?:Write|Read)"')
+_TR_ERROR = re.compile(rb'"is_error"\s*:\s*true')
+
+
+def _tail_lines(path, limit):
+    """The complete lines (bytes) in the last limit bytes of a regular file, or None.
+    Opened as _read_regular opens a file; a line cut by the start of that part
+    and a last line still being written are left out."""
+    try:
+        fd = os.open(path, os.O_RDONLY | getattr(os, 'O_NONBLOCK', 0) | getattr(os, 'O_BINARY', 0))
+    except (OSError, ValueError, TypeError):
+        return None
+    try:
+        st = os.fstat(fd)
+        if not stat.S_ISREG(st.st_mode):
+            return None
+        start = max(0, st.st_size - limit)
+        os.lseek(fd, start, os.SEEK_SET)
+        with os.fdopen(fd, 'rb') as fh:
+            fd = None
+            data = fh.read(limit)
+    except (OSError, ValueError):
+        return None
+    finally:
+        if fd is not None:
+            os.close(fd)
+    data = data[:data.rfind(b'\n') + 1]
+    if start:
+        data = data[data.find(b'\n') + 1:]
+    return data.split(b'\n')[:-1]
+
+
+def _main_calls(lines, ctx):
+    """The main chat's Write and Read calls in transcript lines (Claude Code's
+    session JSONL), in order, as (tool, id, input, timestamp of the entry);
+    and the ids of the calls whose result was an error.  Entries of subagents
+    (isSidechain) and lines that are not JSON in that shape are left out."""
+    calls, failed = [], set()
+    for k, line in enumerate(lines):
+        if not k % 256:
+            ctx.budget.tick()
+        if not _TR_CALL.search(line) and not _TR_ERROR.search(line):
+            continue
+        try:
+            e = json.loads(line)            # bytes: UTF-8 (a line that is not raises a ValueError)
+        except (ValueError, RecursionError):
+            continue
+        if not isinstance(e, dict) or e.get('isSidechain') is True:
+            continue
+        m = e.get('message')
+        content = m.get('content') if isinstance(m, dict) else None
+        for c in content if isinstance(content, list) else ():
+            if not isinstance(c, dict):
+                continue
+            if e.get('type') == 'assistant' and c.get('type') == 'tool_use' and \
+                    c.get('name') in ('Write', 'Read') and isinstance(c.get('input'), dict):
+                cid = c.get('id')
+                calls.append((c['name'], cid if isinstance(cid, str) else None, c['input'], e.get('timestamp')))
+            elif e.get('type') == 'user' and c.get('type') == 'tool_result' and c.get('is_error') is True and \
+                    isinstance(c.get('tool_use_id'), str):
+                failed.add(c['tool_use_id'])
+    return calls, failed
+
+
+def _written_since(path, n, when, ctx):
+    """A Write whose result was an error (denied, rejected in the permission
+    prompt, or, it may be, blocked by its PostToolUse hook after it wrote):
+    the file was written all the same when it changed at or after the time of
+    the call's entry (when, '2026-11-01T15:22:33.123Z') less 2 s.  False when
+    the time or the file's cannot be read."""
+    if not isinstance(when, str) or not _fs_ok(n, ctx):
+        return False
+    import datetime
+    try:
+        t = datetime.datetime.fromisoformat(when.replace('Z', '+00:00'))
+        return t.tzinfo is not None and os.stat(path).st_mtime >= t.timestamp() - 2
+    except (ValueError, TypeError, OverflowError, OSError):
+        return False
+
+
+def _read_span(tin):
+    """The lines a Read call shows: (first, last), last None for the rest of
+    the file.  An input it does not know counts as the whole file."""
+    vals = []
+    for key in ('offset', 'limit'):
+        v = tin.get(key)
+        if isinstance(v, float) and v.is_integer():
+            v = int(v)
+        elif isinstance(v, str) and v.strip().isdigit():
+            v = int(v)
+        if v is not None and (isinstance(v, bool) or not isinstance(v, int)):
+            return 1, None
+        vals.append(v)
+    first = max(vals[0] or 1, 1)
+    return first, (first + vals[1] - 1 if vals[1] and vals[1] > 0 else None)
+
+
+def _spans_text(spans, lines):
+    """For a message: the lines the Reads since the last Write showed."""
+    merged = []
+    for first, last in sorted(spans):
+        last = lines if last is None else min(last, lines)
+        if first > last:
+            continue
+        if merged and first <= merged[-1][1] + 1:
+            merged[-1][1] = max(merged[-1][1], last)
+        else:
+            merged.append([first, last])
+    if not spans:
+        return 'not read'
+    if not merged:
+        return 'read: none of its %d lines' % lines
+    return 'read: lines %s of %d' % (', '.join('%d\u2013%d' % (a, b) for a, b in merged), lines)
+
+
+def _file_id(n, path, ctx):
+    """(device, inode) of a file, by its normalized path or else as written;
+    None when neither can be read or the file system gives no inode."""
+    for p in (n, path):
+        if p and _fs_ok(n, ctx):
+            try:
+                st = os.stat(p)
+            except (OSError, ValueError, TypeError):
+                continue
+            return (st.st_dev, st.st_ino) if st.st_ino else None
+    return None
+
+
+def _same_report(n, path, saved, ids, ctx):
+    """The saved report that a Read names by another spelling (a link to a
+    folder above it): one of the same file name that is the same file.  ids
+    keeps each report's file id; None when there is none or it is unknown."""
+    base = n.rsplit('/', 1)[-1]
+    names = [m for m in saved if m.rsplit('/', 1)[-1] == base]
+    me = _file_id(n, path, ctx) if names else None
+    for m in names if me else ():
+        if m not in ids:
+            ids[m] = _file_id(m, saved[m][0], ctx)
+        if ids[m] == me:
+            return m
+    return None
+
+
+def unread_reports(data, ctx):
+    """R5 and R6 before an Agent, Task or SendMessage call of the main chat:
+    each report the main chat saved (those readback() asks to read back) whose
+    last Write no whole Read followed, [(rule, path relative to the root,
+    what was read)].  Whatever it cannot read or does not know passes."""
+    tp = data.get('transcript_path')
+    if not isinstance(tp, str) or not tp or not _fs_ok(norm_path(tp, ctx, ctx.cwd), ctx):
+        return []
+    lines = _tail_lines(tp, MAX_TRANSCRIPT)
+    if not lines:
+        return []
+    calls, failed = _main_calls(lines, ctx)
+    saved = {}                      # normalized path -> [path as written, rule, spans of the Reads since]
+    ids = {}                        # normalized path of a saved report -> its file id (_same_report)
+    for k, (tool, cid, tin, when) in enumerate(calls):
+        if not k % 256:
+            ctx.budget.tick()
+        path = tin.get('file_path')
+        if not isinstance(path, str) or not path or (tool == 'Read' and not saved):
+            continue
+        n = norm_path(path, ctx, ctx.cwd) or ''
+        if tool == 'Write':
+            fmt = bool(_FORMAT_REPORT.search(n))
+            if (fmt or _VERIFIER_REPORT.search(n)) and (cid not in failed or _written_since(path, n, when, ctx)):
+                saved[n] = [path, 'R6' if fmt else 'R5', []]
+        elif cid not in failed:
+            m = n if n in saved else _same_report(n, path, saved, ids, ctx)
+            if m:
+                saved[m][2].append(_read_span(tin))
+    hits = []
+    for n, (path, rule, spans) in saved.items():
+        if not ctx.enabled(rule):
+            continue
+        text = _read_regular(path, 1 << 22) if _fs_ok(n, ctx) else None   # as readback() reads it
+        if text is None:
+            continue                # gone, or not readable: nothing to read back
+        rows = text.decode('utf-8', 'replace').replace('\r\n', '\n').split('\n')
+        while rows and not rows[-1].strip():
+            rows.pop()
+        covered = 0                 # the lines 1..covered were shown
+        for first, last in sorted(spans):
+            if first > covered + 1:
+                break
+            covered = len(rows) if last is None else max(covered, last)
+        if not spans or covered < len(rows):
+            hits.append((rule, _rel(n, ctx), _spans_text(spans, len(rows))))
+    return hits
+
+
+def agent_reason(hits, ctx):
+    """The deny message for unread_reports()."""
+    out = []
+    for rule in ('R5', 'R6'):
+        mine = [(rel, what) for r, rel, what in hits if r == rule]
+        if not mine:
+            continue
+        files = ' '.join('%s was saved%s, but not read back whole since (%s).'
+                         % (rel, ' as the format-verifier\'s answer' if rule == 'R6' else '', what)
+                         for rel, what in mine[:3])
+        whole = 'the whole file' if len(mine) == 1 else 'each of these files whole'
+        out.append('cephalo guard %s: not run. %s Read %s back with the Read tool (no offset or limit; a file too '
+                   'large for one Read in parts that together cover every line) and compare it with the %s (%s, %s), '
+                   'then call the agent again.'
+                   % (rule, files, whole, 'agent\'s answer' if rule == 'R5' else 'answer', report_definition(ctx),
+                      '"Save every source-verifier report as a file"' if rule == 'R5'
+                      else '"The format-verifier writes its report itself"'))
+    return ' '.join(out)
 
 
 # --------------------------------------------------------------- task prompts (P1)
@@ -1981,6 +2324,12 @@ def shell_reason(hits, ctx, cmd=''):
                    'scripts in scripts/ are changed only by the user, by hand (docs/scripts.md, "cephalo '
                    'guard"). If the change is needed, tell the user what to change and why; do not get around '
                    'this check.' % '; '.join(by['S5'][:3]))
+    if 'S6' in by:
+        out.append('cephalo guard S6: not run. This command keeps the output of state_check.py from you (%s). '
+                   'Its output goes to you whole: run it without a pipe and without throwing its output away (%s, '
+                   '"Chat closure ritual", item 1; '
+                   'docs/scripts.md, "state_check.py"). Its summary line and its last line give its exit code; '
+                   'read the whole output in the tool result.' % (by['S6'][0], ctx.definition('S6')))
     if 'R5' in by:
         out.append('cephalo guard R5: not done (%s). A saved source-verifier report stays as the agent\'s '
                    'answer (%s, "Save every source-verifier report as a file"): if your copy differs from the '
@@ -2039,6 +2388,14 @@ def evaluate(data, env=None):
     if tool in _FILE_TOOLS:
         hits = [h for h in check_file_write(tool, tin, ctx) if ctx.enabled(h[0])]
         return deny(shell_reason(hits, ctx).replace('not run.', 'not done.')) if hits else None
+    # R5, R6: a report the main chat saved is read back before its next agent call
+    if not ctx.agent_id and ctx.coordinator and (ctx.enabled('R5') or ctx.enabled('R6')):
+        try:
+            hits = unread_reports(data, ctx)
+        except OverBudget as exc:
+            return note('the session transcript is too large to check for the %s call (%s)' % (tool, exc), data, env)
+        if hits:
+            return deny(agent_reason(hits, ctx))
     if not ctx.enabled('P1'):
         return None
     res = check_prompt(tool, tin, ctx)

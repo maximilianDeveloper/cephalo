@@ -136,7 +136,8 @@ phases:
           and all sources are accessible. The other documents of the
           checklist's section 1 are recommended: for each one missing, ask the
           user whether the institution provides it, note the gap and continue.
-          Claude in the main chat runs it and then creates workspace/state.md
+          Claude in the main chat runs it and then creates workspace/state.md,
+          with the pre-check result, before step 0.5 starts
           (main_session, "State file format").
       
       - step: 0.5
@@ -181,10 +182,11 @@ phases:
           styleguide.md or a key of its template, otherwise to the user as a
           note (style-resolver.md, "Recording answers to open questions",
           item 6); a line under the open issues of workspace/state.md does
-          not replace either. The line in workspace/state.md for the answer
-          names each such rule by its key or in two or three words and
-          where it went (`gaps: in_text.multiple_sources → Open questions;
-          percentages in the text → note to the user`), or says
+          not replace either. The line in workspace/state.md for each of the
+          writer's answers, also one to a revision (step 2, F.1) or a
+          shortening, names each such rule by its key or in two or three
+          words and where it went (`gaps: in_text.multiple_sources → Open
+          questions; percentages in the text → note to the user`), or says
           `gaps: none`.
           Before step 2, also after a revision, Claude counts the draft; more
           than 20% over its budget, the writer shortens it first, unless the
