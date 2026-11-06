@@ -1269,6 +1269,35 @@ class TestR5AnswerComparison(Base):
         r = self.saved(new.replace('neu', 'NEU'), entries + w + e2, path=rep2, wid=w2)
         self.assertIn('it differs; the first difference: line 7', r)
 
+    def test_written_again_after_an_exact_copy(self):
+        # the answer an exact copy took stays the one a later Write of the same report is compared with: a
+        # source-verifier answers only a call or a message, which the guard sees (Read, Glob and Grep are its
+        # tools), so with none between, the main chat has no later version
+        one, two = verifier_report(1), verifier_report(2)
+        cut = one.rstrip('\n').rsplit('\n', 1)[0] + '\n'
+        entries = tr_launch(self.tid(), agent='a1') + tr_launch(self.tid(), agent='a2') + \
+            [tr_handback(one, agent='a1'), tr_handback(two, agent='a2')]
+        w1, e1 = self.write(self.rep, one)
+        w2, e2 = self.write(self.rep, cut)
+        r = self.saved(cut, entries + e1 + e2, wid=w2)
+        self.assertIn('it differs; the first difference: the saved file ends after line 36', r)   # not report 2's
+        w2, e2 = self.write(self.rep, one)
+        self.assertIn('it matches', self.saved(one, entries + e1 + e2, wid=w2))
+        # the other report's answer saved into this file first, then the right one
+        w1, e1 = self.write(self.rep, two)
+        w2, e2 = self.write(self.rep, one)
+        self.assertIn('it matches', self.saved(one, entries + e1 + e2, wid=w2))
+        # then report 2: its answer was taken by the first of those Writes, no statement (and no wrong one)
+        rep2 = os.path.join(self.ver, 'ch_2_round_1.md')
+        w3, e3 = self.write(rep2, two)
+        self.assertNotIn('The guard compared', self.saved(two, entries + e1 + e2 + e3, path=rep2, wid=w3))
+        # an agent call after the exact copy: the main chat may know more than the guard, no statement
+        w1, e1 = self.write(self.rep, one)
+        call = [tr_call('Agent', {'description': 'Kapitel 1', 'prompt': 'Revise.', 'subagent_type': 'writer-agent'},
+                        self.tid())]
+        w2, e2 = self.write(self.rep, cut)
+        self.assertNotIn('The guard compared', self.saved(cut, entries + e1 + call + e2, wid=w2))
+
     def test_answer_of_another_round_not_used(self):
         old, new = verifier_report(), verifier_report(changed=range(1, 31))
         rep2 = os.path.join(self.ver, 'ch_1_round_2.md')
@@ -1312,11 +1341,6 @@ class TestR5AnswerComparison(Base):
                                  self.tid()), tr_handback(new, agent='a9')]
         w2, e2 = self.write(cf, new)
         self.assertNotIn('The guard compared', self.saved(new, entries + e2, path=cf, wid=w2))
-        # the new answer not in the transcript at all: the same
-        entries = tr_launch(self.tid(), agent='a9') + [tr_handback(old, agent='a9')]
-        w1, e1 = self.write(cf, old)
-        w2, e2 = self.write(cf, new)
-        self.assertNotIn('The guard compared', self.saved(new, entries + e1 + e2, path=cf, wid=w2))
         # round 2's answer in a shape the guard does not read, round 1's report never saved
         rep2 = os.path.join(self.ver, 'ch_1_round_2.md')
         t = self.tid()

@@ -2130,7 +2130,8 @@ _TR_RESULT_ID = re.compile(rb'"tool_use_id"\s*:\s*"([^"\\]{1,200})"')
 def _verifier_events(lines, ctx):
     """The source-verifier's answers to the main chat and the main chat's
     Writes into a verification/ folder, in order: [('answer', text) |
-    ('opaque',) | ('write', tool id, normalized path, text written)].  An
+    ('opaque',) | ('write', tool id, normalized path, text written) |
+    ('call',), an Agent or Task call of the main chat].  An
     answer is the result of a call in the foreground or the report a
     background one hands back (origin.handbackReportText of a peer message,
     as Claude Code 2.1.31x writes it).  'opaque' is an answer the guard does
@@ -2180,8 +2181,10 @@ def _verifier_events(lines, ctx):
             tin = c.get('input')
             if e.get('type') == 'assistant' and c.get('type') == 'tool_use' and isinstance(tin, dict):
                 name, cid = c.get('name'), c.get('id')
-                if name in ('Agent', 'Task') and isinstance(cid, str):
-                    calls[cid.encode('utf-8', 'replace')] = tin.get('subagent_type')
+                if name in ('Agent', 'Task'):
+                    events.append(('call',))
+                    if isinstance(cid, str):
+                        calls[cid.encode('utf-8', 'replace')] = tin.get('subagent_type')
                 elif name == 'SendMessage':
                     to = tin.get('to')
                     if not (isinstance(to, str) and to in others and to not in verifiers):
@@ -2225,12 +2228,15 @@ def _round_answers(events, write_id, n, ctx, paths):
     and after the last answer the guard does not compare with ('opaque',
     which may be a later version of one before it), less each one an earlier
     Write in the round has taken (another report: the answer it is or is
-    most like; this report: the answer it is; a report written before the
-    round takes none), at most the last 6, each with its place in the
-    events; none when the latest answer is one the guard does not compare
-    with, and none when this report was written before its round (an
-    earlier round's report written again: its answer may be one the guard
-    no longer counts).  Also the events before the Write."""
+    most like; a report written before the round takes none), at most the
+    last 6, each with its place in the events; and the answer an earlier
+    Write of this report was the exact copy of, unless an agent call or an
+    answer the guard does not compare with came after that Write (then
+    none: the main chat may know a later version).  None when the latest
+    answer is one the guard does not compare with, and none when this
+    report was written before its round (an earlier round's report written
+    again: its answer may be one the guard no longer counts).  Also the
+    events before the Write."""
     stop = next((i for i, ev in enumerate(events) if ev[0] == 'write' and ev[1] == write_id), len(events)) \
         if write_id else len(events)
     events = events[:stop]
@@ -2241,19 +2247,29 @@ def _round_answers(events, write_id, n, ctx, paths):
     old = {ev[2] for ev in events[:start + 1] if ev[0] == 'write'}
     if n in old:
         return [], events
-    free = []
+    free, held = [], None          # held: the answer an exact copy of this report took (False: no longer sure)
     for i in range(start + 1, len(events)):
         ctx.budget.tick()
         ev = events[i]
-        if ev[0] == 'opaque':
-            free = []
+        if ev[0] in ('opaque', 'call'):
+            if ev[0] == 'opaque':
+                free = []
+            if held:
+                held = False
         elif ev[0] == 'answer':
             free.append(_answer(ev[1], paths, ctx) + (i,))
-        elif ev[0] == 'write' and isinstance(ev[3], str) and free and ev[2] not in old:
-            k = _match(_report_lines(ev[3]), free, ctx)
+        elif ev[0] == 'write' and isinstance(ev[3], str) and ev[2] not in old:
+            cand = free + [held] if ev[2] == n and held else free
+            k = _match(_report_lines(ev[3]), cand, ctx) if cand else None
             if k is not None and (ev[2] != n or k[1]):
-                del free[k[0]]
-    return free[-6:], events
+                taken = cand[k[0]]
+                if k[0] < len(free):
+                    del free[k[0]]
+                if ev[2] == n:
+                    held = taken
+    if held is False:
+        return [], events
+    return free[-6:] + ([held] if held else []), events
 
 
 def _machine_paths(ctx):
