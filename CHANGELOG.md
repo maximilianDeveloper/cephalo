@@ -10,6 +10,14 @@ Dates follow ISO 8601 (`YYYY-MM-DD`).
 
 ## [Unreleased]
 
+### Added
+
+- **A style for the head of a document without a title page** (`scripts/build_reference_docx.py`; `docs/reference_management.md`, "The head of a document without a title page"): `Header Block`, left-aligned `Body Text` without a first-line indent. The writer puts the head of an exported presentation companion in it, one paragraph per line (`writer-agent.md`, "Formatting rules"; presentation step 1). In the second presentation trial run the handout's head, short lines with line breaks in a justified paragraph, was stretched across the line.
+
+### Changed
+
+- **The provenance check as a list in all three orchestrators** (`orchestrator-longform.md` and `orchestrator-defense.md`, as `orchestrator.md` since 1.4.9): each provenance the user's answers wrote into `styleguide.md` is checked against the message it rests on, and the result is a list, one line per provenance.
+
 ## [1.4.9] — 2026-11-06
 
 **What the twelfth seminar trial run and the first presentation trial run found.** `state_check.py` names its exit code in its own output, and the cephalo guard denies a run of it through a pipe or into `/dev/null` (S6). After the main chat saved a source-verifier report, the guard denies its next agent call until the report is read back whole. It also checks the commands inside `if`, `for`, `while` and `case`, and it lets a harmless Edit or Write pass without starting Python. The presentation workflow counts its iterations per part and builds the deck only after the layout questions. It records the writer's gaps and gives the data files to the source-verifier. In F.1 it exports the companion and checks it in format rounds, and the chat closure states the three-way check in a fixed line. The second presentation trial run, on these definitions, carried the workflow through to the deck, its PDF and the handout as DOCX and PDF. It cost 30.47 USD in 107 minutes (the first: 29.52 USD in 97 minutes). None of the six runs of `state_check.py` through a pipe got through (the first run: 25 of 28), and the main chat read all 11 saved reports back whole before its next agent. The guard took 102 seconds instead of 276. Its own findings are fixed here and not yet tried in a run: a Word export of the handout PDF that hung twice, the companion's format questions asked only in F.1, and a provenance check claimed but not done. The recipe for the Word export is still to be checked on Windows. Next: a check by the guard that a saved report matches the agent's answer (one of 11 lacked its last line, and the main chat called it a match), and the remaining layout values that the deck script chose itself.
