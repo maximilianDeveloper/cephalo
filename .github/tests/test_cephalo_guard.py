@@ -1134,25 +1134,66 @@ class TestR5AnswerComparison(Base):
 
     def test_paths_of_this_machine_as_readback_asks(self):
         # the rule readback() enforces: every absolute path of this machine (project, multi-project root, home)
-        # becomes project-relative, as the copy likes; such a line of the answer is no difference, and no
+        # becomes project-relative, with a relative lead the copy likes; such a path is no difference, and no
         # "it matches" goes out with the warning about an absolute path
         rep = verifier_report()
         for absolute, relative in (('/home/u/Zotero/storage/keller2018.pdf', '../Zotero/storage/keller2018.pdf'),
                                    ('/home/u/Zotero/storage/keller2018.pdf', '~/Zotero/storage/keller2018.pdf'),
-                                   (self.root, '.'), (self.root + '/workspace/sources/a.pdf', 'a.pdf')):
+                                   (self.root, '.'),
+                                   (self.root + '/workspace/sources/a.pdf', 'workspace/sources/a.pdf'),
+                                   (self.root + '/workspace/sources/a.pdf', './workspace/sources/a.pdf')):
             with self.subTest(absolute=absolute, relative=relative):
                 r = self.round(rep + 'Quelle: %s\n' % absolute, saved=rep + 'Quelle: %s\n' % relative)
-                self.assertIn('it matches (line ends, trailing blanks and the lines with an absolute path', r)
+                self.assertIn('it matches (line ends, trailing blanks and absolute paths of this machine made '
+                              'relative aside)', r)
                 self.assertNotIn('still contains an absolute path', r)
                 r = self.round(rep + 'Quelle: %s\n' % absolute)                  # saved with the path kept
                 self.assertIn('still contains an absolute path', r)
                 self.assertNotIn('The guard compared', r)
-        # a line with an absolute path that the copy lacks at its end: no statement
+        # the rest of the path stays: a.pdf is not the project-relative form of .../workspace/sources/a.pdf
+        r = self.round(rep + 'Quelle: %s/workspace/sources/a.pdf\n' % self.root, saved=rep + 'Quelle: a.pdf\n')
+        self.assertIn('it differs; the first difference: line 38 of the saved file: \u00abQuelle: a.pdf\u00bb', r)
+        # nor is another absolute path in its place
+        for other in ('/home/other/workspace/sources/a.pdf', 'C:/workspace/sources/a.pdf'):
+            with self.subTest(other=other):
+                r = self.round(rep + 'Quelle: %s/workspace/sources/a.pdf\n' % self.root,
+                               saved=rep + 'Quelle: %s\n' % other)
+                self.assertIn('it differs', r)
+        # a line with an absolute path that the copy lacks at its end is a difference too
         r = self.round(rep + 'Quelle: %s/workspace/sources/a.pdf\n' % self.root, saved=rep)
-        self.assertNotIn('The guard compared', r)
+        self.assertIn('it differs; the first difference: the saved file ends after line 37', r)
         # another difference is still named
         r = self.round(rep + 'Quelle: %s/a.pdf\n' % self.root, saved=rep.replace('alt', 'ALT', 1) + 'Quelle: a.pdf\n')
         self.assertIn('it differs', r)
+
+    def test_rest_of_a_path_line_is_compared(self):
+        # only the absolute path of this machine may change on its line: a status or a page next to it is compared
+        rep = verifier_report()
+        row = '| 31 | \u201eZitat 31\u201c (%s/workspace/sources/a.pdf, S. 12) | \u2705 |\n'
+        answer = rep + row % self.root
+        for saved in ((row % '.').replace('\u2705', '\u26a0\ufe0f'), (row % '.').replace('S. 12', 'S. 13')):
+            with self.subTest(saved=saved):
+                r = self.round(answer, saved=rep + saved)
+                self.assertIn('it differs; the first difference: line 38 of the saved file: \u00ab%s\u00bb'
+                              % saved.rstrip('\n'), r)
+                self.assertNotIn('it matches', r)
+        self.assertIn('it matches', self.round(answer, saved=rep + row % '.'))
+        # a path of another user whose folder starts like the home folder is no path of this machine
+        other = rep + 'Quelle: /home/user2/x.pdf\n'
+        self.assertIn('it differs', self.round(other, saved=rep + 'Quelle: ../user2/x.pdf\n'))
+        r = self.round(other)
+        self.assertIn('it matches', r)
+        self.assertNotIn('still contains an absolute path', r)
+        # Windows: the rest of the path with either separator, the status after it compared
+        win = 'C:\\Home\\u\\Projekt Arbeit'
+        rep_win = os.path.join(win, 'workspace\\output\\verification\\ch_1_round_1.md')
+        answer = rep + 'Quelle: %s\\workspace\\sources\\a.pdf \u2705\n' % win
+        for saved, verdict in (('workspace/sources\\a.pdf \u2705', 'it matches'),
+                               ('workspace/sources/a.pdf \u26a0\ufe0f', 'it differs'),
+                               ('workspace/quellen/a.pdf \u2705', 'it differs')):
+            with self.subTest(saved=saved):
+                self.assertIn(verdict, self.round(answer, saved=rep + 'Quelle: %s\n' % saved, path=rep_win,
+                                                  plat='windows', root=win))
 
     def test_backslash_and_slash_differ(self):
         # outside a path of this machine a backslash is text: Pandoc's 'S.\\ 12', a relative path as written

@@ -2272,16 +2272,74 @@ def _machine_paths(ctx):
             f = unicodedata.normalize('NFC', f)
             if len(f) > 3:
                 out.add(f.lower() if ctx.windows else f)
-    return sorted(out)
+    return sorted(out, key=lambda f: (-len(f), f))
+
+
+_PATH_SEP = r'(?:\\\\|[\\/])'          # \\, \ or /
+_PATH_END = '\\s|\\[\\]()`\'"\u00ab\u00bb,;'    # what ends a path in a report line (a character class)
+
+
+def _paths_alt(paths, ctx):
+    """The regular expression of _machine_paths, the longest first, on
+    Windows in any letter case."""
+    alt = '|'.join(re.escape(p) for p in paths)
+    return '(?i:%s)' % alt if ctx.windows else '(?:%s)' % alt
+
+
+def _path_re(paths, ctx):
+    """One of _machine_paths where it ends a name: a separator, or no letter,
+    digit or hyphen, follows it (/home/u is no part of /home/user2)."""
+    if not paths:
+        return None
+    return re.compile(_paths_alt(paths, ctx) + r'(?![\w-])')
 
 
 def _holds_path(text, paths, ctx):
     """Whether text holds one of _machine_paths (compared in NFC, on Windows
     in any letter case)."""
-    t = unicodedata.normalize('NFC', text)
-    if ctx.windows:
-        t = t.lower()
-    return any(p in t for p in paths)
+    rx = _path_re(paths, ctx)
+    return bool(rx and rx.search(unicodedata.normalize('NFC', text)))
+
+
+def _path_line(line, rx, paths, ctx):
+    """A line of an answer that holds an absolute path of this machine, as a
+    regular expression a copy matches whole: each such path as it is or made
+    relative as the copy likes (nothing, ../00_Shared_Materials/, ~/ before
+    the rest, but no other absolute path; the bare folder may become .), the
+    separators in the rest of
+    the path \\ or /, the line's other text as it is; and the parts of the
+    line that the paths and their separators take, (start, end)."""
+    alt, out, pos, parts = _paths_alt(paths, ctx), [], 0, []
+    for m in rx.finditer(line):
+        if m.start() < pos:
+            continue
+        out.append(re.escape(line[pos:m.start()]))
+        j = m.end()
+        sep = re.match(_PATH_SEP, line[j:])
+        parts.append((m.start(), j + (sep.end() if sep else 0)))
+        if sep:
+            j += sep.end()
+            rest = re.match('[^%s]*' % _PATH_END, line[j:]).group(0)
+            out.append('(?:%s%s|(?![\\\\/]|[A-Za-z]:)[^%s]*%s)?' % (alt, _PATH_SEP, _PATH_END, _PATH_SEP))
+            out.append(''.join(_PATH_SEP if k % 2 else re.escape(part)
+                               for k, part in enumerate(re.split(r'(\\\\|[\\/])', rest))))
+            j += len(rest)
+        else:
+            out.append('(?:%s|\\.)' % alt)
+        pos = j
+    out.append(re.escape(line[pos:]))
+    return re.compile(''.join(out)), parts
+
+
+def _diff_at(a, b, parts):
+    """Where the copy a of the answer's line b first differs from it outside
+    the parts of b an absolute path takes: (position in a, position in b)."""
+    import difflib
+    ops = difflib.SequenceMatcher(None, a, b, autojunk=False).get_opcodes()
+    for tag, i1, i2, j1, j2 in ops:
+        if tag != 'equal' and not any(s <= j1 and j2 <= e for s, e in parts):
+            return i1, j1
+    return 0, 0
 
 
 def _report_lines(text):
@@ -2298,12 +2356,13 @@ def _report_lines(text):
 
 
 def _answer(text, paths, ctx):
-    """An answer as the guard compares a report with it: its lines, and the
-    numbers of those that hold an absolute path of this machine (the saved
-    copy makes it project-relative, as it likes: such a line is no
-    difference)."""
-    lines = _report_lines(text)
-    return lines, frozenset(i for i, ln in enumerate(lines) if _holds_path(ln, paths, ctx))
+    """An answer as the guard compares a report with it: its lines; for each
+    line that holds an absolute path of this machine the expression a copy
+    of it matches (_path_line: the copy makes the path project-relative, as it
+    likes); and its _skeleton, without those paths."""
+    lines, rx = _report_lines(text), _path_re(paths, ctx)
+    pats = {i: _path_line(ln, rx, paths, ctx) for i, ln in enumerate(lines) if rx and rx.search(ln)}
+    return lines, pats, _skeleton([rx.sub('', ln) if i in pats else ln for i, ln in enumerate(lines)])
 
 
 def _skeleton(lines):
@@ -2322,10 +2381,12 @@ def _cut(line, at):
 
 def _first_difference(mine, answer):
     """The first line number at which the report mine (as _report_lines) and
-    an answer (as _answer) differ, its lines with an absolute path aside;
+    an answer (as _answer) differ (a line with an absolute path of this
+    machine: one the copy of which its expression does not match whole);
     None when they do not."""
-    theirs, free = answer[0], answer[1]
-    k = next((i for i, (a, b) in enumerate(zip(mine, theirs)) if i not in free and a != b), None)
+    theirs, pats = answer[0], answer[1]
+    k = next((i for i, (a, b) in enumerate(zip(mine, theirs))
+              if a != b and not (i in pats and pats[i][0].fullmatch(a))), None)
     if k is None and len(mine) != len(theirs):
         k = min(len(mine), len(theirs))
     return k
@@ -2338,7 +2399,7 @@ def _match(mine, answers, ctx):
     import difflib
     if not mine or len(mine) > MAX_COMPARE:
         return None
-    best, best_ratio = None, 0.0
+    best, best_ratio, skel = None, 0.0, _skeleton(mine)
     for k, answer in enumerate(answers):
         ctx.budget.tick()
         theirs = answer[0]
@@ -2348,8 +2409,7 @@ def _match(mine, answers, ctx):
             continue
         # (a long report with many like lines makes difflib slow: there it leaves out lines that recur often,
         # which can only lower the ratio)
-        sm = difflib.SequenceMatcher(None, _skeleton(mine), _skeleton(theirs),
-                                     autojunk=len(mine) * len(theirs) > 1000000)
+        sm = difflib.SequenceMatcher(None, skel, answer[2], autojunk=len(mine) * len(theirs) > 1000000)
         if sm.quick_ratio() >= max(SIMILAR, best_ratio):
             ratio = sm.ratio()
             if ratio >= SIMILAR and ratio > best_ratio:
@@ -2359,23 +2419,19 @@ def _match(mine, answers, ctx):
 
 def _compare(mine, answers, ctx, lead=0):
     """The guard's comparison of a saved report (as _report_lines) with the
-    answers of its round: ('same', None) when one is the same text (the
-    lines of the answer with an absolute path of this machine aside),
+    answers of its round: ('same', None) when one is the same text (an
+    absolute path of this machine made relative aside),
     ('differs', what) for the first difference from the one it is most like
-    when that is the same report (_match), None otherwise, and also when
-    the first difference is a line with an absolute path that the saved file
-    lacks.  lead: the blank lines the saved file starts with (for its line
-    numbers)."""
+    when that is the same report (_match), None otherwise.  lead: the blank
+    lines the saved file starts with (for its line numbers)."""
     found = _match(mine, answers, ctx)
     if found is None:
         return None
     if found[1]:
         return 'same', None, found[0]
-    best, free = answers[found[0]][0], answers[found[0]][1]
+    best = answers[found[0]][0]
     k = _first_difference(mine, answers[found[0]])
     if k == len(mine):
-        if k in free:
-            return None
         more = len(best) - k
         return 'differs', ('the saved file ends after line %d, the answer has %d more line%s, from: \u00ab%s\u00bb'
                            % (k + lead, more, '' if more == 1 else 's', _cut(best[k], 0))), found[0]
@@ -2384,7 +2440,11 @@ def _compare(mine, answers, ctx, lead=0):
         return 'differs', ('the answer ends after line %d, the saved file has %d more line%s, from line %d: '
                            '\u00ab%s\u00bb' % (k, more, '' if more == 1 else 's', k + 1 + lead, _cut(mine[k], 0))), \
             found[0]
-    a, b = mine[k], best[k]
+    a, b, pats = mine[k], best[k], answers[found[0]][1]
+    if k in pats:
+        ia, ib = _diff_at(a, b, pats[k][1])
+        return 'differs', ('line %d of the saved file: \u00ab%s\u00bb; in the answer: \u00ab%s\u00bb'
+                           % (k + 1 + lead, _cut(a, ia), _cut(b, ib))), found[0]
     at = next((i for i, (x, y) in enumerate(zip(a, b)) if x != y), min(len(a), len(b)))
     what = 'line %d of the saved file: \u00ab%s\u00bb; in the answer: \u00ab%s\u00bb' % (k + 1 + lead, _cut(a, at),
                                                                                        _cut(b, at))
@@ -2447,12 +2507,12 @@ def _answer_check(saved, n, data, ctx, absolute):
     found = _compare(mine, answers, ctx, lead)
     if not found or (found[0] == 'same' and absolute):
         return ''
-    after = before[answers[found[2]][2] + 1:]
+    after = before[answers[found[2]][3] + 1:]
     if any(ev[0] == 'compact' for ev in after):
         return ''                  # the answer is no longer in the main chat's context as it was
     if found[0] == 'same':
         return (' The guard compared it with the source-verifier\'s answer in the session transcript: it matches '
-                '(line ends, trailing blanks and the lines with an absolute path of this machine aside).')
+                '(line ends, trailing blanks and absolute paths of this machine made relative aside).')
     again = [ev for ev in after if ev[0] == 'write' and ev[2] == n and isinstance(ev[3], str)]
     if again and _report_lines(again[-1][3]) == mine:
         return (' The guard compared it with the source-verifier\'s answer in the session transcript: it differs as '
