@@ -2201,6 +2201,8 @@ def _verifier_events(lines, ctx):
                 key = c['tool_use_id'].encode('utf-8', 'replace')
                 if key in writes:
                     ev = writes.pop(key)
+                    # (a Write that R5's PostToolUse "block" follows saved the file: its result is no error, as
+                    # in the second Windows trial run with Claude Code 2.1.319, "File created successfully")
                     if c.get('is_error') is True and ev in events:
                         events.remove(ev)
                     continue
