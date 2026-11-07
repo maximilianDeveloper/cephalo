@@ -206,14 +206,18 @@ phases:
           the template nor styleguide.md gives (where the short citations
           stand, the size and position of a chart, the slide layout of the
           template that each kind of slide uses, a source line under a chart,
-          how its data labels read), each with a proposal, and build after
-          the answer. Each answer goes into the decision log of
-          workspace/state.md, one entry per value with the user's words, and
-          the build takes it from there; it is no styleguide entry. The deck
+          how its data labels read and where they stand, a chart's start
+          angle, how its plot and its legend share its area), each with a
+          proposal, and build after the answer. Each answer goes into the
+          decision log of workspace/state.md, one entry per value with the
+          user's words, and the build takes it from there; it is no
+          styleguide entry. The deck
           script sets no such value that neither the template, styleguide.md
           nor the decision log gives: a value it needs beyond them is asked
-          first, as above. After a revision of slide text or speaker
-          notes, the deck is built again the same way before the next check.
+          first, as above. A value changed after looking at a rendering of
+          the deck is a new value, asked before the next build. After a
+          revision of slide text or speaker notes, the deck is built again
+          the same way before the next check.
           When the writer's answer comes in, a line in workspace/state.md
           before a question to the user or the next agent call
           (orchestrator.md, "Steps 1..N: Chapter assignment", after every
