@@ -314,10 +314,12 @@ phases:
           guidelines suggest one, records the answers (style-resolver.md,
           "Recording answers to open questions") and starts the pass after
           them. For a companion that F.1 exports (step 1), the same message
-          asks F.1's question on the parts it has (recorded in the decision
-          log) and leaves out the entries of a part it does not have, which
-          the user may close with the n/a value (style-resolver.md, the same
-          section, item 4). F.1 asks only what comes up later.
+          asks F.1's question on the parts it has, also where the guidelines
+          name them, unless the decision log holds the user's answer to it
+          (record the answer there), and leaves out the entries of a part it
+          does not have, which the user may close with the n/a value
+          (style-resolver.md, the same section, item 4). F.1 asks only what
+          comes up later.
           Claude in the main chat runs this step (main_session). The task
           prompt names the PPTX, its PDF export (three_way_check), the
           companion and the report file, from round 2 on also the previous
