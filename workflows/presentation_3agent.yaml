@@ -424,7 +424,8 @@ phases:
           DOCX, after the field update of the seminar's item 7 where it has a
           table of contents: with Word or LibreOffice, by Claude or the user,
           as the user decides; by Claude with Word, as docs/scripts.md, "A PDF
-          from Word (Windows)", shows, with its time limit.
+          from Word (Windows)", shows, unchanged but for the file names, and
+          after a `not exported` or a timeout as it says.
         - Speaker notes export (if required)
         - Rehearsal with timing (target per assignment / styleguide.md, e.g. 15-20 min)
         - Before closing, run
