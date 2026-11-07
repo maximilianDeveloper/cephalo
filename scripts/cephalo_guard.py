@@ -2175,7 +2175,8 @@ def _verifier_events(lines, ctx):
     writes = {}                           # tool id (bytes) of a Write in events -> its event
     verifiers, others = set(), set()      # agent ids of source-verifiers and of other agents
     handed, unnamed = {}, []              # a verifier's agent id -> its result's event (by identity: a failed
-    #                                       Write leaves events); the texts of answers whose result names no agent
+    #                                       Write leaves events); the answers whose result names no agent (as
+    #                                       _report_lines: a hand-back of the same lines repeats one)
     for k, line in enumerate(lines):
         if not k % 256:
             ctx.budget.tick()
@@ -2205,12 +2206,13 @@ def _verifier_events(lines, ctx):
             if isinstance(frm, str) and frm in handed:    # the hand-back of a result read: its answer once
                 was = handed.pop(frm)
                 at = next((i for i, ev in enumerate(events) if ev is was), None)
-                if at is not None and not (ok and (was[0] == 'pending' or was == ('answer', text))):
+                if at is not None and not (ok and (was[0] == 'pending' or
+                                                   _report_lines(was[1]) == _report_lines(text))):
                     events[at] = ('opaque',)
                 elif at is not None and was[0] == 'pending':
                     events[at] = ('answer', text)
-            elif ok and text in unnamed:
-                unnamed.remove(text)
+            elif ok and _report_lines(text) in unnamed:
+                unnamed.remove(_report_lines(text))
             else:
                 events.append(('answer', text) if ok else ('opaque',))
             continue
@@ -2269,7 +2271,7 @@ def _verifier_events(lines, ctx):
                     if aid:
                         handed[aid] = events[-1]
                     elif what == 'answer':
-                        unnamed.append(text)
+                        unnamed.append(_report_lines(text))
                 elif what == 'opaque':
                     events.append(('opaque',))
     return [('opaque',) if ev[0] == 'pending' else ev for ev in events]   # a report never handed back

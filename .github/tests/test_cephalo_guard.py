@@ -1613,6 +1613,26 @@ class TestR5AnswerComparison(Base):
         self.assertIn('it matches', self.saved(rep, entries + e, wid=w))
         self.assertNotIn('The guard compared', self.saved(cut, entries + e + e2, path=rep2, wid=w2))
 
+    def test_two_copies_of_the_report_alike_but_for_line_ends(self):
+        # the result's report and the hand-back's are compared as report lines: a final newline, CRLF or
+        # trailing blanks in one of them are no other answer
+        rep = verifier_report().rstrip('\n')
+        cut = rep.rsplit('\n', 1)[0] + '\n'
+        for one, two in ((rep + '\n', rep), (rep, rep + '\n'), (rep.replace('\n', '\r\n'), rep),
+                         (rep.replace('\u2705 |\n| 5', '\u2705 |  \n| 5'), rep)):
+            with self.subTest(one=ascii(one[-8:]), two=ascii(two[-8:])):
+                entries = tr_foreground_handback(self.tid(), one) + [tr_handback_attachment(two, 'a7c2e91f04b3d5a68')]
+                w, e = self.write(self.rep, cut)
+                self.assertIn('it differs; the first difference: the saved file ends after line 36',
+                              self.saved(cut, entries + e, wid=w))
+                # a result that names no agent: the hand-back of the same lines is the same answer
+                entries[1]['message']['content'][0]['content'] = 'This agent\'s report was delivered to you.'
+                w, e = self.write(self.rep, rep)
+                rep2 = os.path.join(self.ver, 'ch_2_round_1.md')
+                w2, e2 = self.write(rep2, cut)
+                self.assertIn('it matches', self.saved(rep, entries + e, wid=w))
+                self.assertNotIn('The guard compared', self.saved(cut, entries + e + e2, path=rep2, wid=w2))
+
     def test_source_and_format_verifier_in_parallel(self):
         # as in the third Windows trial run: both results, then both hand-backs
         rep = verifier_report()
