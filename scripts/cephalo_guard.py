@@ -2098,13 +2098,22 @@ SIMILAR = 0.8                   # share of lines two texts have in common to be 
 MAX_COMPARE = 5000              # lines of a report the guard compares, at most
 
 
+_HANDBACK_STUB = re.compile(r'report was delivered to you as a message from "([\w-]+)"')
+
+
 def _agent_result(c, e):
     """What the result c (of entry e) of an Agent or Task call holds:
     ('launch', None, agent id) for a start in the background, ('answer',
     text, agent id) for the answer of a call in the foreground, without
     Claude Code's trailer ('agentId: ...' and a '<usage>...</usage>' block),
-    ('opaque', None, agent id) for an error or a result in another shape.
-    The agent id is None when the result names none."""
+    ('pending', None, agent id) for a result that only names the hand-back
+    message the report comes in, ('opaque', None, agent id) for an error or
+    a result in another shape.  Claude Code 2.1.319 gives a call in the
+    foreground a stub as its result ('This agent's report was delivered to
+    you as a message from "<agent id>" ...'), the report in the entry's
+    toolUseResult (handback "send", handbackReport.text), and the report
+    again in a hand-back that follows (_verifier_events); the stub is never
+    the answer.  The agent id is None when the result names none."""
     tur = e.get('toolUseResult')
     aid = tur.get('agentId') if isinstance(tur, dict) and isinstance(tur.get('agentId'), str) else None
     content = c.get('content')
@@ -2116,10 +2125,18 @@ def _agent_result(c, e):
     else:
         blocks = None
     named = re.findall(r'(?m)^[ \t]*agentId:[ \t]*([\w-]+)', '\n'.join(blocks or ()))
-    aid = aid or (named[-1] if named else None)
+    stub = _HANDBACK_STUB.search('\n'.join(blocks or ()))
+    aid = aid or (named[-1] if named else None) or (stub.group(1) if stub else None)
     if isinstance(tur, dict) and (tur.get('isAsync') is True or tur.get('status') == 'async_launched'):
         return 'launch', None, aid
-    if c.get('is_error') is True or blocks is None:
+    if c.get('is_error') is True:
+        return 'opaque', None, aid
+    report = tur.get('handbackReport') if isinstance(tur, dict) else None
+    if isinstance(report, dict) and isinstance(report.get('text'), str) and report['text'].strip():
+        return 'answer', report['text'], aid
+    if stub or (isinstance(tur, dict) and (tur.get('handback') is not None or report is not None)):
+        return 'pending', None, aid
+    if blocks is None:
         return 'opaque', None, aid
     text = '\n'.join(b for b in blocks if not b.lstrip().startswith('agentId:'))
     if 'Async agent launched' in text:
@@ -2141,9 +2158,12 @@ def _verifier_events(lines, ctx):
     ('call',), an Agent or Task call of the main chat | ('user',), a
     message from the user (typed, or queued while the main chat worked), or
     another one that is neither a tool result nor marked isMeta].  An
-    answer is the result of a call in the foreground or the report a
-    background one hands back (origin.handbackReportText of a peer message,
-    as Claude Code 2.1.31x writes it).  'opaque' is an answer the guard does
+    answer is the result of a call in the foreground (_agent_result) or the
+    report an agent hands back (origin.handbackReportText of a peer message,
+    as Claude Code 2.1.31x writes it, in a user entry or, in 2.1.319, in a
+    queued_command attachment), once: a hand-back that repeats the report of
+    a result read is left out, and one that a result named ('pending')
+    gives that result its answer.  'opaque' is an answer the guard does
     not compare with: one it cannot read (an error, a result or hand-back in
     another shape), and one an agent gives after a message of the main chat
     (SendMessage) to it, or to an agent the guard does not know: there the
@@ -2154,6 +2174,8 @@ def _verifier_events(lines, ctx):
     events, calls, sent = [], {}, set()   # calls: tool id (bytes) of an Agent or Task call -> its subagent_type
     writes = {}                           # tool id (bytes) of a Write in events -> its event
     verifiers, others = set(), set()      # agent ids of source-verifiers and of other agents
+    handed, unnamed = {}, []              # a verifier's agent id -> its result's event (by identity: a failed
+    #                                       Write leaves events); the texts of answers whose result names no agent
     for k, line in enumerate(lines):
         if not k % 256:
             ctx.budget.tick()
@@ -2170,21 +2192,30 @@ def _verifier_events(lines, ctx):
         if (e.get('type') == 'system' and e.get('subtype') == 'compact_boundary') or e.get('isCompactSummary') is True:
             events.append(('compact',))
             continue
-        origin = e.get('origin')
-        if e.get('type') == 'user' and isinstance(origin, dict) and origin.get('handback') is True:
-            name, frm = origin.get('name'), origin.get('from')
+        origin, att = e.get('origin'), e.get('attachment')
+        if e.get('type') == 'attachment' and isinstance(att, dict):
+            origin = att.get('origin')
+        if e.get('type') in ('user', 'attachment') and isinstance(origin, dict) and origin.get('handback') is True:
+            name, frm, text = origin.get('name'), origin.get('from'), origin.get('handbackReportText')
             mine = name == 'source-verifier' or (isinstance(frm, str) and frm in verifiers)
             if not mine and isinstance(name, str):
                 continue                                  # another agent's report
-            if mine and name == 'source-verifier' and origin.get('kind') == 'peer' and isinstance(frm, str) and \
-                    frm not in sent and isinstance(origin.get('handbackReportText'), str):
-                events.append(('answer', origin['handbackReportText']))
+            ok = name == 'source-verifier' and origin.get('kind') == 'peer' and isinstance(frm, str) and \
+                frm not in sent and frm not in others and isinstance(text, str)
+            if isinstance(frm, str) and frm in handed:    # the hand-back of a result read: its answer once
+                was = handed.pop(frm)
+                at = next((i for i, ev in enumerate(events) if ev is was), None)
+                if at is not None and not (ok and (was[0] == 'pending' or was == ('answer', text))):
+                    events[at] = ('opaque',)
+                elif at is not None and was[0] == 'pending':
+                    events[at] = ('answer', text)
+            elif ok and text in unnamed:
+                unnamed.remove(text)
             else:
-                events.append(('opaque',))
+                events.append(('answer', text) if ok else ('opaque',))
             continue
         m = e.get('message')
         content = m.get('content') if isinstance(m, dict) else None
-        att = e.get('attachment')
         if (e.get('type') == 'attachment' and isinstance(att, dict) and att.get('type') == 'queued_command') or \
                 (e.get('type') == 'user' and e.get('isMeta') is not True and
                  (isinstance(content, str) or isinstance(content, list) and
@@ -2207,6 +2238,7 @@ def _verifier_events(lines, ctx):
                         events.append(('opaque',))
                         if isinstance(to, str):
                             sent.add(to)
+                            handed.pop(to, None)          # a hand-back from it now answers this message
                 elif name == 'Write' and isinstance(tin.get('file_path'), str):
                     n = norm_path(tin['file_path'], ctx, ctx.cwd) or ''
                     if _VERIFICATION_DIR.search(n):
@@ -2232,11 +2264,15 @@ def _verifier_events(lines, ctx):
                     continue
                 if aid:
                     verifiers.add(aid)
-                if what == 'answer':
-                    events.append(('answer', text))
+                if what in ('answer', 'pending'):
+                    events.append(('answer', text) if what == 'answer' else ('pending', len(events)))
+                    if aid:
+                        handed[aid] = events[-1]
+                    elif what == 'answer':
+                        unnamed.append(text)
                 elif what == 'opaque':
                     events.append(('opaque',))
-    return events
+    return [('opaque',) if ev[0] == 'pending' else ev for ev in events]   # a report never handed back
 
 
 def _round_answers(events, write_id, n, ctx, paths):

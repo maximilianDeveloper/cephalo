@@ -995,6 +995,34 @@ def tr_foreground(tid, answer, trailer_block=True, subagent='source-verifier', e
     return [call, res]
 
 
+def tr_handback_attachment(text, agent, name='source-verifier'):
+    """An agent's report as Claude Code 2.1.319 hands it back, after a call in the foreground or the background:
+    a queued_command attachment whose origin carries the report verbatim (handbackReportText)."""
+    body = ('[Subagent hand-back] The text below is the final report of a subagent this session delegated to. '
+            'The report follows:\n' + '\n'.join('  ' + ln for ln in text.split('\n')))
+    return {'parentUuid': None, 'isSidechain': False, 'type': 'attachment', 'userType': 'external',
+            'attachment': {'type': 'queued_command',
+                           'prompt': '<agent-message from=\"%s\">\n%s\n</agent-message>' % (agent, body),
+                           'commandMode': 'prompt', 'isMeta': True,
+                           'origin': {'kind': 'peer', 'from': agent, 'senderTaskId': agent, 'name': name, 'body': body,
+                                      'handback': True, 'handbackReportText': text}}}
+
+
+def tr_foreground_handback(tid, answer, agent='a7c2e91f04b3d5a68', subagent='source-verifier', report=True):
+    """An Agent call in the foreground as Claude Code 2.1.319 writes it: the tool result only a stub, the report in
+    toolUseResult (handback "send", handbackReport.text; left out when report is False); the hand-back attachment
+    follows (tr_handback_attachment), here or, with agents in parallel, after the next agent's result."""
+    call = tr_call('Agent', {'description': 'Kapitel 1 Runde 1', 'prompt': 'Verify.', 'subagent_type': subagent}, tid)
+    res = tr_result(tid)
+    res['message']['content'][0]['content'] = (
+        'This agent\'s report was delivered to you as a message from "%s" (its SubagentHandback call). Read it '
+        'there; it is not repeated here.' % agent)
+    res['toolUseResult'] = {'status': 'completed', 'handback': 'send'}
+    if report:
+        res['toolUseResult']['handbackReport'] = {'text': answer}
+    return [call, res]
+
+
 def verifier_report(chapter=1, rows=30, changed=()):
     lines = ['# Verifikation Kapitel %d, Runde 1: `workspace/output/chapters/ch_%d.md`' % (chapter, chapter), '',
              '| # | Satz | Status |', '|---|---|---|']
@@ -1550,6 +1578,100 @@ class TestR5AnswerComparison(Base):
         entries = early + [filler] + e0 + tr_launch(self.tid(), agent='a3') + [tr_handback(one, agent='a3')] + e
         self.assertIn('it differs; the first difference: the saved file ends after line 36',
                       self.saved(cut, entries, wid=w))
+
+    def test_foreground_call_of_claude_code_2_1_319(self):
+        # the tool result is a stub, the report is in toolUseResult and again in the hand-back attachment
+        rep = verifier_report()
+        cut = rep.rstrip('\n').rsplit('\n', 1)[0] + '\n'
+        for report in (True, False):                     # with handbackReport.text, or only in the attachment
+            entries = tr_foreground_handback(self.tid(), rep, report=report) + \
+                [tr_handback_attachment(rep, 'a7c2e91f04b3d5a68')]
+            with self.subTest(report=report):
+                w, e = self.write(self.rep, cut)
+                self.assertIn('it differs; the first difference: the saved file ends after line 36',
+                              self.saved(cut, entries + e, wid=w))
+                w, e = self.write(self.rep, rep)
+                self.assertIn('it matches', self.saved(rep, entries + e, wid=w))
+                # the answer counts once: once this report took it, there is none for another report
+                rep2 = os.path.join(self.ver, 'ch_2_round_1.md')
+                w2, e2 = self.write(rep2, cut)
+                self.assertNotIn('The guard compared', self.saved(cut, entries + e + e2, path=rep2, wid=w2))
+        # no hand-back after a result without the report: no answer to compare with
+        w, e = self.write(self.rep, cut)
+        entries = tr_foreground_handback(self.tid(), rep, report=False)
+        self.assertNotIn('The guard compared', self.saved(cut, entries + e, wid=w))
+        # a hand-back whose text is not the result's: the guard cannot tell which the main chat holds
+        entries = tr_foreground_handback(self.tid(), rep) + \
+            [tr_handback_attachment(rep.replace('alt', 'neu', 1), 'a7c2e91f04b3d5a68')]
+        self.assertNotIn('The guard compared', self.saved(cut, entries + e, wid=w))
+        # a stub that names no agent: the hand-back of the same text is the same answer
+        entries = tr_foreground_handback(self.tid(), rep) + [tr_handback_attachment(rep, 'a7c2e91f04b3d5a68')]
+        entries[1]['message']['content'][0]['content'] = 'This agent\'s report was delivered to you as a message.'
+        w, e = self.write(self.rep, rep)
+        rep2 = os.path.join(self.ver, 'ch_2_round_1.md')
+        w2, e2 = self.write(rep2, cut)
+        self.assertIn('it matches', self.saved(rep, entries + e, wid=w))
+        self.assertNotIn('The guard compared', self.saved(cut, entries + e + e2, path=rep2, wid=w2))
+
+    def test_source_and_format_verifier_in_parallel(self):
+        # as in the third Windows trial run: both results, then both hand-backs
+        rep = verifier_report()
+        cut = rep.rstrip('\n').rsplit('\n', 1)[0] + '\n'
+        fmt = 'Bericht: workspace/output/verification/ch_1_format_round_1.md\nStatus: \u2705 12, \u26a0\ufe0f 0'
+        sv, fv = tr_foreground_handback(self.tid(), rep, 'asv1'), \
+            tr_foreground_handback(self.tid(), fmt, 'afv1', subagent='format-verifier')
+        entries = [sv[0], fv[0], sv[1], fv[1], tr_handback_attachment(rep, 'asv1'),
+                   tr_handback_attachment(fmt, 'afv1', 'format-verifier')]
+        w, e = self.write(self.rep, cut)
+        self.assertIn('it differs; the first difference: the saved file ends after line 36',
+                      self.saved(cut, entries + e, wid=w))
+        w, e = self.write(self.rep, rep)
+        self.assertIn('it matches', self.saved(rep, entries + e, wid=w))
+
+    def test_background_hand_back_as_an_attachment(self):
+        rep = verifier_report()
+        cut = rep.rstrip('\n').rsplit('\n', 1)[0] + '\n'
+        entries = tr_launch(self.tid(), agent='abg1') + [tr_handback_attachment(rep, 'abg1')]
+        w, e = self.write(self.rep, cut)
+        self.assertIn('it differs; the first difference: the saved file ends after line 36',
+                      self.saved(cut, entries + e, wid=w))
+        w, e = self.write(self.rep, rep)
+        self.assertIn('it matches', self.saved(rep, entries + e, wid=w))
+        # a message to the verifier: its next hand-back answers that message, no statement
+        entries += [tr_call('SendMessage', {'to': 'abg1', 'message': 'Check row 3 again.'}, self.tid()),
+                    tr_handback_attachment(rep.replace('alt', 'neu', 1), 'abg1')]
+        w, e = self.write(self.rep, cut)
+        self.assertNotIn('The guard compared', self.saved(cut, entries + e, wid=w))
+
+    def test_a_short_answer_as_in_probe_t11(self):
+        answer = ('T11 Probe\n| 1 | \u201eSatz eins\u201c | \u2705 |\n| 2 | \u201eSatz zwei\u201c | \u2705 |\n'
+                  'Status: \u2705 2\n')
+        entries = tr_foreground_handback(self.tid(), answer, 'at11') + [tr_handback_attachment(answer, 'at11')]
+        short = answer.rsplit('Status:', 1)[0]
+        w, e = self.write(self.rep, short)
+        self.assertIn('it differs; the first difference: the saved file ends after line 3, the answer has 1 more '
+                      'line, from: \u00abStatus: \u2705 2\u00bb', self.saved(short, entries + e, wid=w))
+        w2, e2 = self.write(self.rep, answer)
+        self.assertIn('it matches', self.saved(answer, entries + e + e2, wid=w2))
+
+    def test_a_writer_hand_back_does_not_count(self):
+        # neither as an answer nor as a message from the user: after an exact copy, the next Write is compared
+        rep = verifier_report()
+        cut = rep.rstrip('\n').rsplit('\n', 1)[0] + '\n'
+        writer = tr_launch(self.tid(), subagent='writer-agent', agent='awr1')
+        entries = writer + tr_foreground_handback(self.tid(), rep, 'asv2') + [tr_handback_attachment(rep, 'asv2')]
+        w1, e1 = self.write(self.rep, rep)
+        w2, e2 = self.write(self.rep, cut)
+        back = tr_handback_attachment(rep.replace('alt', 'neu'), 'awr1', 'writer-agent')
+        r = self.saved(cut, entries + e1 + [back] + e2, wid=w2)
+        self.assertIn('it differs; the first difference: the saved file ends after line 36', r)
+        # its report in the foreground form is no answer either
+        two = verifier_report(2)
+        entries = tr_foreground_handback(self.tid(), two, 'awr2', subagent='writer-agent') + \
+            [tr_handback_attachment(two, 'awr2', 'writer-agent')]
+        rep2 = os.path.join(self.ver, 'ch_2_round_1.md')
+        w, e = self.write(rep2, two[:-30])
+        self.assertNotIn('The guard compared', self.saved(two[:-30], entries + e, path=rep2, wid=w))
 
     def test_a_compaction_after_the_answer(self):
         rep = verifier_report()
