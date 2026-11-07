@@ -1407,6 +1407,32 @@ class TestR5AnswerComparison(Base):
                 else:
                     self.assertNotIn('The guard compared', r)
 
+    def test_a_task_notification_is_no_message_from_the_user(self):
+        # one follows every background hand-back and every background command: after an exact copy, the next
+        # Write is still compared; a message the user queued still ends that
+        rep = verifier_report()
+        cut = rep.rstrip('\n').rsplit('\n', 1)[0] + '\n'
+        note = '<task-notification>\n<task-id>b0glindjg</task-id>\n<status>completed</status>\n</task-notification>'
+        queued = {'type': 'attachment', 'isSidechain': False,
+                  'attachment': {'type': 'queued_command', 'prompt': note, 'commandMode': 'task-notification',
+                                 'origin': {'kind': 'task-notification', 'producer': 'session-task'}}}
+        entry = {'type': 'user', 'isSidechain': False, 'message': {'role': 'user', 'content': note},
+                 'origin': {'kind': 'task-notification', 'producer': 'session-task'}, 'promptSource': 'system',
+                 'turnOrigin': 'task_notification'}
+        human = {'type': 'attachment', 'isSidechain': False,
+                 'attachment': {'type': 'queued_command', 'prompt': 'Zeile 4 bitte auf \u26a0\ufe0f.',
+                                'commandMode': 'prompt', 'origin': {'kind': 'human'}, 'humanTurn': True}}
+        for between, verdict in ((queued, 'it differs'), (entry, 'it differs'), (human, None)):
+            with self.subTest(between=json.dumps(between)[:80]):
+                w1, e1 = self.write(self.rep, rep)
+                w2, e2 = self.write(self.rep, cut)
+                entries = tr_launch(self.tid(), agent='b1') + [tr_handback_attachment(rep, 'b1')] + e1 + [between]
+                r = self.saved(cut, entries + e2, wid=w2)
+                if verdict:
+                    self.assertIn(verdict, r)
+                else:
+                    self.assertNotIn('The guard compared', r)
+
     def test_answer_of_another_round_not_used(self):
         old, new = verifier_report(), verifier_report(changed=range(1, 31))
         rep2 = os.path.join(self.ver, 'ch_1_round_2.md')

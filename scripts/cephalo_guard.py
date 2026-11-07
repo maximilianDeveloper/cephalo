@@ -2157,7 +2157,8 @@ def _verifier_events(lines, ctx):
     ('opaque',) | ('write', tool id, normalized path, text written) |
     ('call',), an Agent or Task call of the main chat | ('user',), a
     message from the user (typed, or queued while the main chat worked), or
-    another one that is neither a tool result nor marked isMeta].  An
+    another one that is neither a tool result nor marked isMeta nor a
+    task-notification].  An
     answer is the result of a call in the foreground (_agent_result) or the
     report an agent hands back (origin.handbackReportText of a peer message,
     as Claude Code 2.1.31x writes it, in a user entry or, in 2.1.319, in a
@@ -2222,7 +2223,12 @@ def _verifier_events(lines, ctx):
                 (e.get('type') == 'user' and e.get('isMeta') is not True and
                  (isinstance(content, str) or isinstance(content, list) and
                   not any(isinstance(c, dict) and c.get('type') == 'tool_result' for c in content))):
-            events.append(('user',))
+            # a task-notification (a background agent or command ended) is no message from the user: in a
+            # queued_command attachment (commandMode) or a user entry (turnOrigin), each with origin.kind
+            if not ((isinstance(origin, dict) and origin.get('kind') == 'task-notification') or
+                    (isinstance(att, dict) and att.get('commandMode') == 'task-notification') or
+                    e.get('turnOrigin') == 'task_notification'):
+                events.append(('user',))
             continue
         for c in content if isinstance(content, list) else ():
             if not isinstance(c, dict):
