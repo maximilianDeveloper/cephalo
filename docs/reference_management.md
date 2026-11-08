@@ -300,27 +300,27 @@ Front matter numbered unlike the main text (`pagination.front_matter`: Roman num
 
 The format check reads the sections in the DOCX: an export without them, where the styleguide needs them, is a finding until the script has run.
 
----
-
 ### The head of a document without a title page
 
 Some documents have no title page but a head at the top of their first page, such as a presentation's handout with institution, seminar, title, name and date. In justified body text, its short lines are stretched across the line where they end in a line break, and the first one is indented. Write each line as a paragraph of its own in the style `Header Block`, which `scripts/build_reference_docx.py` writes into the reference document (left-aligned, no first-line indent, otherwise as `Body Text`):
 
 ```markdown
 ::: {custom-style="Header Block"}
-Hochschule, Fachbereich
+Institution, department
 
-Seminar: Titel des Seminars
+Seminar: title of the seminar
 
-Titel des Referats
+Title of the talk
 
 [Name]
 
-[Datum]
+[Date]
 :::
 ```
 
 A starting document that has a style of that name keeps it as it is.
+
+---
 
 ## Common errors
 
