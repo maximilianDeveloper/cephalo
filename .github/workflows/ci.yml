@@ -2186,6 +2186,10 @@ jobs:
           check("Front Matter Heading" in st and st["Front Matter Heading"].base_style.name == "Heading 1" and '<w:outlineLvl w:val="9"/>' in fmh
                 and '<w:numId w:val="0"/>' in fmh and fmh.index("<w:numPr") < fmh.index("<w:outlineLvl"),
                 f"Front Matter Heading: {fmh}")
+          # The head of a document without a title page: Body Text, left-aligned, without a first-line indent.
+          hb = st.get("Header Block")
+          check(hb is not None and hb.base_style.name == "Body Text" and hb.paragraph_format.alignment == 0
+                and cm(hb.paragraph_format.first_line_indent, 0), "Header Block")
           s0 = d.sections[-1]
           check(cm(s0.page_width, 21.0) and cm(s0.page_height, 29.7), "page size")
           check(cm(s0.top_margin, 2.5) and cm(s0.left_margin, 3), "margins")

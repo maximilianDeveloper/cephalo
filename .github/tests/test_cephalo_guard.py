@@ -807,6 +807,16 @@ class TestR5BeforeAgentCall(Base):
         r = self.reason(self.agent(self.write() + self.read(offset=900)))
         self.assertIn('(read: none of its 412 lines)', r)
 
+    def test_reads_with_and_without_a_limit_from_the_same_line(self):
+        # A Read with a limit and a whole Read from the same first line: the spans (1, 12) and (1, None) could not
+        # be sorted, and the guard checked nothing for the rest of the chat (fourth presentation trial run).
+        self.passes(self.agent(self.write() + self.read(limit=12) + self.read()))
+        self.passes(self.agent(self.write() + self.read() + self.read(offset=1, limit=12)))
+        r = self.reason(self.agent(self.write() + self.read(offset=380, limit=10) + self.read(offset=380)))
+        self.assertIn('(read: lines 380\u2013412 of 412)', r)
+        r = self.reason(self.agent(self.write() + self.read(offset=380) + self.read(offset=380, limit=10)))
+        self.assertIn('(read: lines 380\u2013412 of 412)', r)
+
     def test_not_read_denied(self):
         out = self.agent(self.write())
         self.deny(out, 'R5')
@@ -956,6 +966,878 @@ class TestR5BeforeAgentCall(Base):
             g.DEADLINE_S = old
         self.assertEqual(list(out), ['systemMessage'])
         self.assertIn('session transcript', out['systemMessage'])
+
+
+def tr_handback(text, agent='a0f8f41a8b48d208', name='source-verifier', side=False):
+    """A background agent's report as Claude Code 2.1.31x hands it back to the main chat: a peer message whose
+    origin carries the report verbatim (handbackReportText) and, indented, in its body."""
+    body = ('[Subagent hand-back] The text below is the final report of a subagent this session delegated to. '
+            'The report follows:\n' + '\n'.join('  ' + ln for ln in text.split('\n')))
+    return {'parentUuid': None, 'isSidechain': side, 'type': 'user', 'isMeta': True, 'promptSource': 'system',
+            'turnOrigin': 'peer',
+            'origin': {'kind': 'peer', 'from': agent, 'senderTaskId': agent, 'name': name, 'body': body,
+                       'handback': True, 'handbackReportText': text},
+            'message': {'role': 'user', 'content': 'Another Claude session sent a message:\n<agent-message from="%s">'
+                                                   '\n%s\n</agent-message>' % (agent, body)}}
+
+
+def tr_launch(tid, subagent='source-verifier', agent='a0f8f41a8b48d208'):
+    """An Agent call that Claude Code starts in the background, and its result."""
+    call = tr_call('Agent', {'description': 'Kapitel 1 Runde 1', 'prompt': 'Verify.', 'subagent_type': subagent}, tid)
+    res = tr_result(tid)
+    res['message']['content'][0]['content'] = [{'type': 'text', 'text': (
+        'Async agent launched successfully. (This tool result is internal metadata.)\nagentId: %s (internal ID)\n'
+        'The agent is working in the background.' % agent)}]
+    res['toolUseResult'] = {'isAsync': True, 'status': 'async_launched', 'agentId': agent, 'description': 'x',
+                            'prompt': 'Verify.', 'canContinueAgent': True}
+    return [call, res]
+
+
+def tr_foreground(tid, answer, trailer_block=True, subagent='source-verifier', error=False):
+    """An Agent call in the foreground: its result is the answer, with Claude Code's trailer."""
+    call = tr_call('Agent', {'description': 'Kapitel 1 Runde 1', 'prompt': 'Verify.', 'subagent_type': subagent}, tid)
+    trailer = 'agentId: a5e1 (for resuming to continue this agent\'s work if needed)\n<usage>total_tokens: 38949\n' \
+              'tool_uses: 6\nduration_ms: 56146</usage>'
+    res = tr_result(tid, error)
+    res['message']['content'][0]['content'] = [{'type': 'text', 'text': answer}, {'type': 'text', 'text': trailer}] \
+        if trailer_block else [{'type': 'text', 'text': answer + '\n\n' + trailer}]
+    res['toolUseResult'] = {'status': 'completed', 'agentId': 'a5e1', 'totalTokens': 38949}
+    return [call, res]
+
+
+def tr_handback_attachment(text, agent, name='source-verifier'):
+    """An agent's report as Claude Code 2.1.319 hands it back, after a call in the foreground or the background:
+    a queued_command attachment whose origin carries the report verbatim (handbackReportText)."""
+    body = ('[Subagent hand-back] The text below is the final report of a subagent this session delegated to. '
+            'The report follows:\n' + '\n'.join('  ' + ln for ln in text.split('\n')))
+    return {'parentUuid': None, 'isSidechain': False, 'type': 'attachment', 'userType': 'external',
+            'attachment': {'type': 'queued_command',
+                           'prompt': '<agent-message from=\"%s\">\n%s\n</agent-message>' % (agent, body),
+                           'commandMode': 'prompt', 'isMeta': True,
+                           'origin': {'kind': 'peer', 'from': agent, 'senderTaskId': agent, 'name': name, 'body': body,
+                                      'handback': True, 'handbackReportText': text}}}
+
+
+def tr_foreground_handback(tid, answer, agent='a7c2e91f04b3d5a68', subagent='source-verifier', report=True):
+    """An Agent call in the foreground as Claude Code 2.1.319 writes it: the tool result only a stub, the report in
+    toolUseResult (handback "send", handbackReport.text; left out when report is False); the hand-back attachment
+    follows (tr_handback_attachment), here or, with agents in parallel, after the next agent's result."""
+    call = tr_call('Agent', {'description': 'Kapitel 1 Runde 1', 'prompt': 'Verify.', 'subagent_type': subagent}, tid)
+    res = tr_result(tid)
+    res['message']['content'][0]['content'] = (
+        'This agent\'s report was delivered to you as a message from "%s" (its SubagentHandback call). Read it '
+        'there; it is not repeated here.' % agent)
+    res['toolUseResult'] = {'status': 'completed', 'handback': 'send'}
+    if report:
+        res['toolUseResult']['handbackReport'] = {'text': answer}
+    return [call, res]
+
+
+def verifier_report(chapter=1, rows=30, changed=()):
+    lines = ['# Verifikation Kapitel %d, Runde 1: `workspace/output/chapters/ch_%d.md`' % (chapter, chapter), '',
+             '| # | Satz | Status |', '|---|---|---|']
+    for i in range(1, rows + 1):
+        word = 'neu' if i in changed else 'alt'
+        lines.append('| %d | \u201eZitat %d aus Kapitel %d, %s\u201c (Keller 2018, S. %d) | \u2705 |'
+                     % (i, i, chapter, word, i + 3))
+    lines += ['', '**Status:** \u2705 %d' % rows, 'Gesamt: %d \u2705, 0 \u26a0\ufe0f' % rows]
+    return '\n'.join(lines) + '\n'
+
+
+class TestR5AnswerComparison(Base):
+    """After a Write of a source-verifier report, R5's message says whether the saved file is the
+    source-verifier's answer in the session transcript."""
+
+    def setUp(self):
+        self.root = tempfile.mkdtemp(prefix='guard-r5c-')
+        self.ver = os.path.join(self.root, 'workspace', 'output', 'verification')
+        os.makedirs(self.ver)
+        self.rep = os.path.join(self.ver, 'ch_1_round_1.md')
+        self.tr = os.path.join(tempfile.mkdtemp(prefix='guard-r5c-tr-'), 'sess-1.jsonl')
+        self.n = 0
+
+    def tearDown(self):
+        shutil.rmtree(self.root)
+        shutil.rmtree(os.path.dirname(self.tr))
+
+    def tid(self):
+        self.n += 1
+        return 'toolu_%03d' % self.n
+
+    def write(self, path, text):
+        t = self.tid()
+        return t, [tr_call('Write', {'file_path': path, 'content': text}, t), tr_result(t)]
+
+    def saved(self, saved, entries, path=None, wid=None, plat='posix', root=None, transcript=None, agent=None, **kw):
+        """The PostToolUse message for the Write wid of path (saved holds what is in the file)."""
+        path = path or self.rep
+        if plat == 'posix':
+            Path(path).write_text(saved, encoding='utf-8')
+        with open(self.tr, 'w', encoding='utf-8', newline='\n') as fh:
+            for e in entries:
+                fh.write(json.dumps(e, separators=(',', ':'), ensure_ascii=False) + '\n')
+        d = payload('Write', {'file_path': path, 'content': saved}, event='PostToolUse', cwd=root or self.root,
+                    plat=plat, agent=agent)
+        d['transcript_path'] = self.tr if transcript is None else transcript
+        if wid:
+            d['tool_use_id'] = wid
+        out = g.evaluate(d, env(plat, root=root or self.root, **kw))
+        return out['reason'] if out else None
+
+    def round(self, answer, saved=None, path=None, foreground=False, **kw):
+        """A source-verifier's answer, then the Write of its report."""
+        entries = tr_foreground(self.tid(), answer) if foreground else tr_launch(self.tid()) + [tr_handback(answer)]
+        wid, w = self.write(path or self.rep, answer if saved is None else saved)
+        return self.saved(answer if saved is None else saved, entries + w, path=path, wid=wid, **kw)
+
+    def test_match(self):
+        r = self.round(verifier_report())
+        self.assertIn('cephalo guard R5:', r)
+        self.assertIn('Now read the whole file back', r)                       # the definition's read-back stays
+        self.assertIn('it matches (line ends, trailing blanks', r)
+        self.assertNotIn('it differs', r)
+        # CRLF, trailing blanks and blank lines at the ends are no difference
+        rep = verifier_report()
+        self.assertIn('it matches', self.round(rep, saved='\n\n' + rep.replace('\n', '  \r\n') + '\n\n'))
+
+    def test_missing_last_line(self):
+        # the second presentation trial run: the Write dropped the answer's last line
+        rep = verifier_report()
+        cut = rep.rstrip('\n').rsplit('\n', 1)[0] + '\n'
+        r = self.round(rep, saved=cut)
+        self.assertIn('it differs; the first difference: the saved file ends after line 36, the answer has 1 more '
+                      'line, from: \u00abGesamt: 30 \u2705, 0 \u26a0\ufe0f\u00bb. Write the file again with the Write '
+                      'tool, the answer unchanged.', r)
+        self.assertNotIn('it matches', r)
+
+    def test_one_changed_quote_mark(self):
+        rep = verifier_report()
+        bad = rep.replace('\u201eZitat 7 aus Kapitel 1, alt\u201c', '\u201eZitat 7 aus Kapitel 1, alt"')
+        r = self.round(rep, saved=bad)
+        self.assertIn('the first difference: line 11 of the saved file: \u00ab| 7 | \u201eZitat 7 aus Kapitel 1, '
+                      'alt" (Keller 2018, S. 10) | \u2705 |\u00bb; in the answer: \u00ab| 7 | \u201eZitat 7 aus '
+                      'Kapitel 1, alt\u201c (Keller 2018, S. 10) | \u2705 |\u00bb', r)
+        # the line number is the saved file's, also after blank lines at its start
+        r = self.round(rep, saved='\n\n' + bad)
+        self.assertIn('the first difference: line 13 of the saved file', r)
+        # a long line is cut around the difference
+        long = rep.replace('Zitat 7 aus', 'Zitat 7 ' + 'sehr ' * 60 + 'aus')
+        r = self.round(long, saved=long.replace('aus Kapitel 1, alt\u201c (Keller 2018, S. 10)',
+                                                'aus Kapitel 1, alt" (Keller 2018, S. 10)'))
+        first = r.split('the first difference: ', 1)[1]
+        self.assertIn('alt"', first.split('; in the answer:')[0])
+        self.assertLess(len(first.split('; in the answer:')[0]), 175)
+
+    def test_foreground_answer_and_its_trailer(self):
+        rep = verifier_report()
+        for block in (True, False):
+            with self.subTest(trailer_block=block):
+                entries = tr_foreground(self.tid(), rep, trailer_block=block)
+                wid, w = self.write(self.rep, rep)
+                self.assertIn('it matches', self.saved(rep, entries + w, wid=wid))
+        entries = tr_foreground(self.tid(), rep)
+        wid, w = self.write(self.rep, rep.replace('alt', 'ALT', 1))
+        self.assertIn('it differs', self.saved(rep.replace('alt', 'ALT', 1), entries + w, wid=wid))
+        # a result that is an error is no answer
+        entries = tr_foreground(self.tid(), rep, error=True)
+        wid, w = self.write(self.rep, rep)
+        self.assertNotIn('The guard compared', self.saved(rep, entries + w, wid=wid))
+
+    def test_absolute_paths_made_relative(self):
+        rep = verifier_report()
+        answer = rep + 'Quelle: %s/workspace/sources/a.pdf\n' % self.root
+        r = self.round(answer, saved=rep + 'Quelle: workspace/sources/a.pdf\n')
+        self.assertIn('it matches', r)
+        self.assertNotIn('still contains an absolute path', r)
+        # Windows: the folder as CLAUDE_PROJECT_DIR gives it, with \ or /, and as Git Bash writes it
+        win = 'C:\\Home\\u\\Projekt Arbeit'
+        rep_win = os.path.join(win, 'workspace\\output\\verification\\ch_1_round_1.md')
+        for absolute, relative in ((win + '\\workspace\\sources\\a.pdf', 'workspace\\sources\\a.pdf'),
+                                   (win + '\\workspace\\sources\\a.pdf', 'workspace/sources/a.pdf'),
+                                   ('C:/Home/u/Projekt Arbeit/workspace/sources/a.pdf', 'workspace/sources/a.pdf'),
+                                   ('/c/Home/u/Projekt Arbeit/workspace/sources/a.pdf', 'workspace/sources/a.pdf'),
+                                   (win.replace('\\', '\\\\') + '\\\\workspace\\\\a.pdf', 'workspace/a.pdf'),
+                                   ('c:\\home\\u\\projekt arbeit\\workspace\\a.pdf', 'workspace\\a.pdf')):
+            with self.subTest(absolute=absolute):
+                r = self.round(rep + 'Quelle: %s\n' % absolute, saved=rep + 'Quelle: %s\n' % relative, path=rep_win,
+                               plat='windows', root=win)
+                self.assertIn('it matches', r)
+        # Git Bash's form of the project folder kept in the copy: readback() asks to make it relative too
+        r = self.round(rep + 'Quelle: /c/Home/u/Projekt Arbeit/a.pdf\n', path=rep_win, plat='windows', root=win)
+        self.assertIn('still contains an absolute path', r)
+        self.assertNotIn('The guard compared', r)
+        # another absolute path is no path of this machine: a difference
+        r = self.round(rep + 'Quelle: /home/other/a.pdf\n', saved=rep + 'Quelle: a.pdf\n')
+        self.assertIn('it differs', r)
+
+    def test_paths_of_this_machine_as_readback_asks(self):
+        # the rule readback() enforces: every absolute path of this machine (project, multi-project root, home)
+        # becomes project-relative, with a relative lead the copy likes; such a path is no difference, and no
+        # "it matches" goes out with the warning about an absolute path
+        rep = verifier_report()
+        for absolute, relative in (('/home/u/Zotero/storage/keller2018.pdf', '../Zotero/storage/keller2018.pdf'),
+                                   ('/home/u/Zotero/storage/keller2018.pdf', '~/Zotero/storage/keller2018.pdf'),
+                                   ('/home/u/Zotero/storage/keller2018.pdf', '../../Zotero/storage/keller2018.pdf'),
+                                   (self.root, '.'),
+                                   (self.root + '/workspace/sources/a.pdf', 'workspace/sources/a.pdf'),
+                                   (self.root + '/workspace/sources/a.pdf', './workspace/sources/a.pdf')):
+            with self.subTest(absolute=absolute, relative=relative):
+                r = self.round(rep + 'Quelle: %s\n' % absolute, saved=rep + 'Quelle: %s\n' % relative)
+                self.assertIn('it matches (line ends, trailing blanks and absolute paths of this machine made '
+                              'relative aside)', r)
+                self.assertNotIn('still contains an absolute path', r)
+                r = self.round(rep + 'Quelle: %s\n' % absolute)                  # saved with the path kept
+                self.assertIn('still contains an absolute path', r)
+                self.assertNotIn('The guard compared', r)
+        # the rest of the path stays: a.pdf is not the project-relative form of .../workspace/sources/a.pdf
+        r = self.round(rep + 'Quelle: %s/workspace/sources/a.pdf\n' % self.root, saved=rep + 'Quelle: a.pdf\n')
+        self.assertIn('it differs; the first difference: line 38 of the saved file: \u00abQuelle: a.pdf\u00bb', r)
+        # nor is another absolute path in its place, or a folder or text before the rest of the path
+        for other in ('/home/other/workspace/sources/a.pdf', 'C:/workspace/sources/a.pdf',
+                      '02_Literature/workspace/sources/a.pdf', 'S.11/workspace/sources/a.pdf',
+                      '.../workspace/sources/a.pdf', '~/../workspace/sources/a.pdf'):
+            with self.subTest(other=other):
+                r = self.round(rep + 'Quelle: %s/workspace/sources/a.pdf\n' % self.root,
+                               saved=rep + 'Quelle: %s\n' % other)
+                self.assertIn('it differs', r)
+        # a line with an absolute path that the copy lacks at its end is a difference too
+        r = self.round(rep + 'Quelle: %s/workspace/sources/a.pdf\n' % self.root, saved=rep)
+        self.assertIn('it differs; the first difference: the saved file ends after line 37', r)
+        # another difference is still named
+        r = self.round(rep + 'Quelle: %s/a.pdf\n' % self.root, saved=rep.replace('alt', 'ALT', 1) + 'Quelle: a.pdf\n')
+        self.assertIn('it differs', r)
+
+    def test_rest_of_a_path_line_is_compared(self):
+        # only the absolute path of this machine may change on its line: a status or a page next to it is compared
+        rep = verifier_report()
+        row = '| 31 | \u201eZitat 31\u201c (%s/workspace/sources/a.pdf, S. 12) | \u2705 |\n'
+        answer = rep + row % self.root
+        for saved in ((row % '.').replace('\u2705', '\u26a0\ufe0f'), (row % '.').replace('S. 12', 'S. 13')):
+            with self.subTest(saved=saved):
+                r = self.round(answer, saved=rep + saved)
+                self.assertIn('it differs; the first difference: line 38 of the saved file: \u00ab%s\u00bb'
+                              % saved.rstrip('\n'), r)
+                self.assertNotIn('it matches', r)
+        self.assertIn('it matches', self.round(answer, saved=rep + row % '.'))
+        # a path of another user whose folder starts like the home folder is no path of this machine
+        other = rep + 'Quelle: /home/user2/x.pdf\n'
+        self.assertIn('it differs', self.round(other, saved=rep + 'Quelle: ../user2/x.pdf\n'))
+        r = self.round(other)
+        self.assertIn('it matches', r)
+        self.assertNotIn('still contains an absolute path', r)
+        # Windows: the rest of the path with either separator, the status after it compared
+        win = 'C:\\Home\\u\\Projekt Arbeit'
+        rep_win = os.path.join(win, 'workspace\\output\\verification\\ch_1_round_1.md')
+        answer = rep + 'Quelle: %s\\workspace\\sources\\a.pdf \u2705\n' % win
+        for saved, verdict in (('workspace/sources\\a.pdf \u2705', 'it matches'),
+                               ('workspace/sources/a.pdf \u26a0\ufe0f', 'it differs'),
+                               ('workspace/quellen/a.pdf \u2705', 'it differs')):
+            with self.subTest(saved=saved):
+                self.assertIn(verdict, self.round(answer, saved=rep + 'Quelle: %s\n' % saved, path=rep_win,
+                                                  plat='windows', root=win))
+
+    def test_the_place_of_a_difference_on_a_long_path_line(self):
+        # found by a walk along both lines, in a time linear in their length (difflib took 41 s on one line)
+        import time
+        for plat, root in (('posix', self.root), ('windows', WIN_ROOT)):
+            ctx = g.Ctx(payload('Write', {'file_path': 'x', 'content': ''}, plat=plat, cwd=root),
+                        env(plat, root=root))
+            paths = g._machine_paths(ctx)
+            rx = g._path_re(paths, ctx)
+            r = root if plat == 'posix' else root.replace('\\', '\\\\')      # an answer with doubled backslashes
+            cases = [('| %s/workspace/a.md | S. 10 | \u26a0\ufe0f |' % r, '| workspace/a.md | S. 10 | \u2705 |',
+                      '\u2705 |'),
+                     ('Quelle: %s/workspace/a.pdf, S. 3' % r, 'Quelle: ../../workspace/a.pdf, S. 4', '4'),
+                     ('Projekt %s. Satz \u26a0\ufe0f' % r, 'Projekt .. Satz \u2705', '\u2705')]
+            if plat == 'posix':
+                cases += [(' '.join('%s/w%d/a' % (r, i) for i in range(300)),
+                           ' '.join('w%d/a' % i for i in range(299)) + ' w299/b', 'b'),
+                          ('%s/workspace/%s' % (r, 'x' * 20000), 'workspace/%sy' % ('x' * 19999), 'y')]
+            for b, a, rest in cases:
+                with self.subTest(plat=plat, b=b[:40]):
+                    pat, parts = g._path_line(b, rx, paths, ctx)
+                    self.assertIsNone(pat.fullmatch(a))
+                    t = time.monotonic()
+                    ia, ib = g._diff_at(a, b, parts, ctx)
+                    self.assertLess(time.monotonic() - t, 2)
+                    self.assertEqual(a[ia:], rest)
+        # the whole message, on a line of 300 paths
+        rep = verifier_report()
+        line = ' '.join('%s/w%d/a' % (self.root, i) for i in range(300))
+        r = self.round(rep + line + '\n', saved=rep + ' '.join('w%d/a' % i for i in range(299)) + ' w299/b\n')
+        self.assertIn('w298/a w299/b\u00bb; in the answer: \u00ab\u2026', r)
+
+    def test_backslash_and_slash_differ(self):
+        # outside a path of this machine a backslash is text: Pandoc's 'S.\\ 12', a relative path as written
+        rep = verifier_report()
+        for answer, saved in (('S.\\ 12', 'S./ 12'), ('Quelle: sources\\a.pdf', 'Quelle: sources/a.pdf')):
+            with self.subTest(answer=answer):
+                self.assertIn('it differs', self.round(rep + answer + '\n', saved=rep + saved + '\n'))
+
+    def test_multi_project_root(self):
+        top = tempfile.mkdtemp(prefix='guard-r5c-multi-')
+        os.makedirs(os.path.join(top, '00_Shared_Materials'))
+        sub = os.path.join(top, '02_Main_Work')
+        ver = os.path.join(sub, '03_Theory_chapters', 'verification')
+        os.makedirs(ver)
+        rep, path = verifier_report(), os.path.join(ver, 'ch_1_round_1.md')
+        answer = rep + 'Regel aus %s/00_Shared_Materials/styleguide.md\n' % top
+        try:
+            r = self.round(answer, saved=rep + 'Regel aus ../00_Shared_Materials/styleguide.md\n', path=path, root=sub)
+            self.assertIn('it matches', r)
+            r = self.round(answer, path=path, root=sub)
+            self.assertIn('still contains an absolute path', r)
+            self.assertNotIn('The guard compared', r)
+        finally:
+            shutil.rmtree(top)
+
+    def test_macos_folder_named_in_finder(self):
+        # the project folder in NFD (Finder), the path in the answer in NFC (typed)
+        nfd = os.path.join(self.root, unicodedata.normalize('NFD', 'Masterarbeit \u00dcbung'))
+        ver = os.path.join(nfd, 'workspace', 'output', 'verification')
+        os.makedirs(ver)
+        rep, path = verifier_report(), os.path.join(ver, 'ch_1_round_1.md')
+        answer = rep + 'Quelle: %s/workspace/sources/a.pdf\n' % unicodedata.normalize('NFC', nfd)
+        r = self.round(answer, saved=rep + 'Quelle: workspace/sources/a.pdf\n', path=path, root=nfd, plat='macos')
+        self.assertIn('it matches', r)
+        r = self.round(answer, path=path, root=nfd, plat='macos')
+        self.assertIn('still contains an absolute path', r)
+        self.assertNotIn('The guard compared', r)
+
+    def test_two_reports_of_one_round(self):
+        one, two = verifier_report(1), verifier_report(2)
+        rep2 = os.path.join(self.ver, 'ch_2_round_1.md')
+        entries = tr_launch(self.tid(), agent='a1') + tr_launch(self.tid(), agent='a2') + \
+            [tr_handback(one, agent='a1'), tr_handback(two, agent='a2')]
+        w1, e1 = self.write(self.rep, one)
+        self.assertIn('it matches', self.saved(one, entries + e1, wid=w1))
+        cut = two.rstrip('\n').rsplit('\n', 1)[0] + '\n'
+        w2, e2 = self.write(rep2, cut)
+        r = self.saved(cut, entries + e1 + e2, path=rep2, wid=w2)
+        self.assertIn('the saved file ends after line 36, the answer has 1 more line', r)
+        # the first report saved before the second answer came
+        entries = tr_launch(self.tid(), agent='a1') + tr_launch(self.tid(), agent='a2') + [tr_handback(one, agent='a1')]
+        w1, e1 = self.write(self.rep, one)
+        w2, e2 = self.write(rep2, two)
+        self.assertIn('it matches', self.saved(two, entries + e1 + [tr_handback(two, agent='a2')] + e2, path=rep2,
+                                               wid=w2))
+
+    def test_report_of_an_earlier_round_written_again(self):
+        # round 1's report saved with a difference, round 2's answer came, then round 1's report written again:
+        # its answer is no longer the round's, so the guard says nothing, whether the copy is right or not
+        old, new = verifier_report(), verifier_report(changed=(3,)).replace('Runde 1', 'Runde 2')
+        rep2 = os.path.join(self.ver, 'ch_1_round_2.md')
+        bad = old.replace('alt', 'ALT', 1)
+        w1, e1 = self.write(self.rep, bad)
+        entries = tr_launch(self.tid()) + [tr_handback(old)] + e1 + tr_launch(self.tid(), agent='a2') + \
+            [tr_handback(new, agent='a2')]
+        for saved in (old, bad):
+            with self.subTest(saved=saved[:60]):
+                wid, w = self.write(self.rep, saved)
+                self.assertNotIn('The guard compared', self.saved(saved, entries + w, wid=wid))
+        # round 2's report is still compared, also after that
+        wid, w = self.write(self.rep, old)
+        w2, e2 = self.write(rep2, new.replace('neu', 'NEU'))
+        r = self.saved(new.replace('neu', 'NEU'), entries + w + e2, path=rep2, wid=w2)
+        self.assertIn('it differs; the first difference: line 7', r)
+
+    def test_report_written_again_in_its_round(self):
+        # two verifiers started together: report 1 saved with a difference, report 2's answer came, then
+        # report 1 written again; with no agent call since its Write, the answers are of its round
+        one, two = verifier_report(1), verifier_report(2)
+        cut = one.rstrip('\n').rsplit('\n', 1)[0] + '\n'
+        for launches in (tr_launch(self.tid(), agent='a1') + tr_launch(self.tid(), agent='a2'),
+                         []):                               # the calls no longer in the transcript's tail
+            with self.subTest(calls=bool(launches)):
+                w1, e1 = self.write(self.rep, cut)
+                entries = launches + [tr_handback(one, agent='a1')] + e1 + [tr_handback(two, agent='a2')]
+                w2, e2 = self.write(self.rep, one)
+                self.assertIn('it matches', self.saved(one, entries + e2, wid=w2))
+                w2, e2 = self.write(self.rep, cut)
+                r = self.saved(cut, entries + e2, wid=w2)
+                self.assertIn('it differs as after an earlier Write of this file (the first difference: the saved '
+                              'file ends after line 36', r)
+        # an agent call between the Write and the latest answer: another round, no statement
+        w1, e1 = self.write(self.rep, cut)
+        entries = tr_launch(self.tid(), agent='a1') + [tr_handback(one, agent='a1')] + e1 + \
+            tr_launch(self.tid(), agent='a2') + [tr_handback(two, agent='a2')]
+        w2, e2 = self.write(self.rep, one)
+        self.assertNotIn('The guard compared', self.saved(one, entries + e2, wid=w2))
+
+    def test_written_again_after_an_exact_copy(self):
+        # the answer an exact copy took stays the one a later Write of the same report is compared with: a
+        # source-verifier answers only a call or a message, which the guard sees (Read, Glob and Grep are its
+        # tools), so with none between, the main chat has no later version
+        one, two = verifier_report(1), verifier_report(2)
+        cut = one.rstrip('\n').rsplit('\n', 1)[0] + '\n'
+        entries = tr_launch(self.tid(), agent='a1') + tr_launch(self.tid(), agent='a2') + \
+            [tr_handback(one, agent='a1'), tr_handback(two, agent='a2')]
+        w1, e1 = self.write(self.rep, one)
+        w2, e2 = self.write(self.rep, cut)
+        r = self.saved(cut, entries + e1 + e2, wid=w2)
+        self.assertIn('it differs; the first difference: the saved file ends after line 36', r)   # not report 2's
+        w2, e2 = self.write(self.rep, one)
+        self.assertIn('it matches', self.saved(one, entries + e1 + e2, wid=w2))
+        # the other report's answer saved into this file first, then the right one
+        w1, e1 = self.write(self.rep, two)
+        w2, e2 = self.write(self.rep, one)
+        self.assertIn('it matches', self.saved(one, entries + e1 + e2, wid=w2))
+        # then report 2: its answer was taken by the first of those Writes, no statement (and no wrong one)
+        rep2 = os.path.join(self.ver, 'ch_2_round_1.md')
+        w3, e3 = self.write(rep2, two)
+        self.assertNotIn('The guard compared', self.saved(two, entries + e1 + e2 + e3, path=rep2, wid=w3))
+        # an agent call after the exact copy: the main chat may know more than the guard, no statement
+        w1, e1 = self.write(self.rep, one)
+        call = [tr_call('Agent', {'description': 'Kapitel 1', 'prompt': 'Revise.', 'subagent_type': 'writer-agent'},
+                        self.tid())]
+        w2, e2 = self.write(self.rep, cut)
+        self.assertNotIn('The guard compared', self.saved(cut, entries + e1 + call + e2, wid=w2))
+
+    def test_a_message_from_the_user_after_an_exact_copy(self):
+        # the user may ask for a change the guard does not know: after an exact copy, no statement on the next
+        # Write; a message marked isMeta (hook feedback) is none from the user
+        rep = verifier_report()
+        changed = rep.replace('S. 7) | \u2705', 'S. 7) | \u26a0\ufe0f')            # row 4
+        self.assertNotEqual(changed, rep)
+        text = 'In row 4 the verifier was wrong: make it \u26a0\ufe0f.'
+        human = {'type': 'user', 'isSidechain': False, 'message': {'role': 'user', 'content': text}}
+        sdk = {'type': 'user', 'isSidechain': False, 'message': {'role': 'user', 'content': [{'type': 'text',
+                                                                                         'text': text}]},
+               'origin': {'kind': 'human'}, 'promptSource': 'sdk', 'turnOrigin': 'human'}
+        queued = {'type': 'attachment', 'isSidechain': False, 'attachment': {'type': 'queued_command', 'prompt': text}}
+        meta = {'type': 'user', 'isSidechain': False, 'isMeta': True,
+                'message': {'role': 'user', 'content': 'Stop hook feedback:\n[check.sh]: ok'}}
+        for between, verdict in ((human, None), (sdk, None), (queued, None), (meta, 'it differs')):
+            with self.subTest(between=json.dumps(between)[:70]):
+                w1, e1 = self.write(self.rep, rep)
+                w2, e2 = self.write(self.rep, changed)
+                r = self.saved(changed, tr_launch(self.tid()) + [tr_handback(rep)] + e1 + [between] + e2, wid=w2)
+                if verdict:
+                    self.assertIn(verdict, r)
+                else:
+                    self.assertNotIn('The guard compared', r)
+
+    def test_a_task_notification_is_no_message_from_the_user(self):
+        # one follows every background hand-back and every background command: after an exact copy, the next
+        # Write is still compared; a message the user queued still ends that
+        rep = verifier_report()
+        cut = rep.rstrip('\n').rsplit('\n', 1)[0] + '\n'
+        note = '<task-notification>\n<task-id>b0glindjg</task-id>\n<status>completed</status>\n</task-notification>'
+        queued = {'type': 'attachment', 'isSidechain': False,
+                  'attachment': {'type': 'queued_command', 'prompt': note, 'commandMode': 'task-notification',
+                                 'origin': {'kind': 'task-notification', 'producer': 'session-task'}}}
+        entry = {'type': 'user', 'isSidechain': False, 'message': {'role': 'user', 'content': note},
+                 'origin': {'kind': 'task-notification', 'producer': 'session-task'}, 'promptSource': 'system',
+                 'turnOrigin': 'task_notification'}
+        human = {'type': 'attachment', 'isSidechain': False,
+                 'attachment': {'type': 'queued_command', 'prompt': 'Zeile 4 bitte auf \u26a0\ufe0f.',
+                                'commandMode': 'prompt', 'origin': {'kind': 'human'}, 'humanTurn': True}}
+        for between, verdict in ((queued, 'it differs'), (entry, 'it differs'), (human, None)):
+            with self.subTest(between=json.dumps(between)[:80]):
+                w1, e1 = self.write(self.rep, rep)
+                w2, e2 = self.write(self.rep, cut)
+                entries = tr_launch(self.tid(), agent='b1') + [tr_handback_attachment(rep, 'b1')] + e1 + [between]
+                r = self.saved(cut, entries + e2, wid=w2)
+                if verdict:
+                    self.assertIn(verdict, r)
+                else:
+                    self.assertNotIn('The guard compared', r)
+
+    def test_answer_of_another_round_not_used(self):
+        old, new = verifier_report(), verifier_report(changed=range(1, 31))
+        rep2 = os.path.join(self.ver, 'ch_1_round_2.md')
+        entries = tr_launch(self.tid()) + [tr_handback(old)]
+        w1, e1 = self.write(self.rep, old)
+        entries += e1 + tr_launch(self.tid(), agent='a2') + [tr_handback(new, agent='a2')]
+        # round 2's report saved with round 1's text: not compared with round 1's answer, and too unlike
+        # round 2's for a statement
+        w2, e2 = self.write(rep2, old)
+        r = self.saved(old, entries + e2, path=rep2, wid=w2)
+        self.assertNotIn('The guard compared', r)
+        w3, e3 = self.write(rep2, new)
+        self.assertIn('it matches', self.saved(new, entries + e3, path=rep2, wid=w3))
+
+    def test_an_answer_saved_already_is_not_compared_again(self):
+        # round 2 by a message to round 1's verifier (left out): round 1's answer, saved as round 1's report,
+        # is no answer for round 2's report, however alike
+        one, two = verifier_report(), verifier_report(changed=(3, 9, 20))
+        rep2 = os.path.join(self.ver, 'ch_1_round_2.md')
+        entries = tr_launch(self.tid(), agent='a9') + [tr_handback(one, agent='a9')]
+        w1, e1 = self.write(self.rep, one)
+        entries += e1 + [tr_call('SendMessage', {'to': 'a9', 'message': 'Round 2: sentences 3, 9, 20.'}, self.tid()),
+                         tr_handback(two, agent='a9')]
+        w2, e2 = self.write(rep2, two[:-60])
+        self.assertNotIn('The guard compared', self.saved(two[:-60], entries + e2, path=rep2, wid=w2))
+        # the same report saved again after a difference: compared with its answer again
+        entries = tr_launch(self.tid()) + [tr_handback(one)]
+        w1, e1 = self.write(self.rep, one[:-30])
+        w2, e2 = self.write(self.rep, one)
+        self.assertIn('it matches', self.saved(one, entries + e1 + e2, wid=w2))
+
+    def test_continued_or_unreadable_answers_give_no_statement(self):
+        cf = os.path.join(self.ver, 'consistency_final.md')
+        old, new = verifier_report(), verifier_report(changed=(4, 9))
+        # the same verifier asked again with SendMessage: its new answer is left out, and the old one,
+        # taken by the first Write of the file, is no answer for the second
+        entries = tr_launch(self.tid(), agent='a9') + [tr_handback(old, agent='a9')]
+        w1, e1 = self.write(cf, old)
+        entries += e1 + [tr_call('Read', {'file_path': cf}, self.tid()),
+                         tr_call('SendMessage', {'to': 'a9', 'message': 'Check B.2 again, the whole report.'},
+                                 self.tid()), tr_handback(new, agent='a9')]
+        w2, e2 = self.write(cf, new)
+        self.assertNotIn('The guard compared', self.saved(new, entries + e2, path=cf, wid=w2))
+        # round 2's answer in a shape the guard does not read, round 1's report never saved
+        rep2 = os.path.join(self.ver, 'ch_1_round_2.md')
+        t = self.tid()
+        unknown = tr_foreground(t, new)
+        unknown[1]['message']['content'][0]['content'].append({'type': 'tool_reference', 'tool_name': 'x'})
+        entries = tr_launch(self.tid()) + [tr_handback(old)] + unknown
+        w, e = self.write(rep2, new[:-30])
+        self.assertNotIn('The guard compared', self.saved(new[:-30], entries + e, path=rep2, wid=w))
+        # an error result, or a hand-back that does not name its agent, after an answer
+        for after in (tr_foreground(self.tid(), new, error=True), [dict(tr_handback(new), origin={'handback': True})]):
+            w, e = self.write(self.rep, old[:-30])
+            entries = tr_launch(self.tid()) + [tr_handback(old)] + after
+            with self.subTest(after=json.dumps(after)[:60]):
+                self.assertNotIn('The guard compared', self.saved(old[:-30], entries + e, wid=w))
+
+    def test_messages_to_other_agents_and_their_reports(self):
+        rep = verifier_report()
+        cut = rep.rstrip('\n').rsplit('\n', 1)[0] + '\n'
+        writer = tr_launch(self.tid(), subagent='writer-agent', agent='w1')
+        # a message to a writer the guard knows, and a writer's report, leave the comparison as it is
+        for between in ([tr_call('SendMessage', {'to': 'w1', 'message': 'Go on.'}, self.tid())],
+                        [tr_handback('Kapitel 2 ist geschrieben.', agent='w1', name='writer-agent')]):
+            w, e = self.write(self.rep, cut)
+            entries = writer + tr_launch(self.tid()) + [tr_handback(rep)] + between
+            with self.subTest(between=between[0]['type']):
+                self.assertIn('it differs', self.saved(cut, entries + e, wid=w))
+        # a message to an agent it does not know: no statement
+        w, e = self.write(self.rep, cut)
+        entries = tr_launch(self.tid()) + [tr_handback(rep), tr_call('SendMessage', {'to': 'zz', 'message': 'x'},
+                                                                     self.tid())]
+        self.assertNotIn('The guard compared', self.saved(cut, entries + e, wid=w))
+
+    def test_only_the_main_chat(self):
+        # an orchestrator run as a subagent has its calls in a transcript of its own
+        rep = verifier_report()
+        entries = tr_launch(self.tid()) + [tr_handback(rep)]
+        w, e = self.write(self.rep, rep[:-30])
+        self.assertNotIn('The guard compared', self.saved(rep[:-30], entries + e, wid=w, agent='orchestrator-longform'))
+        self.assertIn('it differs', self.saved(rep[:-30], entries + e, wid=w))
+
+    def test_a_denied_write_takes_no_answer(self):
+        rep = verifier_report()
+        t = self.tid()
+        denied = [tr_call('Write', {'file_path': self.rep, 'content': rep}, t), tr_result(t, error=True)]
+        w, e = self.write(self.rep, rep)
+        self.assertIn('it matches', self.saved(rep, tr_launch(self.tid()) + [tr_handback(rep)] + denied + e, wid=w))
+
+    def test_forms_of_one_text_and_look_alikes(self):
+        rep = verifier_report()
+        quote = rep.replace('Zitat 7 aus', '\u201e\u00dcbergangsphase\u201c aus')
+        # NFD in the answer (a quotation from a PDF), NFC in the copy; a byte order mark on either side
+        for answer, saved in ((unicodedata.normalize('NFD', quote), unicodedata.normalize('NFC', quote)),
+                              (rep, '\ufeff' + rep), ('\ufeff' + rep, rep)):
+            with self.subTest(saved=ascii(saved[:3])):
+                self.assertIn('it matches', self.round(answer, saved=saved))
+        # characters that look alike: the code points are named
+        for answer, part in ((rep.replace('S. 10)', 'S.\u00a010)'), 'the file has U+0020, the answer U+00A0'),
+                             (rep.replace('| 7 |', '|\t7 |'), 'the file has U+0020, the answer U+0009'),
+                             (rep.replace('0 \u26a0\ufe0f', '0 \u26a0'), 'the file has U+FE0F, the answer nothing')):
+            with self.subTest(part=part):
+                r = self.round(answer, saved=rep)
+                self.assertIn('they look alike: at character', r)
+                self.assertIn(part, r)
+                self.assertIn('Write the file again', r)
+
+    def test_the_same_difference_again_asks_for_no_rewrite(self):
+        rep = verifier_report()
+        answer = rep.replace('S. 10)', 'S.\u00a010)')
+        entries = tr_launch(self.tid()) + [tr_handback(answer)]
+        w1, e1 = self.write(self.rep, rep)
+        self.assertIn('Write the file again', self.saved(rep, entries + e1, wid=w1))
+        for _ in range(2):                                # written again as before: the same difference
+            w2, e2 = self.write(self.rep, rep)
+            entries += e1
+            e1 = e2
+            r = self.saved(rep, entries + e2, wid=w2)
+            self.assertIn('it differs as after an earlier Write of this file (the first difference: line 11', r)
+            self.assertIn('If you cannot write it as the answer has it, leave the file as it is and tell the user', r)
+            self.assertNotIn('Write the file again with the Write tool, the answer unchanged', r)
+        # written as the answer has it: it matches
+        w3, e3 = self.write(self.rep, answer)
+        self.assertIn('it matches', self.saved(answer, entries + e1 + e3, wid=w3))
+
+    def test_two_versions_in_turn_ask_for_no_rewrite_again(self):
+        # the main chat writes two wrong versions in turn: each is asked for again only once
+        rep = verifier_report()
+        answer = rep.replace('S. 10)', 'S.\u00a010)')
+        one, two = rep, rep.replace('S. 10)', 'S.&nbsp;10)')
+        entries = tr_launch(self.tid()) + [tr_handback(answer)]
+        verdicts = []
+        for text in (one, two, one, two):
+            w, e = self.write(self.rep, text)
+            r = self.saved(text, entries + e, wid=w)
+            entries += e
+            verdicts.append('Write the file again with the Write tool' in r)
+            if len(verdicts) > 2:
+                self.assertIn('it differs as after an earlier Write of this file (the first difference: line 11', r)
+        self.assertEqual(verdicts, [True, True, False, False])
+        # a third version after the first two: no request either
+        w, e = self.write(self.rep, rep.replace('S. 10)', 'S.10)'))
+        r = self.saved(rep.replace('S. 10)', 'S.10)'), entries[:7] + e, wid=w)    # the answer, one, two
+        self.assertIn('and the file was written 2 times before since the answer. If you cannot write it as the '
+                      'answer has it, leave the file as it is and tell the user.', r)
+        self.assertNotIn('Write the file again with the Write tool', r)
+
+    def test_a_round_that_may_begin_before_the_transcript_read(self):
+        # the guard reads the transcript's last MAX_TRANSCRIPT bytes: when an answer of the round may lie before
+        # them, a difference from the answers it sees may be one from another report's, so it says nothing then;
+        # an exact copy of an answer it sees still matches
+        one = verifier_report()
+        two = one.replace('Runde 1', 'Runde 1, Teil B', 1)
+        cut = one.rstrip('\n').rsplit('\n', 1)[0] + '\n'
+        filler = {'type': 'progress', 'isSidechain': False, 'data': 'x' * g.MAX_TRANSCRIPT}
+        early = tr_launch(self.tid(), agent='a1') + [tr_handback(one, agent='a1')]
+        late = tr_launch(self.tid(), agent='a2') + [tr_handback(two, agent='a2')]
+        w, e = self.write(self.rep, cut)
+        r = self.saved(cut, early + late + e, wid=w)                              # both answers read
+        self.assertIn('it differs; the first difference: the saved file ends after line 36', r)
+        self.assertNotIn('The guard compared', self.saved(cut, early + [filler] + late + e, wid=w))
+        w, e = self.write(self.rep, two)
+        self.assertIn('it matches', self.saved(two, early + [filler] + late + e, wid=w))
+        # the round's start read: a Write that an agent call followed, before the answer
+        rep0 = os.path.join(self.ver, 'ch_0_round_1.md')
+        w0, e0 = self.write(rep0, verifier_report(3))
+        w, e = self.write(self.rep, cut)
+        entries = early + [filler] + e0 + tr_launch(self.tid(), agent='a3') + [tr_handback(one, agent='a3')] + e
+        self.assertIn('it differs; the first difference: the saved file ends after line 36',
+                      self.saved(cut, entries, wid=w))
+
+    def test_foreground_call_of_claude_code_2_1_319(self):
+        # the tool result is a stub, the report is in toolUseResult and again in the hand-back attachment
+        rep = verifier_report()
+        cut = rep.rstrip('\n').rsplit('\n', 1)[0] + '\n'
+        for report in (True, False):                     # with handbackReport.text, or only in the attachment
+            entries = tr_foreground_handback(self.tid(), rep, report=report) + \
+                [tr_handback_attachment(rep, 'a7c2e91f04b3d5a68')]
+            with self.subTest(report=report):
+                w, e = self.write(self.rep, cut)
+                self.assertIn('it differs; the first difference: the saved file ends after line 36',
+                              self.saved(cut, entries + e, wid=w))
+                w, e = self.write(self.rep, rep)
+                self.assertIn('it matches', self.saved(rep, entries + e, wid=w))
+                # the answer counts once: once this report took it, there is none for another report
+                rep2 = os.path.join(self.ver, 'ch_2_round_1.md')
+                w2, e2 = self.write(rep2, cut)
+                self.assertNotIn('The guard compared', self.saved(cut, entries + e + e2, path=rep2, wid=w2))
+        # no hand-back after a result without the report: no answer to compare with
+        w, e = self.write(self.rep, cut)
+        entries = tr_foreground_handback(self.tid(), rep, report=False)
+        self.assertNotIn('The guard compared', self.saved(cut, entries + e, wid=w))
+        # a hand-back whose text is not the result's: the guard cannot tell which the main chat holds
+        entries = tr_foreground_handback(self.tid(), rep) + \
+            [tr_handback_attachment(rep.replace('alt', 'neu', 1), 'a7c2e91f04b3d5a68')]
+        self.assertNotIn('The guard compared', self.saved(cut, entries + e, wid=w))
+        # a stub that names no agent: the hand-back of the same text is the same answer
+        entries = tr_foreground_handback(self.tid(), rep) + [tr_handback_attachment(rep, 'a7c2e91f04b3d5a68')]
+        entries[1]['message']['content'][0]['content'] = 'This agent\'s report was delivered to you as a message.'
+        w, e = self.write(self.rep, rep)
+        rep2 = os.path.join(self.ver, 'ch_2_round_1.md')
+        w2, e2 = self.write(rep2, cut)
+        self.assertIn('it matches', self.saved(rep, entries + e, wid=w))
+        self.assertNotIn('The guard compared', self.saved(cut, entries + e + e2, path=rep2, wid=w2))
+
+    def test_two_copies_of_the_report_alike_but_for_line_ends(self):
+        # the result's report and the hand-back's are compared as report lines: a final newline, CRLF or
+        # trailing blanks in one of them are no other answer
+        rep = verifier_report().rstrip('\n')
+        cut = rep.rsplit('\n', 1)[0] + '\n'
+        for one, two in ((rep + '\n', rep), (rep, rep + '\n'), (rep.replace('\n', '\r\n'), rep),
+                         (rep.replace('\u2705 |\n| 5', '\u2705 |  \n| 5'), rep)):
+            with self.subTest(one=ascii(one[-8:]), two=ascii(two[-8:])):
+                entries = tr_foreground_handback(self.tid(), one) + [tr_handback_attachment(two, 'a7c2e91f04b3d5a68')]
+                w, e = self.write(self.rep, cut)
+                self.assertIn('it differs; the first difference: the saved file ends after line 36',
+                              self.saved(cut, entries + e, wid=w))
+                # a result that names no agent: the hand-back of the same lines is the same answer
+                entries[1]['message']['content'][0]['content'] = 'This agent\'s report was delivered to you.'
+                w, e = self.write(self.rep, rep)
+                rep2 = os.path.join(self.ver, 'ch_2_round_1.md')
+                w2, e2 = self.write(rep2, cut)
+                self.assertIn('it matches', self.saved(rep, entries + e, wid=w))
+                self.assertNotIn('The guard compared', self.saved(cut, entries + e + e2, path=rep2, wid=w2))
+
+    def test_source_and_format_verifier_in_parallel(self):
+        # as in the third Windows trial run: both results, then both hand-backs
+        rep = verifier_report()
+        cut = rep.rstrip('\n').rsplit('\n', 1)[0] + '\n'
+        fmt = 'Bericht: workspace/output/verification/ch_1_format_round_1.md\nStatus: \u2705 12, \u26a0\ufe0f 0'
+        sv, fv = tr_foreground_handback(self.tid(), rep, 'asv1'), \
+            tr_foreground_handback(self.tid(), fmt, 'afv1', subagent='format-verifier')
+        entries = [sv[0], fv[0], sv[1], fv[1], tr_handback_attachment(rep, 'asv1'),
+                   tr_handback_attachment(fmt, 'afv1', 'format-verifier')]
+        w, e = self.write(self.rep, cut)
+        self.assertIn('it differs; the first difference: the saved file ends after line 36',
+                      self.saved(cut, entries + e, wid=w))
+        w, e = self.write(self.rep, rep)
+        self.assertIn('it matches', self.saved(rep, entries + e, wid=w))
+
+    def test_background_hand_back_as_an_attachment(self):
+        rep = verifier_report()
+        cut = rep.rstrip('\n').rsplit('\n', 1)[0] + '\n'
+        entries = tr_launch(self.tid(), agent='abg1') + [tr_handback_attachment(rep, 'abg1')]
+        w, e = self.write(self.rep, cut)
+        self.assertIn('it differs; the first difference: the saved file ends after line 36',
+                      self.saved(cut, entries + e, wid=w))
+        w, e = self.write(self.rep, rep)
+        self.assertIn('it matches', self.saved(rep, entries + e, wid=w))
+        # a message to the verifier: its next hand-back answers that message, no statement
+        entries += [tr_call('SendMessage', {'to': 'abg1', 'message': 'Check row 3 again.'}, self.tid()),
+                    tr_handback_attachment(rep.replace('alt', 'neu', 1), 'abg1')]
+        w, e = self.write(self.rep, cut)
+        self.assertNotIn('The guard compared', self.saved(cut, entries + e, wid=w))
+
+    def test_a_short_answer_as_in_probe_t11(self):
+        answer = ('T11 Probe\n| 1 | \u201eSatz eins\u201c | \u2705 |\n| 2 | \u201eSatz zwei\u201c | \u2705 |\n'
+                  'Status: \u2705 2\n')
+        entries = tr_foreground_handback(self.tid(), answer, 'at11') + [tr_handback_attachment(answer, 'at11')]
+        short = answer.rsplit('Status:', 1)[0]
+        w, e = self.write(self.rep, short)
+        self.assertIn('it differs; the first difference: the saved file ends after line 3, the answer has 1 more '
+                      'line, from: \u00abStatus: \u2705 2\u00bb', self.saved(short, entries + e, wid=w))
+        w2, e2 = self.write(self.rep, answer)
+        self.assertIn('it matches', self.saved(answer, entries + e + e2, wid=w2))
+
+    def test_a_writer_hand_back_does_not_count(self):
+        # neither as an answer nor as a message from the user: after an exact copy, the next Write is compared
+        rep = verifier_report()
+        cut = rep.rstrip('\n').rsplit('\n', 1)[0] + '\n'
+        writer = tr_launch(self.tid(), subagent='writer-agent', agent='awr1')
+        entries = writer + tr_foreground_handback(self.tid(), rep, 'asv2') + [tr_handback_attachment(rep, 'asv2')]
+        w1, e1 = self.write(self.rep, rep)
+        w2, e2 = self.write(self.rep, cut)
+        back = tr_handback_attachment(rep.replace('alt', 'neu'), 'awr1', 'writer-agent')
+        r = self.saved(cut, entries + e1 + [back] + e2, wid=w2)
+        self.assertIn('it differs; the first difference: the saved file ends after line 36', r)
+        # its report in the foreground form is no answer either
+        two = verifier_report(2)
+        entries = tr_foreground_handback(self.tid(), two, 'awr2', subagent='writer-agent') + \
+            [tr_handback_attachment(two, 'awr2', 'writer-agent')]
+        rep2 = os.path.join(self.ver, 'ch_2_round_1.md')
+        w, e = self.write(rep2, two[:-30])
+        self.assertNotIn('The guard compared', self.saved(two[:-30], entries + e, path=rep2, wid=w))
+
+    def test_a_compaction_after_the_answer(self):
+        rep = verifier_report()
+        cut = rep.rstrip('\n').rsplit('\n', 1)[0] + '\n'
+        compact = [{'type': 'system', 'subtype': 'compact_boundary', 'isSidechain': False, 'content': 'Compacted'},
+                   {'type': 'user', 'isSidechain': False, 'isCompactSummary': True,
+                    'message': {'role': 'user', 'content': 'Summary: the verifier found 30 sentences OK.'}}]
+        for between in (compact[:1], compact[1:]):
+            w, e = self.write(self.rep, cut)
+            with self.subTest(between=between[0]['type']):
+                self.assertNotIn('The guard compared',
+                                 self.saved(cut, tr_launch(self.tid()) + [tr_handback(rep)] + between + e, wid=w))
+        # before the answer: the comparison as always
+        w, e = self.write(self.rep, cut)
+        self.assertIn('it differs', self.saved(cut, compact + tr_launch(self.tid()) + [tr_handback(rep)] + e, wid=w))
+
+    def test_another_report_gets_no_statement(self):
+        r = self.round(verifier_report(2, changed=range(1, 31)), saved=verifier_report(1))
+        self.assertNotIn('The guard compared', r)
+
+    def test_what_is_no_answer(self):
+        rep = verifier_report()
+        cut = rep.rstrip('\n').rsplit('\n', 1)[0] + '\n'
+        for name, entries in (
+                ('writer', tr_launch(self.tid(), subagent='writer-agent') + [tr_handback(rep, name='writer-agent')]),
+                ('sidechain', tr_launch(self.tid()) + [tr_handback(rep, side=True)]),
+                ('launch only', tr_launch(self.tid())),
+                ('continued', tr_launch(self.tid(), agent='a9') +
+                 [tr_call('SendMessage', {'to': 'a9', 'message': 'Check sentence 3 again.'}, self.tid()),
+                  tr_handback(rep, agent='a9')]),
+                ('foreground writer', tr_foreground(self.tid(), rep, subagent='writer-agent'))):
+            wid, w = self.write(self.rep, cut)
+            with self.subTest(case=name):
+                self.assertNotIn('The guard compared', self.saved(cut, entries + w, wid=wid))
+
+    def test_unchanged_without_a_transcript(self):
+        rep = verifier_report()
+        want = self.saved(rep, [], transcript=os.path.join(self.root, 'missing.jsonl'))
+        self.assertIn('cephalo guard R5:', want)
+        self.assertNotIn('The guard compared', want)
+        wid, w = self.write(self.rep, rep)
+        for transcript in ('', self.root, os.path.join(self.root, 'missing.jsonl')):
+            self.assertEqual(self.saved(rep, tr_launch(self.tid()) + [tr_handback(rep)] + w, wid=wid,
+                                        transcript=transcript), want)
+        self.assertEqual(self.saved(rep, ['not json', '{"type": "user"', '[]'], wid=wid), want)
+        self.assertEqual(self.saved(rep, w, wid=wid), want)                    # no source-verifier call
+        d = payload('Write', {'file_path': self.rep, 'content': rep}, event='PostToolUse', cwd=self.root)
+        del d['transcript_path']
+        self.assertEqual(g.evaluate(d, env(root=self.root))['reason'], want)
+
+    def test_odd_entries_and_errors_keep_the_read_back(self):
+        # an entry of an unknown shape, or an error of the comparison, leaves R5's message as it is
+        rep = verifier_report()
+        want = self.saved(rep, [], transcript=os.path.join(self.root, 'missing.jsonl'))
+        for frm in (['a0f8'], {'id': 'x'}, None, 5):
+            h = tr_handback(rep)
+            h['origin']['from'] = frm
+            wid, w = self.write(self.rep, rep)
+            with self.subTest(frm=frm):
+                self.assertEqual(self.saved(rep, tr_launch(self.tid()) + [h] + w, wid=wid), want)
+        orig = g._verifier_events
+        g._verifier_events = lambda *a: 1 / 0
+        try:
+            wid, w = self.write(self.rep, rep)
+            self.assertEqual(self.saved(rep, tr_launch(self.tid()) + [tr_handback(rep)] + w, wid=wid), want)
+        finally:
+            g._verifier_events = orig
+
+    def test_over_the_deadline_no_statement(self):
+        rep = verifier_report()
+        old = g.DEADLINE_S
+        g.DEADLINE_S = -1.0
+        try:
+            r = self.round(rep, saved=rep[:-40])
+        finally:
+            g.DEADLINE_S = old
+        self.assertIn('cephalo guard R5:', r)
+        self.assertNotIn('The guard compared', r)
+
+    def test_format_report_unchanged(self):
+        fmt = os.path.join(self.ver, 'document_format_round_1.md')
+        rep = verifier_report()
+        r = self.round(rep, saved=rep[:-40], path=fmt)
+        self.assertIn('cephalo guard R6:', r)
+        self.assertNotIn('The guard compared', r)
+
+    def test_many_like_lines_are_quick(self):
+        # 4900 lines from five: difflib would take seconds for each of six answers
+        import random
+        import time
+        rnd = random.Random(1)
+        vals = ['Status: \u2705', 'Status: \u26a0\ufe0f', 'Comment: ok', 'Source: Keller', 'Note']
+        text = lambda: '\n'.join(rnd.choice(vals) for _ in range(4900)) + '\n'
+        entries = []
+        for k in range(6):
+            entries += tr_launch(self.tid(), agent='a%d' % k) + [tr_handback(text(), agent='a%d' % k)]
+        saved = text()
+        w, e = self.write(self.rep, saved)
+        t = time.perf_counter()
+        r = self.saved(saved, entries + e, wid=w)
+        self.assertLess(time.perf_counter() - t, 2.0)
+        self.assertNotIn('The guard compared', r)
+
+    def test_a_large_report_is_quick(self):
+        import time
+        rep = verifier_report(rows=4000)
+        t = time.perf_counter()
+        r = self.round(rep, saved=rep.replace('Zitat 3999 aus', 'Zitat 3999 auf'))
+        self.assertIn('line 4003 of the saved file', r)
+        self.assertLess(time.perf_counter() - t, 2.0)
 
 
 # ------------------------------------------------------------------ P1

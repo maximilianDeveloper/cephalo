@@ -166,6 +166,10 @@ Text extraction, with the Read tool as with `scripts/extract_styleguide.sh`, tur
 
 APA 7 does not require page numbers for paraphrases. Many European institutions do. Extract from examples; note as `❓` if unclear.
 
+### Source lines under figures
+
+A guideline's example of a source line under a figure or table (`Source: Author 2015, p. 12`) shows how to cite one taken from a source. It does not settle a figure or table the author made from a source's data, which many guidelines mark differently ("own figure, based on …"): unless the guidelines say how to mark it, log it as `❓` not covered (`captions.source_position` or the key your template has for it), even where the example looks complete.
+
 ## Recording answers to open questions
 
 The user's answers to open questions do not need a new style-resolver run. Whoever receives them records them in `styleguide.md`: the orchestrator or, in workflows without one, Claude in the main chat (or the user).

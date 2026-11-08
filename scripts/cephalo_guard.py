@@ -48,6 +48,9 @@ Rules (on, except P1)
       consistency_final.md): after a Write, asks for the read-back the
       definitions require and gives the saved file's counts to compare with
       the verifier's answer; an Edit is denied (the copy is written again).
+      The main chat's report it also compares with the answer in the session
+      transcript (answer_check): that it matches, or the first difference
+      when the answer is clearly this report's; otherwise nothing.
       An Agent, Task or SendMessage call of the main chat (no agent_id: an
       orchestrator run as a subagent has its calls in a transcript of its
       own) is denied while a report it saved has not been read back whole
@@ -80,8 +83,10 @@ never answers "allow", which would skip the user's permission prompts.  Input
 it does not understand, and any error of its own, let the call pass with a
 one-line note to the user (systemMessage), once per session.  The session
 transcript is Claude Code's own file, read only for R5/R6 before an agent
-call: when it is missing, unreadable, or not in the shape the guard knows,
-the call passes without a note (past the deadline, with the note).  It writes
+call and for R5 after a report's Write: when it is missing, unreadable, or
+not in the shape the guard knows, the call passes without a note (before an
+agent call past the deadline, with the note), and the read-back message has
+no statement on the answer.  It writes
 nothing but a small file per session in a folder of its own in the system's
 temporary folder (cephalo-guard-<user id>/, on Windows cephalo-guard/), for
 P1 when it is on and for that note, and uses no network.  Python 3.9 or later, standard library only.
@@ -1806,7 +1811,10 @@ _QUOTE_MARKS = '\u201e\u201c\u201d\u201a\u2018\u2019\u00ab\u00bb"'
 _GERMAN_QUOTE = re.compile('\u201e[^\u201e\u201c\u201d"]*(?:"[^\u201e\u201c\u201d"\n]*"[^\u201e\u201c\u201d"]*)*\u201c')
 
 
-def readback(tin, ctx):
+def readback(tin, ctx, data=None):
+    """The PostToolUse message after the coordinator's Write of a saved report
+    (R5, R6), or None.  data: the hook's input (R5 compares the report with
+    the answer in its session transcript)."""
     path = tin.get('file_path')
     if not isinstance(path, str) or not ctx.coordinator:
         return None
@@ -1816,9 +1824,9 @@ def readback(tin, ctx):
         return None
     if not ctx.enabled('R6' if fmt else 'R5'):
         return None
-    data = _read_regular(path, 1 << 22) if _fs_ok(n, ctx) else None   # a report is far smaller than 4 MiB
-    if data is not None:
-        text = data.decode('utf-8', 'replace')
+    raw = _read_regular(path, 1 << 22) if _fs_ok(n, ctx) else None   # a report is far smaller than 4 MiB
+    if raw is not None:
+        text = raw.decode('utf-8', 'replace')
     else:
         text = tin.get('content') if isinstance(tin.get('content'), str) else ''
     lines = text.replace('\r\n', '\n').split('\n')
@@ -1853,13 +1861,11 @@ def readback(tin, ctx):
            'the Write tool\'s note that you need not read it back does not apply here). %s If anything differs '
            'from the answer, write the file again with the Write tool, the answer unchanged; only an absolute '
            'path becomes project-relative.') % (rel, report_definition(ctx), counts)
-    nfc = unicodedata.normalize('NFC', text)
-    absolute = [unicodedata.normalize('NFC', x) for x in {ctx.project_raw, ctx.project_raw.replace('\\', '/'),
-                                                          ctx.home_raw} if len(x) > 3]
-    if any(x in nfc for x in absolute):
+    absolute = _holds_path(text, _machine_paths(ctx), ctx)
+    if absolute:
         msg += (' It still contains an absolute path of this machine: write the file again with the Write tool, '
                 'the path made project-relative (an Edit of the saved report is denied).')
-    return msg
+    return msg + answer_check(text, n, data, ctx, absolute)
 
 
 # a transcript line that may hold a Write or Read call, or a tool result that is an error
@@ -1871,28 +1877,33 @@ def _tail_lines(path, limit):
     """The complete lines (bytes) in the last limit bytes of a regular file, or None.
     Opened as _read_regular opens a file; a line cut by the start of that part
     and a last line still being written are left out."""
+    return _tail(path, limit)[0]
+
+
+def _tail(path, limit):
+    """_tail_lines, and whether the file is longer than limit (its start left out)."""
     try:
         fd = os.open(path, os.O_RDONLY | getattr(os, 'O_NONBLOCK', 0) | getattr(os, 'O_BINARY', 0))
     except (OSError, ValueError, TypeError):
-        return None
+        return None, False
     try:
         st = os.fstat(fd)
         if not stat.S_ISREG(st.st_mode):
-            return None
+            return None, False
         start = max(0, st.st_size - limit)
         os.lseek(fd, start, os.SEEK_SET)
         with os.fdopen(fd, 'rb') as fh:
             fd = None
             data = fh.read(limit)
     except (OSError, ValueError):
-        return None
+        return None, False
     finally:
         if fd is not None:
             os.close(fd)
     data = data[:data.rfind(b'\n') + 1]
     if start:
         data = data[data.find(b'\n') + 1:]
-    return data.split(b'\n')[:-1]
+    return data.split(b'\n')[:-1], start > 0
 
 
 def _main_calls(lines, ctx):
@@ -1960,10 +1971,16 @@ def _read_span(tin):
     return first, (first + vals[1] - 1 if vals[1] and vals[1] > 0 else None)
 
 
+def _span_order(span):
+    """Sort key of a span (first, last): a last of None (to the end) after every number, as (1, 12) and (1, None)
+    do not compare."""
+    return span[0], float('inf') if span[1] is None else span[1]
+
+
 def _spans_text(spans, lines):
     """For a message: the lines the Reads since the last Write showed."""
     merged = []
-    for first, last in sorted(spans):
+    for first, last in sorted(spans, key=_span_order):
         last = lines if last is None else min(last, lines)
         if first > last:
             continue
@@ -2046,7 +2063,7 @@ def unread_reports(data, ctx):
         while rows and not rows[-1].strip():
             rows.pop()
         covered = 0                 # the lines 1..covered were shown
-        for first, last in sorted(spans):
+        for first, last in sorted(spans, key=_span_order):
             if first > covered + 1:
                 break
             covered = len(rows) if last is None else max(covered, last)
@@ -2073,6 +2090,566 @@ def agent_reason(hits, ctx):
                       '"Save every source-verifier report as a file"' if rule == 'R5'
                       else '"The format-verifier writes its report itself"'))
     return ' '.join(out)
+
+
+# --------------------------------------------------------------- R5: the saved report against the answer
+
+# a transcript line that may hold an agent's call or hand-back, a Write, or a SendMessage
+_TR_VERIFIER = re.compile(rb'"handback"\s*:\s*true|"handbackReportText"|"compact_boundary"'
+                          rb'|"isCompactSummary"\s*:\s*true|"name"\s*:\s*"(?:Write|SendMessage|Agent|Task)"'
+                          rb'|"role"\s*:\s*"user"\s*,\s*"content"\s*:\s*(?:"|\[\s*\{\s*"type"\s*:\s*"(?:text|image)")'
+                          rb'|"turnOrigin"\s*:\s*"human"|"kind"\s*:\s*"human"|"queued_command"')
+_VERIFICATION_DIR = re.compile(r'/verification/', re.I | re.A)
+SIMILAR = 0.8                   # share of lines two texts have in common to be the same report (_compare)
+MAX_COMPARE = 5000              # lines of a report the guard compares, at most
+
+
+_HANDBACK_STUB = re.compile(r'report was delivered to you as a message from "([\w-]+)"')
+
+
+def _agent_result(c, e):
+    """What the result c (of entry e) of an Agent or Task call holds:
+    ('launch', None, agent id) for a start in the background, ('answer',
+    text, agent id) for the answer of a call in the foreground, without
+    Claude Code's trailer ('agentId: ...' and a '<usage>...</usage>' block),
+    ('pending', None, agent id) for a result that only names the hand-back
+    message the report comes in, ('opaque', None, agent id) for an error or
+    a result in another shape.  Claude Code 2.1.319 gives a call in the
+    foreground a stub as its result ('This agent's report was delivered to
+    you as a message from "<agent id>" ...'), the report in the entry's
+    toolUseResult (handback "send", handbackReport.text), and the report
+    again in a hand-back that follows (_verifier_events); the stub is never
+    the answer.  The agent id is None when the result names none."""
+    tur = e.get('toolUseResult')
+    aid = tur.get('agentId') if isinstance(tur, dict) and isinstance(tur.get('agentId'), str) else None
+    content = c.get('content')
+    if isinstance(content, str):
+        blocks = [content]
+    elif isinstance(content, list) and all(isinstance(b, dict) and b.get('type') == 'text' and
+                                           isinstance(b.get('text'), str) for b in content):
+        blocks = [b['text'] for b in content]
+    else:
+        blocks = None
+    named = re.findall(r'(?m)^[ \t]*agentId:[ \t]*([\w-]+)', '\n'.join(blocks or ()))
+    stub = _HANDBACK_STUB.search('\n'.join(blocks or ()))
+    aid = aid or (named[-1] if named else None) or (stub.group(1) if stub else None)
+    if isinstance(tur, dict) and (tur.get('isAsync') is True or tur.get('status') == 'async_launched'):
+        return 'launch', None, aid
+    if c.get('is_error') is True:
+        return 'opaque', None, aid
+    report = tur.get('handbackReport') if isinstance(tur, dict) else None
+    if isinstance(report, dict) and isinstance(report.get('text'), str) and report['text'].strip():
+        return 'answer', report['text'], aid
+    if stub or (isinstance(tur, dict) and (tur.get('handback') is not None or report is not None)):
+        return 'pending', None, aid
+    if blocks is None:
+        return 'opaque', None, aid
+    text = '\n'.join(b for b in blocks if not b.lstrip().startswith('agentId:'))
+    if 'Async agent launched' in text:
+        return 'launch', None, aid
+    tail = [m.start() for m in re.finditer(r'(?m)^[ \t]*agentId:', text)]
+    if tail and len(text) - tail[-1] < 1000:
+        text = text[:tail[-1]]
+    text = re.sub(r'\s*<usage>.*?</usage>\s*\Z', '', text, flags=re.S).strip()
+    return ('answer', text, aid) if text else ('opaque', None, aid)
+
+
+_TR_RESULT_ID = re.compile(rb'"tool_use_id"\s*:\s*"([^"\\]{1,200})"')
+
+
+def _verifier_events(lines, ctx):
+    """The source-verifier's answers to the main chat and the main chat's
+    Writes into a verification/ folder, in order: [('answer', text) |
+    ('opaque',) | ('write', tool id, normalized path, text written) |
+    ('call',), an Agent or Task call of the main chat | ('user',), a
+    message from the user (typed, or queued while the main chat worked), or
+    another one that is neither a tool result nor marked isMeta nor a
+    task-notification].  An
+    answer is the result of a call in the foreground (_agent_result) or the
+    report an agent hands back (origin.handbackReportText of a peer message,
+    as Claude Code 2.1.31x writes it, in a user entry or, in 2.1.319, in a
+    queued_command attachment), once: a hand-back that repeats the report of
+    a result read is left out, and one that a result named ('pending')
+    gives that result its answer.  'opaque' is an answer the guard does
+    not compare with: one it cannot read (an error, a result or hand-back in
+    another shape), and one an agent gives after a message of the main chat
+    (SendMessage) to it, or to an agent the guard does not know: there the
+    main chat holds an answer the guard does not see.  A Write whose result
+    is an error (denied, rejected) is left out.  ('compact',): the
+    conversation was compacted there; what came before it, the main chat no
+    longer sees as it was."""
+    events, calls, sent = [], {}, set()   # calls: tool id (bytes) of an Agent or Task call -> its subagent_type
+    writes = {}                           # tool id (bytes) of a Write in events -> its event
+    verifiers, others = set(), set()      # agent ids of source-verifiers and of other agents
+    handed, unnamed = {}, []              # a verifier's agent id -> its result's event (by identity: a failed
+    #                                       Write leaves events); the answers whose result names no agent (as
+    #                                       _report_lines: a hand-back of the same lines repeats one)
+    for k, line in enumerate(lines):
+        if not k % 256:
+            ctx.budget.tick()
+        due = [x for x in _TR_RESULT_ID.findall(line) if x in calls or x in writes] \
+            if (calls or writes) and b'"tool_use_id"' in line else ()
+        if not due and not _TR_VERIFIER.search(line):
+            continue
+        try:
+            e = json.loads(line)
+        except (ValueError, RecursionError):
+            continue
+        if not isinstance(e, dict) or e.get('isSidechain') is True:
+            continue
+        if (e.get('type') == 'system' and e.get('subtype') == 'compact_boundary') or e.get('isCompactSummary') is True:
+            events.append(('compact',))
+            continue
+        origin, att = e.get('origin'), e.get('attachment')
+        if e.get('type') == 'attachment' and isinstance(att, dict):
+            origin = att.get('origin')
+        if e.get('type') in ('user', 'attachment') and isinstance(origin, dict) and origin.get('handback') is True:
+            name, frm, text = origin.get('name'), origin.get('from'), origin.get('handbackReportText')
+            mine = name == 'source-verifier' or (isinstance(frm, str) and frm in verifiers)
+            if not mine and isinstance(name, str):
+                continue                                  # another agent's report
+            ok = name == 'source-verifier' and origin.get('kind') == 'peer' and isinstance(frm, str) and \
+                frm not in sent and frm not in others and isinstance(text, str)
+            if isinstance(frm, str) and frm in handed:    # the hand-back of a result read: its answer once
+                was = handed.pop(frm)
+                at = next((i for i, ev in enumerate(events) if ev is was), None)
+                if at is not None and not (ok and (was[0] == 'pending' or
+                                                   _report_lines(was[1]) == _report_lines(text))):
+                    events[at] = ('opaque',)
+                elif at is not None and was[0] == 'pending':
+                    events[at] = ('answer', text)
+            elif ok and _report_lines(text) in unnamed:
+                unnamed.remove(_report_lines(text))
+            else:
+                events.append(('answer', text) if ok else ('opaque',))
+            continue
+        m = e.get('message')
+        content = m.get('content') if isinstance(m, dict) else None
+        if (e.get('type') == 'attachment' and isinstance(att, dict) and att.get('type') == 'queued_command') or \
+                (e.get('type') == 'user' and e.get('isMeta') is not True and
+                 (isinstance(content, str) or isinstance(content, list) and
+                  not any(isinstance(c, dict) and c.get('type') == 'tool_result' for c in content))):
+            # a task-notification (a background agent or command ended) is no message from the user: in a
+            # queued_command attachment (commandMode) or a user entry (turnOrigin), each with origin.kind
+            if not ((isinstance(origin, dict) and origin.get('kind') == 'task-notification') or
+                    (isinstance(att, dict) and att.get('commandMode') == 'task-notification') or
+                    e.get('turnOrigin') == 'task_notification'):
+                events.append(('user',))
+            continue
+        for c in content if isinstance(content, list) else ():
+            if not isinstance(c, dict):
+                continue
+            tin = c.get('input')
+            if e.get('type') == 'assistant' and c.get('type') == 'tool_use' and isinstance(tin, dict):
+                name, cid = c.get('name'), c.get('id')
+                if name in ('Agent', 'Task'):
+                    events.append(('call',))
+                    if isinstance(cid, str):
+                        calls[cid.encode('utf-8', 'replace')] = tin.get('subagent_type')
+                elif name == 'SendMessage':
+                    to = tin.get('to')
+                    if not (isinstance(to, str) and to in others and to not in verifiers):
+                        events.append(('opaque',))
+                        if isinstance(to, str):
+                            sent.add(to)
+                            handed.pop(to, None)          # a hand-back from it now answers this message
+                elif name == 'Write' and isinstance(tin.get('file_path'), str):
+                    n = norm_path(tin['file_path'], ctx, ctx.cwd) or ''
+                    if _VERIFICATION_DIR.search(n):
+                        events.append(('write', cid, n, tin.get('content')))
+                        if isinstance(cid, str):
+                            writes[cid.encode('utf-8', 'replace')] = events[-1]
+            elif e.get('type') == 'user' and c.get('type') == 'tool_result' and isinstance(c.get('tool_use_id'), str):
+                key = c['tool_use_id'].encode('utf-8', 'replace')
+                if key in writes:
+                    ev = writes.pop(key)
+                    # (a Write that R5's PostToolUse "block" follows saved the file: its result is no error, as
+                    # in the second Windows trial run with Claude Code 2.1.319, "File created successfully")
+                    if c.get('is_error') is True and ev in events:
+                        events.remove(ev)
+                    continue
+                if key not in calls:
+                    continue
+                kind = calls.pop(key)
+                what, text, aid = _agent_result(c, e)
+                if kind != 'source-verifier':
+                    if aid:
+                        others.add(aid)
+                    continue
+                if aid:
+                    verifiers.add(aid)
+                if what in ('answer', 'pending'):
+                    events.append(('answer', text) if what == 'answer' else ('pending', len(events)))
+                    if aid:
+                        handed[aid] = events[-1]
+                    elif what == 'answer':
+                        unnamed.append(_report_lines(text))
+                elif what == 'opaque':
+                    events.append(('opaque',))
+    return [('opaque',) if ev[0] == 'pending' else ev for ev in events]   # a report never handed back
+
+
+def _round_answers(events, write_id, n, ctx, paths):
+    """The answers (as _answer) that the report n, saved by the Write
+    write_id, may be the copy of: those of its round, after the last Write
+    into verification/ that an agent call followed before the latest answer
+    (an earlier round's report: the answers that came with no call since a
+    Write are of its round, as those of verifiers started together) and
+    after the last answer the guard does not compare with ('opaque',
+    which may be a later version of one before it), less each one an earlier
+    Write in the round has taken (another report: the answer it is or is
+    most like; a report written before the round takes none), at most the
+    last 6, each with its place in the events; and the answer an earlier
+    Write of this report was the exact copy of, unless an agent call, a
+    message from the user or an answer the guard does not compare with came
+    after that Write (then none: the main chat may know a later version, or
+    a change the user asked for).  None when the latest
+    answer is one the guard does not compare with, and none when this
+    report was written before its round, with an agent call between that
+    Write and the latest answer (an earlier round's report written again:
+    its answer may be one the guard no longer counts).  Also the events
+    before the Write, and whether the round's start is among the events (a
+    Write that an agent call followed before the latest answer): if not,
+    the round may begin before them."""
+    stop = next((i for i, ev in enumerate(events) if ev[0] == 'write' and ev[1] == write_id), len(events)) \
+        if write_id else len(events)
+    events = events[:stop]
+    last = max((i for i, ev in enumerate(events) if ev[0] in ('answer', 'opaque')), default=None)
+    if last is None or events[last][0] == 'opaque':
+        return [], events, False
+    call = max((i for i, ev in enumerate(events[:last]) if ev[0] == 'call'), default=0)
+    start = max((i for i, ev in enumerate(events[:call]) if ev[0] == 'write'), default=-1)
+    old = {ev[2] for ev in events[:start + 1] if ev[0] == 'write'}
+    if n in old:
+        return [], events, True
+    free, held = [], None          # held: the answer an exact copy of this report took (False: no longer sure)
+    for i in range(start + 1, len(events)):
+        ctx.budget.tick()
+        ev = events[i]
+        if ev[0] in ('opaque', 'call', 'user'):
+            if ev[0] == 'opaque':
+                free = []
+            if held:
+                held = False
+        elif ev[0] == 'answer':
+            free.append(_answer(ev[1], paths, ctx) + (i,))
+        elif ev[0] == 'write' and isinstance(ev[3], str) and ev[2] not in old:
+            cand = free + [held] if ev[2] == n and held else free
+            k = _match(_report_lines(ev[3]), cand, ctx) if cand else None
+            if k is not None and (ev[2] != n or k[1]):
+                taken = cand[k[0]]
+                if k[0] < len(free):
+                    del free[k[0]]
+                if ev[2] == n:
+                    held = taken
+    if held is False:
+        return [], events, start >= 0
+    return free[-6:] + ([held] if held else []), events, start >= 0
+
+
+def _machine_paths(ctx):
+    """The absolute paths of this machine that a saved report must not hold
+    (readback() asks for them to become project-relative): the project
+    folder, the multi-project root above it and the home folder, each with /
+    or \\, as Git Bash writes it (/c/...) and with doubled backslashes; in
+    NFC (macOS: Finder names a folder in NFD, a typed path is NFC) and, on
+    Windows, in lower case (see _holds_path)."""
+    raw = [ctx.project_raw, ctx.home_raw]
+    if ctx.root != ctx.project:
+        raw.append(os.path.dirname(os.path.normpath(ctx.project_raw)))
+    out = set()
+    for p in raw:
+        p = (p or '').rstrip('/\\')
+        forms = {p, p.replace('\\', '/'), p.replace('/', '\\'), p.replace('/', '\\').replace('\\', '\\\\')}
+        m = re.match(r'^([A-Za-z]):[\\/](.*)$', p)
+        if m:
+            rest = m.group(2).replace('\\', '/')
+            forms |= {'/%s/%s' % (m.group(1).lower(), rest), '/%s/%s' % (m.group(1).upper(), rest)}
+        for f in forms:
+            f = unicodedata.normalize('NFC', f)
+            if len(f) > 3:
+                out.add(f.lower() if ctx.windows else f)
+    return sorted(out, key=lambda f: (-len(f), f))
+
+
+_PATH_SEP = r'(?:\\\\|[\\/])'          # \\, \ or /
+_SEP_RX = re.compile(_PATH_SEP)
+_PATH_END = '\\s|\\[\\]()`\'"\u00ab\u00bb,;'    # what ends a path in a report line (a character class)
+
+
+def _paths_alt(paths, ctx):
+    """The regular expression of _machine_paths, the longest first, on
+    Windows in any letter case."""
+    alt = '|'.join(re.escape(p) for p in paths)
+    return '(?i:%s)' % alt if ctx.windows else '(?:%s)' % alt
+
+
+def _path_re(paths, ctx):
+    """One of _machine_paths where it ends a name: a separator, or no letter,
+    digit or hyphen, follows it (/home/u is no part of /home/user2)."""
+    if not paths:
+        return None
+    return re.compile(_paths_alt(paths, ctx) + r'(?![\w-])')
+
+
+def _holds_path(text, paths, ctx):
+    """Whether text holds one of _machine_paths (compared in NFC, on Windows
+    in any letter case)."""
+    rx = _path_re(paths, ctx)
+    return bool(rx and rx.search(unicodedata.normalize('NFC', text)))
+
+
+def _path_line(line, rx, paths, ctx):
+    """A line of an answer that holds an absolute path of this machine, as a
+    regular expression a copy matches whole: each such path as it is or made
+    relative (nothing, ./, ../ once or more, or ~/ before the rest of the
+    path, which may be 00_Shared_Materials/...; the bare folder may become
+    .), the separators in the rest of the path \\ or /, the line's other
+    text as it is; and the parts of the line that the paths and their
+    separators take, {start: (end, what a copy may have there)}."""
+    alt, out, pos, parts = _paths_alt(paths, ctx), [], 0, {}
+    lead, bare = '(?:%s%s|(?:\\.\\.?%s)+|~%s)' % (alt, _PATH_SEP, _PATH_SEP, _PATH_SEP), '(?:%s|\\.)' % alt
+    lead_rx, bare_rx = re.compile(lead), re.compile(bare)
+    for m in rx.finditer(line):
+        if m.start() < pos:
+            continue
+        out.append(re.escape(line[pos:m.start()]))
+        j = m.end()
+        sep = re.match(_PATH_SEP, line[j:])
+        if sep:
+            j += sep.end()
+            parts[m.start()] = (j, lead_rx)
+            rest = re.match('[^%s]*' % _PATH_END, line[j:]).group(0)
+            out.append(lead + '?')
+            out.append(''.join(_PATH_SEP if k % 2 else re.escape(part)
+                               for k, part in enumerate(re.split(r'(\\\\|[\\/])', rest))))
+            j += len(rest)
+        else:
+            parts[m.start()] = (j, bare_rx)
+            out.append(bare)
+        pos = j
+    out.append(re.escape(line[pos:]))
+    return re.compile(''.join(out)), parts
+
+
+def _diff_at(a, b, parts, ctx):
+    """Where the copy a of the answer's line b first differs from it, the
+    absolute paths of b aside (parts, as _path_line gives them): (position
+    in a, position in b).  A walk along both lines, in a time linear in
+    their length (no difflib: a long line would outrun the hook's timeout),
+    with any separator (\\, \\\\ or /) as good as another."""
+    i = j = steps = 0
+    while True:
+        steps += 1
+        if not steps % 4096:
+            ctx.budget.tick()
+        if j in parts:
+            end, may = parts[j]
+            m = may.match(a, i)
+            i, j = (m.end() if m else i), end
+            continue
+        if i >= len(a) or j >= len(b):
+            break
+        sa, sb = _SEP_RX.match(a, i), _SEP_RX.match(b, j)
+        if sa and sb:
+            i, j = sa.end(), sb.end()
+        elif a[i] != b[j]:
+            return i, j
+        else:
+            i, j = i + 1, j + 1
+    if i < len(a) or j < len(b):
+        return i, j
+    at = next((k for k, (x, y) in enumerate(zip(a, b)) if x != y), min(len(a), len(b)))
+    return at, at                  # (a difference the walk passed over, such as \\ for /)
+
+
+def _report_lines(text):
+    """A report's lines as the guard compares them: in NFC, without a byte
+    order mark, line ends as \\n, no trailing blanks, no blank lines at the
+    start and the end."""
+    text = unicodedata.normalize('NFC', text).lstrip('\ufeff')
+    lines = [ln.rstrip() for ln in text.replace('\r\n', '\n').replace('\r', '\n').split('\n')]
+    while lines and not lines[0]:
+        lines.pop(0)
+    while lines and not lines[-1]:
+        lines.pop()
+    return lines
+
+
+def _answer(text, paths, ctx):
+    """An answer as the guard compares a report with it: its lines; for each
+    line that holds an absolute path of this machine the expression a copy
+    of it matches (_path_line: the copy makes the path project-relative, as it
+    likes); and its _skeleton, without those paths."""
+    lines, rx = _report_lines(text), _path_re(paths, ctx)
+    pats = {i: _path_line(ln, rx, paths, ctx) for i, ln in enumerate(lines) if rx and rx.search(ln)}
+    return lines, pats, _skeleton([rx.sub('', ln) if i in pats else ln for i, ln in enumerate(lines)])
+
+
+def _skeleton(lines):
+    """The letters and digits of each line that has any: what two copies of one
+    report share although quotation marks, symbols or spacing differ."""
+    return [s for s in (re.sub(r'\W+', '', ln).casefold() for ln in lines) if s]
+
+
+def _cut(line, at):
+    """A line for a message: about 120 characters around position at."""
+    if len(line) <= 120:
+        return line
+    start = max(0, min(at - 40, len(line) - 120))
+    return ('\u2026' if start else '') + line[start:start + 120] + ('\u2026' if start + 120 < len(line) else '')
+
+
+def _first_difference(mine, answer):
+    """The first line number at which the report mine (as _report_lines) and
+    an answer (as _answer) differ (a line with an absolute path of this
+    machine: one the copy of which its expression does not match whole);
+    None when they do not."""
+    theirs, pats = answer[0], answer[1]
+    k = next((i for i, (a, b) in enumerate(zip(mine, theirs))
+              if a != b and not (i in pats and pats[i][0].fullmatch(a))), None)
+    if k is None and len(mine) != len(theirs):
+        k = min(len(mine), len(theirs))
+    return k
+
+
+def _match(mine, answers, ctx):
+    """(index, same) of the answer (as _answer) that the report mine is: the
+    same text (same True), or else the most similar one with at least
+    SIMILAR of its lines alike in letters and digits; None when none is."""
+    import difflib
+    if not mine or len(mine) > MAX_COMPARE:
+        return None
+    best, best_ratio, skel = None, 0.0, _skeleton(mine)
+    for k, answer in enumerate(answers):
+        ctx.budget.tick()
+        theirs = answer[0]
+        if _first_difference(mine, answer) is None:
+            return k, True
+        if not theirs or len(theirs) > MAX_COMPARE:
+            continue
+        # (a long report with many like lines makes difflib slow: there it leaves out lines that recur often,
+        # which can only lower the ratio)
+        sm = difflib.SequenceMatcher(None, skel, answer[2], autojunk=len(mine) * len(theirs) > 1000000)
+        if sm.quick_ratio() >= max(SIMILAR, best_ratio):
+            ratio = sm.ratio()
+            if ratio >= SIMILAR and ratio > best_ratio:
+                best, best_ratio = k, ratio
+    return None if best is None else (best, False)
+
+
+def _compare(mine, answers, ctx, lead=0):
+    """The guard's comparison of a saved report (as _report_lines) with the
+    answers of its round: ('same', None) when one is the same text (an
+    absolute path of this machine made relative aside),
+    ('differs', what) for the first difference from the one it is most like
+    when that is the same report (_match), None otherwise.  lead: the blank
+    lines the saved file starts with (for its line numbers)."""
+    found = _match(mine, answers, ctx)
+    if found is None:
+        return None
+    if found[1]:
+        return 'same', None, found[0]
+    best = answers[found[0]][0]
+    k = _first_difference(mine, answers[found[0]])
+    if k == len(mine):
+        more = len(best) - k
+        return 'differs', ('the saved file ends after line %d, the answer has %d more line%s, from: \u00ab%s\u00bb'
+                           % (k + lead, more, '' if more == 1 else 's', _cut(best[k], 0))), found[0]
+    if k == len(best):
+        more = len(mine) - k
+        return 'differs', ('the answer ends after line %d, the saved file has %d more line%s, from line %d: '
+                           '\u00ab%s\u00bb' % (k, more, '' if more == 1 else 's', k + 1 + lead, _cut(mine[k], 0))), \
+            found[0]
+    a, b, pats = mine[k], best[k], answers[found[0]][1]
+    if k in pats:
+        ia, ib = _diff_at(a, b, pats[k][1], ctx)
+        return 'differs', ('line %d of the saved file: \u00ab%s\u00bb; in the answer: \u00ab%s\u00bb'
+                           % (k + 1 + lead, _cut(a, ia), _cut(b, ib))), found[0]
+    at = next((i for i, (x, y) in enumerate(zip(a, b)) if x != y), min(len(a), len(b)))
+    what = 'line %d of the saved file: \u00ab%s\u00bb; in the answer: \u00ab%s\u00bb' % (k + 1 + lead, _cut(a, at),
+                                                                                       _cut(b, at))
+    if _looks(a) == _looks(b):
+        suf = 0
+        while suf < min(len(a), len(b)) - at and a[len(a) - 1 - suf] == b[len(b) - 1 - suf]:
+            suf += 1
+        what += ('; they look alike: at character %d the file has %s, the answer %s'
+                 % (at + 1, _code_points(a[at:len(a) - suf]), _code_points(b[at:len(b) - suf])))
+    return 'differs', what, found[0]
+
+
+def _looks(text):
+    """text as it looks: any blank as a space, without format characters
+    (zero-width space, byte order mark) and variation selectors (U+FE0F after
+    \u26a0), compatibility forms as their plain letters (NFKC)."""
+    t = ''.join(' ' if ch.isspace() else ch for ch in text
+                if unicodedata.category(ch) != 'Cf' and not 0xFE00 <= ord(ch) <= 0xFE0F)
+    return unicodedata.normalize('NFKC', t)
+
+
+def _code_points(part):
+    """For a message: the code points of a short piece of a line."""
+    if not part:
+        return 'nothing'
+    return ' '.join('U+%04X' % ord(ch) for ch in part[:6]) + (' \u2026' if len(part) > 6 else '')
+
+
+def answer_check(saved, n, data, ctx, absolute=False):
+    """R5 after a Write of a source-verifier report: the guard's comparison of
+    the saved text (of the report n, a normalized path) with the
+    source-verifier's answer in the session transcript, as a sentence for the
+    read-back message, or '' when it cannot tell (no transcript or answer,
+    another report, its limits reached, an error of its own: the read-back
+    message stays as it is).  absolute: the saved text still holds an absolute
+    path of this machine, which readback() asks to make project-relative; it
+    then says no "it matches"."""
+    try:
+        return _answer_check(saved, n, data, ctx, absolute)
+    except Exception:              # OverBudget too
+        return ''
+
+
+def _answer_check(saved, n, data, ctx, absolute):
+    if ctx.agent_id:
+        return ''                  # an orchestrator run as a subagent: its calls are in a transcript of its own
+    tp = data.get('transcript_path') if isinstance(data, dict) else None
+    if not isinstance(tp, str) or not tp or not _fs_ok(norm_path(tp, ctx, ctx.cwd), ctx):
+        return ''
+    lines, cut = _tail(tp, MAX_TRANSCRIPT)
+    if not lines:
+        return ''
+    wid = data.get('tool_use_id')
+    paths = _machine_paths(ctx)
+    answers, before, begun = _round_answers(_verifier_events(lines, ctx), wid if isinstance(wid, str) else None,
+                                            n, ctx, paths)
+    rows = unicodedata.normalize('NFC', saved).lstrip('\ufeff').replace('\r\n', '\n').replace('\r', '\n').split('\n')
+    lead = next((i for i, ln in enumerate(rows) if ln.strip()), 0)
+    mine = _report_lines(saved)
+    found = _compare(mine, answers, ctx, lead)
+    if not found or (found[0] == 'same' and absolute):
+        return ''
+    if found[0] == 'differs' and cut and not begun:
+        return ''                  # the round may begin before the part of the transcript read: its answer unseen
+    after = before[answers[found[2]][3] + 1:]
+    if any(ev[0] == 'compact' for ev in after):
+        return ''                  # the answer is no longer in the main chat's context as it was
+    if found[0] == 'same':
+        return (' The guard compared it with the source-verifier\'s answer in the session transcript: it matches '
+                '(line ends, trailing blanks and absolute paths of this machine made relative aside).')
+    # the rewrite is asked for once per text: not again for a text an earlier Write of this file since the answer
+    # had, and not after two of them (two versions in turn)
+    again = [ev[3] for ev in after if ev[0] == 'write' and ev[2] == n and isinstance(ev[3], str)]
+    if any(_report_lines(t) == mine for t in again):
+        return (' The guard compared it with the source-verifier\'s answer in the session transcript: it differs as '
+                'after an earlier Write of this file (the first difference: %s). If you cannot write it as the answer '
+                'has it, leave the file as it is and tell the user.' % found[1])
+    if len(again) >= 2:
+        return (' The guard compared it with the source-verifier\'s answer in the session transcript: it differs '
+                '(the first difference: %s), and the file was written %d times before since the answer. If you '
+                'cannot write it as the answer has it, leave the file as it is and tell the user.'
+                % (found[1], len(again)))
+    return (' The guard compared it with the source-verifier\'s answer in the session transcript: it differs; '
+            'the first difference: %s. Write the file again with the Write tool, the answer unchanged.' % found[1])
 
 
 # --------------------------------------------------------------- task prompts (P1)
@@ -2372,7 +2949,7 @@ def evaluate(data, env=None):
     if event == 'PostToolUse':
         if tool != 'Write':
             return None
-        msg = readback(tin, ctx)
+        msg = readback(tin, ctx, data)
         return {'decision': 'block', 'reason': msg} if msg else None
     if tool in _SHELL_TOOLS:
         cmd = tin.get('command')

@@ -193,6 +193,7 @@ Pandoc sets the text in these styles, so these are the ones to adjust:
 | `Table Caption`, `Image Caption`, `Captioned Figure` | captions and figures (`captions.*`) |
 | `Title`, `Subtitle`, `Author`, `Date` | a title block from the metadata, if one is used |
 | `Front Matter Heading` | a heading in front matter that shows no page number ("The title page"): based on `Heading 1`, with the outline level "Body Text" and no numbering, so that the table of contents does not list it |
+| `Header Block` | the head of a document without a title page ("The head of a document without a title page"): based on `Body Text`, left-aligned and without a first-line indent |
 
 Pandoc's own reference document takes the heading font and colour from the document theme: set both in the heading styles and in their character styles, the colour as `headings.color` gives it (Pandoc's own is blue). It has no page size, no margins and no page number: set them, and put a `PAGE` field into the footer, aligned as the styleguide says.
 
@@ -298,6 +299,26 @@ Front matter numbered unlike the main text (`pagination.front_matter`: Roman num
 6. Update the fields (Ctrl+A, then F9), so that the table of contents shows the new numbers.
 
 The format check reads the sections in the DOCX: an export without them, where the styleguide needs them, is a finding until the script has run.
+
+### The head of a document without a title page
+
+Some documents have no title page but a head at the top of their first page, such as a presentation's handout with institution, seminar, title, name and date. In justified body text, its short lines are stretched across the line where they end in a line break, and the first one is indented. Write each line as a paragraph of its own in the style `Header Block`, which `scripts/build_reference_docx.py` writes into the reference document (left-aligned, no first-line indent, otherwise as `Body Text`):
+
+```markdown
+::: {custom-style="Header Block"}
+Institution, department
+
+Seminar: title of the seminar
+
+Title of the talk
+
+[Name]
+
+[Date]
+:::
+```
+
+A starting document that has a style of that name keeps it as it is.
 
 ---
 

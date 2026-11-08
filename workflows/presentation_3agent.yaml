@@ -182,12 +182,18 @@ phases:
         note: |
           Before the companion's first draft, settle whether F.1 exports it
           as a document (the guidelines, or the user, decide), record it in
-          the decision log and name it in the writer's task prompt: an
+          the decision log and name it in the writer's task prompt (for a
+          companion F.1 exports, ask with it F.1's question on the parts it
+          has, a title page, a table of contents, page numbers and how they
+          run, also where the guidelines name them, unless the decision log
+          holds the user's answer, and record the answer there): an
           exported companion takes Pandoc's escaped space before a page
-          number (writer-agent.md, "Formatting rules"), and, without citekeys,
-          its reference list inside the Bibliography div
-          (docs/reference_management.md, "The reference list"), so that step
-          2 checks its entries.
+          number (writer-agent.md, "Formatting rules"), its head, where it has
+          one instead of a title page, inside the Header Block div, and,
+          without citekeys, its reference list inside the Bibliography div
+          (docs/reference_management.md, "The head of a document without a
+          title page", "The reference list"), so that step 2 checks its
+          entries.
           The writer writes slide text and speaker notes as text files in
           workspace/output/slides/; it cannot build a PPTX. Before step 3,
           workspace/output/slides/<deck>.pptx is built from them, as the user
@@ -204,14 +210,25 @@ phases:
           the template nor styleguide.md gives (where the short citations
           stand, the size and position of a chart, the slide layout of the
           template that each kind of slide uses, a source line under a chart,
-          how its data labels read), each with a proposal, and build after
-          the answer. Each answer goes into the decision log of
-          workspace/state.md, one entry per value with the user's words, and
-          the build takes it from there; it is no styleguide entry. The deck
+          how its data labels read and where they stand, a chart's start
+          angle, how its plot and its legend share its area), each with a
+          proposal, and build after the answer. Each answer goes into the
+          decision log of workspace/state.md, one entry per value with the
+          user's words, and the build takes it from there; it is no
+          styleguide entry. The deck
           script sets no such value that neither the template, styleguide.md
           nor the decision log gives: a value it needs beyond them is asked
-          first, as above. After a revision of slide text or speaker
-          notes, the deck is built again the same way before the next check.
+          first, as above. Before the first build, workspace/state.md holds,
+          below the decision log, a table of its own of every value the deck
+          script sets itself, also the sizes of helper boxes, label offsets
+          and leader lines, one row per value with where it comes from (the
+          template, a key of styleguide.md, an entry of the decision log),
+          kept up to date when a value changes; a value without such a source
+          is asked first. A
+          value changed after looking at a rendering of the deck is a new
+          value, asked before the next build. After a
+          revision of slide text or speaker notes, the deck is built again
+          the same way before the next check.
           When the writer's answer comes in, a line in workspace/state.md
           before a question to the user or the next agent call
           (orchestrator.md, "Steps 1..N: Chapter assignment", after every
@@ -312,10 +329,12 @@ phases:
           guidelines suggest one, records the answers (style-resolver.md,
           "Recording answers to open questions") and starts the pass after
           them. For a companion that F.1 exports (step 1), the same message
-          asks F.1's question on the parts it has (recorded in the decision
-          log) and leaves out the entries of a part it does not have, which
-          the user may close with the n/a value (style-resolver.md, the same
-          section, item 4). F.1 asks only what comes up later.
+          asks F.1's question on the parts it has, also where the guidelines
+          name them, unless the decision log holds the user's answer to it
+          (record the answer there), and leaves out the entries of a part it
+          does not have, which the user may close with the n/a value
+          (style-resolver.md, the same section, item 4). F.1 asks only what
+          comes up later.
           Claude in the main chat runs this step (main_session). The task
           prompt names the PPTX, its PDF export (three_way_check), the
           companion and the report file, from round 2 on also the previous
@@ -326,10 +345,11 @@ phases:
           (a) counts the report's "Status:" lines per symbol with Grep and
           writes the counts to workspace/state.md, and (b) reads the report
           with the Read tool, whole (the same section of orchestrator.md).
-          Before the next round, it shows the user the report's Notes, asks
-          whether the guidelines or the supervisor rule on any Note no
-          earlier round asked about (the decision log of workspace/state.md
-          keeps the answer) and ends its turn with that question, with any
+          Before the next round, it shows the user every Note of the report,
+          numbered and quoted in the report's words and language (a Note that
+          changed since the last round counts as new), asks whether the
+          guidelines or the supervisor rule on any Note no earlier round asked
+          about (the decision log of workspace/state.md keeps the answer) and ends its turn with that question, with any
           question on its ❓; the next round starts after the answer.
           Without such a Note or a ❓ to ask about, it goes on without a
           stop.
@@ -392,10 +412,10 @@ phases:
         - Final PDF of the slides (for submission)
         - The companion as a document, where the guidelines or the user
           want one (a handout as a PDF, for example). Before the first
-          export, unless step 3 asked it, ask the user which parts of a
-          written document it has (a title page, a table of contents, page
-          numbers and how they run) and record the answer in the decision log
-          of workspace/state.md. Then
+          export, unless the decision log holds the user's answer (step 1 or
+          3), ask the user which parts of a written document it has (a title
+          page, a table of contents, page numbers and how they run) and
+          record the answer in the decision log of workspace/state.md. Then
           format rounds as the seminar workflow describes them
           (workflows/seminar_2agent.yaml, F.1, items 4, 6 and 7, for the
           parts the companion has; a Bibliography div missing around the
@@ -422,9 +442,15 @@ phases:
           DOCX, after the field update of the seminar's item 7 where it has a
           table of contents: with Word or LibreOffice, by Claude or the user,
           as the user decides; by Claude with Word, as docs/scripts.md, "A PDF
-          from Word (Windows)", shows, with its time limit.
+          from Word (Windows)", shows, unchanged but for the file names, and
+          after a `not exported` or a timeout as it says. A placeholder the
+          user chose to keep (a name, a date) holds no export back: export
+          with it, and name it as a step left to the user.
         - Speaker notes export (if required)
-        - Rehearsal with timing (target per assignment / styleguide.md, e.g. 15-20 min)
+        - Rehearsal with timing (target per assignment / styleguide.md, e.g.
+          15-20 min): ask the user whether they rehearsed the talk and how
+          long it took, and record the answer against the target time in
+          workspace/state.md
         - Before closing, run
           `python3 scripts/state_check.py workspace/state.md workspace/output/chapters/`
           in the Bash tool (on Windows with py), without a pipe (Chat
