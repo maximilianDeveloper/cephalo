@@ -432,9 +432,14 @@ phases:
           table of contents: with Word or LibreOffice, by Claude or the user,
           as the user decides; by Claude with Word, as docs/scripts.md, "A PDF
           from Word (Windows)", shows, unchanged but for the file names, and
-          after a `not exported` or a timeout as it says.
+          after a `not exported` or a timeout as it says. A placeholder the
+          user chose to keep (a name, a date) holds no export back: export
+          with it, and name it as a step left to the user.
         - Speaker notes export (if required)
-        - Rehearsal with timing (target per assignment / styleguide.md, e.g. 15-20 min)
+        - Rehearsal with timing (target per assignment / styleguide.md, e.g.
+          15-20 min): ask the user whether they rehearsed the talk and how
+          long it took, and record the answer against the target time in
+          workspace/state.md
         - Before closing, run
           `python3 scripts/state_check.py workspace/state.md workspace/output/chapters/`
           in the Bash tool (on Windows with py), without a pipe (Chat
