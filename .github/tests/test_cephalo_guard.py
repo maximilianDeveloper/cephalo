@@ -807,6 +807,16 @@ class TestR5BeforeAgentCall(Base):
         r = self.reason(self.agent(self.write() + self.read(offset=900)))
         self.assertIn('(read: none of its 412 lines)', r)
 
+    def test_reads_with_and_without_a_limit_from_the_same_line(self):
+        # A Read with a limit and a whole Read from the same first line: the spans (1, 12) and (1, None) could not
+        # be sorted, and the guard checked nothing for the rest of the chat (fourth presentation trial run).
+        self.passes(self.agent(self.write() + self.read(limit=12) + self.read()))
+        self.passes(self.agent(self.write() + self.read() + self.read(offset=1, limit=12)))
+        r = self.reason(self.agent(self.write() + self.read(offset=380, limit=10) + self.read(offset=380)))
+        self.assertIn('(read: lines 380\u2013412 of 412)', r)
+        r = self.reason(self.agent(self.write() + self.read(offset=380) + self.read(offset=380, limit=10)))
+        self.assertIn('(read: lines 380\u2013412 of 412)', r)
+
     def test_not_read_denied(self):
         out = self.agent(self.write())
         self.deny(out, 'R5')

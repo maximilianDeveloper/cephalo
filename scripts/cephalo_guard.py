@@ -1971,10 +1971,16 @@ def _read_span(tin):
     return first, (first + vals[1] - 1 if vals[1] and vals[1] > 0 else None)
 
 
+def _span_order(span):
+    """Sort key of a span (first, last): a last of None (to the end) after every number, as (1, 12) and (1, None)
+    do not compare."""
+    return span[0], float('inf') if span[1] is None else span[1]
+
+
 def _spans_text(spans, lines):
     """For a message: the lines the Reads since the last Write showed."""
     merged = []
-    for first, last in sorted(spans):
+    for first, last in sorted(spans, key=_span_order):
         last = lines if last is None else min(last, lines)
         if first > last:
             continue
@@ -2057,7 +2063,7 @@ def unread_reports(data, ctx):
         while rows and not rows[-1].strip():
             rows.pop()
         covered = 0                 # the lines 1..covered were shown
-        for first, last in sorted(spans):
+        for first, last in sorted(spans, key=_span_order):
             if first > covered + 1:
                 break
             covered = len(rows) if last is None else max(covered, last)
