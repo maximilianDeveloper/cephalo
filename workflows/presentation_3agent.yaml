@@ -182,7 +182,11 @@ phases:
         note: |
           Before the companion's first draft, settle whether F.1 exports it
           as a document (the guidelines, or the user, decide), record it in
-          the decision log and name it in the writer's task prompt: an
+          the decision log and name it in the writer's task prompt (for a
+          companion F.1 exports, ask with it F.1's question on the parts it
+          has, a title page, a table of contents, page numbers and how they
+          run, also where the guidelines name them, unless the decision log
+          holds the user's answer, and record the answer there): an
           exported companion takes Pandoc's escaped space before a page
           number (writer-agent.md, "Formatting rules"), its head, where it has
           one instead of a title page, inside the Header Block div, and,
@@ -406,10 +410,10 @@ phases:
         - Final PDF of the slides (for submission)
         - The companion as a document, where the guidelines or the user
           want one (a handout as a PDF, for example). Before the first
-          export, unless step 3 asked it, ask the user which parts of a
-          written document it has (a title page, a table of contents, page
-          numbers and how they run) and record the answer in the decision log
-          of workspace/state.md. Then
+          export, unless the decision log holds the user's answer (step 1 or
+          3), ask the user which parts of a written document it has (a title
+          page, a table of contents, page numbers and how they run) and
+          record the answer in the decision log of workspace/state.md. Then
           format rounds as the seminar workflow describes them
           (workflows/seminar_2agent.yaml, F.1, items 4, 6 and 7, for the
           parts the companion has; a Bibliography div missing around the
