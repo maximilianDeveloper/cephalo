@@ -218,11 +218,13 @@ phases:
           styleguide entry. The deck
           script sets no such value that neither the template, styleguide.md
           nor the decision log gives: a value it needs beyond them is asked
-          first, as above. Before the first build, the decision log holds one
-          table of every value the deck script sets itself, also the sizes
-          of helper boxes, label offsets and leader lines, each with where it
-          comes from (the template, a key of styleguide.md, an entry of the
-          decision log); a value without such a source is asked first. A
+          first, as above. Before the first build, workspace/state.md holds,
+          below the decision log, a table of its own of every value the deck
+          script sets itself, also the sizes of helper boxes, label offsets
+          and leader lines, one row per value with where it comes from (the
+          template, a key of styleguide.md, an entry of the decision log),
+          kept up to date when a value changes; a value without such a source
+          is asked first. A
           value changed after looking at a rendering of the deck is a new
           value, asked before the next build. After a
           revision of slide text or speaker notes, the deck is built again
