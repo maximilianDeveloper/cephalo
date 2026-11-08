@@ -367,23 +367,25 @@ $job = Start-Job -ArgumentList $docx, $pdf -ScriptBlock {
         $doc = $word.Documents.Open([ref]$docx, [ref]$false, [ref]$true)
         $doc.ExportAsFixedFormat($pdf, 17)
         $doc.Close([ref]0)
-    } finally { $word.Quit([ref]0) }
+    } finally {
+        $word.Quit([ref]0)
+        foreach ($o in @($doc, $word)) { if ($o) { [void][Runtime.InteropServices.Marshal]::ReleaseComObject($o) } }
+    }
 }
 $done = Wait-Job $job -Timeout 90
-if ($done) { Receive-Job $job }
-if ($done -and $job.State -eq 'Completed' -and (Test-Path -LiteralPath $pdf) -and (Get-Item -LiteralPath $pdf).LastWriteTime -ge $t0) {
-    "exported: $pdf"
-} else {
-    Get-CimInstance Win32_Process -Filter "Name='WINWORD.EXE'" |
-        Where-Object { $before -notcontains $_.ProcessId -and "$($_.CommandLine)" -match '\s(-|/)(Embedding|Automation)\b' } |
-        ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
-    if ($done) { "not exported: the job ended $($job.State); the Word started through COM during this call was stopped" }
-    else { 'timed out: the Word started through COM during this call was stopped' }
-}
+if ($done) { Receive-Job $job; Start-Sleep -Seconds 3 }
+$ok = $done -and $job.State -eq 'Completed' -and (Test-Path -LiteralPath $pdf) -and (Get-Item -LiteralPath $pdf).LastWriteTime -ge $t0
+$left = @(Get-CimInstance Win32_Process -Filter "Name='WINWORD.EXE'" |
+    Where-Object { $before -notcontains $_.ProcessId -and "$($_.CommandLine)" -match '\s(-|/)(Embedding|Automation)\b' })
+$left | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
+$note = if ($left.Count) { '; the Word started through COM during this call was still running and was stopped' } else { '' }
+if ($ok) { "exported: $pdf$note" }
+elseif ($done) { "not exported: the job ended $($job.State)$note" }
+else { "timed out$note" }
 Remove-Job $job -Force
 ```
 
-Put the file names of your project in the first two lines and change nothing else. The call reports `exported` only when the job ended without an error and the PDF is newer than the call; otherwise it names how the job ended, the error line above it says why, and the PDF on disk, if there is one, is an older one. Unless it reports `exported`, it stops a Word started through COM during this call (its command line holds `-Embedding` or `/Automation`), not one the user opened, and not one that ran before; it stops Word before it removes the job, since a job held in a hanging Word would not stop. After `not exported` or a timeout, tell the user what the call reported, with the error line, and try once more with the recipe unchanged; if that fails too, the user exports the PDF in Word (File, Save as, PDF). Do not end a turn while an export still runs. With a table of contents, the user updates the fields (`workflows/seminar_2agent.yaml`, F.1, item 7 (a)), saves and closes the DOCX in Word; then the export. The recipe is for Word only: PowerPoint runs as one program for all callers, so a copy of it for PowerPoint would close the user's own presentations. The third trial run exported with this form; the stop of Word after `not exported` is new and still to be checked on Windows.
+Put the file names of your project in the first two lines and change nothing else. The call reports `exported` only when the job ended without an error and the PDF is newer than the call; otherwise it names how the job ended, the error line above it says why, and the PDF on disk, if there is one, is an older one. Whatever it reports, it then stops a Word started through COM during this call that still runs (its command line holds `-Embedding` or `/Automation`), not one the user opened, and not one that ran before, and says so; it stops Word before it removes the job, since a job held in a hanging Word would not stop. In the fourth trial run a Word quit after `exported` still ran a minute later: the job now also releases its references to Word, and the call waits three seconds before it looks. After `not exported` or a timeout, tell the user what the call reported, with the error line, and try once more with the recipe unchanged; if that fails too, the user exports the PDF in Word (File, Save as, PDF). Do not end a turn while an export still runs. With a table of contents, the user updates the fields (`workflows/seminar_2agent.yaml`, F.1, item 7 (a)), saves and closes the DOCX in Word; then the export. The recipe is for Word only: PowerPoint runs as one program for all callers, so a copy of it for PowerPoint would close the user's own presentations. The third and fourth trial runs exported with this form; the release of Word's references and the stop of a Word still running after the call are new and still to be checked on Windows.
 
 ### `cross_session_audit.py`
 
