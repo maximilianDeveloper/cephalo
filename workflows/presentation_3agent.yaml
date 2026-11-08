@@ -335,10 +335,10 @@ phases:
           writes the counts to workspace/state.md, and (b) reads the report
           with the Read tool, whole (the same section of orchestrator.md).
           Before the next round, it shows the user every Note of the report,
-          numbered and in the report's words, asks whether the guidelines
-          or the supervisor rule on any Note no earlier round asked about
-          (the decision log of workspace/state.md
-          keeps the answer) and ends its turn with that question, with any
+          numbered and quoted in the report's words and language (a Note that
+          changed since the last round counts as new), asks whether the
+          guidelines or the supervisor rule on any Note no earlier round asked
+          about (the decision log of workspace/state.md keeps the answer) and ends its turn with that question, with any
           question on its ❓; the next round starts after the answer.
           Without such a Note or a ❓ to ask about, it goes on without a
           stop.
