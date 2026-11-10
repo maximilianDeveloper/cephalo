@@ -18,7 +18,12 @@ the exit code), then, each with its line number:
     `verbatim_check.py --words` counts it, for the page budget; a chapter it
     cannot count is listed as not counted, with the reason;
   - the lines of "Current state" and "Chapter status" over 500 characters,
-    which "State file format" in .claude/agents/orchestrator.md keeps short.
+    which "State file format" in .claude/agents/orchestrator.md keeps short;
+  - where the state file is workspace/state.md of a project under Git, whether
+    its styleguide.md differs from the last commit (`git status`): then the
+    closing message lists each provenance the chat wrote into it ("Chat
+    closure ritual", item 5). Without Git, or outside such a project, the
+    report says nothing about it.
 Its last line is "Exit code: 0" or "Exit code: 1"; exit code 2 prints
 neither, only an "Error:" line.
 A section runs from its heading (any level, "## Chapter status" or
@@ -48,6 +53,7 @@ import errno
 import io
 import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -167,6 +173,31 @@ def counts(files: list) -> list:
     return out
 
 
+def styleguide_change(state: Path):
+    """Whether styleguide.md of the flat project whose workspace/state.md this is differs from the last
+    commit, as `git status` sees it: "changed since the last commit", "not yet committed", or "" when it does
+    not differ. None where that cannot be told: no workspace folder above the state file, no styleguide.md,
+    no Git, no repository."""
+    try:
+        folder = state.resolve().parent
+    except OSError:
+        return None
+    root = folder.parent
+    if folder.name != "workspace" or not (root / "styleguide.md").is_file():
+        return None
+    try:
+        out = subprocess.run(["git", "-C", str(root), "status", "--porcelain", "--", "styleguide.md"],
+                             capture_output=True, text=True, errors="replace", timeout=20)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if out.returncode != 0:
+        return None
+    line = out.stdout.strip()
+    if not line:
+        return ""
+    return "not yet committed" if line.startswith("??") else "changed since the last commit"
+
+
 def report(args: list) -> int:
     state = Path(args[0])
     lines = read_state(state)
@@ -236,6 +267,14 @@ def report(args: list) -> int:
         print(f"  l. {no} [{sec}], {n} characters (in full above)")
     if long_lines:
         print('  Shorten each as "State file format" in .claude/agents/orchestrator.md says, then run this again.')
+    sg = styleguide_change(state)
+    if sg:
+        print()
+        where = ("git diff -- styleguide.md shows them" if sg.startswith("changed")
+                 else "Git does not know the file yet, so read it whole")
+        print(f"styleguide.md: {sg} (git status). Each provenance this chat wrote into it goes into the closing "
+              "message as a list, in the chat's last message, also after a question the user asks once you closed "
+              f"(.claude/agents/orchestrator.md, \"Chat closure ritual\", item 5); {where}.")
     # the exit code in the summary line and in the last line, so that a shortened view (| head, | tail) shows it
     print()
     print(f"Exit code: {code}")

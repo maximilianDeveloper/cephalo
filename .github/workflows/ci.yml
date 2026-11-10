@@ -1290,6 +1290,25 @@ jobs:
           has 'ch.pdf: not counted (not a .md, .txt or .docx chapter)'
           has 'none: not found'
           has 'l. 4 [Current state], 534 characters'
+          # workspace/state.md of a project under Git: a styleguide.md that differs from the last commit is named
+          hasnt 'styleguide.md:'                     # the files above lie outside such a project
+          P="$W/proj"; mkdir -p "$P/workspace"; cp "$W/state.md" "$P/workspace/state.md"
+          printf '# Styleguide\n' > "$P/styleguide.md"
+          expect 0 python scripts/state_check.py "$P/workspace/state.md"
+          hasnt 'styleguide.md:'                     # no repository: nothing about it
+          git -C "$P" init -q
+          expect 0 python scripts/state_check.py "$P/workspace/state.md"
+          has 'styleguide.md: not yet committed (git status)'
+          has 'Git does not know the file yet'
+          tail -n 1 "$W/out.txt" | grep -qxF 'Exit code: 0' || { echo 'last line is not Exit code: 0'; cat "$W/out.txt"; exit 1; }
+          git -C "$P" -c user.name=ci -c user.email=ci@example.invalid add -A
+          git -C "$P" -c user.name=ci -c user.email=ci@example.invalid commit -qm init
+          expect 0 python scripts/state_check.py "$P/workspace/state.md"
+          hasnt 'styleguide.md:'
+          printf -- '- key: value [user, 2026-11-10]\n' >> "$P/styleguide.md"
+          expect 0 python scripts/state_check.py "$P/workspace/state.md"
+          has 'styleguide.md: changed since the last commit (git status)'
+          has '"Chat closure ritual", item 5); git diff -- styleguide.md shows them.'
           # not a state file, a missing state file, no arguments: exit 2
           printf '# Notes\n' > "$W/notes.md"
           expect 2 python scripts/state_check.py "$W/notes.md"
