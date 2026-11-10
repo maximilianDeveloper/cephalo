@@ -349,7 +349,9 @@ phases:
           with the Read tool, whole (the same section of orchestrator.md).
           Before the next round, it shows the user every Note of the report,
           numbered and quoted in the report's words and language (a Note that
-          changed since the last round counts as new), asks whether the
+          changed since the last round counts as new: compare the Notes with
+          the previous report's first, and quote a changed or new one
+          whole), asks whether the
           guidelines or the supervisor rule on any Note no earlier round asked
           about (the decision log of workspace/state.md keeps the answer) and ends its turn with that question, with any
           question on its ❓; the next round starts after the answer.
