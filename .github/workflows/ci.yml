@@ -1299,16 +1299,21 @@ jobs:
           git -C "$P" init -q
           expect 0 python scripts/state_check.py "$P/workspace/state.md"
           has 'styleguide.md: not yet committed (git status)'
-          has 'Git does not know the file yet'
+          has 'no commit holds the file yet'
           tail -n 1 "$W/out.txt" | grep -qxF 'Exit code: 0' || { echo 'last line is not Exit code: 0'; cat "$W/out.txt"; exit 1; }
-          git -C "$P" -c user.name=ci -c user.email=ci@example.invalid add -A
+          git -C "$P" add -A                         # added to the index, still in no commit
+          expect 0 python scripts/state_check.py "$P/workspace/state.md"
+          has 'styleguide.md: not yet committed (git status)'
           git -C "$P" -c user.name=ci -c user.email=ci@example.invalid commit -qm init
           expect 0 python scripts/state_check.py "$P/workspace/state.md"
           hasnt 'styleguide.md:'
           printf -- '- key: value [user, 2026-11-10]\n' >> "$P/styleguide.md"
           expect 0 python scripts/state_check.py "$P/workspace/state.md"
           has 'styleguide.md: changed since the last commit (git status)'
-          has '"Chat closure ritual", item 5); git diff -- styleguide.md shows them.'
+          has '"Chat closure ritual", item 5); git diff HEAD -- styleguide.md shows them.'
+          git -C "$P" add -A                         # a change added to the index counts the same
+          expect 0 python scripts/state_check.py "$P/workspace/state.md"
+          has 'styleguide.md: changed since the last commit (git status)'
           # not a state file, a missing state file, no arguments: exit 2
           printf '# Notes\n' > "$W/notes.md"
           expect 2 python scripts/state_check.py "$W/notes.md"
