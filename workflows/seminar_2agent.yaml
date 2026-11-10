@@ -81,7 +81,7 @@ main_session:
     - "Step 0: Pre-check (blocking)"
     - "Step 0.5: Style resolution"
     - "Task prompts"
-    - "Steps 1..N: Chapter assignment"   # its bullets above "For each chapter", which does not apply
+    - "Steps 1..N: Chapter assignment"   # all above "For each chapter", which does not apply
     - "Page budget monitoring"
     - "Feedback loop control"
     - "Feedback-loop escalation"
