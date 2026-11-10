@@ -390,13 +390,16 @@ Put the file names of your project in the first two lines and change nothing els
 
 ### A PDF from PowerPoint (Windows)
 
-The deck's PDF for the three-way check and for submission (`workflows/presentation_3agent.yaml`, `three_way_check`, F.1) comes from PowerPoint, through COM in Claude Code's PowerShell tool, after the deck script's run has ended. PowerPoint runs as one program for all callers: with the user's PowerPoint open, the call would work in it, and quitting it would close the user's presentations. So the recipe runs only while no PowerPoint runs; otherwise it says so, and the user closes PowerPoint or exports the PDF in PowerPoint (File, Save as, PDF). It opens the deck read-only and without a window, saves it as a PDF (format 32), closes it, quits PowerPoint and releases it, in a job of its own with a limit of 90 seconds:
+The deck's PDF for the three-way check and for submission (`workflows/presentation_3agent.yaml`, `three_way_check`, F.1) comes from PowerPoint, through COM in Claude Code's PowerShell tool, after the deck script's run has ended. PowerPoint runs as one program for all callers: with the user's PowerPoint open, the call would work in it, and quitting it would close the user's presentations. So the recipe runs only while no PowerPoint runs; otherwise it says so, and the user closes PowerPoint or exports the PDF in PowerPoint (File, Save as, PDF). A PowerPoint that runs without a window is a leftover started through COM, which the user cannot close: the recipe says so, and the user ends `POWERPNT.EXE` in the Task Manager. It opens the deck read-only and without a window, saves it as a PDF (format 32), closes it, quits PowerPoint and releases it, in a job of its own with a limit of 90 seconds:
 
 ```powershell
 $pptx = (Resolve-Path -LiteralPath 'workspace\output\slides\slides.pptx').ProviderPath
 $pdf = [IO.Path]::ChangeExtension($pptx, '.pdf')
-if (Get-Process POWERPNT -ErrorAction SilentlyContinue) {
-    'not run: PowerPoint is open; ask the user to close it, or to export the PDF in PowerPoint'
+$open = @(Get-Process POWERPNT -ErrorAction SilentlyContinue)
+if ($open.Count) {
+    if (@($open | Where-Object { $_.MainWindowHandle -eq 0 }).Count -eq $open.Count) {
+        'not run: PowerPoint runs without a window (a leftover started through COM); ask the user to end POWERPNT.EXE in the Task Manager'
+    } else { 'not run: PowerPoint is open; ask the user to close it, or to export the PDF in PowerPoint' }
 } else {
     $t0 = Get-Date
     $job = Start-Job -ArgumentList $pptx, $pdf -ScriptBlock {
@@ -408,8 +411,8 @@ if (Get-Process POWERPNT -ErrorAction SilentlyContinue) {
             $pres = $app.Presentations.Open($pptx, -1, 0, 0)
             $pres.SaveAs($pdf, 32)
         } finally {
-            if ($pres) { $pres.Close() }
-            $app.Quit()
+            if ($pres) { try { $pres.Close() } catch { Write-Warning "Close: $_" } }
+            try { $app.Quit() } catch { Write-Warning "Quit: $_" }
             foreach ($o in @($pres, $app)) { if ($o) { [void][Runtime.InteropServices.Marshal]::ReleaseComObject($o) } }
         }
     }
@@ -417,7 +420,8 @@ if (Get-Process POWERPNT -ErrorAction SilentlyContinue) {
     if ($done) { Receive-Job $job; Start-Sleep -Seconds 3 }
     $ok = $done -and $job.State -eq 'Completed' -and (Test-Path -LiteralPath $pdf) -and (Get-Item -LiteralPath $pdf).LastWriteTime -ge $t0
     $left = @(Get-CimInstance Win32_Process -Filter "Name='POWERPNT.EXE'" |
-        Where-Object { "$($_.CommandLine)" -match '\s(-|/)(Embedding|Automation)\b' })
+        Where-Object { "$($_.CommandLine)" -match '\s(-|/)(Embedding|Automation)\b' -and
+                       (Get-Process -Id $_.ProcessId -ErrorAction SilentlyContinue).MainWindowHandle -eq 0 })
     $left | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
     $note = if ($left.Count) { '; the PowerPoint started through COM during this call was still running and was stopped' } else { '' }
     if ($ok) { "exported: $pdf$note" }
@@ -427,7 +431,7 @@ if (Get-Process POWERPNT -ErrorAction SilentlyContinue) {
 }
 ```
 
-Put the deck's file name in the first line; the PDF gets its name with `.pdf`, and an older one is replaced. Change nothing else, and run it only after the deck script's run has ended: a PDF exported in the same message as the build may show the deck before it. The call reports `exported` only when the job ended without an error and the PDF is newer than the call; otherwise it names how the job ended, the error line above it says why, and a PDF on disk is an older one. Whatever it reports, it then stops a PowerPoint started through COM that still runs (its command line holds `-Embedding` or `/Automation`): none ran before the call, so it can only be the call's own. After `not exported` or a timeout, tell the user what the call reported, with the error line if there is one, and try once more with the recipe unchanged; if that fails too, the user exports the PDF in PowerPoint. In the third to fifth presentation trial runs the main chat exported the deck with these calls (`Presentations.Open` read-only and without a window, `SaveAs` with format 32), written by itself, in 3 to 7 seconds each; the recipe as a whole, with its job, its check that no PowerPoint runs and its stop, is still to be checked on Windows.
+Put the deck's file name in the first line; the PDF gets its name with `.pdf`, and an older one is replaced. Change nothing else, and run it only after the deck script's run has ended: a PDF exported in the same message as the build may show the deck before it. The call reports `exported` only when the job ended without an error and the PDF is newer than the call; otherwise it names how the job ended, the error line above it says why, and a PDF on disk is an older one. Whatever it reports, it then stops a PowerPoint started through COM that still runs without a window (its command line holds `-Embedding` or `/Automation`): none ran before the call, and a deck the user opened meanwhile would have given it a window, which it leaves alone; its note after `exported` is no error. An error while closing the deck or quitting PowerPoint is only a warning, so that the error line names why an export failed, and a PDF that was written is reported as `exported`. After `not exported` or a timeout, tell the user what the call reported, with the error line if there is one, and try once more with the recipe unchanged; if that fails too, the user exports the PDF in PowerPoint. In the third to fifth presentation trial runs the main chat exported the deck with these calls (`Presentations.Open` read-only and without a window, `SaveAs` with format 32), written by itself, in 3 to 7 seconds each; the recipe as a whole, with its job, its check that no PowerPoint runs and its stop, is still to be checked on Windows.
 
 ### `cross_session_audit.py`
 
