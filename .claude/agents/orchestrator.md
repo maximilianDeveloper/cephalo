@@ -89,8 +89,8 @@ A statement about the project's state in a task prompt ("the decision log record
 **Save every source-verifier report as a file**, since the verifier cannot write one:
 
 - The file is `workspace/output/verification/<name>_round_<n>.md`, where `<name>` is the chapter file's name without `.md`, or `extracts`. A chat that ends between verification and revision then keeps the findings
-- Save the answer as it is (its format is compact: a table row per ✅ sentence). Only an absolute path in it becomes a project-relative one. Nothing else is shortened, reworded, translated or added, and quotation marks (a closing “ stays “, not a straight `"`), labels and emphasis stay as the verifier's answer has them
-- After the Write, read the file back, whatever the Write tool's note says: the read-back checks your copy against the answer. Compare with the answer its number of table rows and of `Status:` lines, its last line and, if the answer has any, one line of it with typographic quotation marks; if they differ, write it again
+- Save the answer as it is. Only an absolute path in it becomes a project-relative one; nothing else is shortened, reworded, translated or added, and quotation marks, labels and emphasis stay as the verifier's answer has them
+- After the Write, read the file back whole, whatever the Write tool's note says, and compare it with the answer; if they differ, write it again
 - Record the status counts in `workspace/state.md` as you count them from the report's rows and entries, not from its totals line; your count goes there, not into the saved report
 
 **The format-verifier writes its report itself:**

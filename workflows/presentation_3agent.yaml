@@ -291,16 +291,10 @@ phases:
              (orchestrator.md, "Feedback loop control").
           3. Save the answer yourself, as <companion>_round_<n>.md (the
              source-verifier cannot write files, so do not ask it to),
-             unchanged: nothing shortened, reworded, translated or added;
-             quotation marks (a closing “ stays “, not a straight "), labels
-             and emphasis as the answer has them; only an absolute path
-             becomes project-relative. After the Write, read the file back,
-             whatever the Write tool's note says, and compare with the
-             answer its number of table rows and of "Status:" lines, its
-             last line and, if the answer has any, one line with
-             typographic quotation marks; if they differ, write it again.
-             Your counts and the loop count go to workspace/state.md, not
-             into the report.
+             unchanged, and read the file back whole (orchestrator.md, "Steps
+             1..N: Chapter assignment", "Save every source-verifier report
+             as a file"). Your counts and the loop count go to
+             workspace/state.md, not into the report.
         feedback_loop_max: 2   # iterations per part, not verification rounds: up to 3 rounds per part
       
       - step: 3
