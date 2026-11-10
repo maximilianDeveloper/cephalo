@@ -10,6 +10,10 @@ Dates follow ISO 8601 (`YYYY-MM-DD`).
 
 ## [Unreleased]
 
+### Added
+
+- **A PDF from PowerPoint on Windows** (`docs/scripts.md`, "A PDF from PowerPoint (Windows)"; presentation `three_way_check`, F.1): a PowerShell recipe for the deck's PDF through COM. It runs only while no PowerPoint runs, since PowerPoint is one program for all callers and quitting it would close the user's presentations; it opens the deck read-only and without a window, saves it as a PDF, quits and releases PowerPoint in a job with a limit of 90 seconds, and stops a PowerPoint started through COM that still runs. The export comes after the deck script's run, not in the same message. In the fifth presentation trial run the main chat, finding no recipe, first proposed that the user export the deck; in the third to fifth runs it wrote these COM calls itself, and once a PowerPoint stayed open. The recipe as a whole is still to be checked on Windows.
+
 ### Changed
 
 - **`state_check.py` names a changed styleguide** (`docs/scripts.md`, "state_check.py"; `orchestrator.md`, "Chat closure ritual", items 1 and 5): where the state file is `workspace/state.md` of a project under Git and its `styleguide.md` differs from the last commit, a line before the last says so and that the chat's last message lists each provenance the chat wrote into it. In the third to fifth presentation trial runs that list was missing from the last message of every chat that had changed the styleguide. The line does not change the exit code; without Git, or outside such a project, the report says nothing about it.
