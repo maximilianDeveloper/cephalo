@@ -70,11 +70,7 @@ Every task prompt to another agent names:
 - the entries of `workspace/feedback.md` that concern it, as written: the other agents do not read the file themselves. Skip an entry you do not follow ("Steps 1..N");
 - for a rule, the definition, `styleguide.md` or the checklist that holds it, not the rule in other words ("Point to rules, do not restate them" under "Principles").
 
-A task prompt does not:
-
-- narrow the work or the check that the agent's definition sets (the writer's source-registry rows, the format-verifier's full check in Phase B, for example);
-- tell the agent to leave out a finding: an open item it finds again is reported again, and the next step reads it in the report;
-- rate in advance what the agent will find ("the title may not fit", "this fixes finding 3", "these should pass"): name what changed and where, not what you expect the check to show.
+A task prompt adds nothing to the agent's definition and takes nothing from it: it does not narrow the work or the check the definition sets, does not tell the agent to leave out a finding (an open item it finds again is reported again), and does not rate in advance what the agent will find. Name what changed and where.
 
 A statement about the project's state in a task prompt ("the decision log records …", "already checked against the sources") rests on a file you read in this chat.
 
@@ -114,7 +110,7 @@ A statement about the project's state in a task prompt ("the decision log record
 
 **Return calls** (a revision after a verification, or a shortening for the page budget):
 
-- Give the agent the report file, or the findings verbatim (for a shortening, the chapter's word count and its budget). Ask it to change only what the findings concern, and give it no aim of your own, such as a length, beyond a shortening that "Page budget monitoring" asks for (more than 20% over)
+- Give the agent the report file, or the findings verbatim (for a shortening, the chapter's word count and its budget). Ask it to change only what the findings concern (a length only for a shortening that "Page budget monitoring" asks for)
 - Name the files it may change: for the writer the chapter file and the "Used in" lines of the extracts it cites (in a seminar paper or presentation, its chapter's rows of the source registry in `workspace/state.md`), for the research-agent the extracts concerned
 - A change to these files that the agent asks for in its answer but did not make (from the writer, for example, the registry row of a passage or the `sources_used` entry of a source that its chapter no longer cites) goes back to the agent in a call that names that file among those it may change; do not make it yourself
 - Before a revision, if the version the last round verified is not committed, keep a copy of it in `_scratch/orchestrator/`, which you delete before the chat ends. After the revision, compare with that version (`git diff`, or the copy) to name the sentences it changed
@@ -125,7 +121,7 @@ A statement about the project's state in a task prompt ("the decision log record
   - the sources and, in a seminar paper or presentation, the source registry in `workspace/state.md`
   - the changed sentences, by their number in the revised chapter and their first words, each with a few words on what changed
   - the entries of `workspace/feedback.md` that concern it, as written, and what else "Task prompts" asks of every prompt
-- That prompt adds no instruction of your own. A scope ("only the changed passages", "Part A of chapters 1 to 3"), a hint, a note on a source (such as its page offset) or a length goes in none of these lines; do not ask it to check every sentence anew, and do not restate its rules. How a later round rates, the unchanged sentences too, is in `source-verifier.md`, "Rounds after a revision"
+- Nothing else goes into that prompt: no scope, no hint, no note on a source, no length. How a later round rates, the unchanged sentences too, is in `source-verifier.md`, "Rounds after a revision"
 
 **For each chapter:**
 
