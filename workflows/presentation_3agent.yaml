@@ -133,7 +133,9 @@ phases:
         manual: true
         note: |
           Verify that the citation guide and formatting guidelines are present
-          and all sources are accessible. The other documents of the
+          and all sources are accessible: that each opens and can be read,
+          not what it says; no value of a source is compared with a data
+          file here, or named to the user (step 0.6). The other documents of the
           checklist's section 1 are recommended: for each one missing, ask the
           user whether the institution provides it, note the gap and continue.
           Claude in the main chat runs it and then creates workspace/state.md,
