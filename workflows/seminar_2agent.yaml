@@ -363,9 +363,10 @@ phases:
            earlier round asked about (the decision log of workspace/state.md
            keeps the answer); end your turn with that question, with any
            question on its ❓, and start the next round after the answer
-           (orchestrator.md, the same item 5). Without such a Note or a ❓ to
-           ask about, go on without a stop. A finding that needs new wording
-           goes to the writer-agent (copies first: step 2, item 2), and a
+           (orchestrator.md, "Phase A → B transition", item 5). Without
+           such a Note or a ❓ to ask about, go on without a stop. A finding
+           that needs new wording goes to the writer-agent (copies first:
+           step 2, item 2), and a
            verification round (step 2) checks the sentences it changed (the
            loop limit as in item 3).
         7. For the user, in Word, after the last export, listed under the open
