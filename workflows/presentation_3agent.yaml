@@ -216,12 +216,8 @@ phases:
           A layout value that neither the template nor styleguide.md gives
           is asked of the user, not chosen:
           - Before the build that first sets one (a position, a size, a
-            colour, a label form), list each for the user with a proposal
-            and build after the answer: where the short citations stand,
-            which layout of the template each kind of slide uses, a chart's
-            size, position and start angle, how its plot and its legend
-            share its area, how its data labels read and where they stand,
-            a source line under it.
+            colour, a label form, of text or of a chart), list each for the
+            user with a proposal and build after the answer.
           - Each answer is an entry of the decision log in the user's words,
             one per value; it is no styleguide entry.
           - Below the decision log, a table of its own lists every value the
