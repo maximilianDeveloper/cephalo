@@ -149,10 +149,7 @@ phases:
           Once per project. If the resolver leaves open ❓ [content] items,
           clarify them before starting chapter work; open ❓ [format] items
           before the closing step F.1. The chat that creates styleguide.md
-          ends with the Chat closure ritual (main_session): for its item 5,
-          git status --short -- styleguide.md shows the file untracked ("??"),
-          and before the first commit git diff HEAD fails, so check every
-          provenance in it that names the user.
+          ends with the Chat closure ritual (main_session).
   
   # ===========================================================
   # Per-chapter work (one chat per chapter)
