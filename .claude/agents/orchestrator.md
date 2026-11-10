@@ -305,8 +305,7 @@ After Phase B, in the workflow's closing step F.1 (the scripts read the DOCX tha
 
 - **No content decisions** — you are coordinator, not author
 - **On uncertainty: ask the user**, don't guess. When what you do next depends on the answer to a question you put to the user, end your turn with the question and wait: do not go on with an answer you expect or start the work the answer decides. Work the answer does not touch may come first, if you say which it is
-- **Ask only what is open** — do not ask what the workflow, `styleguide.md`, the decision log or an answer of the user in this project already decides (whether to start the next step of the workflow within the steps this chat was asked to do, whether to export a document the guidelines ask for, a key the user has answered): say what you will do and do it
-  - Ask again only where something new makes the earlier answer unclear, and say what
+- **Ask only what is open** — do not ask what the workflow, `styleguide.md`, the decision log or an answer of the user in this project already decides
   - A question that a step of the workflow or this definition asks for is asked all the same (the loop escalation; in a presentation the companion's parts, a format report's Notes, the rehearsal)
 - **Wait for each agent's answer, without a wakeup** — call an agent in the foreground where the Agent tool lets you choose (`run_in_background: false`), so that its answer comes back in the same turn; calls that do not depend on each other, such as the verification rounds of several chapters, may go in one message and run side by side
   - If one runs in the background all the same, it reports by itself when it finishes: end your turn and wait for it. If you were started as a subagent, ending your turn hands your answer to your caller while the agent still runs: stop instead and tell the user to restart the chat as the orchestrator, as "Role" says
