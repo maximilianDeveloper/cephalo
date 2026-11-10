@@ -175,19 +175,15 @@ phases:
           When the writer's answer comes in, a line in workspace/state.md
           before a question to the user or the next agent call (the word
           count below may come first and go into that line; orchestrator.md,
-          "Steps 1..N: Chapter assignment", after every agent call). Each rule
-          the answer names as not covered goes, when the answer comes in and
-          before a question to the user or the next agent call, under "Open
-          questions" in styleguide.md if its gap names a rule of
-          styleguide.md or a key of its template, otherwise to the user as a
-          note (style-resolver.md, "Recording answers to open questions",
-          item 6); a line under the open issues of workspace/state.md does
-          not replace either. The line in workspace/state.md for each of the
-          writer's answers, also one to a revision (step 2, F.1) or a
-          shortening, names each such rule by its key or in two or three
-          words and where it went (`gaps: in_text.multiple_sources → Open
+          "Steps 1..N: Chapter assignment", after every agent call). For each
+          of the writer's answers, also one to a revision (step 2, F.1) or a
+          shortening, the line names each rule the answer calls not covered
+          and where it went (`gaps: in_text.multiple_sources → Open
           questions; percentages in the text → note to the user`), or says
-          `gaps: none`.
+          `gaps: none`. Where a gap goes, before a question to the user or
+          the next agent call: style-resolver.md, "Recording answers to open
+          questions", item 6; a line under the open issues of
+          workspace/state.md does not replace either.
           Before step 2, also after a revision, Claude counts the draft; more
           than 20% over its budget, the writer shortens it first, unless the
           user accepts the length (main_session, "Page budget monitoring").
@@ -356,13 +352,11 @@ phases:
            and scripts/repeated_citations.py itself). On Windows every Python
            script (.py) runs with py, also where its help text or
            docs/scripts.md writes python3. When the
-           format-verifier returns, before any fix or question to the user:
-           (a) count the report's "Status:" lines per symbol with Grep and
-           write the counts, and any difference from its answer, to
-           workspace/state.md (orchestrator.md, item 5 of "Action on
-           transition", step (4)); (b) read the report with the Read tool,
-           whole: its answer gives only the path and the counts, the
-           findings and the Notes are in the file. Then apply its
+           format-verifier returns, count the report's "Status:" lines per
+           symbol with Grep into workspace/state.md, with any difference
+           from its answer, and read the report whole with the Read tool,
+           before any fix or question to the user (orchestrator.md, "Steps
+           1..N: Chapter assignment"). Then apply its
            format-only findings (chapter files with the Edit tool, no
            rewording, a non-breaking space as `\ `: writer-agent.md,
            "Formatting rules"; layout by building the reference document
@@ -388,29 +382,19 @@ phases:
            page", step 5) and update the fields again; (c) fill in the title
            page's placeholders; (d) visual proofreading.
         8. Before the chat closes, run in the Bash tool (on Windows with py),
-           without a pipe (Chat closure ritual, item 1):
+           without a pipe:
              python3 scripts/state_check.py workspace/state.md workspace/output/chapters/
-           and go through its whole output, which lists the "Current state",
-           the "Chapter status" and every open item of workspace/state.md in
-           full, with each chapter's word count (a Grep result leaves out long
-           lines, and a Read in parts what lies between them): these and the
-           "Open questions" of styleguide.md agree, and an open issue this
-           chat resolved is ticked (`- [x]`), not one the user accepted as it stands, which stays
-           `- [ ]` (orchestrator.md, "Feedback-loop escalation", item 1);
-           nothing is called resolved in one that is still open in another,
-           and the word counts and the Page count line match the counts it
-           gives. After your changes, run it again: it ends with exit code 0
-           once no line it checks is too long, and this run is the one item 1
-           of the Chat closure ritual asks for. On exit code 2, or without
-           Python, the Chat closure ritual, item 1, says what to do.
-           Then the Chat closure ritual (main_session). For its item 5, run in
-           the Bash tool:
-             git status --short -- styleguide.md && git diff HEAD -- styleguide.md
-           Each provenance that names the user on a line the diff adds (while
-           git status shows the file untracked or newly added, "??" or "A",
-           or the project has no commit yet, so that git diff HEAD fails:
-           each one in the file) rests on the user's words or on a proposal
-           the user accepted.
+           and go through its whole output (orchestrator.md, "Chat closure
+           ritual", item 1, also for exit code 2 and for a project without
+           Python). What it lists and the "Open questions" of styleguide.md
+           agree: an open issue this chat resolved is ticked (`- [x]`), not
+           one the user accepted as it stands, which stays `- [ ]`
+           (orchestrator.md, "Feedback-loop escalation", item 1); nothing is
+           called resolved in one that is still open in another, and the
+           word counts and the Page count line match the counts it gives.
+           After your changes, run it again, until it ends with exit code 0:
+           that run is the one item 1 of the Chat closure ritual asks for.
+           Then the Chat closure ritual (main_session).
 
 # Notes on the lean setup
 

@@ -58,8 +58,7 @@ In every phase, also once `styleguide.md` exists (a `[format]` entry answered in
   - A value the user leaves to you ("make a proposal, I will take it") is recorded only after the user accepts it: name it in the chat, one line per key, and wait for the answer (item 1)
   - A value the user takes provisionally gets `[provisional, user, YYYY-MM-DD]` and a line under the open issues of `workspace/state.md` (item 1)
   - When the user answers, for a `[content]` or a `[format]` entry, that the work will not contain an element (tables, figures, statistics, footnotes or internet sources, for example), close its entry with exactly this value, in English whatever the language of the styleguide or the chat: `n/a — does not occur in this work; reopen if it occurs`, followed by its provenance (`[user, YYYY-MM-DD]`)
-  - Offer and accept the n/a value only for such an element, never for a key the work uses, such as the layout of the reference list or the space before a page number: for such a key, ask for a value (item 4)
-  - A rule an agent reports as not covered goes under "Open questions" when the report comes in, if its gap names a rule of `styleguide.md` or a key of its template; otherwise it goes to the user as a note (item 6)
+  - Item 4 of that section says where the n/a value is no answer (a key the work uses), item 6 where a rule goes that an agent reports as not covered
 
 ### Task prompts
 
@@ -183,11 +182,11 @@ After each written chapter, and after each revision, before the verification:
        - on any other exit 2, tell the user
      - If it warns about a heading in the front matter, write that heading in `workspace/output/title_page.md` as "The title page" says, before the next export
    - (3) The format-verifier checks it and writes `workspace/output/verification/document_format_round_<n>.md`, with a task prompt as "Task prompts" says and, from round 2 on, the previous round's report and what changed since (`format-verifier.md`, "Rounds after a fix")
-   - (4) At once, before any fix or question to the user: a line in `workspace/state.md` with the round's counts from the report's `Status:` lines, as after every agent call, then the report read with the Read tool, whole
+   - (4) Count the report's `Status:` lines into `workspace/state.md` and read the report whole with the Read tool, before any fix or question to the user
    - (5) The format-only fixes and the styleguide answers to its ❓, then the next round, which checks them
 
    Before that next round:
-   - Show the user the report's **Notes** as information, without proposing a value or a key, and ask whether the guidelines or the supervisor rule on any of them: a note becomes a styleguide entry only when the user says so. A ❓ whose gap names no rule of `styleguide.md` and no key of its template is treated as a Note
+   - Show the user the report's **Notes** as "Steps 1..N: Chapter assignment" says, and ask whether the guidelines or the supervisor rule on any of them
    - End your turn with that question, together with any question on its ❓, and start the next round after the answer ("Principles", "On uncertainty")
    - Ask only about a Note no earlier round asked about (a row of the decision log in `workspace/state.md` keeps the answer for a later chat); with no such Note and no ❓ to ask about, go on without a stop
 6. Only fast-model agents active
@@ -234,7 +233,7 @@ At the end of every chat, regardless of what was done:
    - A decision that sets aside a rule of `styleguide.md` for this work (a page count, a structure rule) is also noted at that rule in `styleguide.md`, on a line below its value, which stays as the guidelines give it: `set aside for this work: <decision title> [user, YYYY-MM-DD]`
    - The note is that line only. A later decision that changes it gets a note line of its own in the same form; a decision that ends it, so that the rule applies again, removes the rule's note lines, and the decision's entry keeps the record
    - Write the note (or remove the note lines) and the decision's entry when the user decides, before the next agent call: the format-verifier checks only the styleguide, goes by its notes as they stand and lists such a rule as not applicable (`format-verifier.md`). Here, check that the decision's entry is there and that the rule's note lines match the last decision (none once a decision ended the set-aside)
-   - Then, after your last change to the state file in this chat, run `python3 scripts/state_check.py workspace/state.md workspace/output/chapters/` in the Bash tool (on Windows `py`; it only reads) without a pipe such as `| head`: after one, the exit code the Bash tool shows, and `$?`, are those of the pipe's last command. The script's summary line ends with `; exit code N`, and its last line is `Exit code: N`
+   - Then, after your last change to the state file in this chat, run `python3 scripts/state_check.py workspace/state.md workspace/output/chapters/` in the Bash tool (on Windows `py`; it only reads), without a pipe or a redirect: its whole output goes to you. The script's summary line ends with `; exit code N`, and its last line is `Exit code: N`
    - It lists Current state, Chapter status and every open item in full, with each chapter's word count, and the lines of Current state and Chapter status that are too long. Shorten each of these as "State file format" says, and run it again until it ends with exit code 0. If the Bash tool saves the output to a file instead of showing it, read that file whole with the Read tool
    - Exit code 2 (it prints only an `Error:` line, which says why) means the script could not check the file: tell the user, and read `workspace/state.md` whole with the Read tool instead, in one call; do the same without Python
 2. **Log recurring patterns** into `workspace/feedback.md` if a pattern was observed (if the file exists); a countermeasure stays within the agent definitions: it adds no styleguide key or value and no step a definition rules out

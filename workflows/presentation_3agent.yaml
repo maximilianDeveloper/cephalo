@@ -163,8 +163,8 @@ phases:
           source-verifier can read. One file per source or chart, so consistency
           between slides and companion can be checked. Claude records each
           file and the source it comes from in the decision log of
-          workspace/state.md, and neither compares it with the source itself
-          nor asks the user to: the source-verifier does, in step 2. A
+          workspace/state.md; the source-verifier compares it with the
+          source, in step 2 (main_session). A
           correction of the file that the user approves after its report
           Claude makes with the Edit tool; slide, notes or companion text that changes with it goes
           to the writer (main_session), and the deck is built again.
@@ -239,13 +239,10 @@ phases:
             rule the answer calls not covered and where it went (`gaps:
             captions.source_position → Open questions; thousands separator
             → note to the user`), or says `gaps: none`.
-          - A gap that names a rule of styleguide.md or a key of its
-            template goes under "Open questions" in styleguide.md, with a
-            row in the version history; any other goes to the user as a
-            note in your next message, not only in the closing one
-            (style-resolver.md, "Recording answers to open questions",
-            items 5 and 6). A line under the open issues of
-            workspace/state.md replaces neither.
+          - Where a gap goes: style-resolver.md, "Recording answers to open
+            questions", items 5 and 6; a note to the user stands in your
+            next message, not only in the closing one. A line under the
+            open issues of workspace/state.md replaces neither.
       
       - step: 2
         agent: source-verifier
