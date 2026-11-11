@@ -41,8 +41,7 @@ project_root/                          ← Git repo root (one repo for all)
 ├── 00_Shared_Materials/               ← shared by all three sub-projects
 │   ├── guidelines/
 │   ├── course_materials/
-│   ├── styleguide.md                  (one styleguide for all)
-│   └── README.md
+│   └── styleguide.md                  (one styleguide for all)
 │
 ├── 01_Proposal/                       ← sub-project 1
 │   ├── 00_Status.md
@@ -214,6 +213,8 @@ git tag -a defense_passed_<date> -m "Defense passed"
 | Working on defense | `03_Defense/` |
 
 **Why:** Claude Code uses the opened directory as context. Opening the root exposes all three sub-projects at once — distraction and risk (e.g., accidentally editing the frozen proposal while writing the main work).
+
+A session opened on a sub-project still finds the agent definitions in `../.claude/agents/`, also for `claude --agent <name>`: Claude Code looks for them in the folders above the one it is opened on as well (tested with version 2.1.322, with and without the sub-project's own `.claude/settings.json`).
 
 ### Access to shared materials
 

@@ -99,7 +99,8 @@ phases:
         manual: true
         task: |
           Created by setup.sh / setup.ps1 per docs/longform_structure.md
-          ("Directory layout" section). With minimal scaffolding only
+          ("Directory layout" section; multi-project main work: that section of
+          docs/multiproject_structure.md). With minimal scaffolding only
           guidelines/ exists (multi-project main work: only the 00_*.md
           files); add the phase directories as needed.
 
@@ -151,7 +152,10 @@ phases:
           ../00_Shared_Materials/guidelines/, and ../00_Shared_Materials/styleguide.md
           normally exists already (extracted in the proposal). Only verify it (no open
           ❓ [content] items; ❓ [format] items may wait until Phase B);
-          re-extract only when the guidelines change.
+          re-extract only when the guidelines change. The user confirms for the
+          main work each answer recorded so far (a value whose provenance names
+          the user, such as an n/a value); an entry whose answer does not hold
+          for the main work is opened again.
   
   # ===========================================================
   # Lead-in: Proposal
@@ -330,5 +334,5 @@ phases:
       - Confirm the hyphenation setting matches styleguide.md (document.hyphenation)
       - Visual proofreading
       - Sign declaration of academic integrity
-      - Commit the final state (the user runs it, or asks Claude to: git add -A then git commit -m "submission: final version", in a multi-project main work "main/submission: final version"), then the tag, the same way: git tag v_final_<date>
+      - After the chat closure ritual's steps 1–4 (handover; 00_Status.md with Submitted: <date>), commit the final state (the user runs it, or asks Claude to: git add -A then git commit -m "submission: final version", in a multi-project main work "main/submission: final version"), then the tag, the same way: git tag v_final_<date>
       - Mentally rehearse defending each sentence

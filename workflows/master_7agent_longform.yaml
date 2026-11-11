@@ -115,7 +115,10 @@ phases:
       - step: 0.0
         name: Verify directory structure
         manual: true
-        task: created by setup.sh / setup.ps1 per docs/longform_structure.md
+        task: |
+          Created by setup.sh / setup.ps1 per docs/longform_structure.md
+          (multi-project main work: docs/multiproject_structure.md,
+          "Directory layout"; with minimal scaffolding only the 00_*.md files).
 
       - step: 0.1
         name: Verify Git
@@ -159,7 +162,10 @@ phases:
           ../00_Shared_Materials/guidelines/, and ../00_Shared_Materials/styleguide.md
           normally exists already (extracted in the proposal). Only verify it (no open
           ❓ [content] items; ❓ [format] items may wait until Phase B);
-          re-extract only when the guidelines change.
+          re-extract only when the guidelines change. The user confirms for the
+          main work each answer recorded so far (a value whose provenance names
+          the user, such as an n/a value); an entry whose answer does not hold
+          for the main work is opened again.
       
       - step: 0.6
         name: Methodological design (only if empirical)
@@ -365,5 +371,5 @@ phases:
       - Confirm the hyphenation setting matches styleguide.md (document.hyphenation)
       - Visual proofreading
       - Sign declaration of academic integrity
-      - Commit the final state (the user runs it, or asks Claude to: git add -A then git commit -m "submission: final version", in a multi-project main work "main/submission: final version"), then the tag, the same way: git tag v_final_<date>
+      - After the chat closure ritual's steps 1–4 (handover; 00_Status.md with Submitted: <date>), commit the final state (the user runs it, or asks Claude to: git add -A then git commit -m "submission: final version", in a multi-project main work "main/submission: final version"), then the tag, the same way: git tag v_final_<date>
       - Mentally rehearse defending each sentence (especially methods chapter)

@@ -93,7 +93,7 @@ Keep two kinds of open questions apart, so that the list stays short enough to a
 
 When the project was set up with minimal scaffolding, the user expects you to propose the remaining directory structure based on what the guidelines require.
 
-Check: does `00_Status.md` (long-form) or `workspace/` (flat) exist with only base directories? If so, this is a minimal-scaffolding project.
+Check: does `00_Status.md` (long-form) or `workspace/` (flat) exist with only base directories? If so, this is a minimal-scaffolding project. In a multi-project sub-project, propose the phase folders its workflow file names (`docs/multiproject_structure.md`, "Agent assignment per sub-project").
 
 Propose a structure that matches:
 - The institution's expected chapter structure (e.g., 5-chapter thesis vs. 7-chapter thesis)
@@ -178,6 +178,7 @@ The user's answers to open questions do not need a new style-resolver run. Whoev
 2. Move the entry from "Open questions" to "Resolved questions", with the answer and its provenance. An entry left under "Open questions" counts as open, ticked or not.
 3. An entry answered in part, also a group answered for some of its keys: record the answered part, and keep the rest under "Open questions" as a narrower entry with the same tag.
 4. "Does not occur in this work" is an answer for a key whose element the work will not contain at all (tables, figures, statistics, footnotes or internet sources, for example). Its value is fixed: record exactly `n/a — does not occur in this work; reopen if it occurs`, in English, whatever the language of the styleguide and whatever words the user chose ("kommt nicht vor", for example), followed by its provenance as item 1 gives it (`[user, YYYY-MM-DD]`); a reason goes into the entry under "Resolved questions", not into the value. It is the user's answer, also for an element you would expect to be missing: ask, do not assume. A check of the project's files (no table in the chapters, no DOI in the sources) is no answer, and neither is a notice that you will close such keys, which asks nothing, nor an n/a you write in before the answer, as a proposal to be corrected: record it once the user has answered. It is no answer for a key the work already uses, since the export sets such a key either way: the layout of text the work contains (alignment, spacing or indents of the body, the headings or the reference list) and a notation its citations use (the space before a page number, for example). Do not offer n/a for such a key, also not inside a group whose other keys do not apply; if the user answers n/a for one, say so and ask for a value. Nor is it one for an element that another rule of `styleguide.md` requires (a declaration that the submission rule asks for, for example): name that rule and ask. If an element closed with n/a is added later, open the entry again.
+   - In a multi-project, n/a is an answer only when none of the sub-projects will contain the element, since they share `styleguide.md`: ask about all of them.
 5. Add a row to the version history.
 6. A rule that an agent reports later as not covered (the writer while drafting, for example) becomes an entry under "Open questions" if its gap names a rule of `styleguide.md` (one unclear for the case) or a key of the template: tagged as section 3 says, with the template's key if it has one, and a row in the version history (item 5). Whoever records answers writes it when the report comes in, also when the user defers the answer; a line under the open issues of the state file does not replace it. A gap that names no rule of `styleguide.md` and no key of the template is shown to the user as a note, without a proposed value or key, as a format-verifier note is shown: it becomes an entry only when the user says that the guidelines or the supervisor rule on it.
 7. A decision that sets a rule aside for this work changes no value: the value stays as the guidelines give it, also when the decision names another figure, and a note line below it records the decision (`orchestrator.md`, "Chat closure ritual", item 1).
@@ -188,6 +189,8 @@ The style-resolver runs:
 
 - **Once per new project**, during setup
 - **When guidelines are updated**: place the new version in the guidelines directory, invoke the resolver again, note the change in the `Version history` section of `styleguide.md`, commit with a message like `meta: styleguide updated to guideline version X`
+  - Edit the existing file: keep each value whose provenance names the user, with its entry under "Resolved questions", and the set-aside note lines; where the new version changes such a value's rule, open its entry again
+- **Verify only** (multi-project, `../00_Shared_Materials/styleguide.md` exists and the guidelines have not changed: proposal step 0.4, main-work step 0.5, defense step 0.4): change nothing; report its open ❓ entries by tag.
 
 ## Principles
 
