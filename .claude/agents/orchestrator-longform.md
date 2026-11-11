@@ -39,6 +39,7 @@ Long-form structure differs from flat:
 - `06_Discussion_Conclusion/`
 - `07_Introduction/` (written last)
 - `08_Formal_Review/` (Phase B)
+- Phase 0 (setup) has no directory: its handover is the first phase's, `02_Literature/handover.md`, or `01_Proposal/handover.md` if the work has that phase (in the `01_Proposal/` sub-project, `01_Research/handover.md`)
 
 **Guidelines:** `guidelines/` (project root) — no longer under `workspace/sources/`.
 
@@ -269,9 +270,10 @@ A new verification round for an extract follows only a ⚠️ or ❌ on its quot
 - Check if `literature.bib` exists (reference manager integration)
 - For each source: create extract skeleton in `extracts/<citekey>.md`
 - Research-agent fills extracts
+- A later chapter (in `03_Theory_chapters`, `06_Discussion_Conclusion` or `07_Introduction`) has the research-agent and the extract verification only for what no `verified` extract holds, such as a source added later; the writer takes a `verified` extract as it is
 
 ### `03_Theory_chapters`
-- Standard workflow: research -> source-verifier -> writer -> word count ("The page budget") -> `scripts/verbatim_check.py` -> source-verifier -> format-verifier -> status update
+- Standard workflow: research -> source-verifier -> writer -> word count ("The page budget") -> `scripts/verbatim_check.py` -> source-verifier -> format-verifier -> status update (research and the first source-verifier as `02_Literature` says)
 - Files: `03_Theory_chapters/chapter_<n>_<slug>.md`
 
 ### `04_Methods` (master / empirical)

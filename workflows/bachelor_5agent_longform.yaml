@@ -205,7 +205,7 @@ phases:
       - For longer chapters, split into sections (e.g., Ch. 3.1-3.2 / Ch. 3.3-3.4)
     
     per_chapter:
-      - research-agent reads extracts from 02_Literature/extracts/
+      - research-agent and extract verification only for what no verified extract in 02_Literature/extracts/ holds (orchestrator-longform.md, `02_Literature`)
       - writer-agent drafts the text; citations as citekeys only if 00_Decisions.md records that they are rendered (pre-check, section 6)
       - orchestrator-longform runs scripts/verbatim_check.py on the chapter before every verification round and passes the report on
       - source-verifier: sentence-by-sentence verification incl. plagiarism check
@@ -302,13 +302,13 @@ phases:
     content_or_form_phase: B
     
     chat_structure:
-      - One chat per review pass (typically 3-6 passes for a bachelor thesis)
+      - The next format round, which checks the last round's fixes, follows in the same chat (orchestrator-longform.md, "`08_Formal_Review` (Phase B)", step (5)); typically 3-6 rounds for a bachelor thesis
       - Closing handover.md lists found and resolved issues
     
     steps:
       - Title page as 08_Formal_Review/title_page.md, the first file of every export (docs/reference_management.md, "The title page")
       - Without citekeys, the reference list as 08_Formal_Review/bibliography.md, after the chapter files in every export, before an appendix (docs/reference_management.md, "The reference list"); where pagination.back_matter numbers the back matter unlike the main text, the file starts with the bookmark that starts it, and with citekeys it holds that bookmark, the heading and the empty refs div (same section)
-      - Milestone export as DOCX into submissions/v_<tag>_<date>.docx with Pandoc, a new tag for each format round (v_r1_<date>.docx, v_r2_<date>.docx) (docs/reference_management.md; the steps below read this file); then scripts/docx_pagination.py on it with the values of styleguide.md pagination.front_matter, pagination.main_text and pagination.back_matter, and scripts/docx_postprocess.sh, only if document.hyphenation = automatic (orchestrator, every round: a new export carries neither the sections nor the flag)
+      - Milestone export as DOCX into submissions/v_<tag>_<date>.docx with Pandoc, a new tag for each format round (v_r1_<date>.docx, v_r2_<date>.docx) (docs/reference_management.md; the steps below read this file); then scripts/docx_pagination.py on it with the values of styleguide.md pagination.front_matter, pagination.main_text and pagination.back_matter, and scripts/docx_postprocess.sh, only if document.hyphenation = automatic (orchestrator, every round, since a new export carries neither the sections nor the flag)
       - Full styleguide check of that DOCX (format-verifier; report in format_reports/round_<n>.md)
       - scripts/bibliography_check.py (minus-test)
       - scripts/abbreviations_extract.py (derive list of abbreviations)
