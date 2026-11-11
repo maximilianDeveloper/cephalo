@@ -65,6 +65,7 @@ The orchestrator transitions the project from A to B when:
 3. **No outstanding ⚠️, ❌ or ❓ content items** — all flagged content issues resolved (a 🟡 polish flag does not block), and no open cross-chapter point rated `–`: once the chapter it waits for is written, the source-verifier checks it
 4. **Last 3 iterations were format-only** — empirical signal that content has stabilized: in the last three commits, the changes to the chapter files touched only styleguide-governed items (citations, typography, spacing); state, handover and report files aside. This is not the loop count of the orchestrators, which counts the revisions after findings, each followed by a new verification
 5. **All `❓` items in `styleguide.md` resolved** — no open formatting questions
+6. **Methods and data consistent** (empirical works only) — the data-agent's last three-way check (raw data, table or figure, text) and the methods-agent's last check of the empirical chapter against the design and the methods chapter leave no open deviation
 
 When all criteria are met, the orchestrator:
 - Sets `00_Status.md` (long-form) or `workspace/state.md` (flat) -> phase: B

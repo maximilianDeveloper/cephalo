@@ -96,7 +96,8 @@ phases:
         note: |
           Without a defined methodology, no data agent can work. The design 
           decision (qualitative / quantitative / mixed-methods) is binding 
-          for everything that follows.
+          for everything that follows (orchestrator.md, "Empirical works:
+          methods and data"; methods-agent.md, "Research design").
   
   # ===========================================================
   # Phase A - Content
@@ -104,7 +105,10 @@ phases:
   phase_A_content:
     description: |
       Chapter-by-chapter work. For empirical theses, methods and data 
-      chapters use specialized agents.
+      chapters use specialized agents (orchestrator.md, "Empirical works:
+      methods and data"). The steps under per_theory_chapter (A.1 to A.6)
+      apply to every chapter the two blocks after it do not cover: theory,
+      discussion, conclusion and introduction.
     
     order: [theory, methods, empirical, discussion, conclusion, introduction]
     
@@ -156,7 +160,10 @@ phases:
     
     empirical_chapter:
       condition: empirical == true
-      note: Skip this block for purely theoretical theses.
+      note: |
+        Skip this block for purely theoretical theses. Sentences on the
+        work's own data are verified by A.E.3; sentences that cite sources
+        go to the source-verifier as in A.4.
       steps:
       - step: A.E.1
         agent: data
@@ -174,8 +181,8 @@ phases:
         action: Three-way consistency check (raw data <-> table <-> text)
       
       - step: A.E.4
-        agent: source-verifier
-        action: Methodological consistency between methods chapter and empirical chapter
+        agent: methods
+        action: Consistency of the empirical chapter with design.md and the methods chapter (methods-agent.md, "Consistency of methods and results")
       
       - step: A.E.5
         agent: format-verifier

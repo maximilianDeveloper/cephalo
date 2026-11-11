@@ -131,6 +131,19 @@ A statement about the project's state in a task prompt ("the decision log record
 5. Give format-verifier the text for styleguide compliance
 6. Update `workspace/state.md`
 
+### Empirical works: methods and data
+
+Only for a work with an empirical part (`master_7agent`: steps 0.6, A.M, A.E and F.3). Its other chapters (theory, discussion, conclusion, introduction) follow "For each chapter" above.
+
+- **Step 0.6, before any chapter:** the methods-agent writes the research design, `workspace/methods/design.md` (`methods-agent.md`, "Research design"). Give it the research question and what the user and the materials say about design, sample, instrument and analysis; what it names as open, ask the user
+- The design binds the data-agent and the methods chapter; a later change to it is a decision for the decision log
+- **Methods chapter (A.M):** the methods-agent writes it. It is counted, checked with `scripts/verbatim_check.py`, verified by the source-verifier and checked by the format-verifier like any chapter
+- **Empirical chapter (A.E), in this order:** the data-agent makes the tables and figures from `workspace/data/raw/`, which nobody changes; the writer drafts the chapter from them; the data-agent checks the three-way consistency (raw data ↔ table or figure ↔ text); the methods-agent checks that the chapter does what design and methods chapter say (`methods-agent.md`, "Consistency of methods and results"); the format-verifier checks it
+- A sentence that reports the work's own data rests on a table or figure of the data-agent, not on a source: the three-way check verifies it. Sentences of that chapter that cite sources go to the source-verifier as in any chapter, with the verbatim report
+- The empirical chapter passes when the three-way check and the consistency check leave no open deviation and its cited sentences have passed. A deviation goes back to whoever owns the place (the writer for the text, the data-agent for a table, figure or script, the methods-agent for the methods chapter), and the check runs again; "Feedback loop control" counts these revisions like any other
+- A package an analysis script needs and the project does not have: ask the user before it is installed (`data-agent.md`, "Reproducibility")
+- **Step F.3:** the data-agent audits every number in the text against the raw data once more
+
 ### Page budget monitoring
 
 Before a chapter's first writer task, set its budget:
@@ -158,6 +171,7 @@ After each written chapter, and after each revision, before the verification:
 - The number of sources lies within the workflow's `sources_min`–`sources_max` (if not, tell the user; it does not block)
 - Last 3 iterations brought only format-level changes (indicator: the chapter files' changes in the last 3 commits)
 - No open `❓` items left in `styleguide.md`
+- An empirical work: methods and data consistent, that is, the last three-way check and the last consistency check of methods and results leave no open deviation ("Empirical works: methods and data"); the user cannot waive this one
 - A criterion the user waives (all chapters complete, for chapters the work will not contain; format-only iterations; styleguide questions): as `docs/phase_separation.md` describes ("Waiving a criterion"), recorded in the decision log of `workspace/state.md`
 
 **Action on transition:**

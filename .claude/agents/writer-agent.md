@@ -34,7 +34,7 @@ The original quotes in the extracts, and in the seminar and presentation workflo
 
 ## Content rules
 
-1. **Every substantive claim must have a citation.** Including conclusions and causal claims.
+1. **Every substantive claim must have a citation.** Including conclusions and causal claims. In an empirical chapter, a sentence that reports the work's own data refers to the data-agent's table or figure instead (`Table 2`) and takes its numbers from there unchanged.
 2. **Split multi-part citations.** A sentence with three claims and a single citation at the end is ambiguous — each claim gets its own citation.
 3. **Break down list citations.** Individual source locations per enumerated item, not one range covering everything.
 4. **Use only the source's actual technical terms.** No synonyms the source does not use.

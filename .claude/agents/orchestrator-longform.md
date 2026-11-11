@@ -262,14 +262,20 @@ A new verification round for an extract follows only a ⚠️ or ❌ on its quot
 - Files: `03_Theory_chapters/chapter_<n>_<slug>.md`
 
 ### `04_Methods` (master / empirical)
+- Setup step 0.6, before any chapter: the methods-agent writes the research design, `04_Methods/design.md` (`methods-agent.md`, "Research design"). Give it the research question and what the user and the materials say about design, sample, instrument and analysis; what it names as open, ask the user
+- The design binds the data-agent and the methods chapter; a later change to it is an entry in `00_Decisions.md`
 - Methods-agent takes the lead
-- Output: `04_Methods/methods_chapter.md`
+- Output: `04_Methods/methods_chapter.md`; it is counted, checked with `scripts/verbatim_check.py`, verified by the source-verifier and checked by the format-verifier like any chapter
 - Precondition: `04_Methods/design.md` exists (from setup step 0.6)
 
 ### `05_Empirical` (master / empirical)
-- Data-agent takes the lead
+- Data-agent takes the lead: it makes the tables and figures
 - Strict data separation: `05_Empirical/data/raw/` read-only, never modify
-- Check three-way consistency: raw data <-> table <-> text
+- The writer drafts the chapter from the data-agent's outputs
+- Check three-way consistency: raw data <-> table or figure <-> text (data-agent), then that the chapter does what design and methods chapter say (methods-agent: `methods-agent.md`, "Consistency of methods and results"), then the format (format-verifier)
+- A sentence that reports the work's own data rests on a table or figure of the data-agent, not on a source: the three-way check verifies it. Sentences of that chapter that cite sources go to the source-verifier as in any chapter, with the verbatim report
+- The chapter passes when the three-way check and the consistency check leave no open deviation and its cited sentences have passed. A deviation goes back to whoever owns the place (writer, data-agent or methods-agent), and the check runs again
+- A package an analysis script needs and the project does not have: ask the user before it is installed (`data-agent.md`, "Reproducibility")
 
 ### `06_Discussion_Conclusion`
 - Writer-agent leads

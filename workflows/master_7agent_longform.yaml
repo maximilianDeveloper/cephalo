@@ -169,7 +169,8 @@ phases:
         note: |
           Without a defined methodology, the data-agent cannot work.
           The design decision (qualitative / quantitative / mixed-methods) 
-          is binding for everything that follows.
+          is binding for everything that follows (orchestrator-longform.md,
+          "`04_Methods`"; methods-agent.md, "Research design").
   
   # ===========================================================
   # Lead-in phases (same as bachelor longform)
@@ -229,7 +230,9 @@ phases:
     description: |
       Data-agent leads data preparation and analysis. Writer-agent drafts 
       the empirical chapter from the data-agent's outputs. Strict three-way 
-      consistency: raw data <-> processed tables <-> chapter text.
+      consistency: raw data <-> processed tables <-> chapter text. Then the
+      methods-agent checks that the chapter does what design.md and the
+      methods chapter say (orchestrator-longform.md, "`05_Empirical`").
       
       Skipped for purely theoretical master theses.
     
@@ -274,7 +277,10 @@ phases:
     scope: |
       Cross-chapter cross-references, terminology drift, self-plagiarism 
       between introduction and conclusion, argumentation coherence, 
-      methods/empirical consistency (master-specific).
+      the methodological framing of the other chapters against the methods
+      chapter (master-specific; whether the empirical chapter does what
+      design and methods chapter say is the methods-agent's check in
+      05_Empirical).
   
   # ===========================================================
   # Phase transition A -> B
@@ -286,7 +292,7 @@ phases:
     triggers:
       - All content chapters complete
       - Every chapter passed source verification with ✅
-      - Methods and empirical chapters consistent (data-agent confirmed; empirical theses only)
+      - Methods and empirical chapters consistent (the data-agent's three-way check and the methods-agent's consistency check leave no open deviation; empirical theses only)
       - No outstanding ⚠️, ❌ or ❓ items
       - Last 3 iterations were format-only (content has stabilized; in the last 3 commits the chapter files changed only in styleguide-governed items)
       - All ❓ items in styleguide.md clarified

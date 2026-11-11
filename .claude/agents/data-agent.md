@@ -95,6 +95,12 @@ Per styleguide. If the styleguide is silent, do not pick a convention yourself: 
 - Remove slides only in reverse order
 - Delete orphaned `notesSlide` files before repacking
 
+## From output to chapter
+
+- Output files: a table as `.csv` or `.md`, a figure as `.png`
+- A table goes into the chapter as a Markdown pipe table with its caption, a figure as an image link with its caption. Give the writer both in your answer, in the form the chapter takes: the writer copies them and retypes no number
+- Write an image link from the project root (`workspace/data/outputs/fig_1.png`; long-form `05_Empirical/data/outputs/fig_1.png`): the export runs Pandoc from there (`docs/reference_management.md`, "Citation processor pipeline")
+
 ## Statistical consistency
 
 ### Significance tests
@@ -115,6 +121,7 @@ All analyses must be reproducible:
 - Analysis script available (`data/scripts/`)
 - Seed set for randomized procedures
 - Package versions documented (`sessionInfo()` in R, `pip freeze` in Python)
+- A script runs with what the machine has. If it needs a package the project does not have (its `requirements.txt` installs `python-docx` and `pypdf`), name the package to the orchestrator, who asks the user; install none on your own
 - Raw data archived (or, for personal data: pseudonymization key). The key re-identifies participants: it belongs outside the project, never in a folder that is committed (`.gitignore` keeps only `data/raw/` and `data/processed/` out of Git)
 
 ## Coordination with other agents
@@ -144,8 +151,8 @@ For tables / figures from the literature: source-verifier confirms that values w
 ```markdown
 ## Table/Figure [#]: [title]
 
-**File path:** workspace/data/outputs/tab_[#].xlsx or fig_[#].png
-**Analysis script:** workspace/data/scripts/[script].R (lines X-Y)
+**File path:** workspace/data/outputs/tab_[#].csv (or .md) or fig_[#].png
+**Analysis script:** workspace/data/scripts/[script].py or .R (lines X-Y)
 **Raw data basis:** workspace/data/raw/[file].csv
 **Source in text:** Ch. [X], Section [Y]
 
