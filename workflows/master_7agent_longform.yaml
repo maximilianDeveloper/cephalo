@@ -143,6 +143,7 @@ phases:
         name: Reference manager check
         manual: true
         task: |
+          Only with a reference manager (optional, checklists/precheck.md, section 5); without one, skip this step and write no literature.bib.
           - Reference manager collection created?
           - BibTeX export configured (Better BibTeX or equivalent)?
           - Auto-export to 02_Literature/literature.bib?

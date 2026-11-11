@@ -151,8 +151,7 @@ Optional within a long-form project. Use this only if you don't have a separate 
 ### Phase 02_Literature
 
 Most front-loaded work happens here:
-- Reference manager collection built
-- `literature.bib` exported
+- With a reference manager (optional): collection built, `literature.bib` exported
 - One extract per source in `extracts/<citekey>.md`
 - All extracts verified by source-verifier
 
@@ -240,7 +239,7 @@ One-time at project start:
 - [ ] Initialize Git (done by setup script)
 - [ ] Run style-resolver to produce `styleguide.md`
 - [ ] Resolve the `❓ [content]` items in `styleguide.md` (the `[format]` items before Phase B)
-- [ ] Configure reference manager: collection created, BibTeX export to `02_Literature/literature.bib`
+- [ ] Configure reference manager (optional): collection created, BibTeX export to `02_Literature/literature.bib`
 - [ ] Initial `00_Status.md` filled with project metadata, research question, page budget
 - [ ] First commit: `meta: initial setup`
 

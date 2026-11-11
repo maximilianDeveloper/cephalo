@@ -266,7 +266,7 @@ One-time at project start:
 - [ ] Place supplementary course material in `00_Shared_Materials/course_materials/` (the assignment briefing belongs in `guidelines/`)
 - [ ] Initialize Git (done by setup script)
 - [ ] Run style-resolver once -> `00_Shared_Materials/styleguide.md`
-- [ ] Reference manager collection for the main work, auto-export to `02_Main_Work/02_Literature/literature.bib`
+- [ ] Reference manager collection for the main work (optional), auto-export to `02_Main_Work/02_Literature/literature.bib`
 - [ ] Initial `00_Status.md` in all three sub-projects (done by setup script from templates)
 - [ ] Project overview in a root file of your own (e.g. `00_Project_overview.md`): the root `README.md` is cephalo's and is replaced when you update the template
 
