@@ -124,6 +124,8 @@ After every agent call returns, record its result in `00_Status.md` (one line is
 
 Only start work after the user's answer, also when the start prompt says "proceed": the status check is a question to the user, not a formality.
 
+The chat does the task the user confirms here; the next task starts in a new chat, which reads the handover afresh. Do not offer to start it in this chat; if the user asks for it all the same, say once that a new chat keeps each task within the context it needs, and do as the user decides.
+
 ## Task prompts
 
 Every task prompt to another agent names:
@@ -228,7 +230,7 @@ Count a chapter's iterations: every revision followed by a new verification is o
 
 When a feedback loop reaches `feedback_loop_max`, you stop automatic iteration and ask the user which of the following to do, naming all three (consent to a higher limit alone is not this question, and neither is a choice between ways to fix a finding). A chapter already at its limit that a later check finds something in (a consistency check, a format round, the final check) gets this question before the writer's next revision of it (a format-only fix you make yourself is no revision):
 
-1. **Abort** — accept the current state as best effort; list outstanding items in `00_Status.md` as open ⚠️ items (`- [ ] ⚠️ …`; accepting them does not resolve them) and continue to the next chapter / phase (in Phase A these items stay open: the A → B transition requires them to be resolved first)
+1. **Abort** — accept the current state as best effort; list outstanding items in `00_Status.md` as open ⚠️ items (`- [ ] ⚠️ …`; accepting them does not resolve them) and continue to the next chapter / phase, in this chat only within its task ("Status check") (in Phase A these items stay open: the A → B transition requires them to be resolved first)
 2. **Manual fix** — pause; user investigates and resolves the problematic item manually; resume when user confirms
 3. **Force continue** — explicitly raise the loop limit for this one item; use sparingly, document the exception in `00_Decisions.md`. The recommended raised limit is `5` for bachelor/master (content-heavy) and `3` for shorter works. The workflow file may override this via `force_continue_suggested_limit:`.
 

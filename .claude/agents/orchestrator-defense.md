@@ -80,6 +80,8 @@ At the start of every chat, read these files in order before doing anything else
 
 Only start work after the user's answer, also when the start prompt says "proceed".
 
+The chat does the task the user confirms here; the next task starts in a new chat, which reads the handover afresh. Do not offer to start it in this chat; if the user asks for it all the same, say once that a new chat keeps each task within the context it needs, and do as the user decides.
+
 ## Task prompts
 
 Every task prompt to another agent names:
