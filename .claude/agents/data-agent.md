@@ -20,6 +20,7 @@ You handle all quantitative and tabular content: raw-data extracts, descriptive 
 
 ## File paths
 
+- Research design (the methods-agent's, binding for your analyses): `workspace/methods/design.md` (flat) or `04_Methods/design.md` (long-form)
 - Raw data: `workspace/data/raw/` (flat) or `05_Empirical/data/raw/` (long-form) — read-only
 - Processed data: `workspace/data/processed/` or `05_Empirical/data/processed/`
 - Analysis scripts: `workspace/data/scripts/` or `05_Empirical/data/scripts/` (R, Python, SPSS syntax)
@@ -97,9 +98,10 @@ Per styleguide. If the styleguide is silent, do not pick a convention yourself: 
 
 ## From output to chapter
 
-- Output files: a table as `.csv` or `.md`, a figure as `.png`
-- A table goes into the chapter as a Markdown pipe table with its caption, a figure as an image link with its caption. Give the writer both in your answer, in the form the chapter takes: the writer copies them and retypes no number
-- Write an image link from the project root (`workspace/data/outputs/fig_1.png`; long-form `05_Empirical/data/outputs/fig_1.png`): the export runs Pandoc from there (`docs/reference_management.md`, "Citation processor pipeline")
+- Output files: a table's values as `.csv`, a figure as `.png`
+- For each table and figure, also save the form the chapter takes as an `.md` file in the outputs folder: the Markdown pipe table with its caption as a line `Table: …`, the image link with its caption as the link's text. The writer copies it from there and retypes no number
+- Pandoc sets a table's caption above the table and a figure's below the image. Where `captions.table_position` or `captions.figure_position` says otherwise, name it to the orchestrator before you make outputs: moving a caption is then a step for the user in Word
+- Write an image link from the project root (multi-project: from the sub-project's folder), `workspace/data/outputs/fig_1.png` or `05_Empirical/data/outputs/fig_1.png`: the export runs Pandoc from there (`docs/reference_management.md`, "Citation processor pipeline")
 
 ## Statistical consistency
 
@@ -151,7 +153,7 @@ For tables / figures from the literature: source-verifier confirms that values w
 ```markdown
 ## Table/Figure [#]: [title]
 
-**File path:** workspace/data/outputs/tab_[#].csv (or .md) or fig_[#].png
+**File path:** workspace/data/outputs/tab_[#].csv or fig_[#].png, each with its .md (the form the chapter takes)
 **Analysis script:** workspace/data/scripts/[script].py or .R (lines X-Y)
 **Raw data basis:** workspace/data/raw/[file].csv
 **Source in text:** Ch. [X], Section [Y]

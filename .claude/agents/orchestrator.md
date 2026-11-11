@@ -137,10 +137,12 @@ Only for a work with an empirical part (`master_7agent`: steps 0.6, A.M, A.E and
 
 - **Step 0.6, before any chapter:** the methods-agent writes the research design, `workspace/methods/design.md` (`methods-agent.md`, "Research design"). Give it the research question and what the user and the materials say about design, sample, instrument and analysis; what it names as open, ask the user
 - The design binds the data-agent and the methods chapter; a later change to it is a decision for the decision log
-- **Methods chapter (A.M):** the methods-agent writes it. It is counted, checked with `scripts/verbatim_check.py`, verified by the source-verifier and checked by the format-verifier like any chapter
+- **Methods chapter (A.M):** the methods-agent writes it and the extracts it draws on, which the source-verifier verifies first. The chapter is counted, checked with `scripts/verbatim_check.py`, verified by the source-verifier and checked by the format-verifier like any chapter
 - **Empirical chapter (A.E), in this order:** the data-agent makes the tables and figures from `workspace/data/raw/`, which nobody changes; the writer drafts the chapter from them; the data-agent checks the three-way consistency (raw data ↔ table or figure ↔ text); the methods-agent checks that the chapter does what design and methods chapter say (`methods-agent.md`, "Consistency of methods and results"); the format-verifier checks it
-- A sentence that reports the work's own data rests on a table or figure of the data-agent, not on a source: the three-way check verifies it. Sentences of that chapter that cite sources go to the source-verifier as in any chapter, with the verbatim report
-- The empirical chapter passes when the three-way check and the consistency check leave no open deviation and its cited sentences have passed. A deviation goes back to whoever owns the place (the writer for the text, the data-agent for a table, figure or script, the methods-agent for the methods chapter), and the check runs again; "Feedback loop control" counts these revisions like any other
+- A sentence that reports the work's own data rests on a table or figure of the data-agent (a quotation from the work's own material: on the raw data), not on a source: the three-way check verifies it. The source-verifier gets the chapter like any other, with the verbatim report; such a sentence needs no source there (`source-verifier.md`, step 1)
+- The chapter's word count includes its tables: say so with the figure, and ask for no shortening on their account
+- The empirical chapter passes when the three-way check and the consistency check leave no open deviation and the source-verifier has passed it. A deviation goes back to whoever owns the place (the writer for the text, the data-agent for a table, figure or script, the methods-agent for the methods chapter)
+- After such a fix, the three-way check and the consistency check run again on what changed, and the source-verifier's rounds follow the changed sentences as in any chapter; "Feedback loop control" counts these revisions like any other
 - A package an analysis script needs and the project does not have: ask the user before it is installed (`data-agent.md`, "Reproducibility")
 - **Step F.3:** the data-agent audits every number in the text against the raw data once more
 
@@ -309,7 +311,7 @@ After Phase B, in the workflow's closing step F.1 (the scripts read the DOCX tha
 - **Source registry:** one row per passage and chapter; Page is the printed page; Rating is `direct quote` or `paraphrase`, how the chapter uses the passage. A chapter's verification result goes into Chapter status, not here
 - **Chapter status:** one row per chapter (in a presentation, per part it verifies), each cell short and beginning with its status, ✅ once that step is done. The findings stay in the saved reports, a decision goes into the decision log
   - Written: the file and, where it has a budget, its word count against it (`✅ ch_2_body.md, 684 of 600 words`)
-  - Source-verified: the status, then each round's status counts and the loop count (`✅ R1: ⚠️ 12, ✅ 12; R2: ✅ 23, 🟡 1; loop 1`), then any ❓ left open ("Feedback loop control")
+  - Source-verified: the status, then each round's status counts and the loop count (`✅ R1: ⚠️ 12, ✅ 12; R2: ✅ 23, 🟡 1; loop 1`), then any ❓ left open ("Feedback loop control"); for an empirical chapter also its last two checks (`three-way ✅; consistency: 1 open`)
   - format-verified, where the table has it: the status of the last format round
 - **Current state:** a line holds its present value: replace it when it changes, do not add to it
 - A new row of a table goes directly below its last row, without a blank line, which would end the table; the file holds no HTML comments

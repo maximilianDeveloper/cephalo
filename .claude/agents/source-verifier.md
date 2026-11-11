@@ -46,7 +46,7 @@ citation imprecision and not a sentence status), so it reaches the user as such.
 ## Verification steps (in order)
 
 ### 1. Citation completeness
-Every substantive claim has a citation? Even conclusion-style sentences ("This shows that...") need citations — or explicit marking as the author's own conclusion.
+Every substantive claim has a citation? Even conclusion-style sentences ("This shows that...") need citations — or explicit marking as the author's own conclusion. In an empirical work, a sentence on the work's own study or data needs none: it rests on the research design or names its table or figure, and the data-agent checks its numbers.
 
 ### 2. Citation correctness
 Does the original passage actually say what the text claims? Compare paraphrase to original quote.
@@ -129,7 +129,7 @@ Name an extract entry by its file name and quote ID, the `### Q<n>` heading abov
    | 3 | [Author, p. X; <extract file> Q<n>] | ✅ |
    ```
 
-   A ✅ row has the sentence number, the source with its page, and the status, nothing else: no quote and no comment (a remark that matters goes under Notes). For a sentence that needs no source, such as the research question or a sentence on the chapter's outline, the source is `—`.
+   A ✅ row has the sentence number, the source with its page, and the status, nothing else: no quote and no comment (a remark that matters goes under Notes). For a sentence that needs no source, such as the research question, a sentence on the chapter's outline or a sentence on the work's own study or data, the source is `—`.
 
 2. A full entry per sentence with ⚠️, ❌, 🟡 or ❓:
 

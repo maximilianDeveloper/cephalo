@@ -99,7 +99,7 @@ longform:
       version_controlled: true
     outputs:
       path: 05_Empirical/data/outputs/
-      access: write (data-agent), read (writer-agent)
+      access: write (data-agent), read (writer-agent, methods-agent)
 
 # Workflow
 
@@ -170,7 +170,8 @@ phases:
           Without a defined methodology, the data-agent cannot work.
           The design decision (qualitative / quantitative / mixed-methods) 
           is binding for everything that follows (orchestrator-longform.md,
-          "`04_Methods`"; methods-agent.md, "Research design").
+          "`04_Methods` (master / empirical)"; methods-agent.md, "Research
+          design").
   
   # ===========================================================
   # Lead-in phases (same as bachelor longform)
@@ -223,7 +224,7 @@ phases:
   # ===========================================================
   phase_05_empirical:
     directory: 05_Empirical/
-    agents: [orchestrator-longform, data, writer, source-verifier, format-verifier]
+    agents: [orchestrator-longform, data, writer, methods, source-verifier, format-verifier]
     content_or_form_phase: A
     condition: empirical == true
     
@@ -232,7 +233,8 @@ phases:
       the empirical chapter from the data-agent's outputs. Strict three-way 
       consistency: raw data <-> processed tables <-> chapter text. Then the
       methods-agent checks that the chapter does what design.md and the
-      methods chapter say (orchestrator-longform.md, "`05_Empirical`").
+      methods chapter say (orchestrator-longform.md, "`05_Empirical`
+      (master / empirical)").
       
       Skipped for purely theoretical master theses.
     
@@ -357,6 +359,7 @@ phases:
       - Run scripts/docx_pagination.py on this v_final file with the values of styleguide.md pagination.front_matter, pagination.main_text and pagination.back_matter, and scripts/docx_postprocess.sh (only if document.hyphenation = automatic): a new export carries neither the sections nor the flag
       - Front matter numbered unlike the main text: only if styleguide.md pagination.front_matter is Roman, counted but not shown or none, or pagination.main_text starts at 1, the DOCX has it as a section of its own, set by scripts/docx_pagination.py after the export (docs/reference_management.md, "The title page"; without Python, the user sets it in Word as described there)
       - Update table of contents (Ctrl+A then F9, twice: docs/reference_management.md, "The title page")
+      - Lists of tables and figures, where the guidelines ask for them, inserted in Word
       - Back matter numbered unlike the main text: only if styleguide.md pagination.back_matter does not number it like the main text, the DOCX has it as a section of its own from the reference list on, set the same way; with Roman numerals that continue the front matter's count, check after updating the table of contents that its first number follows the front matter's last page; if it does not (a list or the table of contents fills more than one page), set it in Word: in the header or footer of the reference list's first page, Format Page Numbers, "Start at" the number after the front matter's last page (docs/reference_management.md, "The title page", step 5), then update the fields again (Ctrl+A, then F9); running scripts/docx_pagination.py again on this DOCX changes nothing, and a new export takes that number with --back-matter-start (docs/scripts.md)
       - Confirm the hyphenation setting matches styleguide.md (document.hyphenation)
       - Visual proofreading
