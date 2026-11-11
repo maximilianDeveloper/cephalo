@@ -260,7 +260,7 @@ phases:
       - 04_Submission/proposal_final_<YYYY-MM-DD>.pdf (optional)
     
     steps:
-      - Export with Pandoc (orchestrator) to 04_Submission/proposal_final_<YYYY-MM-DD>.docx as orchestrator-longform.md, "`08_Formal_Review` (Phase B)", says for the title page and items (1)-(2), with 04_Submission/ for 08_Formal_Review/; without citekeys, the reference list stays the last section of 03_Drafting/proposal_draft.md, with the bookmark _cephalo_back_matter_start above its heading if pagination.back_matter numbers the back matter unlike the main text (docs/reference_management.md, "The reference list")
+      - Export with Pandoc (orchestrator) as orchestrator-longform.md, "`08_Formal_Review` (Phase B)", says for the title page and items (1)-(2), with 04_Submission/ for 08_Formal_Review/ (each round a new 04_Submission/submissions/v_r<n>_<date>.docx; the last checked one is copied as 04_Submission/proposal_final_<YYYY-MM-DD>.docx); without citekeys, the reference list stays the last section of 03_Drafting/proposal_draft.md, with the bookmark _cephalo_back_matter_start above its heading if pagination.back_matter numbers the back matter unlike the main text (docs/reference_management.md, "The reference list")
       - format-verifier: check this DOCX against ../00_Shared_Materials/styleguide.md, report in 04_Submission/format_report_round_<n>.md; after fixes, export again as in the step above, hyphenation included
       - The user updates the fields in Word (Ctrl+A, then F9, twice; docs/reference_management.md, "The title page"); then manual export to PDF (if supervisor prefers)
       - Commit the exported files, then Git tag: proposal_v1_<date> (the user runs them, or asks Claude to)
@@ -293,7 +293,7 @@ phases:
     actions:
       - Set the Current overall phase in 00_Status.md to closure
       - Copy the open issues of 00_Status.md that concern ../00_Shared_Materials/styleguide.md (provisional values) to the open issues of ../02_Main_Work/00_Status.md
-      - Copy the final DOCX and its source, 03_Drafting/proposal_draft.md as proposal_final_<date>.md, to ../02_Main_Work/01_Proposal_Reference/
+      - Copy 04_Submission/proposal_final_<date>.docx and its source, 03_Drafting/proposal_draft.md as proposal_final_<date>.md, to ../02_Main_Work/01_Proposal_Reference/
       - Update README.md: "FROZEN — as of <date>"
       - The chat closure ritual's steps 1-4 (handover, 00_Status.md) come before the commit and the tag, which then hold them
       - Commit (the user runs it, or asks Claude to): 'git add -A (it also stages the copy in ../02_Main_Work/), then git commit -m "meta: proposal accepted, copied to main/01_Proposal_Reference/"'

@@ -196,7 +196,7 @@ Sub-project prefix: `proposal`, `main`, `defense`, or `meta` for cross-project c
 
 ```bash
 git tag -a proposal_accepted_<date> -m "Proposal accepted by supervisor"
-git tag -a work_submitted_<date> -m "Main work officially submitted"
+git tag -a v_final_<date> -m "Main work officially submitted"
 git tag -a defense_passed_<date> -m "Defense passed"
 ```
 

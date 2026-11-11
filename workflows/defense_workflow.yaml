@@ -176,7 +176,8 @@ phases:
       The writer writes the slide text to 01_Slides/slides.md; it cannot build
       a PPTX. presentation_v1.pptx is built from it as
       workflows/presentation_3agent.yaml, step 1, "The deck", says, with the
-      deck script in data/scripts/ of 03_Defense/.
+      deck script in data/scripts/ of 03_Defense/, and built again after each
+      change of slide text or speaker notes (phases 2 and 5).
     
     important:
       - Slides are NOT prose. Bullet points, graphics, no text walls.

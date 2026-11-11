@@ -29,7 +29,7 @@ All paths assume the active working directory is `03_Defense/` — i.e., Claude 
 - Path: `../02_Main_Work/`
 - Final submission: `../02_Main_Work/08_Formal_Review/submissions/v_final_*.docx`
 - Chapters as markdown: `../02_Main_Work/03_Theory_chapters/`, `../02_Main_Work/05_Empirical/`, etc.
-- Bibliography: `../02_Main_Work/02_Literature/literature.bib`
+- Bibliography: `../02_Main_Work/02_Literature/literature.bib`; without one, the reference list `../02_Main_Work/08_Formal_Review/bibliography.md`
 
 **Shared materials:**
 - Path: `../00_Shared_Materials/`
@@ -201,6 +201,7 @@ Present the outstanding items as a numbered list with source citations so the us
   - A value the user leaves to you ("make a proposal, I will take it") is recorded only after the user accepts it: name it in the chat, one line per key, and wait for the answer (item 1)
   - A value the user takes provisionally gets `[provisional, user, YYYY-MM-DD]` and a line under the open issues of `00_Status.md` (item 1)
   - When the user answers that the work will not contain an element (tables, figures, statistics, footnotes or internet sources, for example), close its entry with exactly this value, in English whatever the language of the styleguide or the chat: `n/a — does not occur in this work; reopen if it occurs`, followed by its provenance (`[user, YYYY-MM-DD]`)
+    - In a multi-project, only when none of the sub-projects will contain it, since they share the styleguide (item 4)
   - Item 4 of that section says where the n/a value is no answer (a key the work uses), item 6 where a rule goes that an agent reports as not covered (the styleguide template is `../templates/styleguide.md`)
 - If defense date is missing from `00_Decisions.md` → prompt; no timing without it
 - If submitted work is not tagged as "frozen" (no Git tag) → clarify: really submitted?
