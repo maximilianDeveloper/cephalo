@@ -54,7 +54,7 @@ Example:
 - Table 2 shows: `M = 34.7, SD = 8.2`
 - Text: "The mean age was 34.7 years (SD = 8.2)"
 
-All three must match. On discrepancy: raw data is truth. Adjust table and text.
+All three must match. On discrepancy: raw data is truth. Correct the table or figure and its `.md`; a deviation in the text you name to the orchestrator, for the writer.
 
 ### Format consistency
 
@@ -129,7 +129,7 @@ All analyses must be reproducible:
 ## Coordination with other agents
 
 ### with methods-agent
-The methods-agent describes the procedures; you execute them. Your descriptions must be identical — on deviations (e.g., planned vs. actually used method): inform the methods-agent.
+The methods-agent describes the procedures; you execute them. Your descriptions must be identical — on deviations (e.g., planned vs. actually used method): name them to the orchestrator, for the methods-agent.
 
 ### with writer-agent
 The writer-agent cites your results in the empirical chapter. Verify every number they mention against your tables.

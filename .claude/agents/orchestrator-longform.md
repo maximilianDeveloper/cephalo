@@ -289,10 +289,12 @@ A new verification round for an extract follows only a ⚠️ or ❌ on its quot
 - Data-agent takes the lead: it makes the tables and figures
 - Strict data separation: `05_Empirical/data/raw/` read-only, never modify
 - The writer drafts the chapter from the data-agent's outputs
-- Check three-way consistency: raw data <-> table or figure <-> text (data-agent), then that the chapter does what design and methods chapter say (methods-agent: `methods-agent.md`, "Consistency of methods and results"), then the format (format-verifier)
+- Check three-way consistency: raw data <-> table or figure <-> text (data-agent), then that the chapter does what design and methods chapter say (methods-agent: `methods-agent.md`, "Consistency of methods and results"; save its answer unchanged as `04_Methods/consistency_round_<n>.md`), then the source verification, then the format (format-verifier)
 - A sentence that reports the work's own data rests on a table or figure of the data-agent (a quotation from the work's own material: on the raw data), not on a source: the three-way check verifies it. The source-verifier gets the chapter like any other, with the verbatim report; such a sentence needs no source there (`source-verifier.md`, step 1)
 - The chapter's word count includes its tables: say so with the figure, and ask for no shortening on their account
-- The chapter passes when the three-way check and the consistency check leave no open deviation and the source-verifier has passed it; record the two checks' last results with the chapter in `00_Status.md`. A deviation goes back to whoever owns the place (writer, data-agent or methods-agent)
+- The chapter passes when the three-way check and the consistency check leave no open deviation and the source-verifier has passed it; record the two checks' last results with the chapter in `00_Status.md`
+- A deviation goes back to whoever owns the place: the writer for the text, the data-agent for a table, figure or script (the writer then copies its `.md` into the chapter again), the methods-agent for the methods chapter
+- A deviation from `design.md` that the data cannot meet goes to the user; the methods-agent writes the user's decision into the design file first (`methods-agent.md`, "Research design")
 - After such a fix, the three-way check and the consistency check run again on what changed, and the source-verifier's rounds follow the changed sentences as in any chapter
 - Before submission: the data-agent audits every number in the text against the raw data once more
 - A package an analysis script needs and the project does not have: ask the user before it is installed (`data-agent.md`, "Reproducibility")

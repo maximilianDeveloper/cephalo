@@ -138,10 +138,17 @@ Only for a work with an empirical part (`master_7agent`: steps 0.6, A.M, A.E and
 - **Step 0.6, before any chapter:** the methods-agent writes the research design, `workspace/methods/design.md` (`methods-agent.md`, "Research design"). Give it the research question and what the user and the materials say about design, sample, instrument and analysis; what it names as open, ask the user
 - The design binds the data-agent and the methods chapter; a later change to it is a decision for the decision log
 - **Methods chapter (A.M):** the methods-agent writes it and the extracts it draws on, which the source-verifier verifies first. The chapter is counted, checked with `scripts/verbatim_check.py`, verified by the source-verifier and checked by the format-verifier like any chapter
-- **Empirical chapter (A.E), in this order:** the data-agent makes the tables and figures from `workspace/data/raw/`, which nobody changes; the writer drafts the chapter from them; the data-agent checks the three-way consistency (raw data ↔ table or figure ↔ text); the methods-agent checks that the chapter does what design and methods chapter say (`methods-agent.md`, "Consistency of methods and results"); the format-verifier checks it
+- **Empirical chapter (A.E), in this order:**
+  - the data-agent makes the tables and figures from `workspace/data/raw/`, which nobody changes
+  - the writer drafts the chapter from them
+  - the data-agent checks the three-way consistency (raw data ↔ table or figure ↔ text)
+  - the methods-agent checks that the chapter does what design and methods chapter say (`methods-agent.md`, "Consistency of methods and results"); save its answer unchanged as `workspace/methods/consistency_round_<n>.md`
+  - the source-verifier verifies it ("For each chapter", step 4), and the format-verifier checks it
 - A sentence that reports the work's own data rests on a table or figure of the data-agent (a quotation from the work's own material: on the raw data), not on a source: the three-way check verifies it. The source-verifier gets the chapter like any other, with the verbatim report; such a sentence needs no source there (`source-verifier.md`, step 1)
 - The chapter's word count includes its tables: say so with the figure, and ask for no shortening on their account
-- The empirical chapter passes when the three-way check and the consistency check leave no open deviation and the source-verifier has passed it. A deviation goes back to whoever owns the place (the writer for the text, the data-agent for a table, figure or script, the methods-agent for the methods chapter)
+- The empirical chapter passes when the three-way check and the consistency check leave no open deviation and the source-verifier has passed it
+- A deviation goes back to whoever owns the place: the writer for the text, the data-agent for a table, figure or script (the writer then copies its `.md` into the chapter again), the methods-agent for the methods chapter
+- A deviation from `design.md` that the data cannot meet goes to the user; the methods-agent writes the user's decision into the design file first (`methods-agent.md`, "Research design")
 - After such a fix, the three-way check and the consistency check run again on what changed, and the source-verifier's rounds follow the changed sentences as in any chapter; "Feedback loop control" counts these revisions like any other
 - A package an analysis script needs and the project does not have: ask the user before it is installed (`data-agent.md`, "Reproducibility")
 - **Step F.3:** the data-agent audits every number in the text against the raw data once more

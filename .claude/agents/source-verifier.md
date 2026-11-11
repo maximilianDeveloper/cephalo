@@ -46,7 +46,7 @@ citation imprecision and not a sentence status), so it reaches the user as such.
 ## Verification steps (in order)
 
 ### 1. Citation completeness
-Every substantive claim has a citation? Even conclusion-style sentences ("This shows that...") need citations — or explicit marking as the author's own conclusion. In an empirical work, a sentence on the work's own study or data needs none: it rests on the research design or names its table or figure, and the data-agent checks its numbers.
+Every substantive claim has a citation? Even conclusion-style sentences ("This shows that...") need citations — or explicit marking as the author's own conclusion. In an empirical work, a sentence on the work's own study or data needs none: it rests on the research design, names its table or figure, or quotes the work's own material, and the data-agent checks its numbers and quotations.
 
 ### 2. Citation correctness
 Does the original passage actually say what the text claims? Compare paraphrase to original quote.
@@ -90,7 +90,7 @@ Rate verbatim word runs from the source (see `checklists/plagiarism_protection.m
 Method: the count comes from the report of `scripts/verbatim_check.py`, which the orchestrator runs before each chapter verification (in the seminar and presentation workflows, which have no orchestrator, Claude in the main chat runs it, or the user does). It lists every run of 5 or more words the chapter shares with the extracts' original quotes and the source PDFs, already rated, with its place in the chapter and where it occurs in the source (extract file, quote ID, page). Give each run's rating to the sentence it is in, and at 🟡 or higher mark the exact phrase. A run that crosses a sentence boundary counts as one run.
 
 The script does not judge everything:
-- It leaves out quotations of five or more words in quotation marks, and block quotes; the words of a shorter quotation keep a run going but are not counted in its length (the report adds `and 3 in quotation marks`). A direct quote in quotation marks with its citation is not a plagiarism finding; steps 2 and 4 check its wording and page. Quotes it lists as "not found verbatim" need that check by hand: a changed word in a direct quote is ❌, a source that is missing from the check is ❓.
+- It leaves out quotations of five or more words in quotation marks, and block quotes; the words of a shorter quotation keep a run going but are not counted in its length (the report adds `and 3 in quotation marks`). A direct quote in quotation marks with its citation is not a plagiarism finding; steps 2 and 4 check its wording and page. Quotes it lists as "not found verbatim" need that check by hand: a changed word in a direct quote is ❌, a source that is missing from the check is ❓; a quotation from the work's own material gets neither (step 1).
 - It finds only verbatim runs. A paraphrase that keeps the source's sentence structure and swaps single words (`checklists/plagiarism_protection.md`, section 4) is still yours to judge by reading.
 - It does not know names: a run that is only a proper name or the title of a work is no finding.
 - Its section "Runs shared with other chapters", at the end of the report, is not for step 8: it counts A.2 of the consistency check ("Cross-chapter consistency" below).
