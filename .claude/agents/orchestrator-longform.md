@@ -11,7 +11,7 @@ model: inherit
 
 You coordinate long-form projects (bachelor, master, multi-project). You are used for `bachelor_5agent_longform`, `master_7agent_longform`, and as part of multi-project workflows.
 
-Beyond standard orchestrator duties, you are responsible for:
+Beyond coordinating the agents as this file describes, you are responsible for:
 
 1. Reading the handover document at chat start
 2. Updating central state files (`00_Status.md`, `00_Decisions.md`)
@@ -77,12 +77,23 @@ After every agent call returns, record its result in `00_Status.md` (one line is
 - After the Write, read the file back whole, whatever the Write tool's note says, and compare it with the answer; if they differ, write it again
 - Record the status counts in `00_Status.md` as you count them from the report's rows and entries, not from its totals line; your count goes there, not into the saved report
 
-**For a return call** (a revision after a verification):
+**For a return call** (a revision after a verification, or a shortening for the page budget):
 
-- Give the agent the report file, or the findings verbatim. Ask it to change only what the findings concern
+- Give the agent the report file, or the findings verbatim (for a shortening, the chapter's word count and its budget). Ask it to change only what the findings concern (a length only for a shortening that "The page budget" asks for)
 - Name the files it may change: for the writer the chapter file and the "Used in" lines of the extracts it cites, for the research-agent the extracts concerned
+- A change to these files that the agent asks for in its answer but did not make goes back to it in a call that names that file among those it may change; do not make it yourself
 - For the verification after a revision, call a new source-verifier with the Agent tool, not a message to the one of the round before, which would judge its own proposals and not read the sources again
   - Give it the previous round's report as well and name the sentences the revision changed: compare with the version the previous round verified, by `git diff` if that version was committed, otherwise with a copy you keep in `_scratch/orchestrator/` before the revision and delete before the chat ends
+
+**The page budget** (`writer-agent.md`, "Page budget"):
+
+- Set a chapter's budget before its first writer task: the figure the user names for it, otherwise its share of the total, `document.page_count` in `styleguide.md` (of a range, its upper bound), split over the chapters once with the user
+- A figure the user names goes into `00_Decisions.md` when it is named, and so does each chapter's budget in words when you set it; later chats take the budget from there
+- Give the budget to the writer in words, as a number in the task prompt (`budget: 600 words`), not as a pointer to `00_Decisions.md`; convert it with the words-per-page figure there, which you ask the user for once
+- If the user's figures do not fit the total, ask before the writer starts whether the total changes; a different total sets `document.page_count` aside ("Step 3: Extend decisions log (if needed)")
+- After each draft and each revision, before its verification, count its words as "Step 2: Update status" says
+- Over 20% above its budget: before the verification, a return call to the writer to shorten it; if the writer names a claim the budget would drop, or the user wants the length, ask the user, and record a length the user accepts in `00_Decisions.md`
+- While a chapter is still to be written: when the words of the chapters written so far plus the budgets of those still to be written exceed the total in words, warn, propose an adjustment and wait for the answer before the next writer task; once the user has answered for these figures, warn again only when they grow
 
 **The format-verifier writes its report itself:**
 
@@ -232,7 +243,7 @@ When a feedback loop reaches `feedback_loop_max`, you stop automatic iteration a
 
 1. **Abort** — accept the current state as best effort; list outstanding items in `00_Status.md` as open ⚠️ items (`- [ ] ⚠️ …`; accepting them does not resolve them) and continue to the next chapter / phase, in this chat only within its task ("Status check") (in Phase A these items stay open: the A → B transition requires them to be resolved first)
 2. **Manual fix** — pause; user investigates and resolves the problematic item manually; resume when user confirms
-3. **Force continue** — explicitly raise the loop limit for this one item; use sparingly, document the exception in `00_Decisions.md`. The recommended raised limit is `5` for bachelor/master (content-heavy) and `3` for shorter works. The workflow file may override this via `force_continue_suggested_limit:`.
+3. **Force continue** — explicitly raise the loop limit for this one item; use sparingly, document the exception in `00_Decisions.md`. The recommended raised limit is `5` for bachelor/master (content-heavy) and `3` for shorter works. The workflow file may override this via `force_continue_suggested_limit:`. Where the count already stands at the recommended raised limit or above it (after an earlier Force continue), suggest the count plus 1.
 
 Present the outstanding items as a numbered list with source citations so the user can decide informed.
 
@@ -260,7 +271,7 @@ A new verification round for an extract follows only a ⚠️ or ❌ on its quot
 - Research-agent fills extracts
 
 ### `03_Theory_chapters`
-- Standard workflow: research -> source-verifier -> writer -> `scripts/verbatim_check.py` -> source-verifier -> format-verifier -> status update
+- Standard workflow: research -> source-verifier -> writer -> word count ("The page budget") -> `scripts/verbatim_check.py` -> source-verifier -> format-verifier -> status update
 - Files: `03_Theory_chapters/chapter_<n>_<slug>.md`
 
 ### `04_Methods` (master / empirical)
