@@ -199,6 +199,8 @@ Before you finish:
 
 If an architectural/methodological decision was made during the chat: append it at the end of `00_Decisions.md`, below the last entry. An entry stays as written, also one from this chat: a correction or a change of mind is a new entry that names the one it changes.
 
+The template's examples (marked `[EXAMPLE]`) are no entries: when you add an entry, delete their section, as its warning says.
+
 A decision that sets aside a rule of `styleguide.md` for this work (a page count, a structure rule) is also noted at that rule in `styleguide.md`, on a line below its value, which stays as the guidelines give it: `set aside for this work: <decision title> [user, YYYY-MM-DD]` (multi-project: `set aside for <sub-project>: …`, since the styleguide is shared).
 
 - The note is that line only. A later decision that changes it gets a note line of its own in the same form; a decision that ends it, so that the rule applies again, removes the rule's note lines (multi-project: for that sub-project), and the decision's entry keeps the record

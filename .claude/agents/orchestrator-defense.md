@@ -153,7 +153,7 @@ At the end of every chat, perform these steps:
 
 1. **Update `<current_phase>/handover.md`** — what was produced, open items, next chat's start point
 2. **Update `00_Status.md`** — phase status, timeline against the defense date
-3. **Append decisions** to `00_Decisions.md` if any were made: at the end of the file; a correction is a new entry that names the one it changes
+3. **Append decisions** to `00_Decisions.md` if any were made: at the end of the file; a correction is a new entry that names the one it changes. The template's examples (marked `[EXAMPLE]`) are no entries: when you add an entry, delete their section, as its warning says
 4. **Log patterns** into `00_Feedback_log.md` if recurring issues appeared (e.g., slides consistently too dense); a countermeasure stays within the agent definitions: it adds no styleguide key or value and no step a definition rules out
 5. **Suggest a Git commit** — prefix `defense/<phase>:`, with `git add -A` (run in `03_Defense/`, `git add .` leaves changes in `../00_Shared_Materials/` out); do not self-commit unless the user asks for a commit in so many words: a request to record or keep the state for the next chat is none
 6. **State the next task** — what the next chat should pick up
