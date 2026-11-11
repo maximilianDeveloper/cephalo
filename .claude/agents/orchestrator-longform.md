@@ -49,7 +49,7 @@ Long-form structure differs from flat:
 - the styleguide is `../00_Shared_Materials/styleguide.md` and the guidelines are in `../00_Shared_Materials/guidelines/`
 - the framework folders stay at the multi-project root, one level up (`../templates/`, `../checklists/`, `../scripts/`, `../workflows/`, `../docs/`), and so do the agent definitions (`../.claude/agents/`) and `../requirements.txt`
 - the Git repository is the multi-project root's: never run `git init` in a sub-project
-- in `01_Proposal/`, the phase directories are those of `proposal_workflow.yaml` (`01_Research/`, `02_Outline/`, `03_Drafting/`, `04_Submission/`; brief extracts in `01_Research/key_sources.md`), not `02_Literature/` … `08_Formal_Review/`
+- in `01_Proposal/`, the phase directories are those of `proposal_workflow.yaml` (`01_Research/`, `02_Outline/`, `03_Drafting/`, `04_Submission/`; extracts in `01_Research/key_sources.md`), not `02_Literature/` … `08_Formal_Review/`
 - in `02_Main_Work/`, the accepted proposal is the read-only `01_Proposal_Reference/`, not a `01_Proposal/` phase
   - read `01_Proposal_Reference/proposal_final_<date>.md` at step 0.2 (the research question, the outline) and step 0.6 (the planned method, for the methods-agent)
 
@@ -75,7 +75,7 @@ After every agent call returns, record its result in `00_Status.md` (one line is
 
 **Save every source-verifier report as a file**, since the verifier cannot write one:
 
-- The file is `<phase folder>/verification/<name>_round_<n>.md`, where `<name>` is the chapter file's name without `.md`, or `extracts` (for `02_Literature/`). A chat that ends between verification and revision then keeps the findings
+- The file is `<phase folder>/verification/<name>_round_<n>.md`, where `<name>` is the chapter file's name without `.md`, or `extracts` (for `02_Literature/`), or `key_sources` (for `01_Research/`). A chat that ends between verification and revision then keeps the findings
 - Save the answer as it is. Only an absolute path in it becomes a project-relative one; nothing else is shortened, reworded, translated or added, and quotation marks, labels and emphasis stay as the verifier's answer has them
 - After the Write, read the file back whole, whatever the Write tool's note says, and compare it with the answer; if they differ, write it again
 - Record the status counts in `00_Status.md` as you count them from the report's rows and entries, not from its totals line; your count goes there, not into the saved report
@@ -91,6 +91,7 @@ After every agent call returns, record its result in `00_Status.md` (one line is
 **The page budget** (`writer-agent.md`, "Page budget"):
 
 - Set a chapter's budget before its first writer task: the figure the user names for it, otherwise its share of the total, `document.page_count` in `styleguide.md` (of a range, its upper bound), split over the chapters once with the user
+  - In the `01_Proposal/` sub-project, `page_count` in `proposal_workflow.yaml`, as the user confirms it, takes the place of `document.page_count`, and `03_Drafting/proposal_draft.md` is the one chapter
 - A figure the user names goes into `00_Decisions.md` when it is named, and so does each chapter's budget in words when you set it; later chats take the budget from there
 - Give the budget to the writer in words, as a number in the task prompt (`budget: 600 words`), not as a pointer to `00_Decisions.md`; convert it with the words-per-page figure there, which you ask the user for once
 - If the user's figures do not fit the total, ask before the writer starts whether the total changes; a different total sets `document.page_count` aside ("Step 3: Extend decisions log (if needed)")

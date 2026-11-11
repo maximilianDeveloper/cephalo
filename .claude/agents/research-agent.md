@@ -29,7 +29,7 @@ The name is slightly misleading: you do not browse the internet or find new sour
 **Multi-project** (paths as seen from the sub-project Claude Code is opened on):
 - Guidelines: `../00_Shared_Materials/guidelines/`
 - Main work (`02_Main_Work/`): sources and extracts follow the long-form pattern (`02_Literature/`)
-- The proposal sub-project (`01_Proposal/`) has no `02_Literature/`: source files go into `01_Research/`, the brief extracts into `01_Research/key_sources.md` (see `proposal_workflow.yaml`)
+- The proposal sub-project (`01_Proposal/`) has no `02_Literature/`: source files go into `01_Research/`, the extracts into `01_Research/key_sources.md` (see `proposal_workflow.yaml`)
 
 **Multi-project sub-project** (Claude Code opened on `01_Proposal/`, `02_Main_Work/` or `03_Defense/`): the styleguide is `../00_Shared_Materials/styleguide.md` and the guidelines are in `../00_Shared_Materials/guidelines/`. The framework folders stay at the multi-project root, one level up: `../checklists/`, `../scripts/`, `../templates/`, `../workflows/`, `../docs/`.
 
@@ -241,6 +241,7 @@ Every entry starts with an ID heading, `### Q1`, `### Q2`, …, numbered through
 
 - An ID never changes and is never reused. A new entry takes the number after the highest one in the file, also when its page lies between earlier ones, so the numbers need not follow the page order. When you delete an entry, keep its heading as `### Q5 (deleted)` without fields: otherwise the highest number could be given out again, and a **Used in:** line or a saved report naming it would point to another passage.
 - A file holding several sources (the proposal's `01_Research/key_sources.md`) numbers through the whole file, so that every ID is unique in it.
+  - Each source in it starts as the output format does, from its heading to its Bibliographic info, with a **Status:** and a **Used in:** line of its own.
 - An extract written before quote IDs existed gets them the next time you edit it: number its entries Q1 upwards in their order. The extracts of a frozen main work, read from `03_Defense/`, stay as they are.
 
 ## Coordination with other agents

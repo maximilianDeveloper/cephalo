@@ -153,7 +153,7 @@ Name an extract entry by its file name and quote ID, the `### Q<n>` heading abov
 
 ### Extract verification
 
-Per extract: its verdict (see "Verdict on an extract" above), then one row per entry with a finding, and the notes below them. Entries without a finding need no row.
+Per extract (in the proposal's `01_Research/key_sources.md`, per source): its verdict (see "Verdict on an extract" above), then one row per entry with a finding, and the notes below them. Entries without a finding need no row.
 
 ```markdown
 **Weber_2017.md: ⚠️**
