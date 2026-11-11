@@ -115,6 +115,9 @@ phases:
           submission step, or work_submitted_<date> per
           docs/multiproject_structure.md; accept either).
           If no: STOP. Submit thesis officially first.
+          If it is submitted but untagged: the user sets the tag on the commit of the
+          submitted version (`git tag v_final_<date> <commit>`), or asks Claude to;
+          then continue.
       
       - step: 0.2
         name: Verify central files, record the defense basics
@@ -145,17 +148,13 @@ phases:
         agent: style-resolver
         blocking: true
         task: |
-          In multi-project setups, verify that `../00_Shared_Materials/styleguide.md` 
+          Verify that `../00_Shared_Materials/styleguide.md` 
           exists and has no open ❓ [content] entries (see below). The defense reuses the styleguide 
           from the main work.
           
-          In stand-alone defense setups (rare — defense without prior cephalo project), 
-          extract the styleguide from institutional guidelines into `styleguide.md` 
-          at the defense project root.
-          
           Open ❓ [content] entries (or entries without a tag) must be resolved
           before slides or speaker notes are drafted, ❓ [format] entries before
-          the slides are exported.
+          the deck (01_Slides/presentation_v1.pptx) is first built.
   
   # ===========================================================
   # Phase 1 - Slides
@@ -163,15 +162,21 @@ phases:
   phase_01_slides:
     directory: 01_Slides/
     agents: [orchestrator-defense, writer]
-    optional_agents: [data]    # data-agent only for empirical defenses (see note below)
+    optional_agents: [data]    # data-agent only for empirical defenses (see note_for_data_agent below)
     
     goals:
       - PPTX presentation with 12-20 slides
       - "Typical structure: (1) title slide, (2) agenda, (3) topic and relevance, (4) research question, (5) theoretical framework [1-2 slides], (6) methodology [1-2 slides, more for empirical], (7) core findings [3-6 slides], (8) discussion [1-2 slides], (9) conclusion and outlook, (10) backup slides for expected critical questions"
     
     output:
+      - 01_Slides/slides.md (slide text)
       - 01_Slides/presentation_v1.pptx
       - 01_Slides/backup_slides.md (which topics additionally as backup?)
+    note: |
+      The writer writes the slide text to 01_Slides/slides.md; it cannot build
+      a PPTX. presentation_v1.pptx is built from it as
+      workflows/presentation_3agent.yaml, step 1, "The deck", says, with the
+      deck script in data/scripts/ of 03_Defense/.
     
     important:
       - Slides are NOT prose. Bullet points, graphics, no text walls.
@@ -234,7 +239,7 @@ phases:
       - 03_Defense_Prep/answer_outlines.md
     
     chat_structure:
-      - One chat: generate question catalog (Claude as "critical examining committee")
+      - One chat for the question catalog (expected_questions.md), which the writer drafts with the prompt below; playing the examining committee live is the orchestrator's (orchestrator-defense.md, Rule 5)
       - One chat: weakness analysis (where are limits of the work?)
       - One chat: structure answers
     
@@ -283,6 +288,7 @@ phases:
     
     output:
       - 04_Handout/handout_final.pdf
+    note: The writer writes 04_Handout/handout.md; the user makes handout_final.pdf from it.
     
     format: |
       Single column, readable when printed. Not a marketing brochure but 
@@ -293,7 +299,7 @@ phases:
   # ===========================================================
   phase_05_rehearsals:
     directory: 05_Rehearsals/
-    agents: [orchestrator-defense]
+    agents: [orchestrator-defense, writer]   # writer: adjustments to slides and notes
     
     goals:
       - Stay within timing (run a timer!)

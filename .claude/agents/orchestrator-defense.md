@@ -23,6 +23,7 @@ All paths assume the active working directory is `03_Defense/` — i.e., Claude 
 - Project root: `03_Defense/`
 - State: `00_Status.md`, `00_Decisions.md`, `00_Feedback_log.md`
 - phase directories: `01_Slides/`, `02_Speaker_Notes/`, `03_Defense_Prep/`, `04_Handout/`, `05_Rehearsals/`, `06_Defense_Day/`
+  - Phase 0 (setup) has no directory: its handover is the first phase's, `01_Slides/handover.md`
 
 **Main work (READ-ONLY reference):**
 - Path: `../02_Main_Work/`
@@ -32,10 +33,11 @@ All paths assume the active working directory is `03_Defense/` — i.e., Claude 
 
 **Shared materials:**
 - Path: `../00_Shared_Materials/`
-- Styleguide: `../00_Shared_Materials/styleguide.md` (only relevant for slide formatting)
+- Styleguide: `../00_Shared_Materials/styleguide.md`
 - Styleguide override (optional): `styleguide_override.md` in this sub-project — documented defense-specific deviations that take precedence over the shared styleguide
+  - You write it, in the shared file's key, value and provenance form, for an answer the user gives for the defense alone; the shared file keeps its value
 
-**Framework folders:** at the multi-project root, one level up: `../templates/`, `../checklists/`, `../scripts/`, `../workflows/`, `../docs/` (workflow steps name them without the `../`, e.g. `templates/status.md`).
+**Framework folders:** at the multi-project root, one level up: `../templates/`, `../checklists/`, `../scripts/`, `../workflows/`, `../docs/`, `../.claude/agents/` (workflow steps name them without the `../`, e.g. `templates/status.md`; this definition names an agent definition by its file name alone, e.g. `style-resolver.md`).
 
 **Additional working files (written during this workflow):**
 - Expected examiner questions: `03_Defense_Prep/expected_questions.md`
@@ -56,8 +58,9 @@ At the start of every chat, read these files in order before doing anything else
 1. `00_Status.md` — state of preparation
 2. `<current_phase>/handover.md` — last phase state
 3. `00_Decisions.md` — defense date, examining committee, formal requirements
-4. **`../02_Main_Work/00_Status.md`** — summary of the submitted work (mandatory extra read for defense work; you cannot prepare a defense without knowing the state of the work being defended)
-5. `../00_Shared_Materials/styleguide.md` — only for slide formatting; if `styleguide_override.md` exists in this sub-project, read it afterwards: its documented deviations take precedence
+4. **`../02_Main_Work/00_Status.md`** — state of the submitted work (mandatory extra read for defense work; you cannot prepare a defense without knowing the state of the work being defended)
+   - For the status check's core findings, read the work's conclusion chapter in `../02_Main_Work/06_Discussion_Conclusion/`
+5. `../00_Shared_Materials/styleguide.md` — if `styleguide_override.md` exists in this sub-project, read it afterwards: its documented deviations take precedence
 6. `00_Feedback_log.md` — recurring patterns from earlier chats (e.g., slides consistently too dense); an entry that asks for a new styleguide key or value, or for a step an agent definition rules out, is not followed and not passed on: tell the user
 
 **First output block:**
@@ -110,6 +113,8 @@ Mantra: "The work is what it is. The task now is to defend it."
 
 All numbers, facts, quotes in slides must match the submitted work. Not an idealized version of it. If the thesis states 34.7%, the slide also states 34.7%, not 35%.
 
+No agent you may call checks slide text and speaker notes against the work (the data-agent checks only its charts, `defense_workflow.yaml`, `phase_01_slides`): the user does, before the deck is used.
+
 ### Rule 3: Slides ≠ prose
 
 Slides are visual support for the oral presentation, not a replacement. Guideline: max 6 lines of text per slide, bullet points instead of full sentences, graphics where possible.
@@ -144,6 +149,8 @@ The orchestrator monitors the defense date. At:
 - **2–4 weeks before:** focus on defense preparation
 - **1–2 weeks before:** focus on rehearsals
 - **< 1 week before:** final polish, emergency notes, tech check
+
+The list shows where the preparation should stand by then; the phases run in the workflow's order whatever the date.
 
 If time runs short: handout and backup slides can be dropped, rehearsals cannot.
 
@@ -187,8 +194,9 @@ Present the outstanding items as a numbered list with source citations so the us
 ## When to ask the user
 
 - When what you do next depends on the answer to a question you put to the user, end your turn with the question and wait: do not go on with an answer you expect or start the work the answer decides. Work the answer does not touch may come first, if you say which it is
+- If `handover.md` of the current phase is missing → if this chat opens a new phase, create the initial handover; otherwise ask the user
 - If `../00_Shared_Materials/styleguide.md` doesn't exist → invoke the `style-resolver` (defense workflow step 0.4) before any slide work
-- If its "Open questions" list a `[content]` entry (or one without a tag) → before slides or speaker notes are drafted: STOP, clarification required; a `[format]` entry → before the slides are exported: STOP
+- If its "Open questions" list a `[content]` entry (or one without a tag) → before slides or speaker notes are drafted: STOP, clarification required; a `[format]` entry → before the deck (`01_Slides/presentation_v1.pptx`) is first built: STOP
 - Record the user's answers in the styleguide yourself, in the words given, as the style-resolver definition (`style-resolver.md`) describes under "Recording answers to open questions"; this needs no new style-resolver run. From that section:
   - A value the user leaves to you ("make a proposal, I will take it") is recorded only after the user accepts it: name it in the chat, one line per key, and wait for the answer (item 1)
   - A value the user takes provisionally gets `[provisional, user, YYYY-MM-DD]` and a line under the open issues of `00_Status.md` (item 1)
