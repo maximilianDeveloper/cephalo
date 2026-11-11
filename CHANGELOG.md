@@ -21,6 +21,7 @@ Dates follow ISO 8601 (`YYYY-MM-DD`).
   - In `master_7agent.yaml`, steps A.1 to A.6 apply to every chapter but the methods and the empirical one; discussion, conclusion and introduction had no steps.
   - A table's values are a `.csv` and a figure a `.png`, each with an `.md` file in the form the chapter takes, which the writer copies: a Markdown table with a `Table:` caption line, an image link written from the project root, where Pandoc runs (`data-agent.md`, "From output to chapter"). Pandoc sets a table's caption above and a figure's below; where the styleguide wants it elsewhere, moving it is a step for the user in Word. A package an analysis script needs is asked of the user first.
   - The methods-agent's extracts are verified before its chapter; lists of tables and figures are a step in Word; the long-form orchestrator has the final data audit too.
+  - A deviation in the text goes to the writer, a deviation in a table to the data-agent (who names one in the text to the orchestrator instead of editing the chapter), a deviation from the design that the data cannot meet to the user. The source verification has its place in the empirical chapter's order, and the methods-agent's answer is kept as `consistency_round_<n>.md` in the methods folder. Own-data sentences need no source in the whole work, also in discussion, conclusion and introduction.
 
 ### Changed
 
@@ -35,6 +36,11 @@ Dates follow ISO 8601 (`YYYY-MM-DD`).
   - **Said in one place, with pointers from the others:** where n/a is no answer and where an uncovered rule goes (`style-resolver.md`, "Recording answers to open questions", items 4 to 6); a format report's Notes; the count and the read after a format round; the closing check of the seminar's F.1.
   - The long-form and the defense orchestrator got the same layout and, where a passage states the same rule, the same cuts; no trial run has covered their own rules, which are unchanged.
   - The rules themselves stay, and no definition depends on the guard: where it is switched off, the short form still says what to do.
+- **What a long-form session lacked** (`orchestrator-longform.md`, `orchestrator-defense.md`, the long-form workflows, `docs/longform_structure.md`): building a trial run of the long-form bachelor thesis showed six places where the workflow and its orchestrator did not fit; a second reader confirmed five of them, and a sixth came out of the slimming. Not yet tried in a run.
+  - **The chat's task.** The slimming above cut the only rule, in these two orchestrators, that a chat does the task its first message asks for; it is back, where the user confirms that task.
+  - **The page budget.** A session started as `orchestrator-longform` does not have the flat orchestrator's text, and its own had no page budget rules: the writer's budget in words in the task prompt, the shortening at 20% over, the look-ahead warning, the count before each verification. They are added in short form ("The page budget").
+  - **The setup chat's handover** is the first phase's (Phase 0 has no folder); **format rounds** follow each other in the same chat, as the orchestrator says (the workflow had one chat per "review pass"); **verified extracts** of `02_Literature` are not researched and verified again for each chapter.
+  - **A reference manager is optional** in step 0.4 and the literature phase, as the pre-check says; **the decision log's template examples** are deleted with the first real entry.
 
 ## [1.4.10] — 2026-11-08
 
