@@ -236,9 +236,11 @@ phases:
             captions.source_position → Open questions; thousands separator
             → note to the user`), or says `gaps: none`.
           - Where a gap goes: style-resolver.md, "Recording answers to open
-            questions", items 5 and 6; a note to the user stands in your
-            next message, not only in the closing one. A line under the
-            open issues of workspace/state.md replaces neither.
+            questions", items 5 and 6. An entry under "Open questions" of
+            styleguide.md gets its row in the version history (item 5); a
+            note to the user stands in your next message, not only in the
+            closing one. A line under the open issues of
+            workspace/state.md replaces neither.
       
       - step: 2
         agent: source-verifier
