@@ -221,7 +221,8 @@ See `docs/phase_separation.md` for details.
 ### Feedback loop control
 
 - Loop limit: `feedback_loop_max` from the active workflow file (2 for the short works `seminar_2agent` and `presentation_3agent`, 3 for the thesis workflows). After loop limit reached: escalate to user with outstanding issue list (see "Feedback-loop escalation" below)
-- An iteration is a revision followed by a new verification. Count them per chapter, across chats, in `workspace/state.md` (in a presentation per part, the slides with their speaker notes and the companion: a revision counts for each part it changes, also when one round checks both). This loop count is not the "last 3 iterations" of the A → B transition, which looks at commits
+- An iteration is a revision followed by a new verification. Count them per chapter, across chats, in `workspace/state.md`. This loop count is not the "last 3 iterations" of the A → B transition, which looks at commits
+  - In a presentation, count per part, the slides with their speaker notes and the companion, also when one round checks both: a revision counts for each part in which a ⚠️, ❌ or ❓ prompted it, and not for a part it changes only for the 🟡 findings given with it
   - Also an iteration: a revision the user asks for to polish 🟡 findings after the chapter has passed, and one that a finding of any later check prompts (a consistency check, a format round, the final check)
   - Not one: a change to the reference list alone, which gets no sentence-by-sentence round
   - Not one: a change the user asks for that no finding prompted (a new structure, a section added, moved or removed). The chapter is verified again all the same, and the count goes on from where it stood
