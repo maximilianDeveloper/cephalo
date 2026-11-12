@@ -389,7 +389,7 @@ phases:
     
     steps:
       - Export the PPTX to PDF once the deck script's run has ended, not in the same message as the build. Claude does it with PowerPoint, as docs/scripts.md, "A PDF from PowerPoint (Windows)", shows, unchanged but for the file name, or with LibreOffice (soffice --headless --convert-to pdf); or the user does
-      - The format-verifier and the source-verifier compare the numbers across PPTX <-> PDF <-> companion and check that the speaker notes contain the key numbers (the format-verifier reads the PPTX and its notes, which the source-verifier cannot)
+      - The format-verifier and the source-verifier compare the numbers across PPTX <-> PDF <-> companion and check that the speaker notes contain the key numbers. The format-verifier reads the PPTX with its notes and the PDF; the source-verifier reads the text files of slides and notes, the companion and each data file (step 2, item 2), and its task prompt names these files. After a new build that changed none of them, the source-verifier's report stands and only the format-verifier compares again
       - A discrepancy in slide text, speaker notes or companion goes to the writer (copies first, step 2, item 2), then a round of step 2 on what changed. The revision counts toward the loop count; where the count is already at its limit, the user is asked the question of orchestrator.md, "Feedback-loop escalation", before the revision. Then the deck is built again (step 1) and exported again, and the agents compare again, until all three versions are identical
 
 # ===========================================================
