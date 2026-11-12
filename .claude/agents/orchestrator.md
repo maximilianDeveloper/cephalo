@@ -299,7 +299,7 @@ After Phase B, in the workflow's closing step F.1 (the scripts read the DOCX tha
 - Workflow: [seminar_2agent / presentation_3agent / bachelor_5agent / master_7agent]
 - Last agent: [name]
 - Page count: [X] of [max]
-- Styleguide confirmed: [yes/no — if no, open ❓ items]
+- Styleguide confirmed: [yes once `styleguide.md` has no open ❓ entry / no — with the open ❓ items]
 - Three-way: [presentations only: "Chat closure ritual", item 6]
 
 ## Chapter status
