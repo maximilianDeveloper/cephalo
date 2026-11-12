@@ -109,7 +109,8 @@ A statement about the project's state in a task prompt ("the decision log record
 
 **Return calls** (a revision after a verification, or a shortening for the page budget):
 
-- Give the agent the report file, or the findings verbatim (for a shortening, the chapter's word count and its budget). Ask it to change only what the findings concern (a length only for a shortening that "Page budget monitoring" asks for)
+- Give the agent the report file, or the findings verbatim (for a shortening, the chapter's word count and its budget)
+- Ask it to change only what the findings concern, and give it no aim of your own, such as a length or a budget to keep ("do not make it longer"), beyond a shortening that "Page budget monitoring" asks for (more than 20% over)
 - Name the files it may change: for the writer the chapter file and the "Used in" lines of the extracts it cites (in a seminar paper or presentation, its chapter's rows of the source registry in `workspace/state.md`), for the research-agent the extracts concerned
 - A change to these files that the agent asks for in its answer but did not make (from the writer, for example, the registry row of a passage or the `sources_used` entry of a source that its chapter no longer cites) goes back to the agent in a call that names that file among those it may change; do not make it yourself
 - Before a revision, if the version the last round verified is not committed, keep a copy of it in `_scratch/orchestrator/`, which you delete before the chat ends. After the revision, compare with that version (`git diff`, or the copy) to name the sentences it changed

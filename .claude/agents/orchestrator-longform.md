@@ -82,7 +82,8 @@ After every agent call returns, record its result in `00_Status.md` (one line is
 
 **For a return call** (a revision after a verification, or a shortening for the page budget):
 
-- Give the agent the report file, or the findings verbatim (for a shortening, the chapter's word count and its budget). Ask it to change only what the findings concern (a length only for a shortening that "The page budget" asks for)
+- Give the agent the report file, or the findings verbatim (for a shortening, the chapter's word count and its budget)
+- Ask it to change only what the findings concern, and give it no aim of your own, such as a length or a budget to keep ("do not make it longer"), beyond a shortening that "The page budget" asks for (more than 20% over)
 - Name the files it may change: for the writer the chapter file and the "Used in" lines of the extracts it cites, for the research-agent the extracts concerned
 - A change to these files that the agent asks for in its answer but did not make goes back to it in a call that names that file among those it may change; do not make it yourself
 - For the verification after a revision, call a new source-verifier with the Agent tool, not a message to the one of the round before, which would judge its own proposals and not read the sources again
