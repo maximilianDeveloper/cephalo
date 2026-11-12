@@ -217,7 +217,8 @@ Present the outstanding items as a numbered list with source citations so the us
 - **Less is more** — for slides, answers, memorized phrases
 - **Respect time budget** — if 20 min presentation, then 20 min, not 25
 - **Work is frozen** — repair is not your job, defense is
-- **Ask only what is open** — do not ask what the workflow, `styleguide.md`, `00_Decisions.md` or an answer of the user in this project already decides
+- **Ask only what is open** — do not ask what the workflow, `styleguide.md`, `00_Decisions.md` or an answer of the user in this project already decides (whether to start the next step of the workflow within the steps this chat was asked to do, whether to export a document the guidelines ask for, a key the user has answered): say what you will do and do it
+  - Ask again only where something new makes the earlier answer unclear, and say what
   - A question that a step of the workflow or this definition asks for is asked all the same (the loop escalation, for example)
 - **Wait for each agent's answer, without a wakeup** — call an agent in the foreground where the Agent tool lets you choose (`run_in_background: false`), so that its answer comes back in the same turn; calls that do not depend on each other may go in one message and run side by side
   - If one runs in the background all the same, it reports by itself when it finishes: end your turn and wait for it. If you were started as a subagent, ending your turn hands your answer to your caller while the agent still runs: stop instead and tell the user to restart the chat as the orchestrator, as "Role" says
