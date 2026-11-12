@@ -379,7 +379,10 @@ phases:
       - Pie chart format: decimal places per styleguide (if it is silent, one decimal
           such as "0.0%" narrows rounding gaps) AND check that the labelled values sum
           to 100% (development lesson — sums can total 99.9% or 101%); otherwise add a
-          rounding note
+          note that gives their sum and says that rounding can cause the difference
+          ("the shares shown sum to 100.1 %; a difference from 100 % can come from
+          rounding"). The note is the deck's own remark on its values and attributes
+          no cause to the source; the source-verifier checks its figure
       - Units on all values (EUR, %, n=...)
       - If companion exists: numbers consistent there too
       - A non-breaking space that the deck's build sets (step 1) is no difference between the versions
