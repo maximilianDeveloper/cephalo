@@ -213,6 +213,14 @@ phases:
             from the rules styleguide.md gives for slides, not from its
             rules for the written companion (body text, headings, page size
             and margins, pagination).
+          - A non-breaking space that styleguide.md asks for before a page
+            number (in_text.nbsp_before_page) is set where the deck is
+            built, in slide text and speaker notes: the text files have no
+            notation for it (writer-agent.md, "Formatting rules"). A deck
+            script writes U+00A0 in place of that space, as a row of the
+            table below with the key as its source; in a deck the user
+            builds, the user sets it, which you name as a manual step. It
+            is no question to the user.
           A layout value that neither the template nor styleguide.md gives
           is asked of the user, not chosen:
           - Before the build that first sets one (a position, a size, a
@@ -341,10 +349,11 @@ phases:
             the loop count, as in the three-way check
           - a finding in the PPTX's layout: where the deck is built (step 1)
           - a finding on the non-breaking space before a page number: `\ `
-            in the file of a companion that F.1 exports; slides, speaker
-            notes and any other companion have no notation for it
-            (writer-agent.md, "Formatting rules"), so there it goes to the
-            user as an open point
+            in the file of a companion that F.1 exports; in the PPTX's
+            slides and notes, where the deck is built (step 1). The text
+            files of slides and notes and a companion that F.1 does not
+            export have no notation for it (writer-agent.md, "Formatting
+            rules"): it is no finding there and no question to the user
   
   # ===========================================================
   # Three-way consistency check
@@ -373,6 +382,7 @@ phases:
           rounding note
       - Units on all values (EUR, %, n=...)
       - If companion exists: numbers consistent there too
+      - A non-breaking space that the deck's build sets (step 1) is no difference between the versions
     
     steps:
       - Export the PPTX to PDF once the deck script's run has ended, not in the same message as the build. Claude does it with PowerPoint, as docs/scripts.md, "A PDF from PowerPoint (Windows)", shows, unchanged but for the file name, or with LibreOffice (soffice --headless --convert-to pdf); or the user does
