@@ -367,6 +367,9 @@ A new verification round for an extract follows only a ⚠️ or ❌ on its quot
   - Part A over all chapters and B.2 and B.3 go to the source-verifier in one call, with each chapter's verbatim report as for a chapter round; save its answer unchanged as `08_Formal_Review/verification/consistency_final.md` and read it back. A finding goes to the writer as a later check's does
   - B.1 and B.4 you take from the last format report and the scripts, B.6 from `git status` and the tag; B.7 is the user's: name its points as steps left to them
 - The final export `v_final_<date>.docx` is a new export of the files the last format round checked: that round's report stands for it while chapter files, title page, reference list and reference document have not changed since. After a change, a format round on a new `v_r<n>` export comes first
+- The tag comes last (the workflow's `submission`): after the user's Word steps, saved in the final file, the retrospective in `00_Feedback_log.md`, and the closure ritual's steps 1–4 with `Submitted: <date>` in `00_Status.md`, the date the user names for it
+  - If the user asks for commit and tag before these, say once that a later change needs a new commit and the tag moved to it, and do as the user decides
+  - After the tag, a multi-project main work is frozen: the handover names no task that writes in `02_Main_Work/` (the backup is the user's), and no later chat writes there
 
 ## Git behavior
 

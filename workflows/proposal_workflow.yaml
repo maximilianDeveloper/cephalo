@@ -297,7 +297,7 @@ phases:
       - Export with Pandoc (orchestrator) as orchestrator-longform.md, "`08_Formal_Review` (Phase B)", says for the title page and items (1)-(2), with 04_Submission/ for 08_Formal_Review/ (each round a new 04_Submission/submissions/v_r<n>_<date>.docx; the last checked one is copied as 04_Submission/proposal_final_<YYYY-MM-DD>.docx); without citekeys, the reference list stays the last section of 03_Drafting/proposal_draft.md, with the bookmark _cephalo_back_matter_start above its heading if pagination.back_matter numbers the back matter unlike the main text (docs/reference_management.md, "The reference list")
       - format-verifier: check this DOCX against ../00_Shared_Materials/styleguide.md, report in 04_Submission/format_report_round_<n>.md; after fixes, export again as in the step above, hyphenation included
       - The user updates the fields in Word (Ctrl+A, then F9, twice; docs/reference_management.md, "The title page"); then manual export to PDF (if supervisor prefers)
-      - Commit the exported files, then Git tag: proposal_v1_<date> (the user runs them, or asks Claude to)
+      - After the chat closure ritual's steps 1-4, commit the exported files, then the Git tag proposal_v1_<date> (the user runs them, or asks Claude to). The tag comes after the user's Word steps, so that it marks the finished file; a file saved again in Word afterwards needs a new commit and the tag moved to it
     
     submission_is_manual: true
     submission_note: |

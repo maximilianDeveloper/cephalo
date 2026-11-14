@@ -202,6 +202,8 @@ git tag -a v_final_<date> -m "Main work officially submitted"
 git tag -a defense_passed_<date> -m "Defense passed"
 ```
 
+A plain `git tag <name>`, as the workflows write it, serves as well: cephalo looks only for the tag's name.
+
 ---
 
 ## Working in Claude Code

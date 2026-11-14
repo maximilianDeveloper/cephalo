@@ -339,5 +339,6 @@ phases:
       - Confirm the hyphenation setting matches styleguide.md (document.hyphenation)
       - Visual proofreading
       - Sign declaration of academic integrity
-      - After the chat closure ritual's steps 1–4 (handover; 00_Status.md with Submitted: <date>), commit the final state (the user runs it, or asks Claude to: git add -A then git commit -m "submission: final version", in a multi-project main work "main/submission: final version"), then the tag, the same way: git tag v_final_<date>
+      - The tag comes last, since it marks what was handed in and, in a multi-project, freezes 02_Main_Work/. First the user's Word steps above, saved in the v_final file, and the retrospective (checklists/consistency.md, Part C) in 00_Feedback_log.md; then the chat closure ritual's steps 1–4 (handover; 00_Status.md with Submitted: the date the user names for it); then the commit (the user runs it, or asks Claude to: git add -A then git commit -m "submission: final version", in a multi-project main work "main/submission: final version"); then the tag, the same way: git tag v_final_<date>
+      - A change after the tag (the file saved again in Word, a late entry) needs a new commit and the tag moved to it: say so once if the user wants the tag before these steps, and do as the user decides
       - Mentally rehearse defending each sentence

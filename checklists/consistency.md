@@ -112,10 +112,10 @@ To be performed on the exported document, after the last written chapter (introd
 
 ## Part C: After submission
 
-- [ ] Git tag for final state set
+- [ ] Project retrospective: what worked? what didn't? Record it in the project's feedback log (`00_Feedback_log.md`; flat: `workspace/feedback.md`), in a long-form work before the final commit and the tag, which then hold it; to keep general patterns for the next project, add them to `docs/error_catalog.md` in your cephalo template folder (a framework update replaces the project's copy of `docs/`)
+- [ ] Git tag for final state set, as the last step: after the Word steps on the final file, the retrospective and the status line `Submitted`
 - [ ] Backup of submission (local + cloud)
-- [ ] In multi-project structure: `02_Main_Work/` frozen by its submission tag (`v_final_<date>` or `work_submitted_<date>`, which `03_Defense/` checks)
-- [ ] Project retrospective: what worked? what didn't? Record it in the project's feedback log (`00_Feedback_log.md`; flat: `workspace/feedback.md`); to keep general patterns for the next project, add them to `docs/error_catalog.md` in your cephalo template folder (a framework update replaces the project's copy of `docs/`)
+- [ ] In multi-project structure: `02_Main_Work/` frozen by its submission tag (`v_final_<date>` or `work_submitted_<date>`, which `03_Defense/` checks): no chat writes there afterwards
 
 ---
 
