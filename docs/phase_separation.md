@@ -62,8 +62,8 @@ The orchestrator transitions the project from A to B when:
 
 1. **All chapters complete** — body, conclusion, AND introduction (introduction is always last)
 2. **Source verification ✅** — every chapter passed sentence-by-sentence verification
-3. **No outstanding ⚠️, ❌ or ❓ content items** — all flagged content issues resolved (a 🟡 polish flag does not block), and no open cross-chapter point rated `–`: once the chapter it waits for is written, the source-verifier checks it
-4. **Last 3 iterations were format-only** — empirical signal that content has stabilized: in the last three commits, the changes to the chapter files touched only styleguide-governed items (citations, typography, spacing); state, handover and report files aside. This is not the loop count of the orchestrators, which counts the revisions after findings, each followed by a new verification
+3. **No outstanding ⚠️, ❌ or ❓ content items** — all flagged content issues resolved (a 🟡 polish flag does not block), and no open cross-chapter point rated `–`: once the chapter it waits for is written, the source-verifier checks it. A content item is a status on a chapter's sentence, on a point of a cross-chapter check or on the reference list. A `❓` that the research-agent set in an extract is none by itself: it counts through the sentence that rests on that entry, and an entry no chapter uses holds nothing up
+4. **Content has settled** — an indicator, shown with its state like the others, that does not hold the transition up: what the last three commits changed in the chapter files; state, handover and report files aside. Where they touched only styleguide-governed items (citations, typography, spacing), content has stabilized. In a work written straight through they are the chapters themselves, since the format work waits for Phase B: criteria 2 and 3 then carry the transition, and the orchestrator says so and asks only whether more content work is planned. This is not the loop count of the orchestrators, which counts the revisions after findings, each followed by a new verification
 5. **All `❓` items in `styleguide.md` resolved** — no open formatting questions
 6. **Methods and data consistent** (empirical works only) — the data-agent's last three-way check (raw data, table or figure, text) and the methods-agent's last check of the empirical chapter against the design and the methods chapter leave no open deviation
 
@@ -75,7 +75,7 @@ When all criteria are met, the orchestrator:
 
 ### Waiving a criterion
 
-The user may waive criterion 1 (all chapters complete) for chapters the work will not contain, for example the introduction of a practice work, but not for chapters still to be written; and criteria 4 (format-only iterations) and 5 (styleguide questions) for a reason of their own. The orchestrator asks for that reason and proposes none: the waiver is the user's decision, and a reason ready to accept turns it into the orchestrator's. It then records in the decision log (`00_Decisions.md`; flat: `workspace/state.md`) which criteria are waived and why, and transitions. Open `❓ [format]` items in `styleguide.md` are answered at the start of Phase B, before any format work. Criteria 2 (source verification) and 3 (open content items) cannot be waived, nor, in empirical works, criterion 6 (methods and data consistent): while any chapter has an open ⚠️, ❌ or ❓, the project stays in Phase A.
+The user may waive criterion 1 (all chapters complete) for chapters the work will not contain, for example the introduction of a practice work, but not for chapters still to be written; and criterion 5 (styleguide questions) for a reason of their own. Criterion 4 needs no waiver, since it does not hold the transition up. The orchestrator asks for that reason and proposes none: the waiver is the user's decision, and a reason ready to accept turns it into the orchestrator's. It then records in the decision log (`00_Decisions.md`; flat: `workspace/state.md`) which criteria are waived and why, and transitions. Open `❓ [format]` items in `styleguide.md` are answered at the start of Phase B, before any format work. Criteria 2 (source verification) and 3 (open content items) cannot be waived, nor, in empirical works, criterion 6 (methods and data consistent): while any chapter has an open ⚠️, ❌ or ❓, the project stays in Phase A.
 
 ---
 
@@ -139,8 +139,8 @@ This tells the next chat (and the agents within it) immediately what to do and w
 ### Premature transition to B
 
 Symptom: many B -> A rollbacks within the first week of Phase B.
-Cause: criteria 1-4 were not actually met; the writer was tired and pushed for transition.
-Fix: hold off on transition. Spend more time in A until the "format-only iterations" signal is genuine.
+Cause: criteria 1-3 were not actually met, or content was still moving (criterion 4); the writer was tired and pushed for transition.
+Fix: hold off on transition. Spend more time in A until the last commits change the chapters in format only.
 
 ### Resisting transition
 

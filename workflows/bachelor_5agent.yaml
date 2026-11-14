@@ -146,8 +146,9 @@ phases:
       - all_chapters_content_complete: true
       - all_chapters_source_verified: "✅"
       - open_content_warnings: 0
-      - last_3_iterations_format_only: true
       - styleguide_open_questions: 0
+    indicators:
+      - last_3_commits_format_only   # shown with its state; does not hold the transition up
     verification_method: |
       The orchestrator checks these criteria before transitioning:
         - all_chapters_content_complete: read workspace/state.md; every row of the
@@ -157,16 +158,17 @@ phases:
         - open_content_warnings: count open ⚠️, ❌ and ❓ items in workspace/state.md
           (Chapter status table, unchecked "- [ ]" lines under Open issues; not the
           Pre-check result or recorded round counts) and in each chapter's
-          handover.md (if present); must be 0
-        - last_3_iterations_format_only: inspect the last 3 commits (git log); 
-          if their changes to the chapter files touched only styleguide-governed
-          items (citations, typography, spacing), criterion is met
+          handover.md (if present); must be 0. A ❓ the research-agent set
+          in an extract is no item of its own (docs/phase_separation.md,
+          criterion 3)
         - styleguide_open_questions: count open ❓ items in styleguide.md; must be 0
+        - last_3_commits_format_only (indicator): inspect the last 3 commits
+          (git log) and say what they changed in the chapter files; it does
+          not hold the transition up (docs/phase_separation.md, criterion 4)
       If any criterion fails, the orchestrator reports the failing criterion 
       and does not transition, unless the user waives it as docs/phase_separation.md
       describes ("Waiving a criterion": chapters complete, for chapters the work
-      will not contain; format-only iterations; styleguide questions; recorded in
-      workspace/state.md).
+      will not contain; styleguide questions; recorded in workspace/state.md).
     documentation: docs/phase_separation.md
     
     rollback_b_to_a:

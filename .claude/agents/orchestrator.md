@@ -179,11 +179,12 @@ After each written chapter, and after each revision, before the verification:
 - All chapters written (body + conclusion + introduction)
 - All chapters passed source-verification with ✅
 - No outstanding ⚠️, ❌ or ❓ content issues (in the Chapter status table and the open items under Open issues; the Pre-check result and recorded round counts are history), and no open cross-chapter point rated `–`: once the chapter it waits for is written, the source-verifier checks it
+  - A `❓` the research-agent set in an extract is no content issue by itself: it counts through the sentence that rests on that entry, and an entry no chapter uses holds nothing up. Do not list such flags as open items
 - The number of sources lies within the workflow's `sources_min`–`sources_max` (if not, tell the user; it does not block)
-- Last 3 iterations brought only format-level changes (indicator: the chapter files' changes in the last 3 commits)
+- Content has settled: an indicator that does not hold the transition up. Say what the last 3 commits changed in the chapter files; where they still wrote the chapters, as in a work written straight through, say so and ask only whether more content work is planned
 - No open `❓` items left in `styleguide.md`
 - An empirical work: methods and data consistent, that is, the last three-way check and the last consistency check of methods and results leave no open deviation ("Empirical works: methods and data"); the user cannot waive this one
-- A criterion the user waives (all chapters complete, for chapters the work will not contain; format-only iterations; styleguide questions): as `docs/phase_separation.md` describes ("Waiving a criterion"), recorded in the decision log of `workspace/state.md`
+- A criterion the user waives (all chapters complete, for chapters the work will not contain; styleguide questions): as `docs/phase_separation.md` describes ("Waiving a criterion"), recorded in the decision log of `workspace/state.md`
 
 **Action on transition:**
 1. Set `state.md` → `phase: B`

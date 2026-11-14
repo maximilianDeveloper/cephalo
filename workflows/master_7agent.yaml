@@ -205,12 +205,13 @@ phases:
       - all_chapters_source_verified: "✅"
       - methods_data_consistent: true   # empirical theses only
       - open_content_warnings: 0
-      - last_3_iterations_format_only: true
       - styleguide_open_questions: 0
+    indicators:
+      - last_3_commits_format_only   # shown with its state; does not hold the transition up (docs/phase_separation.md, criterion 4)
     waiver: |
       The user may waive the criteria docs/phase_separation.md names under
       "Waiving a criterion" (chapters complete, for chapters the work will not
-      contain; format-only iterations; styleguide questions), not the source
+      contain; styleguide questions), not the source
       verification, open content warnings or the methods/data consistency;
       record which and why in workspace/state.md.
     documentation: docs/phase_separation.md
