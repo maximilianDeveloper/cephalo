@@ -192,6 +192,19 @@ phases:
       - One chat for topic / question sharpening
       - One to two chats for the extracts and the research gap
       - Closing handover confirms: question stable, gap named, key literature identified
+
+    notes: |
+      - key_sources.md: the research-agent writes it, the source-verifier
+        verifies it as extracts (report
+        01_Research/verification/key_sources_round_<n>.md).
+        scripts/verbatim_check.py is not run on it: an extract quotes on
+        purpose, and the script counts the proposal text (Phase 3).
+      - research_gap.md is a working paper for the proposal text, not a
+        chapter. The writer writes it once, with a length in its task
+        prompt (about a page, unless the user names another). It gets one
+        source-verifier round, whose findings the writer applies once; no
+        second round, no loop count, no page budget entry. What counts is
+        the proposal text, which Phase 3 verifies sentence by sentence.
   
   # ===========================================================
   # Phase 2 - Outline
@@ -214,6 +227,19 @@ phases:
     chat_structure:
       - One chat for outline draft
       - One chat for methodological plan and timeline
+
+    notes: |
+      - The three files hold what the user decides. The writer drafts each
+        from research_question.md, research_gap.md and what the user asks
+        for, about a page each; the user changes and confirms it. The
+        orchestrator adds no content wishes of its own to the task prompt.
+      - They are working papers: no verification round, no budget entry.
+        A claim about a source in them is verified where it enters
+        03_Drafting/proposal_draft.md.
+      - What the user decides here about the main work (its length, its
+        chapters, its timeline, a source it will not use) is an entry in
+        this sub-project's 00_Decisions.md; project_closure hands these
+        entries to the main work.
     
     important: |
       The outline here is a FIRST DRAFT. It will likely need adjustment 
@@ -237,6 +263,14 @@ phases:
     chat_structure:
       - One chat for first complete draft
       - One to two chats for revision
+
+    notes: |
+      - proposal_draft.md is the sub-project's one chapter: budget
+        (constraints.page_count), word count, scripts/verbatim_check.py,
+        sentence-by-sentence verification and the loop limit apply to it
+        as orchestrator-longform.md says for a chapter.
+      - The format check is Phase 4's, on the export: no format-verifier
+        call here.
     
     style_note: |
       Voice and person per ../00_Shared_Materials/styleguide.md
