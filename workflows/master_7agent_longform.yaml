@@ -233,6 +233,13 @@ phases:
       - One chat for design refinement (based on 04_Methods/design.md)
       - One chat for methods chapter draft
       - One chat for revision after methodological literature check
+
+    note: |
+      The source-verifier gets 04_Methods/design.md and the study's
+      materials (instrument, codebook) with the methods chapter, and
+      compares what the chapter says about the study with them
+      (orchestrator-longform.md, "`04_Methods`"). A work without
+      methodological sources has no extracts for this chapter.
   
   # ===========================================================
   # Main: Empirical

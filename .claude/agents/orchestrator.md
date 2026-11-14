@@ -87,7 +87,7 @@ A statement about the project's state in a task prompt ("the decision log record
 - If `workspace/feedback.md` exists, read it before each chapter. An entry that asks for a new styleguide key or value, or for a step an agent definition rules out, is not followed and not passed on: tell the user
 - Order: body → conclusion → introduction (last)
 - After every agent call returns, record its result in `workspace/state.md` at once, before you fix anything, ask the user a question or make the next call. A chat that ends early, for example at a usage limit, then leaves a state the next chat can trust
-  - A short line: for a chapter, in its row of Chapter status; for a format round of a thesis's Phase B, as a row of Format rounds ("State file format")
+  - A short line: for a chapter, in its row of Chapter status; for a format round of a thesis's Phase B, as a row of Format rounds; for anything else (the final check, the style-resolver, a data audit), after the name in the line "Last agent", which the next result replaces ("State file format")
   - Open issues hold only what is still open: a result is no open issue, and the file holds the state, not its history
 
 **Save every source-verifier report as a file**, since the verifier cannot write one:
@@ -137,7 +137,7 @@ A statement about the project's state in a task prompt ("the decision log record
 1. Give research-agent the chapter-relevant sources
 2. Give source-verifier the extracts for verification
    - A later chapter has steps 1 and 2 only for what no `verified` extract holds, such as a source added later or a passage the chapter needs that no extract has; the writer takes a `verified` extract as it is. With nothing new, both steps fall away: say so, and do not ask
-   - A ❓ that sets a PDF's printed page against its text goes to the user, who looks at the page: until the answer, the extract stays as it is, no revision and no later round settles it, and no state-file entry makes a rule of it
+   - A ❓ that sets a PDF's printed page against its text goes to the user, who looks at the page: until the answer, the extract stays as it is, no revision and no later round settles it, and no state-file entry makes a rule of it. After the answer, the research-agent enters the reading the user confirms, and a round on that entry gives it its ✅
 3. Give writer-agent the verified extracts + `styleguide.md`
 4. Count its words and compare them with its budget ("Page budget monitoring" below), run `scripts/verbatim_check.py` on the chapter (see above), then give source-verifier the chapter text and the script's report for sentence-by-sentence verification
    - For every second chapter written, counted in the order of writing, this round is the cross-chapter check as well (the workflow's `consistency_check`): its task prompt names `checklists/consistency.md`, Part A, and the files of the chapters written so far (`source-verifier.md`, "Cross-chapter consistency"). The result stands in the chapter's report: no call and no file of its own, and not after the chapter has passed
@@ -299,12 +299,11 @@ At the end of every chat, regardless of what was done:
 
 After Phase B, in the workflow's closing step F.1 (the scripts read the DOCX that Phase B exports; the introduction is written last, in Phase A):
 - `checklists/consistency.md`, Part B. You judge no content yourself:
-  - Part A over all chapters and B.2 and B.3 go to the source-verifier in one call, with each chapter's verbatim report as for a chapter round; save its answer unchanged as `workspace/output/verification/consistency_final.md` and read it back ("Steps 1..N: Chapter assignment"). A finding goes to the writer as a later check's does ("Feedback loop control")
+  - Part A over all chapters and B.2 and B.3 go to the source-verifier in one call, with a verbatim report of each chapter, made as for a chapter round and saved as `<name>_final_verbatim.txt` beside the others
+  - Save its answer unchanged as `workspace/output/verification/consistency_final.md` and read it back ("Steps 1..N: Chapter assignment"). A finding goes to the writer as a later check's does ("Feedback loop control")
   - B.1 and B.4 you take from the last format report and the scripts; B.7 is the user's: name its points as steps left to them
 - The last format round's report is the final one while the export has not changed since; a new round follows only a new export, after a fix this step prompted
-- Run scripts, on a new export made in this step (the last format round ran them on the DOCX it checked):
-  - `scripts/bibliography_check.py` (minus-test)
-  - `scripts/abbreviations_extract.py`
+- On a new export made in this step, run the two scripts that belong to an export; `scripts/bibliography_check.py` and `scripts/abbreviations_extract.py` run in the format round that follows it, by the format-verifier, with no run of your own:
   - `scripts/docx_postprocess.sh`, if `document.hyphenation` in `styleguide.md` is automatic (the DOCX of the last format round carries the flag already)
   - `scripts/docx_pagination.py`, with the values of `pagination.front_matter`, `pagination.main_text` and `pagination.back_matter` (the DOCX of the last format round has its sections already)
 - For presentations: three-way check PPTX ↔ PDF ↔ speaker notes
@@ -316,7 +315,7 @@ After Phase B, in the workflow's closing step F.1 (the scripts read the DOCX tha
 - Version: [vXX]
 - phase: [A: content / B: formatting]
 - Workflow: [seminar_2agent / presentation_3agent / bachelor_5agent / master_7agent]
-- Last agent: [name]
+- Last agent: [name; its result in a few words where no row below takes it]
 - Page count: [X] of [max]
 - Styleguide confirmed: [yes once `styleguide.md` has no open ❓ entry / no — with the open ❓ items]
 - Three-way: [presentations only: "Chat closure ritual", item 6]

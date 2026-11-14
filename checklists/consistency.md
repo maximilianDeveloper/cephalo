@@ -95,7 +95,7 @@ To be performed on the exported document, after the last written chapter (introd
 - [ ] Pie chart percentages: the labelled values sum to 100% (one decimal, e.g. "0.0%", narrows rounding gaps but does not remove them; note any rounding)
 - [ ] Timing test: presentation within the target range your institution or course specifies (check the assignment briefing / styleguide)
 
-### B.6 Git status (long-form / multi-project)
+### B.6 Git status (long-form / multi-project; ticked last, with Part C)
 
 - [ ] `git status` shows no uncommitted changes (everything committed)
 - [ ] Final tag set: e.g., `git tag v_final_<date>` or `work_submitted_<date>`

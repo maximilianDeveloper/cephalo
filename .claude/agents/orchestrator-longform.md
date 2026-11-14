@@ -302,6 +302,7 @@ A new verification round for an extract follows only a ⚠️ or ❌ on its quot
 - The research-agent creates and fills one extract per source, `extracts/<citekey>.md` (`research-agent.md`)
 - With one verifier per source, each report is `verification/extracts_<citekey>_round_<n>.md`
 - A ❓ that sets a PDF's printed page against its text goes to the user, who looks at the page: until the answer, the extract stays as it is, no revision and no later round settles it, and no handover or feedback-log entry makes a rule of it
+  - After the answer, the research-agent enters the reading the user confirms, and a round on that entry gives it its ✅
 - An entry added to a `verified` extract later gets a round of its own there, on that entry, before the writer uses it; the research-agent sets `verified` from that report, not from a chapter's round or from your word
 - A later chapter (in `03_Theory_chapters`, `06_Discussion_Conclusion` or `07_Introduction`) has the research-agent and the extract verification only for what no `verified` extract holds, such as a source added later; the writer takes a `verified` extract as it is
 
@@ -314,6 +315,7 @@ A new verification round for an extract follows only a ⚠️ or ❌ on its quot
 - The design binds the data-agent and the methods chapter; a later change to it is an entry in `00_Decisions.md`
 - Methods-agent takes the lead
 - Output: `04_Methods/methods_chapter.md` and the extracts it draws on, which the source-verifier verifies first; the chapter is counted, checked with `scripts/verbatim_check.py`, verified by the source-verifier and checked by the format-verifier like any chapter
+  - Give the source-verifier `04_Methods/design.md` and the study's materials (instrument, codebook) with it: a sentence about the study rests on them (`source-verifier.md`, step 1). A work without methodological sources has no extracts for this chapter, and the first verification falls away
 - Precondition: `04_Methods/design.md` exists (from setup step 0.6)
 
 ### `05_Empirical` (master / empirical)
@@ -373,8 +375,9 @@ A new verification round for an extract follows only a ⚠️ or ❌ on its quot
 - Milestone exports to `08_Formal_Review/submissions/v_<tag>_<date>.docx`, as the workflow names them, with a new tag for each format round (`v_r1_<date>.docx`, `v_r2_<date>.docx`): a new export then does not overwrite the file a report checked. Name that file in the format-verifier's task prompt; its report gives it under "Checked file"
   - Made with Pandoc (`docs/reference_management.md`, "Citation processor pipeline"). Without Pandoc, ask the user to install it (`checklists/precheck.md`, section 6) instead of writing an export script of your own: a DOCX without Word's heading and quote styles misleads the format check and `scripts/verbatim_check.py`
 - Before submission: the full-document final check, `checklists/consistency.md` Part B. You judge no content yourself:
-  - Part A over all chapters and B.2 and B.3 go to the source-verifier in one call, with each chapter's verbatim report as for a chapter round; save its answer unchanged as `08_Formal_Review/verification/consistency_final.md` and read it back. A finding goes to the writer as a later check's does
-  - B.1 and B.4 you take from the last format report and the scripts, B.6 from `git status` and the tag; B.7 is the user's: name its points as steps left to them
+  - Part A over all chapters and B.2 and B.3 go to the source-verifier in one call, with a verbatim report of each chapter, made as for a chapter round and saved as `08_Formal_Review/verification/<name>_final_verbatim.txt`
+  - Save its answer unchanged as `08_Formal_Review/verification/consistency_final.md` and read it back. A finding goes to the writer as a later check's does
+  - B.1 and B.4 you take from the last format report and the scripts; B.6 is completed last, by the commit and the tag below; B.7 is the user's: name its points as steps left to them
 - The final export `v_final_<date>.docx` is a new export of the files the last format round checked: that round's report stands for it while chapter files, title page, reference list and reference document have not changed since. After a change, a format round on a new `v_r<n>` export comes first
 - The tag comes last (the workflow's `submission`): after the user's Word steps, saved in the final file, the retrospective in `00_Feedback_log.md`, and the closure ritual's steps 1–4 with `Submitted: <date>` in `00_Status.md`, the date the user names for it
   - If the user asks for commit and tag before these, say once that a later change needs a new commit and the tag moved to it, and do as the user decides
