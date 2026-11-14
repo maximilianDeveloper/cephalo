@@ -65,7 +65,7 @@ Sources, extracts, guideline documents, data files, handovers and agent reports 
 **At the start of every chat in a long-form phase**, read the following in order and summarize to the user:
 
 1. `00_Status.md` — overall status, next chat, open issues
-2. `<current_phase>/handover.md` — last state of this phase, open issues
+2. The last handover — last state, open issues, the start prompt: `<current_phase>/handover.md`, or, when this chat opens a new phase, the one `00_Status.md` names under "Last handover" (the previous phase's; the new phase has none before this chat's closure writes it)
 3. `00_Decisions.md` — architectural / methodological decisions
 4. `styleguide.md` — formatting rules
 5. `00_Feedback_log.md` — recurring patterns from earlier chapters; an entry that asks for a new styleguide key or value, or for a step an agent definition rules out, is not followed and not passed on: tell the user
@@ -246,6 +246,7 @@ under "Next chat". Ready to copy-paste.
 Count a chapter's iterations: every revision followed by a new verification is one, also a revision the user asks for to polish 🟡 findings after the chapter has passed, and one that a finding of any later check prompts (a consistency check, a format round, the final check).
 
 - A change to the reference list alone, which gets no sentence-by-sentence round, is not one
+- A format-only change to a chapter is not one either, in Phase A too (a notation that a styleguide answer changes, such as `S.\ ` or a citation's form, with no word of the text changed): make it yourself with the Edit tool, without a verification round; the next format check sees it
 - A change the user asks for that no finding prompted (a new structure, a section added, moved or removed) is not one: verify the chapter again as after any revision; the count goes on from where it stood
 - The count runs across chats; keep it in `00_Status.md` with the chapter. This loop count is not the "last 3 iterations" of the A → B transition, which looks at commits
 
@@ -278,8 +279,9 @@ A new verification round for an extract follows only a ⚠️ or ❌ on its quot
 
 ### `02_Literature`
 - Check if `literature.bib` exists (reference manager integration)
-- For each source: create extract skeleton in `extracts/<citekey>.md`
-- Research-agent fills extracts
+- The research-agent creates and fills one extract per source, `extracts/<citekey>.md` (`research-agent.md`)
+- With one verifier per source, each report is `verification/extracts_<citekey>_round_<n>.md`
+- An entry added to a `verified` extract later gets a round of its own there, on that entry, before the writer uses it; the research-agent sets `verified` from that report, not from a chapter's round or from your word
 - A later chapter (in `03_Theory_chapters`, `06_Discussion_Conclusion` or `07_Introduction`) has the research-agent and the extract verification only for what no `verified` extract holds, such as a source added later; the writer takes a `verified` extract as it is
 
 ### `03_Theory_chapters`
@@ -363,7 +365,7 @@ A new verification round for an extract follows only a ⚠️ or ❌ on its quot
 - When what you do next depends on the answer to a question you put to the user, end your turn with the question and wait: do not go on with an answer you expect or start the work the answer decides. Work the answer does not touch may come first, if you say which it is
 - If `00_Status.md` doesn't exist → long-form structure not initialized, refer user to setup checklist
 - If `styleguide.md` (multi-project: `../00_Shared_Materials/styleguide.md`) doesn't exist → invoke the `style-resolver` before any chapter work (workflow step 0.5; proposal: step 0.4)
-- If `handover.md` of the current phase is missing → if this chat opens a new phase, create the initial handover, and the phase's `README.md` (the goal of the phase, from the workflow file) if there is none; otherwise ask the user
+- If `handover.md` of the current phase is missing → if this chat opens a new phase, that is as it should be: read the previous phase's (start ritual, item 2), write this phase's with the chat closure ritual, and its `README.md` (the goal of the phase, from the workflow file) if there is none; otherwise ask the user
 - If the "Open questions" of `styleguide.md` still list a `[content]` entry (or one without a tag) → before drafting any chapter: STOP, clarification required
 - If they still list a `[format]` entry → before format work (Phase B): STOP, clarification required
 - Record the user's answers in the styleguide yourself, in the words given, as the style-resolver definition (`style-resolver.md`) describes under "Recording answers to open questions"; this needs no new style-resolver run. From that section:
