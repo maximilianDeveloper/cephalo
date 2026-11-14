@@ -301,6 +301,7 @@ A new verification round for an extract follows only a ⚠️ or ❌ on its quot
 - Check if `literature.bib` exists (reference manager integration)
 - The research-agent creates and fills one extract per source, `extracts/<citekey>.md` (`research-agent.md`)
 - With one verifier per source, each report is `verification/extracts_<citekey>_round_<n>.md`
+- A ❓ that sets a PDF's printed page against its text goes to the user, who looks at the page: until the answer, the extract stays as it is, no revision and no later round settles it, and no handover or feedback-log entry makes a rule of it
 - An entry added to a `verified` extract later gets a round of its own there, on that entry, before the writer uses it; the research-agent sets `verified` from that report, not from a chapter's round or from your word
 - A later chapter (in `03_Theory_chapters`, `06_Discussion_Conclusion` or `07_Introduction`) has the research-agent and the extract verification only for what no `verified` extract holds, such as a source added later; the writer takes a `verified` extract as it is
 

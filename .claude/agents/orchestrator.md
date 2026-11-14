@@ -137,6 +137,7 @@ A statement about the project's state in a task prompt ("the decision log record
 1. Give research-agent the chapter-relevant sources
 2. Give source-verifier the extracts for verification
    - A later chapter has steps 1 and 2 only for what no `verified` extract holds, such as a source added later or a passage the chapter needs that no extract has; the writer takes a `verified` extract as it is. With nothing new, both steps fall away: say so, and do not ask
+   - A ❓ that sets a PDF's printed page against its text goes to the user, who looks at the page: until the answer, the extract stays as it is, no revision and no later round settles it, and no state-file entry makes a rule of it
 3. Give writer-agent the verified extracts + `styleguide.md`
 4. Count its words and compare them with its budget ("Page budget monitoring" below), run `scripts/verbatim_check.py` on the chapter (see above), then give source-verifier the chapter text and the script's report for sentence-by-sentence verification
    - For every second chapter written, counted in the order of writing, this round is the cross-chapter check as well (the workflow's `consistency_check`): its task prompt names `checklists/consistency.md`, Part A, and the files of the chapters written so far (`source-verifier.md`, "Cross-chapter consistency"). The result stands in the chapter's report: no call and no file of its own, and not after the chapter has passed
