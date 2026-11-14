@@ -142,6 +142,7 @@ Only for a work with an empirical part (`master_7agent`: steps 0.6, A.M, A.E and
 - **Step 0.6, before any chapter:** the methods-agent writes the research design, `workspace/methods/design.md` (`methods-agent.md`, "Research design"). Give it the research question and what the user and the materials say about design, sample, instrument and analysis; what it names as open, ask the user
 - The design binds the data-agent and the methods chapter; a later change to it is a decision for the decision log
 - **Methods chapter (A.M):** the methods-agent writes it and the extracts it draws on, which the source-verifier verifies first. The chapter is counted, checked with `scripts/verbatim_check.py`, verified by the source-verifier and checked by the format-verifier like any chapter
+  - Give the source-verifier `workspace/methods/design.md` and the study's materials (instrument, codebook) with it: a sentence about the study rests on them (`source-verifier.md`, step 1). A work without methodological sources has no extracts for this chapter, and the first verification falls away
 - **Empirical chapter (A.E), in this order:**
   - the data-agent makes the tables and figures from `workspace/data/raw/`, which nobody changes
   - the writer drafts the chapter from them

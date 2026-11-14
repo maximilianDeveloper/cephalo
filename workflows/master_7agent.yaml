@@ -188,6 +188,10 @@ phases:
       
       - step: A.E.5
         agent: format-verifier
+        note: |
+          Before it, the source-verifier verifies the chapter like any other,
+          with the report of scripts/verbatim_check.py (orchestrator.md,
+          "Empirical works: methods and data").
     
     consistency_check:
       after_every_n_chapters: 2
