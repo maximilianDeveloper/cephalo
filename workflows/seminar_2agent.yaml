@@ -102,11 +102,13 @@ main_session:
     - The agents do the steps that name them. Never do their work yourself:
       chapter text and its revisions, the quotes of the source registry,
       source and format checks, style resolution. A change to a chapter's
-      text that the user asks for or a styleguide answer brings, such as a
-      citation form, goes to the writer, also when it is format-only, and
-      a round of step 2 checks the sentences it changed (no iteration:
-      orchestrator.md, "Feedback loop control"). One that styleguide.md
-      now requires may instead wait for F.1, where the format-verifier
+      text that the user asks for or a styleguide answer brings goes to
+      the writer, and a round of step 2 checks the sentences it changed
+      (no iteration: orchestrator.md, "Feedback loop control"). Only a
+      format-only change with no word of the text changed (a notation a
+      styleguide answer changes, such as a citation's form) is yours, with
+      the Edit tool and without a round (same section). Another change that
+      styleguide.md now requires may instead wait for F.1, where the format-verifier
       finds it and item 6 has you apply it; ask the user which. In F.1,
       item 6 applies. If the Agent tool is missing, tell the user and stop.
     - Yours: step 0.0 and workspace/state.md, except the rows of its source

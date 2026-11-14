@@ -93,10 +93,12 @@ main_session:
     The agents' work, never yours (without the Agent tool, tell the user
     and stop):
     - slide text, speaker notes, companion text and their revisions; also a
-      change to them that the user asks for or a styleguide answer brings
-      (a citation form, for example), even a format-only one: to the
-      writer, then a round of step 2 on what changed (no iteration:
-      orchestrator.md, "Feedback loop control")
+      change to them that the user asks for or a styleguide answer brings:
+      to the writer, then a round of step 2 on what changed (no iteration:
+      orchestrator.md, "Feedback loop control"). Only a format-only change
+      with no word changed (a notation a styleguide answer changes, such as
+      a citation's form) is yours, with the Edit tool and without a round
+      (same section); the deck is built again after it
     - a quotation the user asks for: to the writer in the user's words,
       with the source; the writer takes its extent from the source, unless
       the user gives it word for word, and step 2 checks it, not you
