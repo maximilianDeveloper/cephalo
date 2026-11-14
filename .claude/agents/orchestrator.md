@@ -83,7 +83,7 @@ A statement about the project's state in a task prompt ("the decision log record
 
 **Save every source-verifier report as a file**, since the verifier cannot write one:
 
-- The file is `workspace/output/verification/<name>_round_<n>.md`, where `<name>` is the chapter file's name without `.md`, or `extracts`. A chat that ends between verification and revision then keeps the findings
+- The file is `workspace/output/verification/<name>_round_<n>.md`, where `<name>` is the chapter file's name without `.md`, or `extracts`; the final check's is `consistency_final.md` ("Final check"). A chat that ends between verification and revision then keeps the findings
 - Save the answer as it is. Only an absolute path in it becomes a project-relative one; nothing else is shortened, reworded, translated or added, and quotation marks, labels and emphasis stay as the verifier's answer has them
 - After the Write, read the file back whole, whatever the Write tool's note says, and compare it with the answer; if they differ, write it again
 - Record the status counts in `workspace/state.md` as you count them from the report's rows and entries, not from its totals line; your count goes there, not into the saved report
@@ -130,6 +130,7 @@ A statement about the project's state in a task prompt ("the decision log record
    - A later chapter has steps 1 and 2 only for what no `verified` extract holds, such as a source added later or a passage the chapter needs that no extract has; the writer takes a `verified` extract as it is. With nothing new, both steps fall away: say so, and do not ask
 3. Give writer-agent the verified extracts + `styleguide.md`
 4. Count its words and compare them with its budget ("Page budget monitoring" below), run `scripts/verbatim_check.py` on the chapter (see above), then give source-verifier the chapter text and the script's report for sentence-by-sentence verification
+   - For every second chapter written, counted in the order of writing, this round is the cross-chapter check as well (the workflow's `consistency_check`): its task prompt names `checklists/consistency.md`, Part A, and the files of the chapters written so far (`source-verifier.md`, "Cross-chapter consistency"). The result stands in the chapter's report: no call and no file of its own, and not after the chapter has passed
 5. Give format-verifier the text for styleguide compliance
 6. Update `workspace/state.md`
 

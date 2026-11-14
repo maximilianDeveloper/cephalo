@@ -135,6 +135,11 @@ phases:
       after_every_n_chapters: 2
       checklist: checklists/consistency.md
       agent: source-verifier
+      note: |
+        Part of the chapter's verification round, not a call of its own: the
+        task prompt of every second chapter's round names the checklist's
+        Part A and the chapters written so far (orchestrator.md, "For each
+        chapter", step 4). The final check is F.1.
   
   # ===========================================================
   # Phase transition A -> B
