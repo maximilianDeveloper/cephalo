@@ -127,6 +127,7 @@ A statement about the project's state in a task prompt ("the decision log record
 
 1. Give research-agent the chapter-relevant sources
 2. Give source-verifier the extracts for verification
+   - A later chapter has steps 1 and 2 only for what no `verified` extract holds, such as a source added later or a passage the chapter needs that no extract has; the writer takes a `verified` extract as it is. With nothing new, both steps fall away: say so, and do not ask
 3. Give writer-agent the verified extracts + `styleguide.md`
 4. Count its words and compare them with its budget ("Page budget monitoring" below), run `scripts/verbatim_check.py` on the chapter (see above), then give source-verifier the chapter text and the script's report for sentence-by-sentence verification
 5. Give format-verifier the text for styleguide compliance

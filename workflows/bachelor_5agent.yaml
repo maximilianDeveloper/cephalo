@@ -100,6 +100,10 @@ phases:
         agent: research
         input: Chapter-relevant sources
         output: workspace/sources/extracts/ (one file per source, named author_year or citekey — see research-agent.md)
+        note: |
+          A later chapter (the conclusion, the introduction) runs A.1 and A.2
+          only for what no verified extract holds (orchestrator.md, "For each
+          chapter"); with nothing new, both fall away.
       
       - step: A.2
         agent: source-verifier

@@ -108,7 +108,9 @@ phases:
       chapters use specialized agents (orchestrator.md, "Empirical works:
       methods and data"). The steps under per_theory_chapter (A.1 to A.6)
       apply to every chapter the two blocks after it do not cover: theory,
-      discussion, conclusion and introduction.
+      discussion, conclusion and introduction. A later chapter runs A.1 and
+      A.2 only for what no verified extract holds (orchestrator.md, "For each
+      chapter"); with nothing new, both fall away.
     
     order: [theory, methods, empirical, discussion, conclusion, introduction]
     
