@@ -276,7 +276,7 @@ phases:
       - All content chapters (incl. introduction) complete
       - Every chapter passed source verification with ✅
       - No outstanding content ⚠️, ❌ or ❓ items
-      - Content has settled (an indicator that does not hold the transition up: what the last 3 commits changed in the chapter files; docs/phase_separation.md, criterion 4)
+      - Content has settled (an indicator that does not hold the transition up; it says what the last 3 commits changed in the chapter files; docs/phase_separation.md, criterion 4)
       - All ❓ items in styleguide.md clarified
     waiver: |
       The user may waive the criteria docs/phase_separation.md names under

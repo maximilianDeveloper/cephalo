@@ -204,7 +204,7 @@ This ritual is not optional. Skipping it means the next chat starts blind. The o
 At the beginning of every chat, the orchestrator reads:
 
 1. `00_Status.md` — overall state
-2. `<current_phase>/handover.md` — last state of this phase
+2. `<current_phase>/handover.md` — last state of this phase (a chat that opens a new phase reads the previous phase's, which `00_Status.md` names)
 3. `00_Decisions.md` — historical decisions
 4. `styleguide.md` — formatting rules
 5. `00_Feedback_log.md` — recurring patterns

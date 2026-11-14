@@ -140,7 +140,7 @@ This tells the next chat (and the agents within it) immediately what to do and w
 
 Symptom: many B -> A rollbacks within the first week of Phase B.
 Cause: criteria 1-3 were not actually met, or content was still moving (criterion 4); the writer was tired and pushed for transition.
-Fix: hold off on transition. Spend more time in A until the last commits change the chapters in format only.
+Fix: hold off on transition. Spend more time in A until criteria 1-3 hold and no more content work is planned.
 
 ### Resisting transition
 

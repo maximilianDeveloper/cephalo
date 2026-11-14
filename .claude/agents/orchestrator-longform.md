@@ -267,7 +267,7 @@ Count a chapter's iterations: every revision followed by a new verification is o
 - A change to the reference list alone, which gets no sentence-by-sentence round, is not one
 - A format-only change to a chapter is not one either, in Phase A too (a notation that a styleguide answer changes, such as `S.\ ` or a citation's form, with no word of the text changed): make it yourself with the Edit tool, without a verification round; the next format check sees it
 - A change the user asks for that no finding prompted (a new structure, a section added, moved or removed) is not one: verify the chapter again as after any revision; the count goes on from where it stood
-- The count runs across chats; keep it in `00_Status.md` with the chapter. This loop count is not the "last 3 iterations" of the A → B transition, which looks at commits
+- The count runs across chats; keep it in `00_Status.md` with the chapter. This loop count is not the "Content has settled" indicator of the A → B transition, which looks at commits
 
 When a feedback loop reaches `feedback_loop_max`, you stop automatic iteration and ask the user which of the following to do, naming all three (consent to a higher limit alone is not this question, and neither is a choice between ways to fix a finding). A chapter already at its limit that a later check finds something in (a consistency check, a format round, the final check) gets this question before the writer's next revision of it (a format-only fix you make yourself is no revision):
 
