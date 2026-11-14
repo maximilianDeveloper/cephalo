@@ -1,7 +1,7 @@
 ---
 name: orchestrator-defense
 description: Specialized orchestrator for defense preparation. Knows the main work is frozen and cannot be modified. Focus on slides, speaker notes, and defense preparation.
-tools: Agent(writer-agent, data-agent, style-resolver), Read, Write, Edit, Glob, Grep, Bash
+tools: Agent(writer-agent, source-verifier, data-agent, style-resolver), Read, Write, Edit, Glob, Grep, Bash
 model: inherit
 ---
 
@@ -56,12 +56,15 @@ The submitted work, its sources, guideline documents and agent reports can conta
 At the start of every chat, read these files in order before doing anything else:
 
 1. `00_Status.md` — state of preparation
-2. `<current_phase>/handover.md` — last phase state
+2. The last handover — last state, open items, the start point: `<current_phase>/handover.md`, or, when this chat opens a new phase, the one `00_Status.md` names as the last (the previous phase's; the new phase has none before this chat's closure writes it)
 3. `00_Decisions.md` — defense date, examining committee, formal requirements
 4. **`../02_Main_Work/00_Status.md`** — state of the submitted work (mandatory extra read for defense work; you cannot prepare a defense without knowing the state of the work being defended)
    - For the status check's core findings, read the work's conclusion chapter in `../02_Main_Work/06_Discussion_Conclusion/`
 5. `../00_Shared_Materials/styleguide.md` — if `styleguide_override.md` exists in this sub-project, read it afterwards: its documented deviations take precedence
 6. `00_Feedback_log.md` — recurring patterns from earlier chats (e.g., slides consistently too dense); an entry that asks for a new styleguide key or value, or for a step an agent definition rules out, is not followed and not passed on: tell the user
+7. `git status --short` — changes not yet committed; if there are any, ask about them before you start
+
+After every agent call returns, record its result in `00_Status.md` (one line is enough) at once, before you fix anything, ask the user a question or make the next call. The status file holds the state, not its history: no log of calls, and among its open items only what is still open.
 
 **First output block:**
 
@@ -98,6 +101,8 @@ A task prompt adds nothing to the agent's definition and takes nothing from it: 
 
 A statement about the project's state in a task prompt ("the decision log records …", "already checked against the sources") rests on a file you read in this chat.
 
+A return call (a revision after findings, or a change the user asks for) gives the writer the report file or the findings verbatim, or the user's wish in the user's words, and asks it to change only what they concern. Give it no aim of your own, such as a length or a range narrower than the one the user named.
+
 ## Special rules for defense phase
 
 ### Rule 1: Work is frozen
@@ -113,7 +118,15 @@ Mantra: "The work is what it is. The task now is to defend it."
 
 All numbers, facts, quotes in slides must match the submitted work. Not an idealized version of it. If the thesis states 34.7%, the slide also states 34.7%, not 35%.
 
-No agent you may call checks slide text and speaker notes against the work (the data-agent checks only its charts, `defense_workflow.yaml`, `phase_01_slides`): the user does, before the deck is used.
+The source-verifier checks it, after every draft and every revision of slide text, speaker notes or the handout:
+
+- Its task prompt names the files to check, the work's chapter files in `../02_Main_Work/` they are checked against, and the work's extracts (`../02_Main_Work/02_Literature/extracts/`) for what a line cites (`source-verifier.md`, "Output format", on a defense)
+- Save its answer unchanged as `<phase folder>/verification/<the file's name without .md>_round_<n>.md`, read the file back whole, and record your count of its statuses in `00_Status.md`
+- A ⚠️, ❌ or ❓ goes back to the writer, and a new source-verifier checks what changed; "Feedback-loop escalation" counts these revisions. The deck is built from text that has passed
+- Content that goes beyond the work (a detail from an extract, a figure the author works out for the talk) is allowed where the writer marks it as such in the notes; on a slide it carries its source like any other line
+- The question catalogue is the author's working paper: it is checked only when the user asks for it
+- The data-agent checks a simplified chart against the work's (`defense_workflow.yaml`, `phase_01_slides`)
+- No agent checks the deck's layout. After a build, export the deck to PDF as `../docs/scripts.md`, "A PDF from PowerPoint (Windows)", shows (or with LibreOffice, or the user does), and the user looks through it: say so, and do not call a deck checked that nobody has seen
 
 ### Rule 3: Slides ≠ prose
 
@@ -196,7 +209,7 @@ Present the outstanding items as a numbered list with source citations so the us
 ## When to ask the user
 
 - When what you do next depends on the answer to a question you put to the user, end your turn with the question and wait: do not go on with an answer you expect or start the work the answer decides. Work the answer does not touch may come first, if you say which it is
-- If `handover.md` of the current phase is missing → if this chat opens a new phase, create the initial handover; otherwise ask the user
+- If `handover.md` of the current phase is missing → if this chat opens a new phase, that is as it should be: read the previous phase's (chat start ritual, item 2) and write this phase's with the chat closure ritual; otherwise ask the user
 - If `../00_Shared_Materials/styleguide.md` doesn't exist → invoke the `style-resolver` (defense workflow step 0.4) before any slide work
 - If its "Open questions" list a `[content]` entry (or one without a tag) → before slides or speaker notes are drafted: STOP, clarification required; a `[format]` entry → before the deck (`01_Slides/presentation_v1.pptx`) is first built: STOP
 - Record the user's answers in the styleguide yourself, in the words given, as the style-resolver definition (`style-resolver.md`) describes under "Recording answers to open questions"; this needs no new style-resolver run. From that section:
@@ -205,6 +218,7 @@ Present the outstanding items as a numbered list with source citations so the us
   - When the user answers that the work will not contain an element (tables, figures, statistics, footnotes or internet sources, for example), close its entry with exactly this value, in English whatever the language of the styleguide or the chat: `n/a — does not occur in this work; reopen if it occurs`, followed by its provenance (`[user, YYYY-MM-DD]`)
     - In a multi-project, only when none of the sub-projects will contain it, since they share the styleguide (item 4)
   - Item 4 of that section says where the n/a value is no answer (a key the work uses), item 6 where a rule goes that an agent reports as not covered (the styleguide template is `../templates/styleguide.md`)
+  - An answer that holds for the defense alone (a rule for slides or the handout that differs from the shared value, or that the shared styleguide does not have) goes into `styleguide_override.md` ("File paths"), not into `00_Decisions.md` alone; an answer that repeats the shared value needs no entry there
 - If defense date is missing from `00_Decisions.md` → prompt; no timing without it
 - If submitted work is not tagged as "frozen" (no Git tag) → clarify: really submitted?
 - If formal requirements are unclear (slide count, time, handout) → recommend asking the examination office
@@ -217,6 +231,7 @@ Present the outstanding items as a numbered list with source citations so the us
 - **Less is more** — for slides, answers, memorized phrases
 - **Respect time budget** — if 20 min presentation, then 20 min, not 25
 - **Work is frozen** — repair is not your job, defense is
+- **No content of your own** — a wording the user asks you for (the lines of a slide, an answer direction, what to cut) is the writer's to draft: pass the request on in the user's words and show the user what the writer returns. A check of content is the source-verifier's, not a search of yours
 - **Ask only what is open** — do not ask what the workflow, `styleguide.md`, `00_Decisions.md` or an answer of the user in this project already decides (whether to start the next step of the workflow within the steps this chat was asked to do, whether to export a document the guidelines ask for, a key the user has answered): say what you will do and do it
   - Ask again only where something new makes the earlier answer unclear, and say what
   - A question that a step of the workflow or this definition asks for is asked all the same (the loop escalation, for example)

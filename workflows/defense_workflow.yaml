@@ -33,6 +33,11 @@ agents:
     model: opus
     role: Slide content, speaker notes, question catalogs
   
+  source-verifier:
+    file: .claude/agents/source-verifier.md
+    model: opus
+    role: Checks slide text, speaker notes and handout against the submitted work (orchestrator-defense.md, Rule 2)
+  
   data:
     file: .claude/agents/data-agent.md
     model: opus
@@ -85,6 +90,10 @@ references:
   main_work_chapters:
     relative_path: ../02_Main_Work/
     status: READ-ONLY — reference for content
+  
+  accepted_proposal:
+    relative_path: ../02_Main_Work/01_Proposal_Reference/
+    status: READ-ONLY — only where a question about the proposal comes up; not ../01_Proposal/
   
   shared_materials:
     relative_path: ../00_Shared_Materials/
@@ -161,7 +170,7 @@ phases:
   # ===========================================================
   phase_01_slides:
     directory: 01_Slides/
-    agents: [orchestrator-defense, writer]
+    agents: [orchestrator-defense, writer, source-verifier]
     optional_agents: [data]    # data-agent only for empirical defenses (see note_for_data_agent below)
     
     goals:
@@ -174,10 +183,17 @@ phases:
       - 01_Slides/backup_slides.md (which topics additionally as backup?)
     note: |
       The writer writes the slide text to 01_Slides/slides.md; it cannot build
-      a PPTX. presentation_v1.pptx is built from it as
-      workflows/presentation_3agent.yaml, step 1, "The deck", says, with the
-      deck script in data/scripts/ of 03_Defense/, and built again after each
-      change of slide text or speaker notes (phases 2 and 5).
+      a PPTX. The source-verifier checks slides.md and backup_slides.md against
+      the submitted work before the build (orchestrator-defense.md, Rule 2).
+      presentation_v1.pptx is built from the text as
+      workflows/presentation_3agent.yaml, step 1, says under "The deck" and in
+      the layout rules after that list, with the deck script in data/scripts/
+      of 03_Defense/. The table of the values the script sets stands in
+      01_Slides/deck_values.md, before the first build, and is kept up to
+      date. The deck is built again under the same name after each change of
+      slide text or speaker notes (phases 2 and 5): Git keeps the earlier
+      one. After a build, the deck is exported to PDF for the user to look
+      through (docs/scripts.md, "A PDF from PowerPoint (Windows)").
     
     important:
       - Slides are NOT prose. Bullet points, graphics, no text walls.
@@ -199,7 +215,7 @@ phases:
   # ===========================================================
   phase_02_speaker_notes:
     directory: 02_Speaker_Notes/
-    agents: [orchestrator-defense, writer]
+    agents: [orchestrator-defense, writer, source-verifier]   # source-verifier: the notes against the submitted work (orchestrator-defense.md, Rule 2)
     
     goals:
       - Per slide: what exactly do I say?
@@ -279,7 +295,7 @@ phases:
   # ===========================================================
   phase_04_handout:
     directory: 04_Handout/
-    agents: [orchestrator-defense, writer]
+    agents: [orchestrator-defense, writer, source-verifier]
     optional: true
     trigger: If desired by examining committee
     
@@ -289,7 +305,16 @@ phases:
     
     output:
       - 04_Handout/handout_final.pdf
-    note: The writer writes 04_Handout/handout.md; the user makes handout_final.pdf from it.
+    note: |
+      The writer writes 04_Handout/handout.md, and the source-verifier
+      checks it against the submitted work (orchestrator-defense.md, Rule 2).
+      Before the writer starts, ask the user for its length in words (one
+      sheet, both sides, holds about 600) and give the writer that figure.
+      It is exported like a presentation's companion, without format rounds
+      (workflows/presentation_3agent.yaml, F.1: reference document, Pandoc,
+      the pagination script, then the PDF from Word as docs/scripts.md
+      shows), by Claude or the user as the user decides; the user looks
+      through the PDF.
     
     format: |
       Single column, readable when printed. Not a marketing brochure but 
@@ -300,7 +325,7 @@ phases:
   # ===========================================================
   phase_05_rehearsals:
     directory: 05_Rehearsals/
-    agents: [orchestrator-defense, writer]   # writer: adjustments to slides and notes
+    agents: [orchestrator-defense, writer, source-verifier]   # writer: adjustments to slides and notes, also their wording when the user asks for a proposal; source-verifier: what changed
     
     goals:
       - Stay within timing (run a timer!)
