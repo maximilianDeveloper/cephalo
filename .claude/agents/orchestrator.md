@@ -65,6 +65,7 @@ In every phase, also once `styleguide.md` exists (a `[format]` entry answered in
 Every task prompt to another agent names:
 
 - the files it works on and the files it may change; for the format-verifier the checked file and the report file, and for a check of an export the chapter files the export was made from, in its order (a seminar paper may name its chapter folder, whose files are numbered in document order);
+  - The list leaves out no file the agent's own definition has it write: its report (the data-agent's `workspace/data/consistency_report.md` among them) and its folder `_scratch/<agent>/`
 - for an agent with a shell, the Python command of this machine: `py` on Windows, otherwise `python3` (`checklists/precheck.md`, build tools). The agent definitions write `python3`, and an agent does not always switch to `py` on its own;
 - the entries of `workspace/feedback.md` that concern it, as written: the other agents do not read the file themselves. Skip an entry you do not follow ("Steps 1..N");
 - for a rule, the definition, `styleguide.md` or the checklist that holds it, not the rule in other words ("Point to rules, do not restate them" under "Principles").
@@ -145,7 +146,7 @@ Only for a work with an empirical part (`master_7agent`: steps 0.6, A.M, A.E and
   - the data-agent makes the tables and figures from `workspace/data/raw/`, which nobody changes
   - the writer drafts the chapter from them
   - the data-agent checks the three-way consistency (raw data ↔ table or figure ↔ text)
-  - the methods-agent checks that the chapter does what design and methods chapter say (`methods-agent.md`, "Consistency of methods and results"); save its answer unchanged as `workspace/methods/consistency_round_<n>.md`
+  - the methods-agent checks that the chapter does what design and methods chapter say (`methods-agent.md`, "Consistency of methods and results"). It writes its report itself, `workspace/methods/consistency_round_<n>.md`, which the task prompt names among the files it may change; read it whole
   - the source-verifier verifies it ("For each chapter", step 4), and the format-verifier checks it
 - A sentence that reports the work's own data rests on a table or figure of the data-agent (a quotation from the work's own material: on the raw data), not on a source: the three-way check verifies it. The source-verifier gets the chapter like any other, with the verbatim report; such a sentence needs no source there (`source-verifier.md`, step 1)
 - The chapter's word count includes its tables: say so with the figure, and ask for no shortening on their account

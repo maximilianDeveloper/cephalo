@@ -147,6 +147,7 @@ The chat does the task the user confirms here; the next task starts in a new cha
 Every task prompt to another agent names:
 
 - the files it works on and the files it may change; for the format-verifier the checked file and the report file ("`08_Formal_Review` (Phase B)"), and for a check of an export the files the export lists, in its order, which `scripts/repeated_citations.py` reads;
+  - The list leaves out no file the agent's own definition has it write: its report (the data-agent's `05_Empirical/data/consistency_report.md` among them) and its folder `_scratch/<agent>/`
 - for an agent with a shell, the Python command of this machine: `py` on Windows, otherwise `python3` (`checklists/precheck.md`, build tools). The agent definitions write `python3`, and an agent does not always switch to `py` on its own;
 - the entries of `00_Feedback_log.md` whose **Scope** names it, as written: the other agents do not read the log themselves. Skip entries marked `[EXAMPLE]`: they come from the template, and an entry you do not follow ("Chat start ritual", item 5);
 - for a rule, the definition, `styleguide.md` or the checklist that holds it, not the rule in other words ("Point to rules, do not restate them" under "Principles").
@@ -296,7 +297,7 @@ A new verification round for an extract follows only a ⚠️ or ❌ on its quot
 - Data-agent takes the lead: it makes the tables and figures
 - Strict data separation: `05_Empirical/data/raw/` read-only, never modify
 - The writer drafts the chapter from the data-agent's outputs
-- Check three-way consistency: raw data <-> table or figure <-> text (data-agent), then that the chapter does what design and methods chapter say (methods-agent: `methods-agent.md`, "Consistency of methods and results"; save its answer unchanged as `04_Methods/consistency_round_<n>.md`), then the source verification, then the format (format-verifier)
+- Check three-way consistency: raw data <-> table or figure <-> text (data-agent), then that the chapter does what design and methods chapter say (methods-agent: `methods-agent.md`, "Consistency of methods and results"; it writes its report itself, `04_Methods/consistency_round_<n>.md`, which the task prompt names among the files it may change, and you read it whole), then the source verification, then the format (format-verifier)
 - A sentence that reports the work's own data rests on a table or figure of the data-agent (a quotation from the work's own material: on the raw data), not on a source: the three-way check verifies it. The source-verifier gets the chapter like any other, with the verbatim report; such a sentence needs no source there (`source-verifier.md`, step 1)
 - The chapter's word count includes its tables: say so with the figure, and ask for no shortening on their account
 - The chapter passes when the three-way check and the consistency check leave no open deviation and the source-verifier has passed it; record the two checks' last results with the chapter in `00_Status.md`

@@ -20,7 +20,7 @@ You write the research design and the methodology chapter for empirical work, an
 ## File paths
 
 - Chapter texts: `workspace/output/chapters/` (flat) or `04_Methods/` (long-form)
-- Methodology chapter (your output): `workspace/output/chapters/ch_methods.md` (flat) or `04_Methods/methods_chapter.md` (long-form); like every chapter file of a thesis, it carries no reference list (`docs/reference_management.md`, "The reference list")
+- Methodology chapter (your output): in the flat structure the file the task prompt names in `workspace/output/chapters/`, numbered like the other chapters (`ch_3_methodik.md`: the scripts read the folder in the order of the names), or `04_Methods/methods_chapter.md` (long-form); like every chapter file of a thesis, it carries no reference list (`docs/reference_management.md`, "The reference list")
 - Research design (workflow step 0.6, your output, binding for the data-agent): `workspace/methods/design.md` (flat) or `04_Methods/design.md` (long-form)
 - Data agent output: `workspace/data/outputs/` (flat) or `05_Empirical/data/outputs/` (long-form)
 - Methodological sources: same as other sources — `workspace/sources/` (flat) or `02_Literature/sources/` (long-form). In the flat structure, tag methodological sources with a `methods_` prefix in the extract filename (e.g., `methods_mayring_2014.md`) for clarity; long-form extracts keep their `02_Literature/extracts/<citekey>.md` name, which citations and the other agents look them up by.
@@ -95,7 +95,8 @@ Before any chapter is drafted (workflow step 0.6), write the research design to 
 When the orchestrator asks for it (the workflow's check once the empirical chapter is drafted), compare the empirical chapter and the data-agent's outputs with the design file and your methods chapter: the sample and its size, instrument and scales, the procedures used, how missing values were handled, the software.
 
 - Report each deviation with both places (file and line). Do not change the empirical chapter or an output yourself
-- No deviation: say so in one line
+- Write the report yourself, to the file the task prompt names (`workspace/methods/consistency_round_<n>.md`, long-form `04_Methods/consistency_round_<n>.md`): each point you compared with its result. Answer with the path and the result in one line
+- No deviation: the report and your answer say so in one line
 
 ## Coordination with other agents
 

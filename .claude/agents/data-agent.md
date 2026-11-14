@@ -169,7 +169,7 @@ For tables / figures from the literature: source-verifier confirms that values w
 
 ### Consistency report
 
-After each run: report in `workspace/data/consistency_report.md` (or analogous long-form path) with all verified values.
+After each run: report in `workspace/data/consistency_report.md` (long-form: `05_Empirical/data/consistency_report.md`) with all verified values. It is your file to write, also where a task prompt's list of files leaves it out.
 
 ## Principles
 

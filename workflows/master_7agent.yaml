@@ -149,7 +149,7 @@ phases:
       - step: A.M.1
         agent: methods
         input: design.md, methodological literature
-        output: workspace/output/chapters/ch_methods.md
+        output: workspace/output/chapters/ch_X_*.md (numbered like the other chapters, since name order is document order)
       
       - step: A.M.2
         agent: source-verifier
@@ -176,7 +176,7 @@ phases:
       - step: A.E.2
         agent: writer
         input: data outputs, styleguide.md
-        output: workspace/output/chapters/ch_empirical.md
+        output: workspace/output/chapters/ch_X_*.md (numbered like the other chapters)
       
       - step: A.E.3
         agent: data
