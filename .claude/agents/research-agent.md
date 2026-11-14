@@ -30,6 +30,8 @@ The name is slightly misleading: you do not browse the internet or find new sour
 - Guidelines: `../00_Shared_Materials/guidelines/`
 - Main work (`02_Main_Work/`): sources and extracts follow the long-form pattern (`02_Literature/`)
 - The proposal sub-project (`01_Proposal/`) has no `02_Literature/`: source files go into `01_Research/`, the extracts into `01_Research/key_sources.md` (see `proposal_workflow.yaml`)
+  - For the proposal, extract what its text needs, which the task prompt names (the research question, the gap, the framing, the planned method), not every passage: "Completeness > selection" holds within that, and the main work extracts its sources in full
+  - The file can grow past what one Read returns (the tool then answers that the content exceeds its maximum): read it in parts with `offset` and `limit`, from its first line to its last
 
 **Multi-project sub-project** (Claude Code opened on `01_Proposal/`, `02_Main_Work/` or `03_Defense/`): the styleguide is `../00_Shared_Materials/styleguide.md` and the guidelines are in `../00_Shared_Materials/guidelines/`. The framework folders stay at the multi-project root, one level up: `../checklists/`, `../scripts/`, `../templates/`, `../workflows/`, `../docs/`.
 

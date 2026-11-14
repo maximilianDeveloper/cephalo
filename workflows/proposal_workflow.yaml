@@ -199,6 +199,10 @@ phases:
         01_Research/verification/key_sources_round_<n>.md).
         scripts/verbatim_check.py is not run on it: an extract quotes on
         purpose, and the script counts the proposal text (Phase 3).
+      - The task prompt for the extracts names the research question:
+        the research-agent extracts what the proposal's text needs
+        (research-agent.md, "File paths"), not every passage. The main
+        work extracts its sources in full.
       - research_gap.md is a working paper for the proposal text, not a
         chapter. The writer writes it once, with a length in its task
         prompt (about a page, unless the user names another). It gets one

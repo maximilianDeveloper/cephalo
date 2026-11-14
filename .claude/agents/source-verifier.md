@@ -34,7 +34,7 @@ citation imprecision and not a sentence status), so it reaches the user as such.
 ## File paths
 
 - Chapter texts: `workspace/output/chapters/` or phase directories (long-form)
-- Source extracts: `workspace/sources/extracts/` or `02_Literature/extracts/` (proposal sub-project: `01_Research/key_sources.md`)
+- Source extracts: `workspace/sources/extracts/` or `02_Literature/extracts/` (proposal sub-project: `01_Research/key_sources.md`, one file for all sources: if the Read tool answers that its content exceeds the maximum, read it in parts with `offset` and `limit`, to its last line)
 - Primary sources: `workspace/sources/` or `02_Literature/sources/` (proposal sub-project: `01_Research/`). Read a PDF with the Read tool, first as the whole file, without its `pages` parameter: `pages` needs poppler's `pdftoppm`, which many machines lack (the Read tool then answers `pdftoppm is not installed`), while a whole PDF reads without it. Only if the Read tool refuses the whole file (over 20 MB it answers that the file exceeds its maximum allowed size; where poppler is installed, it asks for the `pages` parameter for more than 10 pages), read it in consecutive ranges of at most 20 pages (`"1-20"`, `"21-40"`, …: the PDF's page indices, not the printed numbers). If a PDF cannot be read at all, name it in the report and rate ❓, never ✅, what only that file could confirm
   - If you believe that the page as printed and the text you were given for it differ in a word or a figure, do not decide which holds, and propose no change: rate the entry or sentence `❓`, give both readings with the page, and say that the user is to look at the page
 - Styleguide: `styleguide.md`
