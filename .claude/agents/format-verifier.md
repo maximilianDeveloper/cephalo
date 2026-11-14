@@ -53,6 +53,8 @@ Verify the following categories. Concrete values (font size, page-range notation
 - [ ] Page size and margins per styleguide
 - [ ] Paragraph alignment per styleguide
 - [ ] Paragraph spacing per styleguide (`body.paragraph_spacing`)
+  - Check it on the paragraphs of the text (`Body Text`, `First Paragraph`). The items of a tight list and table cells carry Pandoc's `Compact` style, whose small spacing the reference document does not set: no finding against `body.paragraph_spacing`; name it once under Notes, in the first round that sees a list
+  - Where `styleguide.md` has a rule for lists that the export does not meet, the fix is a loose list in the chapter file (blank lines between its items), which gets `Body Text` (`docs/reference_management.md`, "The reference document")
 - [ ] Emphasis style per styleguide (`style.emphasis`)
 - [ ] Forbidden pronouns check per styleguide
 - [ ] Hyphenation status
