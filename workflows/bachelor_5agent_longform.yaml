@@ -155,12 +155,15 @@ phases:
         note: |
           Multi-project main work: the guidelines are in
           ../00_Shared_Materials/guidelines/, and ../00_Shared_Materials/styleguide.md
-          normally exists already (extracted in the proposal). Only verify it (no open
+          normally exists already (extracted in the proposal). The style-resolver
+          only verifies it, called for that like any step's agent (no open
           ❓ [content] items; ❓ [format] items may wait until Phase B);
           re-extract only when the guidelines change. The user confirms for the
           main work each answer recorded so far (a value whose provenance names
-          the user, such as an n/a value); an entry whose answer does not hold
-          for the main work is opened again.
+          the user). The orchestrator asks from the style-resolver's two lists.
+          It asks for each n/a value by itself, whether the element occurs in
+          the main work, and for the other values as one list. An entry whose
+          answer does not hold for the main work is opened again.
   
   # ===========================================================
   # Lead-in: Proposal

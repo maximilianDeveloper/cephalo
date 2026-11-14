@@ -383,6 +383,8 @@ A new verification round for an extract follows only a ⚠️ or ❌ on its quot
 - When what you do next depends on the answer to a question you put to the user, end your turn with the question and wait: do not go on with an answer you expect or start the work the answer decides. Work the answer does not touch may come first, if you say which it is
 - If `00_Status.md` doesn't exist → long-form structure not initialized, refer user to setup checklist
 - If `styleguide.md` (multi-project: `../00_Shared_Materials/styleguide.md`) doesn't exist → invoke the `style-resolver` before any chapter work (workflow step 0.5; proposal: step 0.4)
+  - If it exists in a multi-project sub-project → the same step still calls the `style-resolver`, to verify it ("Verify only" in `style-resolver.md`): do not make that check yourself
+  - Then have the user confirm for this sub-project the answers it lists: each n/a value on a line of its own, with the question whether the element occurs here; the other values as one list of key and value, to which the user names what does not hold. An answer that does not hold opens its entry again; record the confirmation in `00_Decisions.md`
 - If `handover.md` of the current phase is missing → if this chat opens a new phase, that is as it should be: read the previous phase's (start ritual, item 2), write this phase's with the chat closure ritual, and its `README.md` (the goal of the phase, from the workflow file) if there is none; otherwise ask the user
 - If the "Open questions" of `styleguide.md` still list a `[content]` entry (or one without a tag) → before drafting any chapter: STOP, clarification required
 - If they still list a `[format]` entry → before format work (Phase B): STOP, clarification required
