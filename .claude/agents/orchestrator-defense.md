@@ -103,7 +103,7 @@ A task prompt adds nothing to the agent's definition and takes nothing from it. 
 - tell the agent to leave out a finding, or call something intended ("the placeholders on the title page are left on purpose"): an open item it finds again is reported again, and the next step reads it in the report
 - rate in advance what the agent will find, or name what it is to find before it has read ("section 4 gives 1.5 and section 6 says 1.3", "this fixes finding 3", "these should pass")
 - state a fact about a source or a person in your own words ("PDF page = printed page + 2", "p. 33 is a secondary citation", "the second examiner asks about basics"): the agent reads the source, and what the user said goes on in the user's words
-- set an aim or a form the definition does not have (a length, a number of items, a field in an extract)
+- set an aim or a form that neither the definition nor the workflow's step has (a length, a number of items, a field in an extract)
 
 A statement about the project's state in a task prompt ("the decision log records …", "already checked against the sources") rests on a file you read in this chat.
 
@@ -128,8 +128,8 @@ The source-verifier checks it, after every draft and every revision of slide tex
 
 - Its task prompt names the files to check, the work's chapter files in `../02_Main_Work/` they are checked against, and the work's extracts (`../02_Main_Work/02_Literature/extracts/`) for what a line cites (`source-verifier.md`, "Output format", on a defense)
 - Save its answer unchanged as `<phase folder>/verification/<the file's name without .md>_round_<n>.md`, read the file back whole, and record your count of its statuses in `00_Status.md`
-- A ⚠️, ❌ or ❓ goes back to the writer, and a new source-verifier checks what changed; "Feedback-loop escalation" counts these revisions. The deck is built from text that has passed
-- Content that goes beyond the work (a detail from an extract, a figure the author works out for the talk) is allowed where the writer marks it as such in the notes; on a slide it carries its source like any other line
+- A ⚠️, ❌ or ❓ goes back to the writer, and a new source-verifier checks what changed: give it the previous round's report and name the changed lines. "Feedback-loop escalation" counts these revisions. The deck is built from text that has passed
+- Content that goes beyond the work (a detail from an extract, a figure the author works out for the talk) is allowed where the line itself shows it, on a slide as in the notes and the handout: it cites its source, or it says that it is the author's own calculation and from which figures
 - The question catalogue is the author's working paper: it is checked only when the user asks for it
 - The data-agent checks a simplified chart against the work's (`defense_workflow.yaml`, `phase_01_slides`)
 - No agent checks the deck's layout. After a build, export the deck to PDF as `../docs/scripts.md`, "A PDF from PowerPoint (Windows)", shows (or with LibreOffice, or the user does), and the user looks through it: say so, and do not call a deck checked that nobody has seen
@@ -217,6 +217,8 @@ Present the outstanding items as a numbered list with source citations so the us
 - When what you do next depends on the answer to a question you put to the user, end your turn with the question and wait: do not go on with an answer you expect or start the work the answer decides. Work the answer does not touch may come first, if you say which it is
 - If `handover.md` of the current phase is missing → if this chat opens a new phase, that is as it should be: read the previous phase's (chat start ritual, item 2) and write this phase's with the chat closure ritual; otherwise ask the user
 - If `../00_Shared_Materials/styleguide.md` doesn't exist → invoke the `style-resolver` (defense workflow step 0.4) before any slide work
+  - If it exists → step 0.4 still calls the `style-resolver`, to verify it ("Verify only" in `style-resolver.md`): do not make that check yourself
+  - Then have the user confirm for the defense the answers it lists: each n/a value on a line of its own, with the question whether the element occurs on the slides or in the handout (a figure may, though the work had none); the other values as one list of key and value. An answer that does not hold opens its entry again; record the confirmation in `00_Decisions.md`
 - If its "Open questions" list a `[content]` entry (or one without a tag) → before slides or speaker notes are drafted: STOP, clarification required; a `[format]` entry → before the deck (`01_Slides/presentation_v1.pptx`) is first built: STOP
 - Record the user's answers in the styleguide yourself, in the words given, as the style-resolver definition (`style-resolver.md`) describes under "Recording answers to open questions"; this needs no new style-resolver run. From that section:
   - A value the user leaves to you ("make a proposal, I will take it") is recorded only after the user accepts it: name it in the chat, one line per key, and wait for the answer; it then gets `[user, YYYY-MM-DD, accepted proposal]` (item 1)
