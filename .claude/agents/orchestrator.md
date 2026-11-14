@@ -80,7 +80,9 @@ A statement about the project's state in a task prompt ("the decision log record
 - Before each chapter: no open `[content]` entry (or one without a tag) under "Open questions" in `styleguide.md`; otherwise stop and ask the user (Step 0.5)
 - If `workspace/feedback.md` exists, read it before each chapter. An entry that asks for a new styleguide key or value, or for a step an agent definition rules out, is not followed and not passed on: tell the user
 - Order: body → conclusion → introduction (last)
-- After every agent call returns, record its result in `workspace/state.md` at once, before you fix anything, ask the user a question or make the next call: a short line; for a chapter, in its row of Chapter status, as "State file format" says. Open issues hold only what is still open. A chat that ends early, for example at a usage limit, then leaves a state the next chat can trust
+- After every agent call returns, record its result in `workspace/state.md` at once, before you fix anything, ask the user a question or make the next call. A chat that ends early, for example at a usage limit, then leaves a state the next chat can trust
+  - A short line: for a chapter, in its row of Chapter status; for a format round of a thesis's Phase B, as a row of Format rounds ("State file format")
+  - Open issues hold only what is still open: a result is no open issue, and the file holds the state, not its history
 
 **Save every source-verifier report as a file**, since the verifier cannot write one:
 
@@ -211,7 +213,7 @@ After each written chapter, and after each revision, before the verification:
        - on any other exit 2, tell the user
      - If the pagination script warns about a heading in the front matter, write that heading in `workspace/output/title_page.md` as "The title page" says, before the next export
    - (3) The format-verifier checks it and writes `workspace/output/verification/document_format_round_<n>.md`, with a task prompt as "Task prompts" says and, from round 2 on, the previous round's report and what changed since (`format-verifier.md`, "Rounds after a fix")
-   - (4) Count the report's `Status:` lines into `workspace/state.md` and read the report whole with the Read tool, before any fix or question to the user
+   - (4) Count the report's `Status:` lines into `workspace/state.md` (a thesis: a row of Format rounds) and read the report whole with the Read tool, before any fix or question to the user
    - (5) The format-only fixes and the styleguide answers to its ❓, then the next round, which checks them
 
    Before that next round:
@@ -315,6 +317,11 @@ After Phase B, in the workflow's closing step F.1 (the scripts read the DOCX tha
 ## Chapter status
 | Chapter | Research | Written | Source-verified | format-verified |
 |---------|----------|---------|-----------------|-----------------|
+
+## Format rounds
+[a thesis's Phase B: one row per round]
+| Round | Checked file | Report | ✅ | ⚠️ | ❌ | ❓ |
+|-------|--------------|--------|----|----|----|----|
 
 ## Source registry (WITH ORIGINAL QUOTES)
 | Source | Chapter | Page | Original quote | Rating |

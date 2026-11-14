@@ -28,6 +28,7 @@
 **Active phase:** [e.g., 03_Theory_chapters]
 **Last handover:** [date, brief summary]
 **Next planned task:** [from current handover]
+**Last agent result:** [agent, what it returned, its report file; the next result replaces this line]
 
 ---
 
@@ -42,6 +43,14 @@
 | Conclusion | Summary and outlook | 2.0 | - | ⬜ | ⬜ | ⬜ | ⬜ |
 
 Status symbols: ⬜ not started · 🔵 in progress · ✅ done · ⚠️ revision needed
+
+---
+
+## Format rounds (Phase B)
+
+| Round | Checked file | Report | ✅ | ⚠️ | ❌ | ❓ |
+|-------|--------------|--------|----|----|----|----|
+| | | | | | | |
 
 ---
 
