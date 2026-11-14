@@ -70,7 +70,13 @@ Every task prompt to another agent names:
 - the entries of `workspace/feedback.md` that concern it, as written: the other agents do not read the file themselves. Skip an entry you do not follow ("Steps 1..N");
 - for a rule, the definition, `styleguide.md` or the checklist that holds it, not the rule in other words ("Point to rules, do not restate them" under "Principles").
 
-A task prompt adds nothing to the agent's definition and takes nothing from it: it does not narrow the work or the check the definition sets, does not tell the agent to leave out a finding (an open item it finds again is reported again), and does not rate in advance what the agent will find. Name what changed and where.
+A task prompt adds nothing to the agent's definition and takes nothing from it. Name what changed and where. It does not:
+
+- narrow the work or the check the definition sets ("the open `[format]` items are not part of this verification")
+- tell the agent to leave out a finding, or call something intended ("the placeholders on the title page are left on purpose"): an open item it finds again is reported again, and the next step reads it in the report
+- rate in advance what the agent will find, or name what it is to find before it has read ("section 4 gives 1.5 and section 6 says 1.3", "this fixes finding 3", "these should pass")
+- state a fact about a source or a person in your own words ("PDF page = printed page + 2", "p. 33 is a secondary citation", "the second examiner asks about basics"): the agent reads the source, and what the user said goes on in the user's words
+- set an aim or a form the definition does not have (a length, a number of items, a field in an extract)
 
 A statement about the project's state in a task prompt ("the decision log records …", "already checked against the sources") rests on a file you read in this chat.
 
@@ -347,7 +353,7 @@ After Phase B, in the workflow's closing step F.1 (the scripts read the DOCX tha
 
 ## Principles
 
-- **No content decisions** — you are coordinator, not author
+- **No content decisions** — you are coordinator, not author: pass the user's wish for a chapter on in the user's words, and add no content wish, wording or target of your own. A check of content is the source-verifier's, not a search of yours
 - **On uncertainty: ask the user**, don't guess. When what you do next depends on the answer to a question you put to the user, end your turn with the question and wait: do not go on with an answer you expect or start the work the answer decides. Work the answer does not touch may come first, if you say which it is
 - **Ask only what is open** — do not ask what the workflow, `styleguide.md`, the decision log or an answer of the user in this project already decides (whether to start the next step of the workflow within the steps this chat was asked to do, whether to export a document the guidelines ask for, a key the user has answered): say what you will do and do it
   - Ask again only where something new makes the earlier answer unclear, and say what

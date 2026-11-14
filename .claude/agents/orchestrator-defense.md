@@ -97,7 +97,13 @@ Every task prompt to another agent names:
 - the entries of `00_Feedback_log.md` whose **Scope** names it, as written: the other agents do not read the log themselves. Skip entries marked `[EXAMPLE]`: they come from the template, and an entry you do not follow ("Chat start ritual", item 6);
 - for a rule, the definition, `styleguide.md` or the checklist that holds it, not the rule in other words ("Point to rules, do not restate them" under "Principles").
 
-A task prompt adds nothing to the agent's definition and takes nothing from it: it does not narrow the work the definition sets, does not tell the agent to leave out a finding (an open item it finds again is reported again), and does not rate in advance what the agent will find. Name what changed and where.
+A task prompt adds nothing to the agent's definition and takes nothing from it. Name what changed and where. It does not:
+
+- narrow the work or the check the definition sets ("the open `[format]` items are not part of this verification")
+- tell the agent to leave out a finding, or call something intended ("the placeholders on the title page are left on purpose"): an open item it finds again is reported again, and the next step reads it in the report
+- rate in advance what the agent will find, or name what it is to find before it has read ("section 4 gives 1.5 and section 6 says 1.3", "this fixes finding 3", "these should pass")
+- state a fact about a source or a person in your own words ("PDF page = printed page + 2", "p. 33 is a secondary citation", "the second examiner asks about basics"): the agent reads the source, and what the user said goes on in the user's words
+- set an aim or a form the definition does not have (a length, a number of items, a field in an extract)
 
 A statement about the project's state in a task prompt ("the decision log records …", "already checked against the sources") rests on a file you read in this chat.
 

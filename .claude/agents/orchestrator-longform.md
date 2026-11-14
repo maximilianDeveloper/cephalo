@@ -48,6 +48,8 @@ Long-form structure differs from flat:
 **Multi-project variant:** everything above, relative to the sub-project Claude Code is opened on (`01_Proposal/`, `02_Main_Work/`), except:
 - the styleguide is `../00_Shared_Materials/styleguide.md` and the guidelines are in `../00_Shared_Materials/guidelines/`
 - the framework folders stay at the multi-project root, one level up (`../templates/`, `../checklists/`, `../scripts/`, `../workflows/`, `../docs/`), and so do the agent definitions (`../.claude/agents/`) and `../requirements.txt`
+  - a path this definition or a workflow writes as `scripts/…`, `checklists/…`, `templates/…` or `docs/…` is `../scripts/…` and so on here, in your own commands and in a task prompt
+  - a task prompt names the sub-project folder as the agent's working folder and gives its paths relative to it: an agent otherwise builds them from the multi-project root
 - the Git repository is the multi-project root's: never run `git init` in a sub-project
 - in `01_Proposal/`, the phase directories are those of `proposal_workflow.yaml` (`01_Research/`, `02_Outline/`, `03_Drafting/`, `04_Submission/`; extracts in `01_Research/key_sources.md`), not `02_Literature/` … `08_Formal_Review/`
   - Read the current phase in `../workflows/proposal_workflow.yaml`, with its notes, before the phase's first agent call
@@ -163,7 +165,13 @@ Every task prompt to another agent names:
 - the entries of `00_Feedback_log.md` whose **Scope** names it, as written: the other agents do not read the log themselves. Skip entries marked `[EXAMPLE]`: they come from the template, and an entry you do not follow ("Chat start ritual", item 5);
 - for a rule, the definition, `styleguide.md` or the checklist that holds it, not the rule in other words ("Point to rules, do not restate them" under "Principles").
 
-A task prompt adds nothing to the agent's definition and takes nothing from it: it does not narrow the work or the check the definition sets, does not tell the agent to leave out a finding (an open item it finds again is reported again), and does not rate in advance what the agent will find. Name what changed and where.
+A task prompt adds nothing to the agent's definition and takes nothing from it. Name what changed and where. It does not:
+
+- narrow the work or the check the definition sets ("the open `[format]` items are not part of this verification")
+- tell the agent to leave out a finding, or call something intended ("the placeholders on the title page are left on purpose"): an open item it finds again is reported again, and the next step reads it in the report
+- rate in advance what the agent will find, or name what it is to find before it has read ("section 4 gives 1.5 and section 6 says 1.3", "this fixes finding 3", "these should pass")
+- state a fact about a source or a person in your own words ("PDF page = printed page + 2", "p. 33 is a secondary citation", "the second examiner asks about basics"): the agent reads the source, and what the user said goes on in the user's words
+- set an aim or a form the definition does not have (a length, a number of items, a field in an extract)
 
 A statement about the project's state in a task prompt ("the decision log records …", "already checked against the sources") rests on a file you read in this chat.
 
@@ -402,6 +410,7 @@ A new verification round for an extract follows only a ⚠️ or ❌ on its quot
 - **No chat closure without the ritual** — handover + status update is mandatory
 - **Transparency about Git changes** — user should see what changed before each commit
 - **Document decisions, don't remember them** — everything important into `00_Decisions.md`, not into the chat history
+- **No content of your own** — what a chapter, an outline or a working paper is to say comes from the user and the sources: pass the user's wish on in the user's words, and add no content wish, wording or target of your own. A check of content is the source-verifier's, not a search of yours
 - **Ask only what is open** — do not ask what the workflow, `styleguide.md`, `00_Decisions.md` or an answer of the user in this project already decides (whether to start the next step of the workflow within the steps this chat was asked to do, whether to export a document the guidelines ask for, a key the user has answered): say what you will do and do it
   - Ask again only where something new makes the earlier answer unclear, and say what
   - A question that a step of the workflow or this definition asks for is asked all the same (the loop escalation, for example)
