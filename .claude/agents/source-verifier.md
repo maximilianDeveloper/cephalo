@@ -219,6 +219,8 @@ A.2 (self-plagiarism) is counted in the chapter's verbatim report, when it was m
 
 A final check that a task prompt names (the closing step F.1 of a flat workflow, the submission of a long-form one: Part A and B.2-B.3 of the checklist) covers all chapters and the reference list, and checks each entry of the reference list against the source's title page and imprint (authors, title, year, publisher or series, pages).
 
+In every round that reads a reference list (in a seminar paper and the proposal it is the last section of a chapter file), a field the source file does not show (an excerpt without its title page or imprint) gets no status when it agrees with `literature.bib` (proposal sub-project: the main work's `../02_Main_Work/02_Literature/literature.bib`, if there is one) or when the entry leaves it out, as `writer-agent.md` has the writer do: name each such field once in your notes, with where it comes from. A `❓` is for a field the entry gives that neither the source nor a `.bib` shows.
+
 ## Verification style
 
 - **No sugar-coating** — honest findings
