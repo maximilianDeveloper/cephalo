@@ -325,8 +325,8 @@ phases:
   submission:
     manual: true
     task: |
-      - Full-document final check: checklists/consistency.md, Part B (orchestrator-longform; B.6 is completed by the commit and tag below)
-      - Final DOCX export to 08_Formal_Review/submissions/v_final_<date>.docx
+      - Full-document final check: checklists/consistency.md, Part B. The source-verifier checks Part A over all chapters and B.2-B.3 in one call, and its answer is saved unchanged as 08_Formal_Review/verification/consistency_final.md; orchestrator-longform takes B.1 and B.4 from the last format report and the scripts and judges no content itself (orchestrator-longform.md, "`08_Formal_Review` (Phase B)"; B.6 is completed by the commit and tag below)
+      - Final DOCX export to 08_Formal_Review/submissions/v_final_<date>.docx: a new export of the files the last format round checked, whose report stands for it while they have not changed since; after a change, a format round on a new v_r<n> export first
       - Run scripts/docx_pagination.py on this v_final file with the values of styleguide.md pagination.front_matter, pagination.main_text and pagination.back_matter, and scripts/docx_postprocess.sh (only if document.hyphenation = automatic): a new export carries neither the sections nor the flag
       - Front matter numbered unlike the main text: only if styleguide.md pagination.front_matter is Roman, counted but not shown or none, or pagination.main_text starts at 1, the DOCX has it as a section of its own, set by scripts/docx_pagination.py after the export (docs/reference_management.md, "The title page"; without Python, the user sets it in Word as described there)
       - Update table of contents (Ctrl+A then F9, twice: docs/reference_management.md, "The title page")

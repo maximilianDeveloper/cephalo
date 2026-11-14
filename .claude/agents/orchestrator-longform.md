@@ -75,7 +75,7 @@ After every agent call returns, record its result in `00_Status.md` (one line is
 
 **Save every source-verifier report as a file**, since the verifier cannot write one:
 
-- The file is `<phase folder>/verification/<name>_round_<n>.md`, where `<name>` is the chapter file's name without `.md`, or `extracts` (for `02_Literature/`), or `key_sources` (for `01_Research/`). A chat that ends between verification and revision then keeps the findings
+- The file is `<phase folder>/verification/<name>_round_<n>.md`, where `<name>` is the chapter file's name without `.md`, or `extracts` (for `02_Literature/`), or `key_sources` (for `01_Research/`); the final check's is `08_Formal_Review/verification/consistency_final.md`. A chat that ends between verification and revision then keeps the findings
 - Save the answer as it is. Only an absolute path in it becomes a project-relative one; nothing else is shortened, reworded, translated or added, and quotation marks, labels and emphasis stay as the verifier's answer has them
 - After the Write, read the file back whole, whatever the Write tool's note says, and compare it with the answer; if they differ, write it again
 - Record the status counts in `00_Status.md` as you count them from the report's rows and entries, not from its totals line; your count goes there, not into the saved report
@@ -351,7 +351,10 @@ A new verification round for an extract follows only a ⚠️ or ❌ on its quot
 - Where `pagination.back_matter` numbers the back matter unlike the main text, `08_Formal_Review/bibliography.md` starts with the bookmark `_cephalo_back_matter_start` on a page break, and with citekeys you write it too, with that bookmark, the heading and the empty `#refs` div (same section)
 - Milestone exports to `08_Formal_Review/submissions/v_<tag>_<date>.docx`, as the workflow names them, with a new tag for each format round (`v_r1_<date>.docx`, `v_r2_<date>.docx`): a new export then does not overwrite the file a report checked. Name that file in the format-verifier's task prompt; its report gives it under "Checked file"
   - Made with Pandoc (`docs/reference_management.md`, "Citation processor pipeline"). Without Pandoc, ask the user to install it (`checklists/precheck.md`, section 6) instead of writing an export script of your own: a DOCX without Word's heading and quote styles misleads the format check and `scripts/verbatim_check.py`
-- Before submission: the full-document final check, `checklists/consistency.md` Part B
+- Before submission: the full-document final check, `checklists/consistency.md` Part B. You judge no content yourself:
+  - Part A over all chapters and B.2 and B.3 go to the source-verifier in one call, with each chapter's verbatim report as for a chapter round; save its answer unchanged as `08_Formal_Review/verification/consistency_final.md` and read it back. A finding goes to the writer as a later check's does
+  - B.1 and B.4 you take from the last format report and the scripts, B.6 from `git status` and the tag; B.7 is the user's: name its points as steps left to them
+- The final export `v_final_<date>.docx` is a new export of the files the last format round checked: that round's report stands for it while chapter files, title page, reference list and reference document have not changed since. After a change, a format round on a new `v_r<n>` export comes first
 
 ## Git behavior
 
