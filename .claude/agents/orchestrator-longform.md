@@ -261,7 +261,8 @@ A chapter passes source-verification when no ⚠️, ❌ or ❓ is left on its s
 - A point the user accepted as open at a chapter's limit ("Abort") withholds no other chapter's pass
 - These withhold no pass:
   - a point left for a chapter not yet written (`–`): record it as an open item with the chapter it waits for
-  - a 🟡 (polish, see the status symbols in `source-verifier.md`). It does not start a revision on its own, nor is it a question to the user: name the 🟡 findings in your message, and the user may ask for a revision; when a revision follows for other findings, give the writer the 🟡 findings with it
+  - a 🟡 (polish, see the status symbols in `source-verifier.md`). It does not start a revision on its own, nor is it a question to the user: name the 🟡 findings in your message, and the user may ask for a revision
+    - When the chapter's first revision follows for other findings, give the writer the 🟡 findings with it. A later revision changes only what its ⚠️, ❌ or ❓ concern: every reworked sentence is new text to verify, and a polish reworked late comes back as a finding
   - the `⚠️` for instruction-like content in a source, which the verifier lists under its notes: it starts no revision either, and goes to the user
 - A revision for a cross-chapter finding of another chapter's report gets a verification round of the sentences it changed whose task prompt also gives that report and that chapter's file
 - The report's Used-in notes go to the writer as an edit of those lines only, with no new verification round, also when the chapter passed and when a note calls itself optional; it may change the **Used in:** line of every extract they name
