@@ -269,16 +269,33 @@ phases:
       - step: B.1
         agent: format-verifier
         action: Full styleguide check
+        note: |
+          A format round as orchestrator.md, "Phase A → B transition", item
+          5, describes. In every round the format-verifier runs the scripts
+          of B.2 and B.3 itself and reports their results
+          (format-verifier.md, section 3).
 
       - step: B.2
         script: scripts/bibliography_check.py
+        note: |
+          Run by the format-verifier within each format round (B.1), which
+          reports the result; no run of your own beside it.
       
       - step: B.3
         script: scripts/abbreviations_extract.py
+        note: |
+          Run by the format-verifier within each format round (B.1), which
+          reports the result; no run of your own beside it.
       
       - step: B.4
         agent: format-verifier
         action: Consistency checks
+        note: |
+          The next format round, on a new export (B.0) after the fixes of
+          the round before. It checks the fixes and, as every round does,
+          the consistency across the document. An export that has not
+          changed gets no further round, so without a fix after B.1, B.4
+          falls away.
   
   # ===========================================================
   # Closing
@@ -288,10 +305,21 @@ phases:
       agent: orchestrator
       checklist: checklists/consistency.md
       action: Full-document consistency check
+      note: |
+        orchestrator.md, "Final check". The source-verifier checks Part A
+        over all chapters and B.2-B.3 in one call; its answer is saved
+        unchanged as workspace/output/verification/consistency_final.md
+        and read back. The orchestrator takes B.1 and B.4 from the last
+        format report and the scripts and names B.7 to the user; it judges
+        no content itself.
     
     - step: F.2
       agent: format-verifier
       action: Final styleguide report
+      note: |
+        The report of the last format round is the final one while the
+        export has not changed since. A new round follows only a new
+        export, after a fix that F.1 prompted.
     
     - step: F.3
       agent: data

@@ -285,12 +285,15 @@ At the end of every chat, regardless of what was done:
 ### Final check
 
 After Phase B, in the workflow's closing step F.1 (the scripts read the DOCX that Phase B exports; the introduction is written last, in Phase A):
-- Execute `checklists/consistency.md`
-- Run scripts:
+- `checklists/consistency.md`, Part B. You judge no content yourself:
+  - Part A over all chapters and B.2 and B.3 go to the source-verifier in one call, with each chapter's verbatim report as for a chapter round; save its answer unchanged as `workspace/output/verification/consistency_final.md` and read it back ("Steps 1..N: Chapter assignment"). A finding goes to the writer as a later check's does ("Feedback loop control")
+  - B.1 and B.4 you take from the last format report and the scripts; B.7 is the user's: name its points as steps left to them
+- The last format round's report is the final one while the export has not changed since; a new round follows only a new export, after a fix this step prompted
+- Run scripts, on a new export made in this step (the last format round ran them on the DOCX it checked):
   - `scripts/bibliography_check.py` (minus-test)
   - `scripts/abbreviations_extract.py`
-  - `scripts/docx_postprocess.sh` on a new export made in this step, if `document.hyphenation` in `styleguide.md` is automatic (the DOCX of the last format round carries the flag already)
-  - `scripts/docx_pagination.py` on a new export made in this step, with the values of `pagination.front_matter`, `pagination.main_text` and `pagination.back_matter` (the DOCX of the last format round has its sections already)
+  - `scripts/docx_postprocess.sh`, if `document.hyphenation` in `styleguide.md` is automatic (the DOCX of the last format round carries the flag already)
+  - `scripts/docx_pagination.py`, with the values of `pagination.front_matter`, `pagination.main_text` and `pagination.back_matter` (the DOCX of the last format round has its sections already)
 - For presentations: three-way check PPTX ↔ PDF ↔ speaker notes
 
 ## State file format

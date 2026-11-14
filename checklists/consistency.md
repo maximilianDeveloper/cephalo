@@ -1,7 +1,7 @@
 # Consistency Check
 
 **Purpose:** Verifies consistency within and between chapters.
-**Executed by:** source-verifier (cross-chapter checks; in a seminar paper also the final check of Part A and B.2-B.3), orchestrator (final check).
+**Executed by:** source-verifier (cross-chapter checks; in the final check Part A and B.2-B.3), orchestrator (the rest of the final check, from the format reports, the scripts and `git status`; without an orchestrator, Claude in the main chat).
 **When:** After every second chapter, plus a final check before submission; A.2 also in every round whose verbatim report lists runs shared with other chapters (`.claude/agents/source-verifier.md`, "Cross-chapter consistency").
 
 ---
@@ -51,7 +51,7 @@ To be performed by source-verifier after every second chapter.
 
 ## Part B: Full-document final check (before submission)
 
-To be performed on the exported document, after the last written chapter (introduction, written last) and the formatting phase: in the flat workflows the closing step F.1, in the long-form workflows the submission step. A seminar paper (`seminar_2agent`) has no formatting phase: in its closing step F.1, the source-verifier checks Part A and B.2-B.3 on the chapter files and the reference list before the export; B.1, B.4 and B.7 come from the format rounds and the user.
+To be performed on the exported document, after the last written chapter (introduction, written last) and the formatting phase: in the flat workflows the closing step F.1, in the long-form workflows the submission step. In every final check the source-verifier checks Part A and B.2-B.3 on the chapter files and the reference list, and its answer is saved as `consistency_final.md` beside the verification reports; B.1 and B.4 come from the format rounds, B.7 from the user. A seminar paper (`seminar_2agent`) has no formatting phase: there this check comes before the export, in its closing step F.1.
 
 ### B.1 Indexes
 
