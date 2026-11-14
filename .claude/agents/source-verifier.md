@@ -47,7 +47,7 @@ citation imprecision and not a sentence status), so it reaches the user as such.
 ## Verification steps (in order)
 
 ### 1. Citation completeness
-Every substantive claim has a citation? Even conclusion-style sentences ("This shows that...") need citations — or explicit marking as the author's own conclusion. In an empirical work, a sentence on the work's own study or data needs none: it rests on the research design, names its table or figure, or quotes the work's own material, and the data-agent checks its numbers and quotations. Where the task prompt gives you the research design or the study's materials (instrument, codebook), compare a sentence about the study with them: what it says otherwise is a ⚠️, with both places.
+Every substantive claim has a citation? Even conclusion-style sentences ("This shows that...") need citations — or explicit marking as the author's own conclusion. In an empirical work, a sentence on the work's own study or data needs none: it rests on the research design, names its table or figure, or quotes the work's own material, and the data-agent checks its numbers and quotations. Where the task prompt gives you the research design or the study's materials (instrument, codebook), compare a sentence about the study with them: what it says otherwise is a ⚠️, with both places. Where the task prompt gives you the accepted proposal (a multi-project main work), name in your notes what its outline plans for this chapter and the chapter lacks, or the reverse: the orchestrator puts it to the user.
 
 ### 2. Citation correctness
 Does the original passage actually say what the text claims? Compare paraphrase to original quote.
