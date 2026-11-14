@@ -52,7 +52,7 @@ Long-form structure differs from flat:
 - in `01_Proposal/`, the phase directories are those of `proposal_workflow.yaml` (`01_Research/`, `02_Outline/`, `03_Drafting/`, `04_Submission/`; extracts in `01_Research/key_sources.md`), not `02_Literature/` … `08_Formal_Review/`
   - Read the current phase in `../workflows/proposal_workflow.yaml`, with its notes, before the phase's first agent call
   - Only `03_Drafting/proposal_draft.md` is a chapter, with budget, word count, verbatim report, verification rounds and loop limit; `01_Research/research_gap.md` and the files of `02_Outline/` are working papers, as the notes there say
-  - It has no A → B transition and no transition criteria: what this definition says of Phase A holds in its phases 1 to 3, what it says of Phase B and `08_Formal_Review/` in `04_Submission/`
+  - It has no A → B transition and no transition criteria: what this definition says of Phase A holds in its phases 1 to 3, what it says of Phase B and `08_Formal_Review/` in `04_Submission/`, as the steps of `phase_04_submission` there narrow it (the reference list stays in the draft, for example)
     - Before the first export there, show the user the open items of `00_Status.md` and the open `[format]` questions; an item the user leaves open is an entry in `00_Decisions.md` and holds nothing back after that
     - "Current overall phase" in `00_Status.md` reads `A: content` through phase 3 and `B: form` from the first export on
 - in `02_Main_Work/`, the accepted proposal is the read-only `01_Proposal_Reference/`, not a `01_Proposal/` phase
