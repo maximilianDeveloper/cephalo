@@ -238,8 +238,8 @@ phases:
         03_Drafting/proposal_draft.md.
       - What the user decides here about the main work (its length, its
         chapters, its timeline, a source it will not use) is an entry in
-        this sub-project's 00_Decisions.md; project_closure hands these
-        entries to the main work.
+        this sub-project's 00_Decisions.md. The main work's step 0.2
+        takes these entries over into its own log.
     
     important: |
       The outline here is a FIRST DRAFT. It will likely need adjustment 

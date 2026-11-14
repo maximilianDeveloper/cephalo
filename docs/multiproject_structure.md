@@ -117,6 +117,8 @@ The `01_`, `02_`, `03_` numbering enforces meaningful sort order: proposal first
 
 **Special characteristic:** the proposal is read-only in `01_Proposal_Reference/`. When the work deviates from the proposal (which is normal), document the deviation in `00_Decisions.md` — not by editing the proposal itself.
 
+At setup (step 0.2), the main work's `00_Decisions.md` takes over what the proposal settled for it: the research question, the planned outline, and the decisions of the proposal's log that concern the main work, such as its length. The main work's chats can then work from their own log, and a deviation has an entry to refer to. A chat of the main work may read the frozen `01_Proposal/` (for a decision, or its title page file as a pattern); it writes nothing there.
+
 ### Sub-project 3: Defense
 
 **Purpose:** Preparation for the oral defense. Unlike the proposal and main work, the *output* is not a document — it is your performance in the exam. The files (slides, notes, cheat sheets) are tools, not the assignment itself.

@@ -135,6 +135,11 @@ phases:
           00_Status.md, 00_Decisions.md and 00_Feedback_log.md were created by
           setup from templates/ (feedback log: templates/feedback_log.md).
           Fill 00_Status.md; add the research question to 00_Decisions.md.
+          Multi-project main work: also enter in 00_Decisions.md what the
+          work takes from the accepted proposal, each entry naming it as
+          its source. That is the planned outline and the decisions of
+          ../01_Proposal/00_Decisions.md that concern the main work
+          (orchestrator-longform.md, "Multi-project variant").
 
       - step: 0.3
         name: Materials pre-check
