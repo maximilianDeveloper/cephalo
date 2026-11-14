@@ -133,4 +133,6 @@ When the source-verifier sends immediate feedback:
 3. Return to source-verifier
 4. If feedback repeats for the same sentence: escalate to orchestrator
 
+A revision after findings takes the length the findings need: leave out or shorten nothing a finding asks for in order to keep the budget, also when the task prompt names one. If the chapter may now run over its budget, say so with your estimate; a shortening is a task of its own ("Page budget").
+
 In Phase B (Formatting), activate only for genuine content changes — not for rewrites prompted by formatting.

@@ -83,7 +83,7 @@ After every agent call returns, record its result in `00_Status.md` (one line is
 **For a return call** (a revision after a verification, or a shortening for the page budget):
 
 - Give the agent the report file, or the findings verbatim (for a shortening, the chapter's word count and its budget)
-- Ask it to change only what the findings concern, and give it no aim of your own, such as a length or a budget to keep ("do not make it longer"), beyond a shortening that "The page budget" asks for (more than 20% over)
+- Ask it to change only what the findings concern, and give it no aim of your own, such as a length or the budget, also as a reminder ("budget: 600 words, the chapter has 612", "do not make it longer"), beyond a shortening that "The page budget" asks for (more than 20% over)
 - Name the files it may change: for the writer the chapter file and the "Used in" lines of the extracts it cites, for the research-agent the extracts concerned
 - A change to these files that the agent asks for in its answer but did not make goes back to it in a call that names that file among those it may change; do not make it yourself
 - For the verification after a revision, call a new source-verifier with the Agent tool, not a message to the one of the round before, which would judge its own proposals and not read the sources again
@@ -94,7 +94,7 @@ After every agent call returns, record its result in `00_Status.md` (one line is
 - Set a chapter's budget before its first writer task: the figure the user names for it, otherwise its share of the total, `document.page_count` in `styleguide.md` (of a range, its upper bound), split over the chapters once with the user
   - In the `01_Proposal/` sub-project, `page_count` in `proposal_workflow.yaml`, as the user confirms it, takes the place of `document.page_count`, and `03_Drafting/proposal_draft.md` is the one chapter
 - A figure the user names goes into `00_Decisions.md` when it is named, and so does each chapter's budget in words when you set it; later chats take the budget from there
-- Give the budget to the writer in words, as a number in the task prompt (`budget: 600 words`), not as a pointer to `00_Decisions.md`; convert it with the words-per-page figure there, which you ask the user for once
+- Give the budget to the writer in words, as a number in the task prompt of the chapter's first draft (`budget: 600 words`), not as a pointer to `00_Decisions.md`; a return call after findings names no budget and no word count ("For a return call"). Convert it with the words-per-page figure there, which you ask the user for once
 - If the user's figures do not fit the total, ask before the writer starts whether the total changes; a different total sets `document.page_count` aside ("Step 3: Extend decisions log (if needed)")
 - After each draft and each revision, before its verification, count its words as "Step 2: Update status" says
 - Over 20% above its budget: before the verification, a return call to the writer to shorten it; if the writer names a claim the budget would drop, or the user wants the length, ask the user, and record a length the user accepts in `00_Decisions.md`
