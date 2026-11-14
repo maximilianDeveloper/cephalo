@@ -366,7 +366,7 @@ A new verification round for an extract follows only a ⚠️ or ❌ on its quot
 - If the "Open questions" of `styleguide.md` still list a `[content]` entry (or one without a tag) → before drafting any chapter: STOP, clarification required
 - If they still list a `[format]` entry → before format work (Phase B): STOP, clarification required
 - Record the user's answers in the styleguide yourself, in the words given, as the style-resolver definition (`style-resolver.md`) describes under "Recording answers to open questions"; this needs no new style-resolver run. From that section:
-  - A value the user leaves to you ("make a proposal, I will take it") is recorded only after the user accepts it: name it in the chat, one line per key, and wait for the answer (item 1)
+  - A value the user leaves to you ("make a proposal, I will take it") is recorded only after the user accepts it: name it in the chat, one line per key, and wait for the answer; it then gets `[user, YYYY-MM-DD, accepted proposal]` (item 1)
   - A value the user takes provisionally gets `[provisional, user, YYYY-MM-DD]` and a line under the open issues of `00_Status.md` (item 1)
   - When the user answers that the work will not contain an element (tables, figures, statistics, footnotes or internet sources, for example), close its entry with exactly this value, in English whatever the language of the styleguide or the chat: `n/a — does not occur in this work; reopen if it occurs`, followed by its provenance (`[user, YYYY-MM-DD]`)
     - In a multi-project, only when none of the sub-projects will contain it, since they share the styleguide (item 4)
