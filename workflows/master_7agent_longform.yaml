@@ -305,6 +305,12 @@ phases:
       chapter (master-specific; whether the empirical chapter does what
       design and methods chapter say is the methods-agent's check in
       05_Empirical).
+    note: |
+      Part of a chapter's verification round, not a step or a call of its
+      own. The task prompt of every second chapter's round, and of the last
+      chapter's, names the checklist's Part A and the chapters written so
+      far; the conclusion's round names B.3 as well, the introduction's B.2
+      (orchestrator-longform.md, "Feedback-loop escalation").
   
   # ===========================================================
   # Phase transition A -> B

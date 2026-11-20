@@ -2,13 +2,13 @@
 
 **Purpose:** Verifies consistency within and between chapters.
 **Executed by:** source-verifier (cross-chapter checks; in the final check Part A and B.2-B.3), orchestrator (the rest of the final check, from the format reports, the scripts and `git status`; without an orchestrator, Claude in the main chat).
-**When:** After every second chapter, plus a final check before submission; A.2 also in every round whose verbatim report lists runs shared with other chapters (`.claude/agents/source-verifier.md`, "Cross-chapter consistency").
+**When:** After every second chapter and after the last one, inside that chapter's verification round (B.3 with the conclusion's round, B.2 with the introduction's), plus a final check before submission; A.2 also in every round whose verbatim report lists runs shared with other chapters (`.claude/agents/source-verifier.md`, "Cross-chapter consistency").
 
 ---
 
 ## Part A: Cross-chapter consistency (during Phase A)
 
-To be performed by source-verifier after every second chapter.
+To be performed by source-verifier after every second chapter and after the last one.
 
 ### A.1 Cross-references
 

@@ -203,9 +203,11 @@ phases:
       agent: source-verifier
       note: |
         Part of the chapter's verification round, not a call of its own: the
-        task prompt of every second chapter's round names the checklist's
-        Part A and the chapters written so far (orchestrator.md, "For each
-        chapter", step 4). The final check is F.1.
+        task prompt of every second chapter's round, and of the last
+        chapter's, names the checklist's Part A and the chapters written so
+        far; the conclusion's round names B.3 as well, the introduction's
+        B.2 (orchestrator.md, "For each chapter", step 4). The final check
+        is F.1.
   
   # ===========================================================
   # Phase transition A -> B (same as bachelor)
