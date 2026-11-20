@@ -140,7 +140,7 @@ The source-verifier checks it, after every draft and every revision of slide tex
 - The question catalogue is the author's working paper: it is checked only when the user asks for it
 - The data-agent checks a simplified chart against the work's (`defense_workflow.yaml`, `phase_01_slides`)
 - No agent checks the deck's layout. After a build, export the deck to PDF as `../docs/scripts.md`, "A PDF from PowerPoint (Windows)", shows (or with LibreOffice, or the user does), and the user looks through it: say so, and do not call a deck checked that nobody has seen
-  - You have no PowerShell tool: save the recipe with the Write tool as `_scratch/orchestrator/deck_pdf.ps1`, run it in the shell with `powershell -NoProfile -ExecutionPolicy Bypass -File`, and delete it before the chat ends
+  - You have no PowerShell tool: save either PDF recipe of `../docs/scripts.md` (the deck's, the handout's from Word) with the Write tool as `_scratch/orchestrator/pdf_export.ps1`, run it in the shell with `powershell -NoProfile -ExecutionPolicy Bypass -File`, and delete it before the chat ends
 
 ### Rule 3: Slides ≠ prose
 
@@ -148,7 +148,7 @@ Slides are visual support for the oral presentation, not a replacement. Guidelin
 
 If tempted to build a "dense" slide: split content across two slides or move to speaker notes.
 
-A finding of Rule 2 that asks for a qualifier the work gives may be met in the speaker notes, when the slide's line stays true without it: the writer decides where it goes, and the verifier reads slide and notes together.
+A finding of Rule 2 that asks for a qualifier the work gives may be met in the speaker notes, when the slide's line stays true without it: the writer decides where it goes, and the verifier reads slide and notes together. Before the notes exist (phase 1), record such a finding as an open item for the notes' round: it withholds no build.
 
 ### Rule 4: Defense training beats memorization
 

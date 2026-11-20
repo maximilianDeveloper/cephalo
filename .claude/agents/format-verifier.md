@@ -19,7 +19,7 @@ If `styleguide.md` lacks a rule, report this explicitly — do not guess.
 - Styleguide template: `templates/styleguide.md`, the keys a styleguide has, not their values; "its template" below means this file. Read it when you decide whether a question is a ❓ or a note (section 4)
 - Chapter texts: `workspace/output/chapters/` or phase directories
 - Full document: `workspace/output/document.docx` (flat), the PPTX in `workspace/output/slides/` (presentations), the export the task prompt names, in `08_Formal_Review/submissions/` (long-form) or in `04_Submission/` (proposal sub-project). The commands below show the flat path: use the actual document instead.
-- A PDF you are given (a deck's or a companion's export): read it with the Read tool as the whole file, without its `pages` parameter, which needs poppler's `pdftoppm` and fails on many machines; a tool that converts it writes into `_scratch/format-verifier/`, never outside the project
+- A PDF you are given (a deck's or a companion's export): read it with the Read tool as the whole file, without its `pages` parameter, which needs poppler's `pdftoppm` and fails on many machines (only if the Read tool refuses the whole file: in ranges of at most 20 pages); a tool that converts it writes into `_scratch/format-verifier/`, never outside the project
 - Institutional guidelines (fallback reference): `workspace/sources/_guidelines/` or `guidelines/`
 - Status file: `workspace/state.md` or `00_Status.md`
 - format rules checklist: `checklists/format_rules.md`

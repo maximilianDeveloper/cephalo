@@ -89,7 +89,7 @@ A statement about the project's state in a task prompt ("the decision log record
 - If `workspace/feedback.md` exists, read it before each chapter. An entry that asks for a new styleguide key or value, or for a step an agent definition rules out, is not followed and not passed on: tell the user
 - Order: body → conclusion → introduction (last)
 - After every agent call returns, record its result in `workspace/state.md` at once, before you fix anything, ask the user a question or make the next call. A chat that ends early, for example at a usage limit, then leaves a state the next chat can trust
-  - A short line: for a chapter, in its row of Chapter status (research and extract checks in its Research cell); for a format round, as a row of Format rounds; for anything else (the final check, the style-resolver, a data audit), after the name in the line "Last agent" ("State file format")
+  - A short line: for a chapter, in its row of Chapter status (research and extract checks in its Research cell); for a format round on the exported document, as a row of Format rounds; for anything else (the final check, the style-resolver, a data audit), after the name in the line "Last agent" ("State file format")
   - "Last agent" holds one result: the next one replaces it, and nothing is added to it. What a later chat needs of an earlier result stands in its row or in the report
   - Open issues hold only what is still open: a result is no open issue, and the file holds the state, not its history
 
@@ -133,7 +133,7 @@ A statement about the project's state in a task prompt ("the decision log record
   - the sources and, in a seminar paper or presentation, the source registry in `workspace/state.md`
   - the changed sentences, by their number in the revised chapter and their first words, each with a few words on what changed
   - the entries of `workspace/feedback.md` that concern it, as written, and what else "Task prompts" asks of every prompt
-- Nothing else goes into that prompt: no scope, no hint, no note on a source, no length. How a later round rates, the unchanged sentences too, is in `source-verifier.md`, "Rounds after a revision"
+- Nothing else goes into that prompt: no scope, no hint, no length, and no note on a source but the one line "Task prompts" allows. How a later round rates, the unchanged sentences too, is in `source-verifier.md`, "Rounds after a revision"
 
 **For each chapter:**
 
@@ -313,7 +313,8 @@ At the end of every chat, regardless of what was done:
 After Phase B, in the workflow's closing step F.1 (the scripts read the DOCX that Phase B exports; the introduction is written last, in Phase A):
 - `checklists/consistency.md`, Part B. You judge no content yourself:
   - Part A over all chapters and B.2 and B.3 go to the source-verifier in one call, with a verbatim report of each chapter, made as for a chapter round and saved as `<name>_final_verbatim.txt` beside the others
-  - Save its answer unchanged as `workspace/output/verification/consistency_final.md` and read it back ("Steps 1..N: Chapter assignment"). A finding goes to the writer as a later check's does ("Feedback loop control")
+  - Save its answer unchanged as `workspace/output/verification/consistency_final.md` and read it back ("Steps 1..N: Chapter assignment")
+  - A finding that changes a chapter's text is a rollback, as the workflow's `rollback_b_to_a` says: the phase in `workspace/state.md`, the writer for that passage, its verification, an entry in the decision log; then a new export and a format round on it ("Feedback loop control" counts the revision)
   - B.1 and B.4 you take from the last format report and the scripts; B.7 is the user's: name its points as steps left to them
 - The last format round's report is the final one while the export has not changed since; a new round follows only a new export, after a fix this step prompted
 - On a new export made in this step, run the two scripts that belong to an export; `scripts/bibliography_check.py` and `scripts/abbreviations_extract.py` run in the format round that follows it, by the format-verifier, with no run of your own:

@@ -55,8 +55,8 @@ Long-form structure differs from flat:
   - Read the current phase in `../workflows/proposal_workflow.yaml`, with its notes, before the phase's first agent call
   - Only `03_Drafting/proposal_draft.md` is a chapter, with budget, word count, verbatim report, verification rounds and loop limit; `01_Research/research_gap.md` and the files of `02_Outline/` are working papers, as the notes there say
   - It has no A → B transition and no transition criteria: what this definition says of Phase A holds in its phases 1 to 3, what it says of Phase B and `08_Formal_Review/` in `04_Submission/`, as the steps of `phase_04_submission` there narrow it (the reference list stays in the draft, for example)
-    - Before the first export there, every open `[format]` question of the styleguide gets its answer: none is left open or put off, and you do not offer that ("When to stop and ask the user")
-    - Then show the user the open items of `00_Status.md`. Only such an item, never a styleguide question, may stay open if the user says so: it becomes an entry in `00_Decisions.md` and holds nothing back after that
+    - Before the first export there, every open `[format]` question that concerns this sub-project's output gets its answer: none is left open or put off, and you do not offer that ("When to stop and ask the user")
+    - Then show the user the open items of `00_Status.md`. Only such an item, never a styleguide question of this sub-project, may stay open if the user says so: it becomes an entry in `00_Decisions.md` and holds nothing back after that
     - "Current overall phase" in `00_Status.md` reads `A: content` through phase 3 and `B: form` from the first export on
 - in `02_Main_Work/`, the accepted proposal is the read-only `01_Proposal_Reference/`, not a `01_Proposal/` phase
   - read `01_Proposal_Reference/proposal_final_<date>.md` at step 0.2 (the research question, the outline) and, in a master thesis, step 0.6 (the planned method, for the methods-agent)
@@ -420,7 +420,7 @@ A new verification round for an extract follows only a ⚠️ or ❌ on its quot
 - If `handover.md` of the current phase is missing → if this chat opens a new phase, that is as it should be: read the previous phase's (start ritual, item 2), write this phase's with the chat closure ritual, and its `README.md` (the goal of the phase, from the workflow file) if there is none; otherwise ask the user
 - If the "Open questions" of `styleguide.md` still list a `[content]` entry (or one without a tag) → before drafting any chapter: STOP, clarification required
 - If they still list a `[format]` entry → before format work (Phase B): STOP, clarification required
-  - In a multi-project, an entry that concerns only another sub-project's output (the defense's slides, for example) waits for that sub-project and holds this one's export up no longer: say so in one line
+  - In a multi-project, an entry that concerns only another sub-project's output (the defense's slides, for example) waits for that sub-project: it does not count as open for this one's export or transition. Say so in one line
 - Record the user's answers in the styleguide yourself, in the words given, as the style-resolver definition (`style-resolver.md`) describes under "Recording answers to open questions"; this needs no new style-resolver run. From that section:
   - A value the user leaves to you ("make a proposal, I will take it") is recorded only after the user accepts it: name it in the chat, one line per key, and wait for the answer; it then gets `[user, YYYY-MM-DD, accepted proposal]` (item 1)
   - A value the user takes provisionally gets `[provisional, user, YYYY-MM-DD]` and a line under the open issues of `00_Status.md` (item 1)

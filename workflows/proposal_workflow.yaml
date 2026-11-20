@@ -118,7 +118,9 @@ phases:
           - 00_Feedback_log.md from templates/feedback_log.md
           Fill 00_Status.md for the proposal: in its chapter status and page
           budget, 03_Drafting/proposal_draft.md is the one chapter, in place
-          of the template's thesis rows.
+          of the template's thesis rows. research_gap.md and the outline
+          files get a row of the chapter status each when they are written,
+          without budget or loop count.
           Create:
           - README.md describing the sub-project's purpose
 
