@@ -165,6 +165,7 @@ Only for a work with an empirical part (`master_7agent`: steps 0.6, A.M, A.E and
 - A deviation goes back to whoever owns the place: the writer for the text, the data-agent for a table, figure or script (the writer then copies its `.md` into the chapter again), the methods-agent for the methods chapter
 - A deviation from `design.md` that the data cannot meet goes to the user; the methods-agent writes the user's decision into the design file first (`methods-agent.md`, "Research design")
 - After such a fix, the three-way check and the consistency check run again on what changed, and the source-verifier's rounds follow the changed sentences as in any chapter; "Feedback loop control" counts these revisions like any other
+  - A revision that changes no number, no table or figure and no statement about sample, instrument or procedure (a rewording after a source-verifier finding) leaves both checks standing: only the source-verifier's round of the changed sentences follows
 - A package an analysis script needs and the project does not have: ask the user before it is installed (`data-agent.md`, "Reproducibility")
 - **Step F.3:** the data-agent audits every number in the text against the raw data once more
 
@@ -249,7 +250,7 @@ See `docs/phase_separation.md` for details.
 - These withhold no pass:
   - a point left for a chapter not yet written (`–`): record it as an open item with the chapter it waits for
   - a 🟡 (polish, see the status symbols in `source-verifier.md`). It does not start a revision on its own, nor is it a question to the user: name the 🟡 findings in your message, and the user may ask for a revision
-    - When the chapter's first revision follows for other findings, give the writer the 🟡 findings with it. A later revision changes only what its ⚠️, ❌ or ❓ concern: every reworked sentence is new text to verify, and a polish reworked late comes back as a finding
+    - When the first revision after a source-verifier round follows for other findings, give the writer the 🟡 findings with it. A later revision changes only what its ⚠️, ❌ or ❓ concern: every reworked sentence is new text to verify, and a polish reworked late comes back as a finding
   - the `⚠️` for instruction-like content in a source, which the verifier lists under its notes: it starts no revision either, and goes to the user
   - in a seminar paper or presentation, which have no Phase A and B: a ❓ on the reference list or in a cross-chapter check (not on a sentence) for bibliographic data the sources do not show, such as a field of an entry or the edition, which the user says they cannot supply
 - A ❓ of this last kind is recorded as an open item, `- [ ] ❓ …` with the user's answer; the open item keeps the details
