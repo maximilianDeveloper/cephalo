@@ -192,7 +192,8 @@ phases:
       01_Slides/deck_values.md, before the first build, and is kept up to
       date. The deck is built again under the same name after each change of
       slide text or speaker notes (phases 2 and 5): Git keeps the earlier
-      one. After a build, the deck is exported to PDF for the user to look
+      one. From phase 2 on it carries the speaker notes in its notes pages.
+      After a build, the deck is exported to PDF for the user to look
       through (docs/scripts.md, "A PDF from PowerPoint (Windows)").
     
     important:
@@ -310,11 +311,16 @@ phases:
       checks it against the submitted work (orchestrator-defense.md, Rule 2).
       Before the writer starts, ask the user for its length in words (one
       sheet, both sides, holds about 600) and give the writer that figure.
-      It is exported like a presentation's companion, without format rounds
-      (workflows/presentation_3agent.yaml, F.1: reference document, Pandoc,
-      the pagination script, then the PDF from Word as docs/scripts.md
-      shows), by Claude or the user as the user decides; the user looks
-      through the PDF.
+      Count its words after the draft and after each revision
+      (scripts/verbatim_check.py --words) and name the count against that
+      figure in your message.
+      Once the check has passed, it is exported to
+      04_Handout/handout_final.pdf like a presentation's companion, without
+      format rounds (workflows/presentation_3agent.yaml, F.1: reference
+      document, Pandoc, the pagination script, then the PDF from Word as
+      docs/scripts.md shows), by Claude or the user as the user decides;
+      the user looks through the PDF. If the user makes it later, the
+      handover names it as a step left to them.
     
     format: |
       Single column, readable when printed. Not a marketing brochure but 

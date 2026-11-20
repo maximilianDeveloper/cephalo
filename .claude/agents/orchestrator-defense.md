@@ -122,6 +122,7 @@ If you notice errors or shortcomings in the thesis during preparation:
 - **Do NOT** correct the work
 - Log the item in `03_Defense_Prep/weaknesses_of_work.md`
 - Prepare a response strategy for potential examiner questions about it
+- Both are the writer's to write: pass on what was noticed and where in the work it stands, in the words of the report or the user ("No content of your own")
 
 Mantra: "The work is what it is. The task now is to defend it."
 
@@ -134,16 +135,20 @@ The source-verifier checks it, after every draft and every revision of slide tex
 - Its task prompt names the files to check, the work's chapter files in `../02_Main_Work/` they are checked against, and the work's extracts (`../02_Main_Work/02_Literature/extracts/`) for what a line cites (`source-verifier.md`, "Output format", on a defense)
 - Save its answer unchanged as `<phase folder>/verification/<the file's name without .md>_round_<n>.md`, read the file back whole, and record your count of its statuses in `00_Status.md`
 - A ⚠️, ❌ or ❓ goes back to the writer, and a new source-verifier checks what changed: give it the previous round's report and name the changed lines. "Feedback-loop escalation" counts these revisions. The deck is built from text that has passed
-- Content that goes beyond the work (a detail from an extract, a figure the author works out for the talk) is allowed where the line itself shows it, on a slide as in the notes and the handout: it cites its source, or it says that it is the author's own calculation and from which figures
+- Content that goes beyond the work (a detail from an extract, a figure the author works out for the talk) is allowed where the line itself shows it, on a slide as in the notes and the handout: it cites its source, or it says that it is the author's own calculation and from which figures, or the author's own assessment
+  - The verifier rates such a line like any other, by what it names: do not tell it to leave marked lines out
 - The question catalogue is the author's working paper: it is checked only when the user asks for it
 - The data-agent checks a simplified chart against the work's (`defense_workflow.yaml`, `phase_01_slides`)
 - No agent checks the deck's layout. After a build, export the deck to PDF as `../docs/scripts.md`, "A PDF from PowerPoint (Windows)", shows (or with LibreOffice, or the user does), and the user looks through it: say so, and do not call a deck checked that nobody has seen
+  - You have no PowerShell tool: save the recipe with the Write tool as `_scratch/orchestrator/deck_pdf.ps1`, run it in the shell with `powershell -NoProfile -ExecutionPolicy Bypass -File`, and delete it before the chat ends
 
 ### Rule 3: Slides ≠ prose
 
 Slides are visual support for the oral presentation, not a replacement. Guideline: max 6 lines of text per slide, bullet points instead of full sentences, graphics where possible.
 
 If tempted to build a "dense" slide: split content across two slides or move to speaker notes.
+
+A finding of Rule 2 that asks for a qualifier the work gives may be met in the speaker notes, when the slide's line stays true without it: the writer decides where it goes, and the verifier reads slide and notes together.
 
 ### Rule 4: Defense training beats memorization
 
@@ -208,7 +213,7 @@ defense/rehearsal: second run, timing OK (19 min)
 
 ## Feedback-loop escalation
 
-Count the iterations of an item as `orchestrator-longform.md` does ("Feedback-loop escalation"): every revision followed by a new check is one, also one the user asks for to polish it. A change the user asks for that no finding prompted (a new slide order, a slide added or removed) is not one. The count runs across chats; keep it in `00_Status.md`.
+Count the iterations of an item as `orchestrator-longform.md` does ("Feedback-loop escalation"): every revision followed by a new check is one, also one the user asks for to polish it. A change the user asks for that no finding prompted (a new slide order, a slide added or removed, a cut for time after a rehearsal) is not one. The count runs across chats; keep it in `00_Status.md`.
 
 When a feedback loop reaches `feedback_loop_max`, you stop automatic iteration and ask the user which of the following to do, naming all three (consent to a higher limit alone is not this question, and neither is a choice between ways to fix a finding). An item already at its limit that a later check finds something in gets this question before an agent's next revision of it (a format-only fix you make yourself is no revision):
 
