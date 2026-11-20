@@ -165,7 +165,8 @@ After a line naming the state file, the report gives a summary line: the open an
 - every line of "Chapter status", its table and anything else in it;
 - every open item (`- [ ] …`, in any section) with its section, and the number of ticked ones;
 - the word count of each chapter file named, as `verbatim_check.py --words` counts it (a folder: its `.md` and `.docx` files, not those in subfolders and no hidden file). A chapter it cannot count (a Word file without `python-docx`, or one that is broken) and an argument that is no chapter or does not exist are listed with the reason, and the report goes on;
-- the lines of "Current state" and "Chapter status" over 500 characters, which "State file format" in `orchestrator.md` keeps short.
+- the lines of "Current state" and "Chapter status" over 500 characters, which "State file format" in `orchestrator.md` keeps short;
+- where the state file is `workspace/state.md` of a project under Git, a line before the last when its `styleguide.md` differs from the last commit (`git status`, run without taking Git's index lock: changed, or not yet committed): the closing message then lists each provenance naming the user that the chat wrote into it, as one whole list in that message (`orchestrator.md`, "Chat closure ritual", item 5). In the third to fifth presentation trial runs that list was missing from the last message of every chat that had changed the styleguide. Without Git, or outside such a project, the report says nothing about it, and the line does not change the exit code.
 
 Its last line is `Exit code: 0` or `Exit code: 1`; exit code 2 prints neither, only the `Error:` line. With the summary line, it gives the exit code also where only part of the output is shown: after a pipe, the exit code the Bash tool shows, and `$?`, are those of the pipe's last command. A pipe that closes before the report ends, such as `| head`, does not change the script's exit code. The closing check reads the whole output: the cephalo guard denies a run whose output goes into a pipe or to `/dev/null` (rule S6, "cephalo guard" below).
 
@@ -385,7 +386,52 @@ else { "timed out$note" }
 Remove-Job $job -Force
 ```
 
-Put the file names of your project in the first two lines and change nothing else. The call reports `exported` only when the job ended without an error and the PDF is newer than the call; otherwise it names how the job ended, the error line above it says why, and the PDF on disk, if there is one, is an older one. Whatever it reports, it then stops a Word started through COM during this call that still runs (its command line holds `-Embedding` or `/Automation`), not one the user opened, and not one that ran before, and says so; it stops Word before it removes the job, since a job held in a hanging Word would not stop. In the fourth trial run, and in the fifth also with its references released, the Word that had quit still ran after `exported`: the stop is the normal path, and its note after `exported` is no error. After `not exported` or a timeout, tell the user what the call reported, with the error line if there is one, and try once more with the recipe unchanged; if that fails too, the user exports the PDF in Word (File, Save as, PDF). Do not end a turn while an export still runs. With a table of contents, the user updates the fields (`workflows/seminar_2agent.yaml`, F.1, item 7 (a)), saves and closes the DOCX in Word; then the export. The recipe is for Word only: PowerPoint runs as one program for all callers, so a copy of it for PowerPoint would close the user's own presentations. The fifth trial run exported with this form, the third and fourth with its earlier forms; in the fifth, the stop ended the Word that still ran, and no Word was left.
+Put the file names of your project in the first two lines and change nothing else. The call reports `exported` only when the job ended without an error and the PDF is newer than the call; otherwise it names how the job ended, the error line above it says why, and the PDF on disk, if there is one, is an older one. Whatever it reports, it then stops a Word started through COM during this call that still runs (its command line holds `-Embedding` or `/Automation`), not one the user opened, and not one that ran before, and says so; it stops Word before it removes the job, since a job held in a hanging Word would not stop. In the fourth trial run, and in the fifth also with its references released, the Word that had quit still ran after `exported`: the stop is the normal path, and its note after `exported` is no error. After `not exported` or a timeout, tell the user what the call reported, with the error line if there is one, and try once more with the recipe unchanged; if that fails too, the user exports the PDF in Word (File, Save as, PDF). Do not end a turn while an export still runs. With a table of contents, the user updates the fields (`workflows/seminar_2agent.yaml`, F.1, item 7 (a)), saves and closes the DOCX in Word; then the export. The recipe is for Word only: PowerPoint runs as one program for all callers, so a copy of it for PowerPoint would close the user's own presentations; the next section has PowerPoint's. The fifth trial run exported with this form, the third and fourth with its earlier forms; in the fifth, the stop ended the Word that still ran, and no Word was left.
+
+### A PDF from PowerPoint (Windows)
+
+The deck's PDF for the three-way check and for submission (`workflows/presentation_3agent.yaml`, `three_way_check`, F.1) comes from PowerPoint, through COM in Claude Code's PowerShell tool, after the deck script's run has ended. PowerPoint runs as one program for all callers: with the user's PowerPoint open, the call would work in it, and quitting it would close the user's presentations. So the recipe runs only while no PowerPoint runs; otherwise it says so, and the user closes PowerPoint or exports the PDF in PowerPoint (File, Save as, PDF). A PowerPoint that runs without a window is a leftover started through COM, which the user cannot close: the recipe says so, and the user ends `POWERPNT.EXE` in the Task Manager. It opens the deck read-only and without a window, saves it as a PDF (format 32), closes it, quits PowerPoint and releases it, in a job of its own with a limit of 90 seconds:
+
+```powershell
+$pptx = (Resolve-Path -LiteralPath 'workspace\output\slides\slides.pptx').ProviderPath
+$pdf = [IO.Path]::ChangeExtension($pptx, '.pdf')
+$open = @(Get-Process POWERPNT -ErrorAction SilentlyContinue)
+if ($open.Count) {
+    if (@($open | Where-Object { $_.MainWindowHandle -eq 0 }).Count -eq $open.Count) {
+        'not run: PowerPoint runs without a window (a leftover started through COM); ask the user to end POWERPNT.EXE in the Task Manager'
+    } else { 'not run: PowerPoint is open; ask the user to close it, or to export the PDF in PowerPoint' }
+} else {
+    $t0 = Get-Date
+    $job = Start-Job -ArgumentList $pptx, $pdf -ScriptBlock {
+        param([string]$pptx, [string]$pdf)
+        $ErrorActionPreference = 'Stop'
+        $app = New-Object -ComObject PowerPoint.Application
+        $pres = $null
+        try {
+            $pres = $app.Presentations.Open($pptx, -1, 0, 0)
+            $pres.SaveAs($pdf, 32)
+        } finally {
+            if ($pres) { try { $pres.Close() } catch { Write-Warning "Close: $_" } }
+            try { $app.Quit() } catch { Write-Warning "Quit: $_" }
+            foreach ($o in @($pres, $app)) { if ($o) { [void][Runtime.InteropServices.Marshal]::ReleaseComObject($o) } }
+        }
+    }
+    $done = Wait-Job $job -Timeout 90
+    if ($done) { Receive-Job $job; Start-Sleep -Seconds 3 }
+    $ok = $done -and $job.State -eq 'Completed' -and (Test-Path -LiteralPath $pdf) -and (Get-Item -LiteralPath $pdf).LastWriteTime -ge $t0
+    $left = @(Get-CimInstance Win32_Process -Filter "Name='POWERPNT.EXE'" |
+        Where-Object { "$($_.CommandLine)" -match '\s(-|/)(Embedding|Automation)\b' -and
+                       (Get-Process -Id $_.ProcessId -ErrorAction SilentlyContinue).MainWindowHandle -eq 0 })
+    $left | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
+    $note = if ($left.Count) { '; the PowerPoint started through COM during this call was still running and was stopped' } else { '' }
+    if ($ok) { "exported: $pdf$note" }
+    elseif ($done) { "not exported: the job ended $($job.State)$note" }
+    else { "timed out$note" }
+    Remove-Job $job -Force
+}
+```
+
+Put the deck's file name in the first line; the PDF gets its name with `.pdf`, and an older one is replaced. Change nothing else, and run it only after the deck script's run has ended: a PDF exported in the same message as the build may show the deck before it. The call reports `exported` only when the job ended without an error and the PDF is newer than the call; otherwise it names how the job ended, the error line above it says why, and a PDF on disk is an older one. Whatever it reports, it then stops a PowerPoint started through COM that still runs without a window (its command line holds `-Embedding` or `/Automation`): none ran before the call, and a deck the user opened meanwhile would have given it a window, which it leaves alone; its note after `exported` is no error. An error while closing the deck or quitting PowerPoint is only a warning, so that the error line names why an export failed, and a PDF that was written is reported as `exported`. After `not exported` or a timeout, tell the user what the call reported, with the error line if there is one, and try once more with the recipe unchanged; if that fails too, the user exports the PDF in PowerPoint. In the third to fifth presentation trial runs the main chat exported the deck with these calls (`Presentations.Open` read-only and without a window, `SaveAs` with format 32), written by itself, in 3 to 7 seconds each; the recipe as a whole, with its job, its check that no PowerPoint runs and its stop, is still to be checked on Windows.
 
 ### `cross_session_audit.py`
 

@@ -100,6 +100,10 @@ phases:
         agent: research
         input: Chapter-relevant sources
         output: workspace/sources/extracts/ (one file per source, named author_year or citekey — see research-agent.md)
+        note: |
+          A later chapter (the conclusion, the introduction) runs A.1 and A.2
+          only for what no verified extract holds (orchestrator.md, "For each
+          chapter"); with nothing new, both fall away.
       
       - step: A.2
         agent: source-verifier
@@ -131,6 +135,14 @@ phases:
       after_every_n_chapters: 2
       checklist: checklists/consistency.md
       agent: source-verifier
+      note: |
+        Part of the chapter's verification round, not a call of its own: the
+        task prompt of every second chapter's round, and of the round of
+        the last chapter written (the introduction), names the checklist's
+        Part A and the chapters written so
+        far; the conclusion's round names B.3 as well, the introduction's
+        B.2 (orchestrator.md, "For each chapter", step 4). The final check
+        is F.1.
   
   # ===========================================================
   # Phase transition A -> B
@@ -142,8 +154,9 @@ phases:
       - all_chapters_content_complete: true
       - all_chapters_source_verified: "✅"
       - open_content_warnings: 0
-      - last_3_iterations_format_only: true
       - styleguide_open_questions: 0
+    indicators:
+      - last_3_commits_format_only   # shown with its state; does not hold the transition up
     verification_method: |
       The orchestrator checks these criteria before transitioning:
         - all_chapters_content_complete: read workspace/state.md; every row of the
@@ -153,16 +166,17 @@ phases:
         - open_content_warnings: count open ⚠️, ❌ and ❓ items in workspace/state.md
           (Chapter status table, unchecked "- [ ]" lines under Open issues; not the
           Pre-check result or recorded round counts) and in each chapter's
-          handover.md (if present); must be 0
-        - last_3_iterations_format_only: inspect the last 3 commits (git log); 
-          if their changes to the chapter files touched only styleguide-governed
-          items (citations, typography, spacing), criterion is met
+          handover.md (if present); must be 0. A ❓ the research-agent set
+          in an extract is no item of its own (docs/phase_separation.md,
+          criterion 3)
         - styleguide_open_questions: count open ❓ items in styleguide.md; must be 0
+        - last_3_commits_format_only (indicator): inspect the last 3 commits
+          (git log) and say what they changed in the chapter files; it does
+          not hold the transition up (docs/phase_separation.md, criterion 4)
       If any criterion fails, the orchestrator reports the failing criterion 
       and does not transition, unless the user waives it as docs/phase_separation.md
       describes ("Waiving a criterion": chapters complete, for chapters the work
-      will not contain; format-only iterations; styleguide questions; recorded in
-      workspace/state.md).
+      will not contain; styleguide questions; recorded in workspace/state.md).
     documentation: docs/phase_separation.md
     
     rollback_b_to_a:
@@ -218,18 +232,35 @@ phases:
       - step: B.1
         agent: format-verifier
         action: Full styleguide check against styleguide.md
+        note: |
+          A format round as orchestrator.md, "Phase A → B transition", item
+          5, describes. In every round the format-verifier runs the scripts
+          of B.2 and B.3 itself and reports their results
+          (format-verifier.md, section 3).
       
       - step: B.2
         script: scripts/bibliography_check.py
         action: Minus-test by author surname (every cited author in the bibliography, every entry's lead author cited; years are not compared)
+        note: |
+          Run by the format-verifier within each format round (B.1), which
+          reports the result; no run of your own beside it.
       
       - step: B.3
         script: scripts/abbreviations_extract.py
         action: Derive list of abbreviations from text corpus
+        note: |
+          Run by the format-verifier within each format round (B.1), which
+          reports the result; no run of your own beside it.
       
       - step: B.4
         agent: format-verifier
         action: Consistency checks (page ranges, et-al., editions, pronouns)
+        note: |
+          The next format round, on a new export (B.0) after the fixes of
+          the round before. It checks the fixes and, as every round does,
+          the consistency across the document. An export that has not
+          changed gets no further round, so without a fix after B.1, B.4
+          falls away.
   
   # ===========================================================
   # Closing
@@ -239,10 +270,21 @@ phases:
       agent: orchestrator
       checklist: checklists/consistency.md
       action: Full-document consistency check
+      note: |
+        orchestrator.md, "Final check". The source-verifier checks Part A
+        over all chapters and B.2-B.3 in one call; its answer is saved
+        unchanged as workspace/output/verification/consistency_final.md
+        and read back. The orchestrator takes B.1 and B.4 from the last
+        format report and the scripts and names B.7 to the user; it judges
+        no content itself.
     
     - step: F.2
       agent: format-verifier
       action: Final styleguide report
+      note: |
+        The report of the last format round is the final one while the
+        export has not changed since. A new round follows only a new
+        export, after a fix that F.1 prompted.
     
     - step: F.3
       manual: true

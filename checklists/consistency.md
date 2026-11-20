@@ -1,14 +1,14 @@
 # Consistency Check
 
 **Purpose:** Verifies consistency within and between chapters.
-**Executed by:** source-verifier (cross-chapter checks; in a seminar paper also the final check of Part A and B.2-B.3), orchestrator (final check).
-**When:** After every second chapter, plus a final check before submission; A.2 also in every round whose verbatim report lists runs shared with other chapters (`.claude/agents/source-verifier.md`, "Cross-chapter consistency").
+**Executed by:** source-verifier (cross-chapter checks; in the final check Part A and B.2-B.3), orchestrator (the rest of the final check, from the format reports, the scripts and `git status`; without an orchestrator, Claude in the main chat).
+**When:** After every second chapter and after the last one, inside that chapter's verification round (B.3 with the conclusion's round, B.2 with the introduction's), plus a final check before submission; A.2 also in every round whose verbatim report lists runs shared with other chapters (`.claude/agents/source-verifier.md`, "Cross-chapter consistency").
 
 ---
 
 ## Part A: Cross-chapter consistency (during Phase A)
 
-To be performed by source-verifier after every second chapter.
+To be performed by source-verifier after every second chapter and after the last one.
 
 ### A.1 Cross-references
 
@@ -51,7 +51,7 @@ To be performed by source-verifier after every second chapter.
 
 ## Part B: Full-document final check (before submission)
 
-To be performed on the exported document, after the last written chapter (introduction, written last) and the formatting phase: in the flat workflows the closing step F.1, in the long-form workflows the submission step. A seminar paper (`seminar_2agent`) has no formatting phase: in its closing step F.1, the source-verifier checks Part A and B.2-B.3 on the chapter files and the reference list before the export; B.1, B.4 and B.7 come from the format rounds and the user.
+To be performed on the exported document, after the last written chapter (introduction, written last) and the formatting phase: in the flat workflows the closing step F.1, in the long-form workflows the submission step. In every final check the source-verifier checks Part A and B.2-B.3 on the chapter files and the reference list, and its answer is saved as `consistency_final.md` beside the verification reports; B.1 and B.4 come from the format rounds, B.7 from the user. A seminar paper (`seminar_2agent`) has no formatting phase: there this check comes before the export, in its closing step F.1.
 
 ### B.1 Indexes
 
@@ -95,7 +95,7 @@ To be performed on the exported document, after the last written chapter (introd
 - [ ] Pie chart percentages: the labelled values sum to 100% (one decimal, e.g. "0.0%", narrows rounding gaps but does not remove them; note any rounding)
 - [ ] Timing test: presentation within the target range your institution or course specifies (check the assignment briefing / styleguide)
 
-### B.6 Git status (long-form / multi-project)
+### B.6 Git status (long-form / multi-project; ticked last, with Part C)
 
 - [ ] `git status` shows no uncommitted changes (everything committed)
 - [ ] Final tag set: e.g., `git tag v_final_<date>` or `work_submitted_<date>`
@@ -112,10 +112,10 @@ To be performed on the exported document, after the last written chapter (introd
 
 ## Part C: After submission
 
-- [ ] Git tag for final state set
+- [ ] Project retrospective: what worked? what didn't? Record it in the project's feedback log (`00_Feedback_log.md`; flat: `workspace/feedback.md`), in a long-form work before the final commit and the tag, which then hold it; to keep general patterns for the next project, add them to `docs/error_catalog.md` in your cephalo template folder (a framework update replaces the project's copy of `docs/`)
+- [ ] Git tag for final state set, as the last step: after the Word steps on the final file, the retrospective and the status line `Submitted`
 - [ ] Backup of submission (local + cloud)
-- [ ] In multi-project structure: `02_Main_Work/` frozen by its submission tag (`v_final_<date>` or `work_submitted_<date>`, which `03_Defense/` checks)
-- [ ] Project retrospective: what worked? what didn't? Record it in the project's feedback log (`00_Feedback_log.md`; flat: `workspace/feedback.md`); to keep general patterns for the next project, add them to `docs/error_catalog.md` in your cephalo template folder (a framework update replaces the project's copy of `docs/`)
+- [ ] In multi-project structure: `02_Main_Work/` frozen by its submission tag (`v_final_<date>` or `work_submitted_<date>`, which `03_Defense/` checks): no chat writes there afterwards
 
 ---
 
@@ -138,6 +138,7 @@ The source-verifier or orchestrator returns a structured report:
 | A.3 Argumentation | ✅ / ⚠️ / ❌ / ❓ / – | ... |
 | A.4 Terms | ✅ / ⚠️ / ❌ / ❓ / – | ... |
 | A.5 Editions | ✅ / ⚠️ / ❌ / ❓ / – | ... |
+| B.2 Introduction ↔ body (when the task prompt names it) | ✅ / 🟡 / ⚠️ / ❌ / ❓ / – | ... |
 | B.3 Body ↔ conclusion (when the task prompt names it) | ✅ / 🟡 / ⚠️ / ❌ / ❓ / – | ... |
 
 ### Detailed findings
@@ -152,7 +153,7 @@ The source-verifier or orchestrator returns a structured report:
 ❓ Material missing: what, and who supplies it
 ```
 
-In Part A and B.2-B.3, no status is minor or non-blocking: a ⚠️ or ❌ goes to the revision of the chapter its fix changes, a ❓ to whoever supplies what is missing, and that chapter has not passed while one is left, except a ❓ for bibliographic data the user cannot supply in a seminar paper or presentation (`.claude/agents/orchestrator.md`, "Feedback loop control"; long-form: `orchestrator-longform.md`, "Feedback-loop escalation"). A `–` (an en dash) marks a point that waits for a chapter not yet written: the next consistency check that includes that chapter, or else the final check, takes it up.
+In Part A and B.2-B.3, no status is minor or non-blocking: a ⚠️ or ❌ goes to the revision of the chapter its fix changes, a ❓ to whoever supplies what is missing, and that chapter has not passed while one is left, except a ❓ for bibliographic data the user cannot supply in a seminar paper or presentation (`.claude/agents/orchestrator.md`, "Feedback loop control"; long-form: `orchestrator-longform.md`, "Feedback-loop escalation"). A `–` (an en dash) marks a point that waits for a chapter not yet written: that chapter's verification round takes it up (its task prompt names the report and the point), or else the final check.
 
 ---
 

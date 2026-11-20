@@ -99,7 +99,7 @@ longform:
       version_controlled: true
     outputs:
       path: 05_Empirical/data/outputs/
-      access: write (data-agent), read (writer-agent)
+      access: write (data-agent), read (writer-agent, methods-agent)
 
 # Workflow
 
@@ -115,7 +115,10 @@ phases:
       - step: 0.0
         name: Verify directory structure
         manual: true
-        task: created by setup.sh / setup.ps1 per docs/longform_structure.md
+        task: |
+          Created by setup.sh / setup.ps1 per docs/longform_structure.md
+          (multi-project main work: docs/multiproject_structure.md,
+          "Directory layout"; with minimal scaffolding only the 00_*.md files).
 
       - step: 0.1
         name: Verify Git
@@ -132,6 +135,11 @@ phases:
           00_Status.md, 00_Decisions.md and 00_Feedback_log.md were created by
           setup from templates/ (feedback log: templates/feedback_log.md).
           Fill 00_Status.md; add the research question to 00_Decisions.md.
+          Multi-project main work: also enter in 00_Decisions.md what the
+          work takes from the accepted proposal, each entry naming it as
+          its source. That is the planned outline and the decisions of
+          ../01_Proposal/00_Decisions.md that concern the main work
+          (orchestrator-longform.md, "Multi-project variant").
 
       - step: 0.3
         name: Materials pre-check
@@ -143,6 +151,7 @@ phases:
         name: Reference manager check
         manual: true
         task: |
+          Only with a reference manager (optional, checklists/precheck.md, section 5); without one, skip this step and write no literature.bib.
           - Reference manager collection created?
           - BibTeX export configured (Better BibTeX or equivalent)?
           - Auto-export to 02_Literature/literature.bib?
@@ -156,9 +165,15 @@ phases:
         note: |
           Multi-project main work: the guidelines are in
           ../00_Shared_Materials/guidelines/, and ../00_Shared_Materials/styleguide.md
-          normally exists already (extracted in the proposal). Only verify it (no open
+          normally exists already (extracted in the proposal). The style-resolver
+          only verifies it, called for that like any step's agent (no open
           ❓ [content] items; ❓ [format] items may wait until Phase B);
-          re-extract only when the guidelines change.
+          re-extract only when the guidelines change. The user confirms for the
+          main work each answer recorded so far (a value whose provenance names
+          the user). The orchestrator asks from the style-resolver's two lists.
+          It asks for each n/a value by itself, whether the element occurs in
+          the main work, and for the other values as one list. An entry whose
+          answer does not hold for the main work is opened again.
       
       - step: 0.6
         name: Methodological design (only if empirical)
@@ -169,7 +184,9 @@ phases:
         note: |
           Without a defined methodology, the data-agent cannot work.
           The design decision (qualitative / quantitative / mixed-methods) 
-          is binding for everything that follows.
+          is binding for everything that follows (orchestrator-longform.md,
+          "`04_Methods` (master / empirical)"; methods-agent.md, "Research
+          design").
   
   # ===========================================================
   # Lead-in phases (same as bachelor longform)
@@ -216,20 +233,30 @@ phases:
       - One chat for design refinement (based on 04_Methods/design.md)
       - One chat for methods chapter draft
       - One chat for revision after methodological literature check
+
+    note: |
+      The source-verifier gets 04_Methods/design.md and the study's
+      materials (instrument, codebook) with the methods chapter, and
+      compares what the chapter says about the study with them
+      (orchestrator-longform.md, "`04_Methods`"). A work without
+      methodological sources has no extracts for this chapter.
   
   # ===========================================================
   # Main: Empirical
   # ===========================================================
   phase_05_empirical:
     directory: 05_Empirical/
-    agents: [orchestrator-longform, data, writer, source-verifier, format-verifier]
+    agents: [orchestrator-longform, data, writer, methods, source-verifier, format-verifier]
     content_or_form_phase: A
     condition: empirical == true
     
     description: |
       Data-agent leads data preparation and analysis. Writer-agent drafts 
       the empirical chapter from the data-agent's outputs. Strict three-way 
-      consistency: raw data <-> processed tables <-> chapter text.
+      consistency: raw data <-> processed tables <-> chapter text. Then the
+      methods-agent checks that the chapter does what design.md and the
+      methods chapter say (orchestrator-longform.md, "`05_Empirical`
+      (master / empirical)").
       
       Skipped for purely theoretical master theses.
     
@@ -274,7 +301,17 @@ phases:
     scope: |
       Cross-chapter cross-references, terminology drift, self-plagiarism 
       between introduction and conclusion, argumentation coherence, 
-      methods/empirical consistency (master-specific).
+      the methodological framing of the other chapters against the methods
+      chapter (master-specific; whether the empirical chapter does what
+      design and methods chapter say is the methods-agent's check in
+      05_Empirical).
+    note: |
+      Part of a chapter's verification round, not a step or a call of its
+      own. The task prompt of every second chapter's round, and of the
+      round of the last chapter written (the introduction), names the
+      checklist's Part A and the chapters written so
+      far; the conclusion's round names B.3 as well, the introduction's B.2
+      (orchestrator-longform.md, "Feedback-loop escalation").
   
   # ===========================================================
   # Phase transition A -> B
@@ -286,14 +323,14 @@ phases:
     triggers:
       - All content chapters complete
       - Every chapter passed source verification with ✅
-      - Methods and empirical chapters consistent (data-agent confirmed; empirical theses only)
+      - Methods and empirical chapters consistent (the data-agent's three-way check and the methods-agent's consistency check leave no open deviation; empirical theses only)
       - No outstanding ⚠️, ❌ or ❓ items
-      - Last 3 iterations were format-only (content has stabilized; in the last 3 commits the chapter files changed only in styleguide-governed items)
+      - Content has settled (an indicator that does not hold the transition up; it says what the last 3 commits changed in the chapter files; docs/phase_separation.md, criterion 4)
       - All ❓ items in styleguide.md clarified
     waiver: |
       The user may waive the criteria docs/phase_separation.md names under
       "Waiving a criterion" (chapters complete, for chapters the work will not
-      contain; format-only iterations; styleguide questions), not the source
+      contain; styleguide questions), not the source
       verification, open content items or the methods/data consistency; record
       which and why in 00_Decisions.md.
     
@@ -345,15 +382,17 @@ phases:
   submission:
     manual: true
     task: |
-      - Full-document final check: checklists/consistency.md, Part B (orchestrator-longform; B.6 is completed by the commit and tag below)
+      - Full-document final check: checklists/consistency.md, Part B. The source-verifier checks Part A over all chapters and B.2-B.3 in one call, and its answer is saved unchanged as 08_Formal_Review/verification/consistency_final.md; orchestrator-longform takes B.1 and B.4 from the last format report and the scripts and judges no content itself (orchestrator-longform.md, "`08_Formal_Review` (Phase B)"; B.6 is completed by the commit and tag below)
       - data-agent: final data audit, all numbers in the text vs. raw data (empirical theses only)
-      - Final DOCX export to 08_Formal_Review/submissions/v_final_<date>.docx
+      - Final DOCX export to 08_Formal_Review/submissions/v_final_<date>.docx: a new export of the files the last format round checked, whose report stands for it while they have not changed since; after a change, a format round on a new v_r<n> export first
       - Run scripts/docx_pagination.py on this v_final file with the values of styleguide.md pagination.front_matter, pagination.main_text and pagination.back_matter, and scripts/docx_postprocess.sh (only if document.hyphenation = automatic): a new export carries neither the sections nor the flag
       - Front matter numbered unlike the main text: only if styleguide.md pagination.front_matter is Roman, counted but not shown or none, or pagination.main_text starts at 1, the DOCX has it as a section of its own, set by scripts/docx_pagination.py after the export (docs/reference_management.md, "The title page"; without Python, the user sets it in Word as described there)
       - Update table of contents (Ctrl+A then F9, twice: docs/reference_management.md, "The title page")
+      - Lists of tables and figures, where the guidelines ask for them, inserted in Word
       - Back matter numbered unlike the main text: only if styleguide.md pagination.back_matter does not number it like the main text, the DOCX has it as a section of its own from the reference list on, set the same way; with Roman numerals that continue the front matter's count, check after updating the table of contents that its first number follows the front matter's last page; if it does not (a list or the table of contents fills more than one page), set it in Word: in the header or footer of the reference list's first page, Format Page Numbers, "Start at" the number after the front matter's last page (docs/reference_management.md, "The title page", step 5), then update the fields again (Ctrl+A, then F9); running scripts/docx_pagination.py again on this DOCX changes nothing, and a new export takes that number with --back-matter-start (docs/scripts.md)
       - Confirm the hyphenation setting matches styleguide.md (document.hyphenation)
       - Visual proofreading
       - Sign declaration of academic integrity
-      - Commit the final state (the user runs it, or asks Claude to: git add -A then git commit -m "submission: final version", in a multi-project main work "main/submission: final version"), then the tag, the same way: git tag v_final_<date>
+      - The tag comes last, since it marks what was handed in and, in a multi-project, freezes 02_Main_Work/. First the user's Word steps above, saved in the v_final file, and the retrospective (checklists/consistency.md, Part C) in 00_Feedback_log.md; then the chat closure ritual's steps 1–4 (handover; 00_Status.md with Submitted: the date the user names for it); then the commit (the user runs it, or asks Claude to: git add -A then git commit -m "submission: final version", in a multi-project main work "main/submission: final version"); then the tag, the same way: git tag v_final_<date>
+      - A change after the tag (the file saved again in Word, a late entry) needs a new commit and the tag moved to it: say so once if the user wants the tag before these steps, and do as the user decides
       - Mentally rehearse defending each sentence (especially methods chapter)

@@ -29,7 +29,9 @@ The name is slightly misleading: you do not browse the internet or find new sour
 **Multi-project** (paths as seen from the sub-project Claude Code is opened on):
 - Guidelines: `../00_Shared_Materials/guidelines/`
 - Main work (`02_Main_Work/`): sources and extracts follow the long-form pattern (`02_Literature/`)
-- The proposal sub-project (`01_Proposal/`) has no `02_Literature/`: source files go into `01_Research/`, the brief extracts into `01_Research/key_sources.md` (see `proposal_workflow.yaml`)
+- The proposal sub-project (`01_Proposal/`) has no `02_Literature/`: source files go into `01_Research/`, the extracts into `01_Research/key_sources.md` (see `proposal_workflow.yaml`)
+  - For the proposal, extract what its text needs for the research question the task prompt names (what the sources say on it, what they leave open, how they proceed), not every passage: "Completeness > selection" holds within that, and the main work extracts its sources in full
+  - The file can grow past what one Read returns (the tool then answers that the content exceeds its maximum): read it in parts with `offset` and `limit`, from its first line to its last
 
 **Multi-project sub-project** (Claude Code opened on `01_Proposal/`, `02_Main_Work/` or `03_Defense/`): the styleguide is `../00_Shared_Materials/styleguide.md` and the guidelines are in `../00_Shared_Materials/guidelines/`. The framework folders stay at the multi-project root, one level up: `../checklists/`, `../scripts/`, `../templates/`, `../workflows/`, `../docs/`.
 
@@ -241,6 +243,7 @@ Every entry starts with an ID heading, `### Q1`, `### Q2`, …, numbered through
 
 - An ID never changes and is never reused. A new entry takes the number after the highest one in the file, also when its page lies between earlier ones, so the numbers need not follow the page order. When you delete an entry, keep its heading as `### Q5 (deleted)` without fields: otherwise the highest number could be given out again, and a **Used in:** line or a saved report naming it would point to another passage.
 - A file holding several sources (the proposal's `01_Research/key_sources.md`) numbers through the whole file, so that every ID is unique in it.
+  - Each source in it starts as the output format does, from its heading to its Bibliographic info, with a **Status:** and a **Used in:** line of its own.
 - An extract written before quote IDs existed gets them the next time you edit it: number its entries Q1 upwards in their order. The extracts of a frozen main work, read from `03_Defense/`, stay as they are.
 
 ## Coordination with other agents
@@ -266,8 +269,8 @@ The writer-agent reads your extracts and builds prose from them, and records the
 - **Document uncertainty** — `❓` instead of guessing
 - **No evaluation** — neutral preparer, not editor
 - **Inspect file contents, not filenames** — institutional sources can be misleadingly named
-- **Stay inside the project** — write no files outside the project folder (multi-project: the folder that holds all sub-projects), not even scratch files: no `/tmp`, which in Git Bash on Windows is the system's temporary folder, and no scratchpad that Claude Code may name. Put scratch files in `_scratch/research-agent/` at the project root (multi-project: of the sub-project you work in), which Git ignores, and delete that folder before you finish; leave the rest of `_scratch/` alone, the orchestrator may keep a file there; the scripts in `scripts/`, which clean up their own temporary folders, are fine
-- **Write a file's text with the Write or Edit tool** — not with the shell (`cat <<EOF`, `echo … >`, `printf … >`, or an inline `python -c` / `py -c` program that writes a file's text): in Git Bash on Windows, a here-document with umlauts or quotes can fail or write altered text, and the shell's quoting can alter the backticks, `$` signs and quotes of an inline program. Use the shell to run scripts and commands; the files a saved script writes (one of cephalo's scripts in `scripts/`, or a script of the project in its `data/scripts/`, such as an analysis script or a presentation's deck script; not a program you save to make the change), and its output redirected to a file, are fine
+- **Stay inside the project** — write no files outside the project folder (multi-project: the folder that holds all sub-projects), not even scratch files: no `/tmp` and no scratchpad that Claude Code may name. Put scratch files in `_scratch/research-agent/` at the project root (multi-project: of the sub-project you work in) and delete that folder before you finish; leave the rest of `_scratch/` alone
+- **Write a file's text with the Write or Edit tool** — not with the shell (`cat <<EOF`, `echo … >`, `printf … >`, or an inline `python -c` / `py -c` program that writes a file's text). Use the shell to run scripts and commands; the files a saved script writes (one of cephalo's scripts in `scripts/`, or a script of the project in its `data/scripts/`; not a program you save to make the change), and its output redirected to a file, are fine
 
 ## Common errors (from development experience)
 

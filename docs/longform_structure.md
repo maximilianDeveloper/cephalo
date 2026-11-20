@@ -151,8 +151,7 @@ Optional within a long-form project. Use this only if you don't have a separate 
 ### Phase 02_Literature
 
 Most front-loaded work happens here:
-- Reference manager collection built
-- `literature.bib` exported
+- With a reference manager (optional): collection built, `literature.bib` exported
 - One extract per source in `extracts/<citekey>.md`
 - All extracts verified by source-verifier
 
@@ -205,7 +204,7 @@ This ritual is not optional. Skipping it means the next chat starts blind. The o
 At the beginning of every chat, the orchestrator reads:
 
 1. `00_Status.md` — overall state
-2. `<current_phase>/handover.md` — last state of this phase
+2. `<current_phase>/handover.md` — last state of this phase (a chat that opens a new phase reads the previous phase's, which `00_Status.md` names)
 3. `00_Decisions.md` — historical decisions
 4. `styleguide.md` — formatting rules
 5. `00_Feedback_log.md` — recurring patterns
@@ -240,7 +239,7 @@ One-time at project start:
 - [ ] Initialize Git (done by setup script)
 - [ ] Run style-resolver to produce `styleguide.md`
 - [ ] Resolve the `❓ [content]` items in `styleguide.md` (the `[format]` items before Phase B)
-- [ ] Configure reference manager: collection created, BibTeX export to `02_Literature/literature.bib`
+- [ ] Configure reference manager (optional): collection created, BibTeX export to `02_Literature/literature.bib`
 - [ ] Initial `00_Status.md` filled with project metadata, research question, page budget
 - [ ] First commit: `meta: initial setup`
 

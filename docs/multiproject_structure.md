@@ -41,8 +41,7 @@ project_root/                          ← Git repo root (one repo for all)
 ├── 00_Shared_Materials/               ← shared by all three sub-projects
 │   ├── guidelines/
 │   ├── course_materials/
-│   ├── styleguide.md                  (one styleguide for all)
-│   └── README.md
+│   └── styleguide.md                  (one styleguide for all)
 │
 ├── 01_Proposal/                       ← sub-project 1
 │   ├── 00_Status.md
@@ -117,6 +116,8 @@ The `01_`, `02_`, `03_` numbering enforces meaningful sort order: proposal first
 **Workflow:** `bachelor_5agent_longform.yaml` or `master_7agent_longform.yaml`
 
 **Special characteristic:** the proposal is read-only in `01_Proposal_Reference/`. When the work deviates from the proposal (which is normal), document the deviation in `00_Decisions.md` — not by editing the proposal itself.
+
+At setup (step 0.2), the main work's `00_Decisions.md` takes over what the proposal settled for it: the research question, the planned outline, and the decisions of the proposal's log that concern the main work, such as its length. The main work's chats can then work from their own log, and a deviation has an entry to refer to. A chat of the main work may read the frozen `01_Proposal/` (for a decision, or its title page file as a pattern); it writes nothing there.
 
 ### Sub-project 3: Defense
 
@@ -197,9 +198,11 @@ Sub-project prefix: `proposal`, `main`, `defense`, or `meta` for cross-project c
 
 ```bash
 git tag -a proposal_accepted_<date> -m "Proposal accepted by supervisor"
-git tag -a work_submitted_<date> -m "Main work officially submitted"
+git tag -a v_final_<date> -m "Main work officially submitted"
 git tag -a defense_passed_<date> -m "Defense passed"
 ```
+
+A plain `git tag <name>`, as the workflows write it, serves as well: cephalo looks only for the tag's name.
 
 ---
 
@@ -214,6 +217,8 @@ git tag -a defense_passed_<date> -m "Defense passed"
 | Working on defense | `03_Defense/` |
 
 **Why:** Claude Code uses the opened directory as context. Opening the root exposes all three sub-projects at once — distraction and risk (e.g., accidentally editing the frozen proposal while writing the main work).
+
+A session opened on a sub-project still finds the agent definitions in `../.claude/agents/`, also for `claude --agent <name>`: Claude Code looks for them in the folders above the one it is opened on as well (tested with version 2.1.322, with and without the sub-project's own `.claude/settings.json`).
 
 ### Access to shared materials
 
@@ -266,7 +271,7 @@ One-time at project start:
 - [ ] Place supplementary course material in `00_Shared_Materials/course_materials/` (the assignment briefing belongs in `guidelines/`)
 - [ ] Initialize Git (done by setup script)
 - [ ] Run style-resolver once -> `00_Shared_Materials/styleguide.md`
-- [ ] Reference manager collection for the main work, auto-export to `02_Main_Work/02_Literature/literature.bib`
+- [ ] Reference manager collection for the main work (optional), auto-export to `02_Main_Work/02_Literature/literature.bib`
 - [ ] Initial `00_Status.md` in all three sub-projects (done by setup script from templates)
 - [ ] Project overview in a root file of your own (e.g. `00_Project_overview.md`): the root `README.md` is cephalo's and is replaced when you update the template
 

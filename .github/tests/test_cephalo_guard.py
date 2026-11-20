@@ -151,6 +151,10 @@ class TestS1ShellWrites(Base):
         "doc.save('workspace/output/reference.docx')\n\"",
         'python3 -c "import json; json.dump({}, open(\'x.json\', \'w\'))"',
         "python -c \"from pathlib import Path; Path('workspace/state.md').open('a').write('x')\"",
+        "python -c \"from pathlib import Path; Path('workspace/state.md').open('w', encoding='utf-8').write('x')\"",
+        "py -c \"from pathlib import Path; f = Path('workspace/data/outputs/t.bin').open(mode='wb'); f.write(b'x')\"",
+        "py -c \"from pathlib import Path; Path('workspace/state.md').open('a+').write('x')\"",
+        "py -c \"import gzip; gzip.open('workspace/data/raw/x.csv.gz', 'wb').write(b'x')\"",
         'py -3 -c "import pathlib; pathlib.Path(\'a.md\').write_bytes(b\'x\')"',
         # here-documents
         "cat <<'EOF' > workspace/output/verification/ch_1_round_1.md\n# Report\nEOF",
@@ -217,6 +221,12 @@ class TestS1ShellWrites(Base):
         "for i, p in enumerate(d.paragraphs[:20]): print(i, repr(p.style.name)) \"",
         "py - <<'EOF'\nprint(open('workspace/state.md', encoding='utf-8').read().count('| '))\nEOF",
         'pandoc workspace/output/document.docx --to plain --wrap=none | py -c "import sys; print(len(sys.stdin.read()))"',
+        # a method .open() with a path whose name begins with a mode letter is a read (the empirical trial leg: a
+        # figure under workspace/ opened to look at its size was taken for a write)
+        "py -c \"from PIL import Image; im = Image.open('workspace/data/outputs/fig_1.png'); print(im.size)\"",
+        "py -c \"from PIL import Image; print(Image.open('abbildung_1.png').size, Image.open('x.png').mode)\"",
+        "py -c \"import gzip; print(len(gzip.open('workspace/data/raw/x.csv.gz').read()))\"",
+        "py -c \"from pathlib import Path; print(Path('workspace/state.md').open('r', encoding='utf-8').read()[:80])\"",
         # inline programs that write only in _scratch/
         "py -c \"import zipfile; zipfile.ZipFile('_scratch/orchestrator/x.zip', 'w').close()\"",
         'py -c "print(1)" > _scratch/orchestrator/out.txt',

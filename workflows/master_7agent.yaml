@@ -96,7 +96,8 @@ phases:
         note: |
           Without a defined methodology, no data agent can work. The design 
           decision (qualitative / quantitative / mixed-methods) is binding 
-          for everything that follows.
+          for everything that follows (orchestrator.md, "Empirical works:
+          methods and data"; methods-agent.md, "Research design").
   
   # ===========================================================
   # Phase A - Content
@@ -104,7 +105,12 @@ phases:
   phase_A_content:
     description: |
       Chapter-by-chapter work. For empirical theses, methods and data 
-      chapters use specialized agents.
+      chapters use specialized agents (orchestrator.md, "Empirical works:
+      methods and data"). The steps under per_theory_chapter (A.1 to A.6)
+      apply to every chapter the two blocks after it do not cover: theory,
+      discussion, conclusion and introduction. A later chapter runs A.1 and
+      A.2 only for what no verified extract holds (orchestrator.md, "For each
+      chapter"); with nothing new, both fall away.
     
     order: [theory, methods, empirical, discussion, conclusion, introduction]
     
@@ -143,7 +149,7 @@ phases:
       - step: A.M.1
         agent: methods
         input: design.md, methodological literature
-        output: workspace/output/chapters/ch_methods.md
+        output: workspace/output/chapters/ch_X_*.md (numbered like the other chapters, since name order is document order)
       
       - step: A.M.2
         agent: source-verifier
@@ -156,7 +162,14 @@ phases:
     
     empirical_chapter:
       condition: empirical == true
-      note: Skip this block for purely theoretical theses.
+      note: |
+        Skip this block for purely theoretical theses. A sentence on the
+        work's own data is verified by A.E.3 and needs no source; the
+        source-verifier gets the chapter as in A.4. A.E.3 and A.E.4 run
+        again after a fix of a deviation, on what changed; a revision that
+        changes no number, table, figure or statement about the method
+        leaves them standing (orchestrator.md, "Empirical works: methods
+        and data").
       steps:
       - step: A.E.1
         agent: data
@@ -167,23 +180,35 @@ phases:
       - step: A.E.2
         agent: writer
         input: data outputs, styleguide.md
-        output: workspace/output/chapters/ch_empirical.md
+        output: workspace/output/chapters/ch_X_*.md (numbered like the other chapters)
       
       - step: A.E.3
         agent: data
         action: Three-way consistency check (raw data <-> table <-> text)
       
       - step: A.E.4
-        agent: source-verifier
-        action: Methodological consistency between methods chapter and empirical chapter
+        agent: methods
+        action: Consistency of the empirical chapter with design.md and the methods chapter (methods-agent.md, "Consistency of methods and results")
       
       - step: A.E.5
         agent: format-verifier
+        note: |
+          Before it, the source-verifier verifies the chapter like any other,
+          with the report of scripts/verbatim_check.py (orchestrator.md,
+          "Empirical works: methods and data").
     
     consistency_check:
       after_every_n_chapters: 2
       checklist: checklists/consistency.md
       agent: source-verifier
+      note: |
+        Part of the chapter's verification round, not a call of its own: the
+        task prompt of every second chapter's round, and of the round of
+        the last chapter written (the introduction), names the checklist's
+        Part A and the chapters written so
+        far; the conclusion's round names B.3 as well, the introduction's
+        B.2 (orchestrator.md, "For each chapter", step 4). The final check
+        is F.1.
   
   # ===========================================================
   # Phase transition A -> B (same as bachelor)
@@ -196,12 +221,13 @@ phases:
       - all_chapters_source_verified: "✅"
       - methods_data_consistent: true   # empirical theses only
       - open_content_warnings: 0
-      - last_3_iterations_format_only: true
       - styleguide_open_questions: 0
+    indicators:
+      - last_3_commits_format_only   # shown with its state; does not hold the transition up (docs/phase_separation.md, criterion 4)
     waiver: |
       The user may waive the criteria docs/phase_separation.md names under
       "Waiving a criterion" (chapters complete, for chapters the work will not
-      contain; format-only iterations; styleguide questions), not the source
+      contain; styleguide questions), not the source
       verification, open content warnings or the methods/data consistency;
       record which and why in workspace/state.md.
     documentation: docs/phase_separation.md
@@ -259,16 +285,33 @@ phases:
       - step: B.1
         agent: format-verifier
         action: Full styleguide check
+        note: |
+          A format round as orchestrator.md, "Phase A → B transition", item
+          5, describes. In every round the format-verifier runs the scripts
+          of B.2 and B.3 itself and reports their results
+          (format-verifier.md, section 3).
 
       - step: B.2
         script: scripts/bibliography_check.py
+        note: |
+          Run by the format-verifier within each format round (B.1), which
+          reports the result; no run of your own beside it.
       
       - step: B.3
         script: scripts/abbreviations_extract.py
+        note: |
+          Run by the format-verifier within each format round (B.1), which
+          reports the result; no run of your own beside it.
       
       - step: B.4
         agent: format-verifier
         action: Consistency checks
+        note: |
+          The next format round, on a new export (B.0) after the fixes of
+          the round before. It checks the fixes and, as every round does,
+          the consistency across the document. An export that has not
+          changed gets no further round, so without a fix after B.1, B.4
+          falls away.
   
   # ===========================================================
   # Closing
@@ -278,10 +321,21 @@ phases:
       agent: orchestrator
       checklist: checklists/consistency.md
       action: Full-document consistency check
+      note: |
+        orchestrator.md, "Final check". The source-verifier checks Part A
+        over all chapters and B.2-B.3 in one call; its answer is saved
+        unchanged as workspace/output/verification/consistency_final.md
+        and read back. The orchestrator takes B.1 and B.4 from the last
+        format report and the scripts and names B.7 to the user; it judges
+        no content itself.
     
     - step: F.2
       agent: format-verifier
       action: Final styleguide report
+      note: |
+        The report of the last format round is the final one while the
+        export has not changed since. A new round follows only a new
+        export, after a fix that F.1 prompted.
     
     - step: F.3
       agent: data
@@ -293,6 +347,7 @@ phases:
       task: |
         - Front matter numbered unlike the main text: only if styleguide.md pagination.front_matter is Roman, counted but not shown or none, or pagination.main_text starts at 1, the DOCX has it as a section of its own, set by scripts/docx_pagination.py after the export (docs/reference_management.md, "The title page"; without Python, the user sets it in Word as described there)
         - Update table of contents (in Word: Ctrl+A then F9, twice: docs/reference_management.md, "The title page")
+        - Lists of tables and figures, where the guidelines ask for them, inserted in Word
         - Back matter numbered unlike the main text: only if styleguide.md pagination.back_matter does not number it like the main text, the DOCX has it as a section of its own from the reference list on, set the same way; with Roman numerals that continue the front matter's count, check after updating the table of contents that its first number follows the front matter's last page; if it does not (a list or the table of contents fills more than one page), set it in Word: in the header or footer of the reference list's first page, Format Page Numbers, "Start at" the number after the front matter's last page (docs/reference_management.md, "The title page", step 5), then update the fields again (Ctrl+A, then F9); running scripts/docx_pagination.py again on this DOCX changes nothing, and a new export takes that number with --back-matter-start (docs/scripts.md)
         - Confirm the hyphenation setting matches styleguide.md (document.hyphenation)
         - Visual proofreading

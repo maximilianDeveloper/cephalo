@@ -731,10 +731,12 @@ def py_mode(args):
 
 # --------------------------------------------------------------- S1 helpers
 
+# What makes an inline Python program a write. A method call .open(...) counts by its mode, a string of mode letters
+# only (Path(p).open('w')): Image.open('workspace/fig.png') and gzip.open('a.csv.gz') open a path to read it.
 _PY_WRITE = re.compile(
     r"""open\s*\([^()]{0,160}?(?:\([^()]*(?:\([^()]*(?:\([^()]*\)[^()]*){0,8}\)[^()]*){0,8}\)[^()]{0,80}?)?(?:,\s*|mode\s*=\s*)['"][rbt]*(?:[wax]|\+)[rbt+]*['"]"""
     r"""|open\s*\(\s*[rRuUbBfF]{0,2}(?:'[^'\n]{0,4096}'|"[^"\n]{0,4096}")\s*,\s*(?:mode\s*=\s*)?['"][rbt]*(?:[wax]|\+)"""
-    r"""|\.open\s*\(\s*(?:mode\s*=\s*)?['"][rbt]*(?:[wax]|\+)"""
+    r"""|\.open\s*\(\s*(?:mode\s*=\s*)?['"][rbt]*(?:[wax]|\+)[rbt+]*['"]"""
     r"""|\.write_(?:text|bytes)\s*\("""
     r"""|\.save\s*\("""
     r"""|ZipFile\s*\([^()]{0,160}?,\s*(?:mode\s*=\s*)?['"][wax]['"]"""

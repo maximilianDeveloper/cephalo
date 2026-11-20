@@ -33,6 +33,11 @@ agents:
     model: opus
     role: Slide content, speaker notes, question catalogs
   
+  source-verifier:
+    file: .claude/agents/source-verifier.md
+    model: opus
+    role: Checks slide text, speaker notes and handout against the submitted work (orchestrator-defense.md, Rule 2)
+  
   data:
     file: .claude/agents/data-agent.md
     model: opus
@@ -86,6 +91,10 @@ references:
     relative_path: ../02_Main_Work/
     status: READ-ONLY — reference for content
   
+  accepted_proposal:
+    relative_path: ../02_Main_Work/01_Proposal_Reference/
+    status: READ-ONLY — only where a question about the proposal comes up; not ../01_Proposal/
+  
   shared_materials:
     relative_path: ../00_Shared_Materials/
 
@@ -115,6 +124,9 @@ phases:
           submission step, or work_submitted_<date> per
           docs/multiproject_structure.md; accept either).
           If no: STOP. Submit thesis officially first.
+          If it is submitted but untagged: the user sets the tag on the commit of the
+          submitted version (`git tag v_final_<date> <commit>`), or asks Claude to;
+          then continue.
       
       - step: 0.2
         name: Verify central files, record the defense basics
@@ -145,33 +157,44 @@ phases:
         agent: style-resolver
         blocking: true
         task: |
-          In multi-project setups, verify that `../00_Shared_Materials/styleguide.md` 
+          Verify that `../00_Shared_Materials/styleguide.md` 
           exists and has no open ❓ [content] entries (see below). The defense reuses the styleguide 
           from the main work.
           
-          In stand-alone defense setups (rare — defense without prior cephalo project), 
-          extract the styleguide from institutional guidelines into `styleguide.md` 
-          at the defense project root.
-          
           Open ❓ [content] entries (or entries without a tag) must be resolved
           before slides or speaker notes are drafted, ❓ [format] entries before
-          the slides are exported.
+          the deck (01_Slides/presentation_v1.pptx) is first built.
   
   # ===========================================================
   # Phase 1 - Slides
   # ===========================================================
   phase_01_slides:
     directory: 01_Slides/
-    agents: [orchestrator-defense, writer]
-    optional_agents: [data]    # data-agent only for empirical defenses (see note below)
+    agents: [orchestrator-defense, writer, source-verifier]
+    optional_agents: [data]    # data-agent only for empirical defenses (see note_for_data_agent below)
     
     goals:
       - PPTX presentation with 12-20 slides
       - "Typical structure: (1) title slide, (2) agenda, (3) topic and relevance, (4) research question, (5) theoretical framework [1-2 slides], (6) methodology [1-2 slides, more for empirical], (7) core findings [3-6 slides], (8) discussion [1-2 slides], (9) conclusion and outlook, (10) backup slides for expected critical questions"
     
     output:
+      - 01_Slides/slides.md (slide text)
       - 01_Slides/presentation_v1.pptx
       - 01_Slides/backup_slides.md (which topics additionally as backup?)
+    note: |
+      The writer writes the slide text to 01_Slides/slides.md; it cannot build
+      a PPTX. The source-verifier checks slides.md and backup_slides.md against
+      the submitted work before the build (orchestrator-defense.md, Rule 2).
+      presentation_v1.pptx is built from the text as
+      workflows/presentation_3agent.yaml, step 1, says under "The deck" and in
+      the layout rules after that list, with the deck script in data/scripts/
+      of 03_Defense/. The table of the values the script sets stands in
+      01_Slides/deck_values.md, before the first build, and is kept up to
+      date. The deck is built again under the same name after each change of
+      slide text or speaker notes (phases 2 and 5): Git keeps the earlier
+      one. From phase 2 on it carries the speaker notes in its notes pages.
+      After a build, the deck is exported to PDF for the user to look
+      through (docs/scripts.md, "A PDF from PowerPoint (Windows)").
     
     important:
       - Slides are NOT prose. Bullet points, graphics, no text walls.
@@ -193,7 +216,7 @@ phases:
   # ===========================================================
   phase_02_speaker_notes:
     directory: 02_Speaker_Notes/
-    agents: [orchestrator-defense, writer]
+    agents: [orchestrator-defense, writer, source-verifier]   # source-verifier: the notes against the submitted work (orchestrator-defense.md, Rule 2)
     
     goals:
       - Per slide: what exactly do I say?
@@ -234,7 +257,7 @@ phases:
       - 03_Defense_Prep/answer_outlines.md
     
     chat_structure:
-      - One chat: generate question catalog (Claude as "critical examining committee")
+      - One chat for the question catalog (expected_questions.md), which the writer drafts with the prompt below; playing the examining committee live is the orchestrator's (orchestrator-defense.md, Rule 5)
       - One chat: weakness analysis (where are limits of the work?)
       - One chat: structure answers
     
@@ -273,7 +296,7 @@ phases:
   # ===========================================================
   phase_04_handout:
     directory: 04_Handout/
-    agents: [orchestrator-defense, writer]
+    agents: [orchestrator-defense, writer, source-verifier]
     optional: true
     trigger: If desired by examining committee
     
@@ -283,6 +306,21 @@ phases:
     
     output:
       - 04_Handout/handout_final.pdf
+    note: |
+      The writer writes 04_Handout/handout.md, and the source-verifier
+      checks it against the submitted work (orchestrator-defense.md, Rule 2).
+      Before the writer starts, ask the user for its length in words (one
+      sheet, both sides, holds about 600) and give the writer that figure.
+      Count its words after the draft and after each revision
+      (scripts/verbatim_check.py --words) and name the count against that
+      figure in your message.
+      Once the check has passed, it is exported to
+      04_Handout/handout_final.pdf like a presentation's companion, without
+      format rounds (workflows/presentation_3agent.yaml, F.1: reference
+      document, Pandoc, the pagination script, then the PDF from Word as
+      docs/scripts.md shows), by Claude or the user as the user decides;
+      the user looks through the PDF. If the user makes it later, the
+      handover names it as a step left to them.
     
     format: |
       Single column, readable when printed. Not a marketing brochure but 
@@ -293,7 +331,7 @@ phases:
   # ===========================================================
   phase_05_rehearsals:
     directory: 05_Rehearsals/
-    agents: [orchestrator-defense]
+    agents: [orchestrator-defense, writer, source-verifier]   # writer: adjustments to slides and notes, also their wording when the user asks for a proposal; source-verifier: what changed
     
     goals:
       - Stay within timing (run a timer!)

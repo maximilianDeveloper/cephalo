@@ -99,7 +99,8 @@ phases:
         manual: true
         task: |
           Created by setup.sh / setup.ps1 per docs/longform_structure.md
-          ("Directory layout" section). With minimal scaffolding only
+          ("Directory layout" section; multi-project main work: that section of
+          docs/multiproject_structure.md). With minimal scaffolding only
           guidelines/ exists (multi-project main work: only the 00_*.md
           files); add the phase directories as needed.
 
@@ -123,6 +124,11 @@ phases:
           - 00_Status.md (from templates/status.md): fill initially
           - 00_Decisions.md (from templates/decisions.md): add research question
           - 00_Feedback_log.md (from templates/feedback_log.md): delete its example section, otherwise keep as is
+          Multi-project main work: also enter in 00_Decisions.md what the
+          work takes from the accepted proposal, each entry naming it as
+          its source. That is the planned outline and the decisions of
+          ../01_Proposal/00_Decisions.md that concern the main work
+          (orchestrator-longform.md, "Multi-project variant").
       
       - step: 0.3
         name: Materials pre-check
@@ -135,6 +141,7 @@ phases:
         name: Reference manager check
         manual: true
         task: |
+          Only with a reference manager (optional, checklists/precheck.md, section 5); without one, skip this step and write no literature.bib.
           - Reference manager collection created?
           - BibTeX export configured (Better BibTeX or equivalent)?
           - Auto-export to 02_Literature/literature.bib?
@@ -148,9 +155,15 @@ phases:
         note: |
           Multi-project main work: the guidelines are in
           ../00_Shared_Materials/guidelines/, and ../00_Shared_Materials/styleguide.md
-          normally exists already (extracted in the proposal). Only verify it (no open
+          normally exists already (extracted in the proposal). The style-resolver
+          only verifies it, called for that like any step's agent (no open
           ❓ [content] items; ❓ [format] items may wait until Phase B);
-          re-extract only when the guidelines change.
+          re-extract only when the guidelines change. The user confirms for the
+          main work each answer recorded so far (a value whose provenance names
+          the user). The orchestrator asks from the style-resolver's two lists.
+          It asks for each n/a value by itself, whether the element occurs in
+          the main work, and for the other values as one list. An entry whose
+          answer does not hold for the main work is opened again.
   
   # ===========================================================
   # Lead-in: Proposal
@@ -183,7 +196,7 @@ phases:
     agents: [orchestrator-longform, research, source-verifier]
     
     goals:
-      - Complete literature inventory in reference manager, exported as literature.bib
+      - Complete literature inventory; with a reference manager, exported as literature.bib (step 0.4)
       - For each source: extract in extracts/<citekey>.md (structured, with original quotes)
       - source-verifier has verified all extracts
       - Secondary citations identified, primary sources sourced where possible
@@ -205,7 +218,7 @@ phases:
       - For longer chapters, split into sections (e.g., Ch. 3.1-3.2 / Ch. 3.3-3.4)
     
     per_chapter:
-      - research-agent reads extracts from 02_Literature/extracts/
+      - research-agent and extract verification only for what no verified extract in 02_Literature/extracts/ holds (orchestrator-longform.md, `02_Literature`)
       - writer-agent drafts the text; citations as citekeys only if 00_Decisions.md records that they are rendered (pre-check, section 6)
       - orchestrator-longform runs scripts/verbatim_check.py on the chapter before every verification round and passes the report on
       - source-verifier: sentence-by-sentence verification incl. plagiarism check
@@ -251,6 +264,13 @@ phases:
     scope: |
       Cross-chapter cross-references, terminology drift, self-plagiarism 
       between introduction and conclusion, argumentation coherence.
+    note: |
+      Part of a chapter's verification round, not a step or a call of its
+      own. The task prompt of every second chapter's round, and of the
+      round of the last chapter written (the introduction), names the
+      checklist's Part A and the chapters written so
+      far; the conclusion's round names B.3 as well, the introduction's B.2
+      (orchestrator-longform.md, "Feedback-loop escalation").
   
   # ===========================================================
   # Phase transition A -> B
@@ -263,12 +283,12 @@ phases:
       - All content chapters (incl. introduction) complete
       - Every chapter passed source verification with ✅
       - No outstanding content ⚠️, ❌ or ❓ items
-      - Last 3 iterations were format-only (content has stabilized; in the last 3 commits the chapter files changed only in styleguide-governed items)
+      - Content has settled (an indicator that does not hold the transition up; it says what the last 3 commits changed in the chapter files; docs/phase_separation.md, criterion 4)
       - All ❓ items in styleguide.md clarified
     waiver: |
       The user may waive the criteria docs/phase_separation.md names under
       "Waiving a criterion" (chapters complete, for chapters the work will not
-      contain; format-only iterations; styleguide questions), not the source
+      contain; styleguide questions), not the source
       verification or open content items; record which and why in 00_Decisions.md.
     
     actions:
@@ -302,13 +322,13 @@ phases:
     content_or_form_phase: B
     
     chat_structure:
-      - One chat per review pass (typically 3-6 passes for a bachelor thesis)
+      - The next format round, which checks the last round's fixes, follows in the same chat (orchestrator-longform.md, "`08_Formal_Review` (Phase B)", step (5)); typically 3-6 rounds for a bachelor thesis
       - Closing handover.md lists found and resolved issues
     
     steps:
       - Title page as 08_Formal_Review/title_page.md, the first file of every export (docs/reference_management.md, "The title page")
       - Without citekeys, the reference list as 08_Formal_Review/bibliography.md, after the chapter files in every export, before an appendix (docs/reference_management.md, "The reference list"); where pagination.back_matter numbers the back matter unlike the main text, the file starts with the bookmark that starts it, and with citekeys it holds that bookmark, the heading and the empty refs div (same section)
-      - Milestone export as DOCX into submissions/v_<tag>_<date>.docx with Pandoc, a new tag for each format round (v_r1_<date>.docx, v_r2_<date>.docx) (docs/reference_management.md; the steps below read this file); then scripts/docx_pagination.py on it with the values of styleguide.md pagination.front_matter, pagination.main_text and pagination.back_matter, and scripts/docx_postprocess.sh, only if document.hyphenation = automatic (orchestrator, every round: a new export carries neither the sections nor the flag)
+      - Milestone export as DOCX into submissions/v_<tag>_<date>.docx with Pandoc, a new tag for each format round (v_r1_<date>.docx, v_r2_<date>.docx) (docs/reference_management.md; the steps below read this file); then scripts/docx_pagination.py on it with the values of styleguide.md pagination.front_matter, pagination.main_text and pagination.back_matter, and scripts/docx_postprocess.sh, only if document.hyphenation = automatic (orchestrator, every round, since a new export carries neither the sections nor the flag)
       - Full styleguide check of that DOCX (format-verifier; report in format_reports/round_<n>.md)
       - scripts/bibliography_check.py (minus-test)
       - scripts/abbreviations_extract.py (derive list of abbreviations)
@@ -320,8 +340,8 @@ phases:
   submission:
     manual: true
     task: |
-      - Full-document final check: checklists/consistency.md, Part B (orchestrator-longform; B.6 is completed by the commit and tag below)
-      - Final DOCX export to 08_Formal_Review/submissions/v_final_<date>.docx
+      - Full-document final check: checklists/consistency.md, Part B. The source-verifier checks Part A over all chapters and B.2-B.3 in one call, and its answer is saved unchanged as 08_Formal_Review/verification/consistency_final.md; orchestrator-longform takes B.1 and B.4 from the last format report and the scripts and judges no content itself (orchestrator-longform.md, "`08_Formal_Review` (Phase B)"; B.6 is completed by the commit and tag below)
+      - Final DOCX export to 08_Formal_Review/submissions/v_final_<date>.docx: a new export of the files the last format round checked, whose report stands for it while they have not changed since; after a change, a format round on a new v_r<n> export first
       - Run scripts/docx_pagination.py on this v_final file with the values of styleguide.md pagination.front_matter, pagination.main_text and pagination.back_matter, and scripts/docx_postprocess.sh (only if document.hyphenation = automatic): a new export carries neither the sections nor the flag
       - Front matter numbered unlike the main text: only if styleguide.md pagination.front_matter is Roman, counted but not shown or none, or pagination.main_text starts at 1, the DOCX has it as a section of its own, set by scripts/docx_pagination.py after the export (docs/reference_management.md, "The title page"; without Python, the user sets it in Word as described there)
       - Update table of contents (Ctrl+A then F9, twice: docs/reference_management.md, "The title page")
@@ -329,5 +349,6 @@ phases:
       - Confirm the hyphenation setting matches styleguide.md (document.hyphenation)
       - Visual proofreading
       - Sign declaration of academic integrity
-      - Commit the final state (the user runs it, or asks Claude to: git add -A then git commit -m "submission: final version", in a multi-project main work "main/submission: final version"), then the tag, the same way: git tag v_final_<date>
+      - The tag comes last, since it marks what was handed in and, in a multi-project, freezes 02_Main_Work/. First the user's Word steps above, saved in the v_final file, and the retrospective (checklists/consistency.md, Part C) in 00_Feedback_log.md; then the chat closure ritual's steps 1–4 (handover; 00_Status.md with Submitted: the date the user names for it); then the commit (the user runs it, or asks Claude to: git add -A then git commit -m "submission: final version", in a multi-project main work "main/submission: final version"); then the tag, the same way: git tag v_final_<date>
+      - A change after the tag (the file saved again in Word, a late entry) needs a new commit and the tag moved to it: say so once if the user wants the tag before these steps, and do as the user decides
       - Mentally rehearse defending each sentence

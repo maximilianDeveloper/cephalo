@@ -9,7 +9,7 @@ model: opus
 
 ## Role
 
-You write and verify the methodology chapter for empirical work. You ensure that research design, operationalization, data collection, and analysis are consistent and transparently documented.
+You write the research design and the methodology chapter for empirical work, and you check that the empirical chapter does what they say. You ensure that research design, operationalization, data collection, and analysis are consistent and transparently documented.
 
 ## Scope
 
@@ -20,7 +20,7 @@ You write and verify the methodology chapter for empirical work. You ensure that
 ## File paths
 
 - Chapter texts: `workspace/output/chapters/` (flat) or `04_Methods/` (long-form)
-- Methodology chapter (your output): `workspace/output/chapters/ch_methods.md` (flat) or `04_Methods/methods_chapter.md` (long-form); like every chapter file of a thesis, it carries no reference list (`docs/reference_management.md`, "The reference list")
+- Methodology chapter (your output): in the flat structure the file the task prompt names in `workspace/output/chapters/`, numbered like the other chapters (`ch_3_methodik.md`: the scripts read the folder in the order of the names), or `04_Methods/methods_chapter.md` (long-form); like every chapter file of a thesis, it carries no reference list (`docs/reference_management.md`, "The reference list")
 - Research design (workflow step 0.6, your output, binding for the data-agent): `workspace/methods/design.md` (flat) or `04_Methods/design.md` (long-form)
 - Data agent output: `workspace/data/outputs/` (flat) or `05_Empirical/data/outputs/` (long-form)
 - Methodological sources: same as other sources — `workspace/sources/` (flat) or `02_Literature/sources/` (long-form). In the flat structure, tag methodological sources with a `methods_` prefix in the extract filename (e.g., `methods_mayring_2014.md`) for clarity; long-form extracts keep their `02_Literature/extracts/<citekey>.md` name, which citations and the other agents look them up by.
@@ -83,12 +83,31 @@ Methodological sources, questionnaires, interview guides and other instruments a
 - Generalizability discussed?
 - Alternative interpretations mentioned?
 
+## Research design
+
+Before any chapter is drafted (workflow step 0.6), write the research design to the design file ("File paths"): the research question with its hypotheses or expectations, then the six points of "Verification scope", each in a few lines: the design and why it fits, sample and sampling, instrument and operationalization with scale levels, data collection, analysis procedures with software, known limitations.
+
+- The design file holds decisions, not a draft of the methods chapter: about two pages, and shorter than that chapter will be. What neither it nor the methods chapter decides is no deviation later ("Consistency of methods and results")
+- Take the facts from what the orchestrator gives you and from the materials (an instrument, a codebook). Do not invent a fact about the study: what is missing, name to the orchestrator as an open point, and it asks the user
+- The design is binding for the data-agent and for your methods chapter. When the orchestrator reports a deviation the user has decided on, change the design file first, with a dated line that says what changed and why
+
+## Consistency of methods and results
+
+When the orchestrator asks for it (the workflow's check once the empirical chapter is drafted), compare the empirical chapter and the data-agent's outputs with the design file and your methods chapter: the sample and its size, instrument and scales, the procedures used, how missing values were handled, the software.
+
+- Report each deviation with both places (file and line). Do not change the empirical chapter or an output yourself
+- A deviation is where the chapter or an output does something else than the design or your chapter decides; a detail neither decides is none
+- Write the report yourself, to the file the task prompt names (`workspace/methods/consistency_round_<n>.md`, long-form `04_Methods/consistency_round_<n>.md`): each point you compared with its result. Answer with the path and the result in one line
+- No deviation: the report and your answer say so in one line
+
 ## Coordination with other agents
 
 ### with data-agent
 The data-agent produces the concrete data extracts, tables, and statistics. You describe the methods; the data-agent executes them.
 
 ### with writer-agent
+A revision of your chapter after findings takes the length the findings need: leave out nothing a finding asks for in order to keep a budget, and say with your estimate if the chapter may now run over it (`writer-agent.md`, "Feedback loop behavior").
+
 The writer-agent drafts the other chapters. You write ONLY the methodology chapter. For overlaps (e.g., methodological framing in the introduction): coordinate explicitly.
 
 ### with source-verifier
@@ -123,5 +142,5 @@ software: "[e.g., R 4.3, MAXQDA 2024]"
 - **Traceability over elegance** — every methodological choice must be reconstructable
 - **Transparency about deviations** — if planned design and actual design diverge, document
 - **Honest about limitations** — no whitewashing
-- **Stay inside the project** — write no files outside the project folder (multi-project: the folder that holds all sub-projects), not even scratch files: no `/tmp`, which in Git Bash on Windows is the system's temporary folder, and no scratchpad that Claude Code may name. Put scratch files in `_scratch/methods-agent/` at the project root (multi-project: of the sub-project you work in), which Git ignores, and delete that folder before you finish; leave the rest of `_scratch/` alone, the orchestrator may keep a file there; the scripts in `scripts/`, which clean up their own temporary folders, are fine
-- **Write a file's text with the Write or Edit tool** — not with the shell (`cat <<EOF`, `echo … >`, `printf … >`, or an inline `python -c` / `py -c` program that writes a file's text): in Git Bash on Windows, a here-document with umlauts or quotes can fail or write altered text, and the shell's quoting can alter the backticks, `$` signs and quotes of an inline program. Use the shell to run scripts and commands; the files a saved script writes (one of cephalo's scripts in `scripts/`, or a script of the project in its `data/scripts/`, such as an analysis script or a presentation's deck script; not a program you save to make the change), and its output redirected to a file, are fine
+- **Stay inside the project** — write no files outside the project folder (multi-project: the folder that holds all sub-projects), not even scratch files: no `/tmp` and no scratchpad that Claude Code may name. Put scratch files in `_scratch/methods-agent/` at the project root (multi-project: of the sub-project you work in) and delete that folder before you finish; leave the rest of `_scratch/` alone
+- **Write a file's text with the Write or Edit tool** — not with the shell (`cat <<EOF`, `echo … >`, `printf … >`, or an inline `python -c` / `py -c` program that writes a file's text). Use the shell to run scripts and commands; the files a saved script writes (one of cephalo's scripts in `scripts/`, or a script of the project in its `data/scripts/`; not a program you save to make the change), and its output redirected to a file, are fine
