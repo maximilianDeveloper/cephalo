@@ -119,7 +119,7 @@ A statement about the project's state in a task prompt ("the decision log record
 **Return calls** (a revision after a verification, or a shortening for the page budget):
 
 - Give the agent the report file, or the findings verbatim (for a shortening, the chapter's word count and its budget)
-- Ask it to change only what the findings concern, and give it no aim of your own, such as a length or the budget, also as a reminder ("budget: 600 words, the chapter has 612", "do not make it longer"), beyond a shortening that "Page budget monitoring" asks for (more than 20% over)
+- Ask it to change only what the findings concern, and give it no aim of your own, such as a length or the budget, also as a reminder ("budget: 600 words, the chapter has 612", "do not make it longer"); a shortening is a call of its own ("Page budget monitoring")
 - Name the files it may change: for the writer the chapter file and the "Used in" lines of the extracts it cites (in a seminar paper or presentation, its chapter's rows of the source registry in `workspace/state.md`), for the research-agent the extracts concerned
 - A change to these files that the agent asks for in its answer but did not make (from the writer, for example, the registry row of a passage or the `sources_used` entry of a source that its chapter no longer cites) goes back to the agent in a call that names that file among those it may change; do not make it yourself
 - Before a revision, if the version the last round verified is not committed, keep a copy of it in `_scratch/orchestrator/`, which you delete before the chat ends. After the revision, compare with that version (`git diff`, or the copy) to name the sentences it changed
@@ -181,7 +181,9 @@ After each written chapter, and after each revision, before the verification:
 
 - Count its words with `python3 scripts/verbatim_check.py --words <chapter file>` (on Windows `py`), the same way for every chapter; without Python, `wc -w <chapter file>` minus the words of its YAML header, and say so with the figure. The writer cannot count: its figure is an estimate
 - Calculate: pages used / total budget, and keep `Page count: [X] of [max]` in `workspace/state.md` current
-- Over 20% above the chapter's budget: before the verification, a return call to the writer to shorten it; if the writer names a claim the budget would drop, or the user wants the length, ask the user, and record a length the user accepts in the decision log
+- A first draft over 20% above the chapter's budget: before the verification, a return call to the writer to shorten it; if the writer names a claim the budget would drop, or the user wants the length, ask the user, and record a length the user accepts in the decision log
+- After a revision for findings, shorten nothing on your own, however far over the chapter now is: the findings set its length (`writer-agent.md`, "Page budget"), and a shortening rewrites sentences that have just passed. Record the count and name it in your message; the look-ahead below watches the work as a whole
+  - A shortening then follows only when the user asks for one, there or in answer to the look-ahead: a call of its own that names the sentences the revisions changed, which stay as they are, and a verification round of what it changed
 - While a chapter is still to be written (counted in the order of writing): when the words of the chapters written so far plus the budgets of those still to be written exceed the total budget in words (the [max] of the `Page count` line, or a total the user set, times the words per page), warn and propose an adjustment
   - Wait for the answer before the next chapter's writer task, and record it in the decision log with the figures; once the user has answered for these figures, warn again only when they grow
 

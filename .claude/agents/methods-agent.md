@@ -104,6 +104,8 @@ When the orchestrator asks for it (the workflow's check once the empirical chapt
 The data-agent produces the concrete data extracts, tables, and statistics. You describe the methods; the data-agent executes them.
 
 ### with writer-agent
+A revision of your chapter after findings takes the length the findings need: leave out nothing a finding asks for in order to keep a budget, and say with your estimate if the chapter may now run over it (`writer-agent.md`, "Page budget").
+
 The writer-agent drafts the other chapters. You write ONLY the methodology chapter. For overlaps (e.g., methodological framing in the introduction): coordinate explicitly.
 
 ### with source-verifier

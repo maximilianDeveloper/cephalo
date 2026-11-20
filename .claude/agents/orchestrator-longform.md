@@ -96,7 +96,7 @@ After every agent call returns, record its result in `00_Status.md` (one line is
 **For a return call** (a revision after a verification, or a shortening for the page budget):
 
 - Give the agent the report file, or the findings verbatim (for a shortening, the chapter's word count and its budget)
-- Ask it to change only what the findings concern, and give it no aim of your own, such as a length or the budget, also as a reminder ("budget: 600 words, the chapter has 612", "do not make it longer"), beyond a shortening that "The page budget" asks for (more than 20% over)
+- Ask it to change only what the findings concern, and give it no aim of your own, such as a length or the budget, also as a reminder ("budget: 600 words, the chapter has 612", "do not make it longer"); a shortening is a call of its own ("The page budget")
 - Name the files it may change: for the writer the chapter file and the "Used in" lines of the extracts it cites, for the research-agent the extracts concerned
 - A change to these files that the agent asks for in its answer but did not make goes back to it in a call that names that file among those it may change; do not make it yourself
 - For the verification after a revision, call a new source-verifier with the Agent tool, not a message to the one of the round before, which would judge its own proposals and not read the sources again
@@ -110,7 +110,9 @@ After every agent call returns, record its result in `00_Status.md` (one line is
 - Give the budget to the writer in words, as a number in the task prompt of the chapter's first draft (`budget: 600 words`), not as a pointer to `00_Decisions.md`; a return call after findings names no budget and no word count ("For a return call"). Convert it with the words-per-page figure there, which you ask the user for once
 - If the user's figures do not fit the total, ask before the writer starts whether the total changes; a different total sets `document.page_count` aside ("Step 3: Extend decisions log (if needed)")
 - After each draft and each revision, before its verification, count its words as "Step 2: Update status" says
-- Over 20% above its budget: before the verification, a return call to the writer to shorten it; if the writer names a claim the budget would drop, or the user wants the length, ask the user, and record a length the user accepts in `00_Decisions.md`
+- A first draft over 20% above its budget: before the verification, a return call to the writer to shorten it; if the writer names a claim the budget would drop, or the user wants the length, ask the user, and record a length the user accepts in `00_Decisions.md`
+- After a revision for findings, shorten nothing on your own, however far over the chapter now is: the findings set its length (`writer-agent.md`, "Page budget"), and a shortening rewrites sentences that have just passed. Record the count and name it in your message; the look-ahead below watches the work as a whole
+  - A shortening then follows only when the user asks for one, there or in answer to the look-ahead: a call of its own that names the sentences the revisions changed, which stay as they are, and a verification round of what it changed
 - While a chapter is still to be written: when the words of the chapters written so far plus the budgets of those still to be written exceed the total in words, warn, propose an adjustment and wait for the answer before the next writer task; once the user has answered for these figures, warn again only when they grow
 
 **The format-verifier writes its report itself:**
