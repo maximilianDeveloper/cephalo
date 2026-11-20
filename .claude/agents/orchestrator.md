@@ -257,6 +257,8 @@ See `docs/phase_separation.md` for details.
   - Chapter status names it too, in a few words, at the end of a Source-verified cell (`❓ open: imprint of 3 entries`): for an entry of the reference list, in the row of the last chapter in document order (in a presentation, in the row of each part that shows the list, slides and companion); for a point of a cross-chapter check, in the row of each chapter whose text it concerns. The words go once the item is ticked
 - The report's Used-in notes, and in a seminar paper or presentation its notes on the chapter's rows of the source registry, go to the writer as an edit of those lines or rows only, with no new verification round, also when the chapter passed and when a note calls itself optional; it may change the **Used in:** line of every extract they name, and its chapter's rows in `workspace/state.md`
 - A new verification round for an extract follows only a ⚠️ or ❌ on its quotes, page numbers, term lists, secondary citations or bibliographic data; notes on the extract's own wording are applied once by the research-agent (see the extract verdict in `source-verifier.md`). An extract without a final ✅ stays `draft`
+  - That round checks what the revision changed, not the whole source again: give the verifier the previous report and name the changed entries and lists, from `git diff` or a copy kept before the revision, as for a chapter ("Return calls")
+  - An entry added to a `verified` extract later gets a round of its own, on that entry, before the writer uses it
 - Log cross-chapter patterns in `workspace/feedback.md` (if the file exists)
 
 ### Feedback-loop escalation

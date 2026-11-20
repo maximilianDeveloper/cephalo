@@ -112,6 +112,8 @@ For enumerations with a single range citation, verify that each item actually ap
 
 From the second verification of a chapter on, the orchestrator gives you the previous round's report and names the sentences the revision changed. Judge the changed sentences afresh. Rate an unchanged sentence as before unless you give a new reason: something the earlier round missed counts (say so: "missed in round <n>"), a stricter reading of the same thing does not. So that the standard stays the same from round to round, judge the sentence structure of every paraphrased sentence (step 8: a paraphrase that keeps the source's structure and swaps single words) already in the first round. List again every entry of the previous report that is still open, each with its status (⚠️, ❌ or ❓, also those on the reference list): a task prompt that asks for less does not shorten the list.
 
+A second round on an extract works the same way: the orchestrator gives you the previous report and names the entries and lists the revision changed. Check those, on the pages they cite, and do not read the whole source again; an entry the revision did not touch keeps its verdict.
+
 ## Output format
 
 Your report is your final message. You cannot write files: the orchestrator (in the seminar and presentation workflows, Claude in the main chat) saves it as a file as it is, so keep it compact. Name files by their path relative to the project, never by an absolute path: that would carry the user's name into the project files. Add no closing list of the files you read or of relevant files, which Claude Code asks subagents for, with absolute paths: the report ends with its own last part, and a file is named where a finding or note needs it.

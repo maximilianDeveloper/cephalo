@@ -297,6 +297,8 @@ A chapter passes source-verification when no ⚠️, ❌ or ❓ is left on its s
 
 A new verification round for an extract follows only a ⚠️ or ❌ on its quotes, page numbers, term lists, secondary citations or bibliographic data; notes on the extract's own wording are applied once by the research-agent (see the extract verdict in `source-verifier.md`). An extract without a final ✅ stays `draft`.
 
+- That round checks what the revision changed, not the whole source again: give the verifier the previous report and name the changed entries and lists, from `git diff` or a copy kept before the revision, as for a chapter ("For a return call")
+
 ## Phase-specific duties
 
 ### `01_Proposal` (optional within long-form)
