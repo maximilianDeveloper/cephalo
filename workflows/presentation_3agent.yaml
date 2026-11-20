@@ -343,12 +343,13 @@ phases:
             your turn with it; the decision log keeps the answer. Without
             such a Note or ❓, go on without a stop.
           Fixes, which the next round checks:
-          - a format-only finding in the companion: yours, with the Edit
-            tool, without rewording
-          - a finding in slide text or speaker notes, or one that needs new
-            wording: to the writer (copies first: step 2, item 2), then a
-            round of step 2 on what changed; the revision counts toward
-            the loop count, as in the three-way check
+          - a format-only finding in the companion, the slide text or the
+            speaker notes (a notation, no word changed): yours, with the
+            Edit tool, without rewording; after one in slide text or notes
+            the deck is built again
+          - a finding that needs new wording: to the writer (copies first:
+            step 2, item 2), then a round of step 2 on what changed; the
+            revision counts toward the loop count, as in the three-way check
           - a finding in the PPTX's layout: where the deck is built (step 1)
           - a finding on the non-breaking space before a page number: `\ `
             in the file of a companion that F.1 exports; in the PPTX's
@@ -391,7 +392,7 @@ phases:
     
     steps:
       - Export the PPTX to PDF once the deck script's run has ended, not in the same message as the build. Claude does it with PowerPoint, as docs/scripts.md, "A PDF from PowerPoint (Windows)", shows, unchanged but for the file name, or with LibreOffice (soffice --headless --convert-to pdf); or the user does
-      - The format-verifier and the source-verifier compare the numbers across PPTX <-> PDF <-> companion and check that the speaker notes contain the key numbers. The format-verifier reads the PPTX with its notes and the PDF; the source-verifier reads the text files of slides and notes, the companion and each data file (step 2, item 2), and its task prompt names these files. After a new build that changed none of them, the source-verifier's report stands and only the format-verifier compares again
+      - The format-verifier and the source-verifier compare the numbers across PPTX <-> PDF <-> companion and check that the speaker notes contain the key numbers. The format-verifier reads the PPTX with its notes and the PDF; the source-verifier reads the text files of slides and notes, the companion and each data file (step 2, item 2), and its task prompt names these files. After a new build that changed none of them, the source-verifier's report stands and only the format-verifier compares again; a format-only edit of yours, which changes no word, leaves it standing too
       - A discrepancy in slide text, speaker notes or companion goes to the writer (copies first, step 2, item 2), then a round of step 2 on what changed. The revision counts toward the loop count; where the count is already at its limit, the user is asked the question of orchestrator.md, "Feedback-loop escalation", before the revision. Then the deck is built again (step 1) and exported again, and the agents compare again, until all three versions are identical
 
 # ===========================================================

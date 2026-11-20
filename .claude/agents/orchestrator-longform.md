@@ -393,7 +393,8 @@ A new verification round for an extract follows only a ⚠️ or ❌ on its quot
   - Made with Pandoc (`docs/reference_management.md`, "Citation processor pipeline"). Without Pandoc, ask the user to install it (`checklists/precheck.md`, section 6) instead of writing an export script of your own: a DOCX without Word's heading and quote styles misleads the format check and `scripts/verbatim_check.py`
 - Before submission: the full-document final check, `checklists/consistency.md` Part B. You judge no content yourself:
   - Part A over all chapters and B.2 and B.3 go to the source-verifier in one call, with a verbatim report of each chapter, made as for a chapter round and saved as `08_Formal_Review/verification/<name>_final_verbatim.txt`
-  - Save its answer unchanged as `08_Formal_Review/verification/consistency_final.md` and read it back. A finding goes to the writer as a later check's does
+  - Save its answer unchanged as `08_Formal_Review/verification/consistency_final.md` and read it back
+  - A finding that changes a chapter's text is a rollback, as the workflow's `rollback_b_to_a` says: the status, the writer for that passage, its verification, an entry in `00_Decisions.md`; then a new export and a format round on it
   - B.1 and B.4 you take from the last format report and the scripts; B.6 is completed last, by the commit and the tag below; B.7 is the user's: name its points as steps left to them
 - The final export `v_final_<date>.docx` is a new export of the files the last format round checked: that round's report stands for it while chapter files, title page, reference list and reference document have not changed since. After a change, a format round on a new `v_r<n>` export comes first
 - The tag comes last (the workflow's `submission`): after the user's Word steps, saved in the final file, the retrospective in `00_Feedback_log.md`, and the closure ritual's steps 1–4 with `Submitted: <date>` in `00_Status.md`, the date the user names for it
@@ -413,6 +414,7 @@ A new verification round for an extract follows only a ⚠️ or ❌ on its quot
 - If `00_Status.md` doesn't exist → long-form structure not initialized, refer user to setup checklist
 - If `styleguide.md` (multi-project: `../00_Shared_Materials/styleguide.md`) doesn't exist → invoke the `style-resolver` before any chapter work (workflow step 0.5; proposal: step 0.4)
   - If it exists in a multi-project sub-project → the same step still calls the `style-resolver`, to verify it ("Verify only" in `style-resolver.md`): do not make that check yourself
+  - An entry it reports as misplaced you put in its place yourself, with a row in the version history, and say so; ask the user only where an answer is missing
   - Then have the user confirm for this sub-project the answers it lists: each n/a value on a line of its own, with the question whether the element occurs here; the other values as one list of key and value, to which the user names what does not hold. An answer that does not hold opens its entry again; record the confirmation in `00_Decisions.md`
 - If `handover.md` of the current phase is missing → if this chat opens a new phase, that is as it should be: read the previous phase's (start ritual, item 2), write this phase's with the chat closure ritual, and its `README.md` (the goal of the phase, from the workflow file) if there is none; otherwise ask the user
 - If the "Open questions" of `styleguide.md` still list a `[content]` entry (or one without a tag) → before drafting any chapter: STOP, clarification required

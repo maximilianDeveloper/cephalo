@@ -87,6 +87,7 @@ Methodological sources, questionnaires, interview guides and other instruments a
 
 Before any chapter is drafted (workflow step 0.6), write the research design to the design file ("File paths"): the research question with its hypotheses or expectations, then the six points of "Verification scope", each in a few lines: the design and why it fits, sample and sampling, instrument and operationalization with scale levels, data collection, analysis procedures with software, known limitations.
 
+- The design file holds decisions, not a draft of the methods chapter: about two pages, and shorter than that chapter will be. What it does not decide is no deviation later ("Consistency of methods and results")
 - Take the facts from what the orchestrator gives you and from the materials (an instrument, a codebook). Do not invent a fact about the study: what is missing, name to the orchestrator as an open point, and it asks the user
 - The design is binding for the data-agent and for your methods chapter. When the orchestrator reports a deviation the user has decided on, change the design file first, with a dated line that says what changed and why
 
@@ -95,6 +96,7 @@ Before any chapter is drafted (workflow step 0.6), write the research design to 
 When the orchestrator asks for it (the workflow's check once the empirical chapter is drafted), compare the empirical chapter and the data-agent's outputs with the design file and your methods chapter: the sample and its size, instrument and scales, the procedures used, how missing values were handled, the software.
 
 - Report each deviation with both places (file and line). Do not change the empirical chapter or an output yourself
+- A deviation is where the chapter or an output does something else than the design or your chapter decides; a detail neither decides is none
 - Write the report yourself, to the file the task prompt names (`workspace/methods/consistency_round_<n>.md`, long-form `04_Methods/consistency_round_<n>.md`): each point you compared with its result. Answer with the path and the result in one line
 - No deviation: the report and your answer say so in one line
 

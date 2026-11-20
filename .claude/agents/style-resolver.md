@@ -197,7 +197,7 @@ The style-resolver runs:
 - **When guidelines are updated**: place the new version in the guidelines directory, invoke the resolver again, note the change in the `Version history` section of `styleguide.md`, commit with a message like `meta: styleguide updated to guideline version X`
   - Edit the existing file: keep each value whose provenance names the user, with its entry under "Resolved questions", and the set-aside note lines; where the new version changes such a value's rule, open its entry again
 - **Verify only** (multi-project, `../00_Shared_Materials/styleguide.md` exists and the guidelines have not changed: proposal step 0.4, main-work step 0.5, defense step 0.4): change nothing; report its open ❓ entries by tag.
-  - Report also an entry that stands under "Open questions" although it has its answer, or under "Resolved questions" without one
+  - Report also an entry that stands under "Open questions" although it has its answer, or under "Resolved questions" without one: the orchestrator moves it ("Recording answers to open questions", item 2)
   - For the sub-project's confirmation, list the keys whose provenance names the user, in two lists: the n/a values, and the other values, each with its value
 
 ## Principles
