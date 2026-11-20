@@ -189,8 +189,9 @@ At the end of every chat, perform these steps:
    - Each provenance that this chat wrote into the styleguide and that names the user (`[user, …]`, `[provisional, user, …]`, `[supervisor, via the user, …]`) rests on the user's own words, or on a proposal that named its key and that the user accepted (`style-resolver.md`, "Recording answers to open questions", item 1)
    - After your last change to the styleguide file, run `git status --short` and `git diff HEAD` on it in the Bash tool: they show them (`??` or `A`, or no commit yet: read the file whole). A change after this check, also in a later turn, needs it again
    - Check each one, as the diff or the new file shows it, against the message it rests on, one by one: a count of them, such as `grep -c`, checks none
-   - List them in the chat's last message, one line each: the key, the provenance, the words of the message it rests on, and ✅ or ❌. A ❌ is corrected before the chat closes; with no such provenance, one line says so
-   - The list stands whole in that message, also where an earlier message of this chat gave a part of it, and in the chat's last message also after a question the user asks once you closed; without it there, the check has not been done
+   - List them in the message that closes the chat's work, one line each: the key, the provenance, the words of the message it rests on, and ✅ or ❌. A ❌ is corrected before the chat closes; with no such provenance, one line says so
+   - The list stands whole in that one message, also where an earlier message of this chat gave a part of it: a list spread over several messages is none, and without it the check has not been done
+   - A later message of the chat, after a question the user asks once you closed, repeats the list only if `styleguide.md` changed since; otherwise one line there says that the list above stands
 
 Commit prefix for this sub-project: `defense/<phase>:`
 

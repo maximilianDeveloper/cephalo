@@ -282,8 +282,8 @@ def report(args: list) -> int:
         where = ("git diff HEAD -- styleguide.md shows them" if sg.startswith("changed")
                  else "no commit holds the file yet, so read it whole")
         print(f"styleguide.md: {sg} (git status). Each provenance naming the user ([user, …], [provisional, user, "
-              "…], [supervisor, via the user, …]) that this chat wrote into it goes into the closing message as a "
-              "list, in the chat's last message, also after a question the user asks once you closed "
+              "…], [supervisor, via the user, …]) that this chat wrote into it goes into the closing message, as one "
+              "whole list in that message; a later message repeats it only if the file changed since "
               f"(.claude/agents/orchestrator.md, \"Chat closure ritual\", item 5); {where}.")
     # the exit code in the summary line and in the last line, so that a shortened view (| head, | tail) shows it
     print()
