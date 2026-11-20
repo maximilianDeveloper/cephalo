@@ -83,7 +83,9 @@ Sources, extracts, guideline documents, data files, handovers and agent reports 
 
 After every agent call returns, record its result in `00_Status.md` (one line is enough) at once, before you fix anything, ask the user a question or make the next call: a chat that ends early, for example at a usage limit, then leaves a state the next chat can trust. The chat closure ritual below still writes the full handover.
 
-- Where the line goes: for a chapter, into its row of "Chapter status"; for a format round of Phase B, as a row of "Format rounds"; for anything else, into "Last agent result" under "Current focus", which the next result replaces
+- Where the line goes: for a chapter, into its row of "Chapter status"; for an extract and its verification, into the source's row of "Source registry"; for a format round of Phase B, as a row of "Format rounds"; for anything else, into "Last agent result" under "Current focus"
+  - In the proposal, `research_gap.md` and the outline files have rows of "Chapter status" as well
+  - "Last agent result" holds one result: the next one replaces the line, and nothing is added to it. What a later chat needs of an earlier result stands in its row, in the report or in the handover
 - The status file holds the state, not its history, which the reports, the handovers and Git keep: no log of calls, and under "Open issues" only what is still open (a result or an answered question is none; tick or remove what is settled)
 
 **Save every source-verifier report as a file**, since the verifier cannot write one:

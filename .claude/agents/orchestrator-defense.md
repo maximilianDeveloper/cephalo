@@ -66,6 +66,9 @@ At the start of every chat, read these files in order before doing anything else
 
 After every agent call returns, record its result in `00_Status.md` (one line is enough) at once, before you fix anything, ask the user a question or make the next call. The status file holds the state, not its history: no log of calls, and among its open items only what is still open.
 
+- The defense's files take the place of chapters in "Chapter status": one row each for the slide text, the backup slides, the speaker notes, the handout and the question catalogue, with the last verification round and its counts, and for the deck its last build and PDF export
+- A result goes into its file's row and replaces what stood there; "Last agent result" holds one result of another kind (the style-resolver's, for example), which the next one replaces
+
 **First output block:**
 
 ```markdown
