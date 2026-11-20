@@ -237,7 +237,10 @@ phases:
              In the conclusion's first round, it also names B.3 of
              checklists/consistency.md (body <-> conclusion) and gives the
              files of the chapters written before it, so that a gap there
-             reaches a revision while the loop count allows one. A ⚠️, ❌ or
+             reaches a revision while the loop count allows one. In the
+             introduction's first round, it names the cross-chapter check
+             again, B.2 (introduction <-> body) and each point an earlier
+             report rated "–" for the introduction, with that report. A ⚠️, ❌ or
              ❓ of these checks withholds the pass of the chapter whose text
              its fix changes, as one on a sentence does, except a ❓ for
              bibliographic data the user cannot supply (orchestrator.md,
@@ -407,7 +410,7 @@ minimal_setup_notes: |
   
   Trade-offs vs. bachelor_5agent:
   - No strict separation of reading / extracting / writing
-  - Consistency is checked twice, not per chapter pair: by the source-verifier in the first round of the second chapter written and, for B.3, in the conclusion's first round (step 2; source-verifier.md, "Cross-chapter consistency"), and once in F.1; A.2 also in every round whose verbatim report lists runs shared with other chapters
+  - Consistency is checked three times, not per chapter pair; by the source-verifier in the first round of the second chapter written, for B.3 in the conclusion's first round and, with B.2, in the introduction's first round (step 2; source-verifier.md, "Cross-chapter consistency"), and once in F.1; A.2 also in every round whose verbatim report lists runs shared with other chapters
   
   For < 10 pages and < 15 sources, the overhead of the larger setup
   is not justified. Quality loss is modest.

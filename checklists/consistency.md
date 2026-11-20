@@ -138,6 +138,7 @@ The source-verifier or orchestrator returns a structured report:
 | A.3 Argumentation | ✅ / ⚠️ / ❌ / ❓ / – | ... |
 | A.4 Terms | ✅ / ⚠️ / ❌ / ❓ / – | ... |
 | A.5 Editions | ✅ / ⚠️ / ❌ / ❓ / – | ... |
+| B.2 Introduction ↔ body (when the task prompt names it) | ✅ / 🟡 / ⚠️ / ❌ / ❓ / – | ... |
 | B.3 Body ↔ conclusion (when the task prompt names it) | ✅ / 🟡 / ⚠️ / ❌ / ❓ / – | ... |
 
 ### Detailed findings
@@ -152,7 +153,7 @@ The source-verifier or orchestrator returns a structured report:
 ❓ Material missing: what, and who supplies it
 ```
 
-In Part A and B.2-B.3, no status is minor or non-blocking: a ⚠️ or ❌ goes to the revision of the chapter its fix changes, a ❓ to whoever supplies what is missing, and that chapter has not passed while one is left, except a ❓ for bibliographic data the user cannot supply in a seminar paper or presentation (`.claude/agents/orchestrator.md`, "Feedback loop control"; long-form: `orchestrator-longform.md`, "Feedback-loop escalation"). A `–` (an en dash) marks a point that waits for a chapter not yet written: the next consistency check that includes that chapter, or else the final check, takes it up.
+In Part A and B.2-B.3, no status is minor or non-blocking: a ⚠️ or ❌ goes to the revision of the chapter its fix changes, a ❓ to whoever supplies what is missing, and that chapter has not passed while one is left, except a ❓ for bibliographic data the user cannot supply in a seminar paper or presentation (`.claude/agents/orchestrator.md`, "Feedback loop control"; long-form: `orchestrator-longform.md`, "Feedback-loop escalation"). A `–` (an en dash) marks a point that waits for a chapter not yet written: that chapter's verification round takes it up (its task prompt names the report and the point), or else the final check.
 
 ---
 

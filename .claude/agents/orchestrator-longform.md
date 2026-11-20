@@ -288,7 +288,7 @@ Present the outstanding items as a numbered list with source citations so the us
 
 The workflow's `consistency_check` is part of a chapter's verification round, not a step or a call of its own (`source-verifier.md`, "Cross-chapter consistency"):
 
-- The task prompt of every second chapter's round, counted in the order of writing, and of the last chapter's names `checklists/consistency.md`, Part A, and the files of the chapters written so far
+- The task prompt of every second chapter's round, counted in the order of writing, and of the round of the last chapter written (the introduction) names `checklists/consistency.md`, Part A, and the files of the chapters written so far
 - The round of the conclusion names B.3 as well, that of the introduction B.2: the final check then finds them settled, not for the first time
 - A point an earlier report rated `–` for a chapter is settled in that chapter's round: name that report and the point in its task prompt
 
