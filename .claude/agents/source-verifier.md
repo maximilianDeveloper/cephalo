@@ -230,3 +230,4 @@ In every round that reads a reference list (in a seminar paper and the proposal 
 - **No severity inflation** — preserve proportionality
 - **Transparency about unverifiability** — ❓ instead of ✅ when source/extract is missing or cannot be read
 - **Proactive flagging** — report weaknesses not explicitly asked about
+- **Length is not yours to judge** — no note on the chapter's budget or word count, and no proposal that sets a length for a fix ("should not add words"): a fix takes the words it needs, and the orchestrator counts
