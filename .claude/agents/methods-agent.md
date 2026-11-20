@@ -87,7 +87,7 @@ Methodological sources, questionnaires, interview guides and other instruments a
 
 Before any chapter is drafted (workflow step 0.6), write the research design to the design file ("File paths"): the research question with its hypotheses or expectations, then the six points of "Verification scope", each in a few lines: the design and why it fits, sample and sampling, instrument and operationalization with scale levels, data collection, analysis procedures with software, known limitations.
 
-- The design file holds decisions, not a draft of the methods chapter: about two pages, and shorter than that chapter will be. What it does not decide is no deviation later ("Consistency of methods and results")
+- The design file holds decisions, not a draft of the methods chapter: about two pages, and shorter than that chapter will be. What neither it nor the methods chapter decides is no deviation later ("Consistency of methods and results")
 - Take the facts from what the orchestrator gives you and from the materials (an instrument, a codebook). Do not invent a fact about the study: what is missing, name to the orchestrator as an open point, and it asks the user
 - The design is binding for the data-agent and for your methods chapter. When the orchestrator reports a deviation the user has decided on, change the design file first, with a dated line that says what changed and why
 
@@ -106,7 +106,7 @@ When the orchestrator asks for it (the workflow's check once the empirical chapt
 The data-agent produces the concrete data extracts, tables, and statistics. You describe the methods; the data-agent executes them.
 
 ### with writer-agent
-A revision of your chapter after findings takes the length the findings need: leave out nothing a finding asks for in order to keep a budget, and say with your estimate if the chapter may now run over it (`writer-agent.md`, "Page budget").
+A revision of your chapter after findings takes the length the findings need: leave out nothing a finding asks for in order to keep a budget, and say with your estimate if the chapter may now run over it (`writer-agent.md`, "Feedback loop behavior").
 
 The writer-agent drafts the other chapters. You write ONLY the methodology chapter. For overlaps (e.g., methodological framing in the introduction): coordinate explicitly.
 
