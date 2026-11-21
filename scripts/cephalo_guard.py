@@ -985,6 +985,19 @@ def protected(n, ctx):
     return None
 
 
+def _has_claude_dir(folder, ctx):
+    """Whether a folder has a .claude/ folder of its own (on Windows and
+    macOS in any letter case)."""
+    if os.path.isdir(os.path.join(folder, '.claude')):
+        return True
+    if not (ctx.windows or ctx.macos):
+        return False
+    try:
+        return any(x.lower() == '.claude' and os.path.isdir(os.path.join(folder, x)) for x in os.listdir(folder))
+    except OSError:
+        return False
+
+
 def holds_protected(n, ctx):
     """A folder whose removal or move takes the hook settings or scripts/
     with it (the project folder, a .claude/ folder, scripts/ itself, in a
@@ -998,9 +1011,12 @@ def holds_protected(n, ctx):
     bases = {ctx.project, ctx.root, ctx.home}
     if ctx.root != ctx.project:
         if ctx._sub_projects is None:
+            # A sibling sub-project is a folder of the multi-project root with a .claude/ folder of its own
+            # (setup gives each sub-project one).  A folder without it holds no hook settings: the shared
+            # materials, or a folder made by mistake, which a chat must be able to remove again.
             try:
                 ctx._sub_projects = [ctx.root + '/' + _fold(d, ctx) for d in os.listdir(ctx.root)
-                                     if os.path.isdir(os.path.join(ctx.root, d))]
+                                     if _has_claude_dir(os.path.join(ctx.root, d), ctx)]
             except OSError:
                 ctx._sub_projects = []
         bases.update(ctx._sub_projects)

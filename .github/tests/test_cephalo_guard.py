@@ -2638,6 +2638,33 @@ class TestS5Protected(Base):
         self.passes(bash('cp ../00_Shared_Materials/styleguide.md _scratch/orchestrator/', root=sub, cwd=sub))
         shutil.rmtree(top)
 
+    def test_multi_project_siblings(self):
+        # a sibling counts as a sub-project with hook settings only if it has a .claude/ folder: a folder made by
+        # mistake in the multi-project root (a trial run's `mkdir -p 04_Submission/submissions` after a `cd ..`)
+        # can be removed again, and so can a folder without settings
+        top = tempfile.mkdtemp(prefix='guard-multi8-')
+        for d in ('00_Shared_Materials', '01_Proposal/.claude', '02_Main_Work/.claude', '03_Defense/.Claude',
+                  '04_Submission/submissions', 'notes'):
+            os.makedirs(os.path.join(top, d))
+        Path(top, '02_Main_Work', '.claude', 'settings.json').write_text('{}', encoding='utf-8')
+        sub = os.path.join(top, '01_Proposal')
+        for cmd in ('rm -rf ../04_Submission', 'rmdir ../04_Submission/submissions ../04_Submission',
+                    'rm -r "%s"' % os.path.join(top, '04_Submission'), 'mv ../notes ../notes_old',
+                    'cd .. && rm -rf 04_Submission'):
+            with self.subTest(cmd=cmd):
+                self.passes(bash(cmd, root=sub, cwd=sub))
+        for cmd in ('rm -rf ../02_Main_Work', 'mv ../02_Main_Work ../old', 'rm -rf ../01_Proposal',
+                    'rm -rf "%s"' % top, 'rm -rf ../02_Main_Work/.claude', 'rm ../02_Main_Work/.claude/settings.json'):
+            with self.subTest(cmd=cmd):
+                self.assertIn('S5', rules_of(bash(cmd, root=sub, cwd=sub)), cmd)
+        reason = bash('rm -rf ../02_Main_Work', root=sub, cwd=sub)['hookSpecificOutput']['permissionDecisionReason']
+        self.assertIn('02_Main_Work (a folder that holds the hook settings .claude/settings.json)', reason)
+        # a .claude/ folder in another letter case: a sub-project on macOS and Windows, where the file system
+        # ignores the case; on Linux the folder .Claude/ is not Claude Code's
+        self.assertIn('S5', rules_of(bash('rm -rf ../03_Defense', plat='macos', root=sub, cwd=sub)))
+        self.passes(bash('rm -rf ../03_Defense', root=sub, cwd=sub))
+        shutil.rmtree(top)
+
     def test_macos_unicode_form(self):
         nfd, nfc = (unicodedata.normalize(f, POSIX_HOME + '/Masterarbeit Übung') for f in ('NFD', 'NFC'))
         for cmd in ('rm -rf "%s/scripts"' % nfc, 'rm "%s/scripts/cephalo_guard.py"' % nfc,
