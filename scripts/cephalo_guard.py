@@ -2863,6 +2863,10 @@ def check_prompt(tool, tin, ctx):
 # --------------------------------------------------------------- messages
 
 
+# a detail of S1 whose target is a program file: "a here-document into _scratch/format-verifier/c.py"
+_INTO_PROGRAM = re.compile(r' into .*\.(?:py|sh|bash|ps1|psm1|js|rb|pl|r)["\']?$', re.I)
+
+
 def shell_reason(hits, ctx, cmd=''):
     by = {}
     for rule, detail in hits:
@@ -2879,21 +2883,30 @@ def shell_reason(hits, ctx, cmd=''):
         d = ctx.definition('S1')
         tool_words = 'Write tool' if ctx.agent_type == 'format-verifier' else 'Write or Edit tool'
         msg = ('cephalo guard S1: not run. This command writes a file\'s text through the shell (%s). %s, '
-               '"Principles": "Write a file\'s text with the %s". Make the change with %s.'
-               % ('; '.join(by['S1'][:3]), d, tool_words, 'Write' if ctx.agent_type == 'format-verifier'
-                  else 'Edit or Write'))
+               '"Principles": "Write a file\'s text with the %s".' % ('; '.join(by['S1'][:3]), d, tool_words))
         joined = ' '.join(by['S1'])
-        if '.save' in joined and re.search(r'docx|reference', cmd + joined, re.I):
-            msg += ' A layout change in the reference document goes through scripts/build_reference_docx.py.'
-        if 'in place' in joined and ctx.agent_type != 'format-verifier':
-            msg += (' For a string that repeats, use Edit with replace_all, one call per file; do not rewrite '
-                    'a whole chapter with Write.')
-        msg += (" Running one of cephalo's scripts and redirecting its output is fine. If the tool cannot make "
-                'the change, ask the user; do not save the program as a script file to get around this check.')
-        if re.search(r'\bS\.(?:\\?\s|\\u00a0|\\xa0|\\x\{a0\}|\xa0)', cmd) or \
-                re.search(r'00a0|x\{a0\}|nbsp|\xa0', cmd, re.I):
-            msg += (' A non-breaking space before a page number is written in a chapter file as a backslash '
-                    'before the space, `S.\\ 12` (writer-agent.md).')
+        if all(_INTO_PROGRAM.search(x) for x in by['S1']):
+            # The text is a script's own (a here-document into a check script): Write is the way to save it,
+            # and the warning is about what the saved script does, not about saving it.
+            msg += (' Save the script with the Write tool, then run it from the shell: a script that reads, '
+                    'counts or checks is fine, and so is what a script of the project in its data/scripts/ '
+                    'writes. A program you save to change a file\'s text in the tool\'s place gets around this '
+                    "check. Running one of cephalo's scripts and redirecting its output is fine. If the tool "
+                    'cannot do what you need, ask the user.')
+        else:
+            msg += ' Make the change with %s.' % ('Write' if ctx.agent_type == 'format-verifier' else 'Edit or Write')
+            if '.save' in joined and re.search(r'docx|reference', cmd + joined, re.I):
+                msg += ' A layout change in the reference document goes through scripts/build_reference_docx.py.'
+            if 'in place' in joined and ctx.agent_type != 'format-verifier':
+                msg += (' For a string that repeats, use Edit with replace_all, one call per file; do not rewrite '
+                        'a whole chapter with Write.')
+            msg += (" Running one of cephalo's scripts and redirecting its output is fine. If the tool cannot "
+                    'make the change, ask the user; do not save a program as a script file that makes the change '
+                    'in your place: that gets around this check.')
+            if re.search(r'\bS\.(?:\\?\s|\\u00a0|\\xa0|\\x\{a0\}|\xa0)', cmd) or \
+                    re.search(r'00a0|x\{a0\}|nbsp|\xa0', cmd, re.I):
+                msg += (' A non-breaking space before a page number is written in a chapter file as a backslash '
+                        'before the space, `S.\\ 12` (writer-agent.md).')
         out.append(msg)
     if 'S2' in by:
         out.append('cephalo guard S2: not run. This writes outside the project: %s. %s, "Principles": "Stay '

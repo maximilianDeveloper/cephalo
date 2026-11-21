@@ -314,6 +314,33 @@ class TestS1ShellWrites(Base):
         docx = bash(self.SLIPS[2])['hookSpecificOutput']['permissionDecisionReason']
         self.assertIn('build_reference_docx.py', docx)
 
+    def test_message_for_a_script(self):
+        # a here-document into a check script: the message says how to save it (Write), not that a script must
+        # not be saved, and it leaves out the hint on `S.\ 12`, which is about a chapter file
+        cmd = ("cat > _scratch/format-verifier/c.py <<'EOF'\nimport re\n"
+               "print(re.findall(r'S\\. \\d+', open('workspace/output/chapters/ch_1.md', encoding='utf-8').read()))\nEOF")
+        reason = bash(cmd, agent='format-verifier')['hookSpecificOutput']['permissionDecisionReason']
+        for part in ('cephalo guard S1: not run', 'a here-document into _scratch/format-verifier/c.py',
+                     '.claude/agents/format-verifier.md, "Principles": "Write a file\'s text with the Write tool"',
+                     'Save the script with the Write tool, then run it', 'reads, counts or checks is fine',
+                     'in the tool\'s place gets around this check', 'ask the user'):
+            self.assertIn(part, reason)
+        for part in ('Make the change with', 'S.\\ 12', 'do not save', 'non-breaking'):
+            self.assertNotIn(part, reason)
+        # the same for the other shells' forms and another agent
+        for cmd, agent in (("printf '%s\\n' 'print(1)' > _scratch/data-agent/t.py", 'data-agent'),
+                           ("cat <<'EOF' > '_scratch/orchestrator/check it.sh'\ngrep -c x a.md\nEOF", None)):
+            with self.subTest(cmd=cmd):
+                reason = bash(cmd, agent=agent)['hookSpecificOutput']['permissionDecisionReason']
+                self.assertIn('Save the script with the Write tool', reason)
+                self.assertNotIn('do not save', reason)
+        # a file's text beside the script, or a script's text that is not the only thing written: as before
+        both = bash("cat <<'EOF' > _scratch/orchestrator/c.py\nprint(1)\nEOF\necho x > workspace/state.md")
+        reason = both['hookSpecificOutput']['permissionDecisionReason']
+        for part in ('Make the change with Edit or Write', 'do not save a program as a script file that makes the change'):
+            self.assertIn(part, reason)
+        self.assertNotIn('Save the script with the Write tool', reason)
+
 
 class TestS1PowerShell(Base):
     def test_cmdlets_denied(self):

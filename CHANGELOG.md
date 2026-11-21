@@ -13,6 +13,7 @@ Dates follow ISO 8601 (`YYYY-MM-DD`).
 ### Fixed
 
 - **The guard lets a folder made by mistake in a multi-project root be removed again** (`scripts/cephalo_guard.py`, rule S5): in the second trial run a chat had made `04_Submission/` in the root instead of its sub-project, and the clean-up was denied as a change to "a folder that holds the hook settings". The guard took every folder of the multi-project root for a sub-project with hook settings. A sibling now counts as one only if it has a `.claude/` folder of its own, as setup gives each sub-project (on Windows and macOS in any letter case). Removing or moving a sub-project, its `.claude/` folder or its settings is denied as before.
+- **The guard's S1 message for a script says how to save it** (`scripts/cephalo_guard.py`): after a here-document into a check script, the message said "Make the change with Write" and, two sentences on, "do not save the program as a script file to get around this check", and it added a hint on the non-breaking space before a page number because the script's text held `S.`. Where the shell command writes only script files, the message now says to save the script with the Write tool and run it, that a script which reads, counts or checks is fine, and that a program saved to change a file's text in the tool's place gets around the check; the hint on `S.\ 12` stays for a write into another file. For every other S1 denial the last sentence now reads "do not save a program as a script file that makes the change in your place".
 
 ## [1.4.11] — 2026-11-20
 
