@@ -2894,9 +2894,10 @@ def shell_reason(hits, ctx, cmd=''):
         msg = ('cephalo guard S1: not run. This command writes a file\'s text through the shell (%s). %s, '
                '"Principles": "Write a file\'s text with the %s".' % ('; '.join(by['S1'][:3]), d, tool_words))
         joined = ' '.join(by['S1'])
-        if all(_INTO_PROGRAM.search(x) for x in by['S1']):
+        if all(_INTO_PROGRAM.search(x) for x in by['S1']) and 'S5' not in by:
             # The text is a script's own (a here-document into a check script): Write is the way to save it,
-            # and the warning is about what the saved script does, not about saving it.
+            # and the warning is about what the saved script does, not about saving it.  (Not for a script in
+            # cephalo's scripts/ folder, which S5 denies in the same message: there Write is no way either.)
             msg += (' Save the script with the Write tool, then run it from the shell: a script that reads, '
                     'counts or checks is fine, and so is what a script of the project in its data/scripts/ '
                     'writes. A program you save to change a file\'s text in the tool\'s place gets around this '

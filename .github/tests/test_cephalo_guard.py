@@ -340,6 +340,10 @@ class TestS1ShellWrites(Base):
         for part in ('Make the change with Edit or Write', 'do not save a program as a script file that makes the change'):
             self.assertIn(part, reason)
         self.assertNotIn('Save the script with the Write tool', reason)
+        # a script in cephalo's scripts/ folder is S5's as well: no advice to write it with the Write tool
+        out = bash("cat <<'EOF' > scripts/helper.py\nprint(1)\nEOF")
+        self.assertEqual(rules_of(out), {'S1', 'S5'})
+        self.assertNotIn('Save the script with the Write tool', out['hookSpecificOutput']['permissionDecisionReason'])
 
 
 class TestS1PowerShell(Base):
