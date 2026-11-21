@@ -1816,11 +1816,21 @@ def _rel(n, ctx):
     return n[len(ctx.root) + 1:] if inside(n, ctx.root) and n != ctx.root else n
 
 
-def report_definition(ctx):
-    """The definition that holds the rules on saved reports (orchestrator-defense
-    saves none)."""
+_REPORT_SECTION = {'R5': '"Save every source-verifier report as a file"',
+                   'R6': '"The format-verifier writes its report itself"'}
+
+
+def report_rule(ctx, rule):
+    """(definition, quoted section) that hold the rule on a saved report, for
+    a message of R5 or R6.  The defense orchestrator has the rule on the
+    source-verifier's reports under its Rule 2; it calls no format-verifier,
+    so R6 names the long-form orchestrator there."""
     d = ctx.definition('R5')
-    return '.claude/agents/orchestrator-longform.md' if d.endswith('orchestrator-defense.md') else d
+    if d.endswith('orchestrator-defense.md'):
+        if rule == 'R5':
+            return d, '"Rule 2: Consistency with submitted work"'
+        d = '.claude/agents/orchestrator-longform.md'
+    return d, _REPORT_SECTION[rule]
 
 
 _QUOTE_MARKS = '\u201e\u201c\u201d\u201a\u2018\u2019\u00ab\u00bb"'
@@ -1871,14 +1881,15 @@ def readback(tin, ctx, data=None):
                    'same, leave it.' % (open_, 'is' if open_ == 1 else 'are', 'it' if open_ == 1 else 'them'))
     if fmt:
         return ('cephalo guard R6: %s is saved as the format-verifier\'s answer, the fallback when it writes no '
-                'report (%s, "The format-verifier writes its report itself"). Read the whole file back with the '
+                'report (%s, %s). Read the whole file back with the '
                 'Read tool (no offset or limit) and compare it with the answer. %s If it differs, tell the user: '
-                'the guard does not let a format report be written over.' % (rel, report_definition(ctx), counts))
+                'the guard does not let a format report be written over.'
+                % ((rel,) + report_rule(ctx, 'R6') + (counts,)))
     msg = ('cephalo guard R5: %s is saved. Now read the whole file back with the Read tool (no offset or limit) '
-           'and compare it with the agent\'s answer, as %s says ("Save every source-verifier report as a file"; '
+           'and compare it with the agent\'s answer, as %s says (%s; '
            'the Write tool\'s note that you need not read it back does not apply here). %s If anything differs '
            'from the answer, write the file again with the Write tool, the answer unchanged; only an absolute '
-           'path becomes project-relative.') % (rel, report_definition(ctx), counts)
+           'path becomes project-relative.') % ((rel,) + report_rule(ctx, 'R5') + (counts,))
     absolute = _holds_path(text, _machine_paths(ctx), ctx)
     if absolute:
         msg += (' It still contains an absolute path of this machine: write the file again with the Write tool, '
@@ -2104,9 +2115,7 @@ def agent_reason(hits, ctx):
         out.append('cephalo guard %s: not run. %s Read %s back with the Read tool (no offset or limit; a file too '
                    'large for one Read in parts that together cover every line) and compare it with the %s (%s, %s), '
                    'then call the agent again.'
-                   % (rule, files, whole, 'agent\'s answer' if rule == 'R5' else 'answer', report_definition(ctx),
-                      '"Save every source-verifier report as a file"' if rule == 'R5'
-                      else '"The format-verifier writes its report itself"'))
+                   % ((rule, files, whole, 'agent\'s answer' if rule == 'R5' else 'answer') + report_rule(ctx, rule)))
     return ' '.join(out)
 
 
@@ -2940,14 +2949,14 @@ def shell_reason(hits, ctx, cmd=''):
                    'read the whole output in the tool result.' % (by['S6'][0], ctx.definition('S6')))
     if 'R5' in by:
         out.append('cephalo guard R5: not done (%s). A saved source-verifier report stays as the agent\'s '
-                   'answer (%s, "Save every source-verifier report as a file"): if your copy differs from the '
+                   'answer (%s, %s): if your copy differs from the '
                    'answer, write the file again with the Write tool, the answer unchanged; only an absolute '
-                   'path becomes project-relative.' % (by['R5'][0], report_definition(ctx)))
+                   'path becomes project-relative.' % ((by['R5'][0],) + report_rule(ctx, 'R5')))
     if 'R6' in by:
         out.append('cephalo guard R6: not done (%s). The format-verifier writes its report itself; do not write '
-                   'or change it (%s, "The format-verifier writes its report itself"). Read in the file the '
+                   'or change it (%s, %s). Read in the file the '
                    'findings you fix. Only if the file does not exist after the call, save the agent\'s answer '
-                   'there unchanged.' % (by['R6'][0], report_definition(ctx)))
+                   'there unchanged.' % ((by['R6'][0],) + report_rule(ctx, 'R6')))
     return ' '.join(out)
 
 

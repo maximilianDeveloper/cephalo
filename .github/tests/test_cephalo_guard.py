@@ -2873,6 +2873,49 @@ class TestMessagesPointToRules(Base):
                 self.check(out['hookSpecificOutput']['permissionDecisionReason'])
         shutil.rmtree(root)
 
+    def test_defense_names_its_own_rule(self):
+        # the defense orchestrator has the rule on saved source-verifier reports itself (Rule 2): R5 names that
+        # definition and section in a defense session, not the long-form orchestrator; R6 (the format-verifier,
+        # which the defense does not call) keeps naming the long-form orchestrator
+        top = tempfile.mkdtemp(prefix='guard-defense-')
+        for d in ('00_Shared_Materials', '03_Defense/01_Slides/verification'):
+            os.makedirs(os.path.join(top, d))
+        sub = os.path.join(top, '03_Defense')
+        rep = os.path.join(sub, '01_Slides', 'verification', 'slides_round_1.md')
+        Path(rep).write_text('| a |\nStatus: x\n', encoding='utf-8')
+        own = '.claude/agents/orchestrator-defense.md, "Rule 2: Consistency with submitted work"'
+        edit = run('Edit', {'file_path': rep, 'old_string': 'a', 'new_string': 'b'}, agent='orchestrator-defense',
+                   root=sub, cwd=sub)
+        self.assertEqual(rules_of(edit), {'R5'})
+        self.assertIn(own, edit['hookSpecificOutput']['permissionDecisionReason'])
+        self.assertNotIn('orchestrator-longform.md', edit['hookSpecificOutput']['permissionDecisionReason'])
+        post = run('Write', {'file_path': rep, 'content': 'x'}, event='PostToolUse', agent='orchestrator-defense',
+                   root=sub, cwd=sub)
+        text = (post.get('hookSpecificOutput') or {}).get('additionalContext') or post.get('reason') or json.dumps(post)
+        self.assertIn('as .claude/agents/orchestrator-defense.md says ("Rule 2: Consistency with submitted work";', text)
+        self.assertNotIn('orchestrator-longform.md', text)
+        tr = os.path.join(top, 'sess.jsonl')
+        Path(tr).write_text(json.dumps(tr_call('Write', {'file_path': rep, 'content': 'x'}, 't0')) + '\n', encoding='utf-8')
+        d = payload('Agent', {'prompt': 'x', 'subagent_type': 'writer-agent'}, cwd=sub)
+        d['transcript_path'] = tr
+        d['agent_type'] = 'orchestrator-defense'
+        out = g.evaluate(d, env(root=sub))
+        self.assertEqual(rules_of(out), {'R5'})
+        self.assertIn('(%s)' % own, out['hookSpecificOutput']['permissionDecisionReason'])
+        # the long-form orchestrator in the same folder: its own definition and section, as before
+        edit = run('Edit', {'file_path': rep, 'old_string': 'a', 'new_string': 'b'}, agent='orchestrator-longform',
+                   root=sub, cwd=sub)
+        self.assertIn('.claude/agents/orchestrator-longform.md, "Save every source-verifier report as a file"',
+                      edit['hookSpecificOutput']['permissionDecisionReason'])
+        # R6 in a defense session names the definition that has the format-verifier's rule
+        fmt = os.path.join(sub, '01_Slides', 'verification', 'document_format_round_1.md')
+        Path(fmt).write_text('x', encoding='utf-8')
+        r6 = run('Edit', {'file_path': fmt, 'old_string': 'a', 'new_string': 'b'}, agent='orchestrator-defense',
+                 root=sub, cwd=sub)
+        self.assertIn('.claude/agents/orchestrator-longform.md, "The format-verifier writes its report itself"',
+                      r6['hookSpecificOutput']['permissionDecisionReason'])
+        shutil.rmtree(top)
+
     def test_docs_section(self):
         self.assertIn('### cephalo guard', (ROOT / 'docs' / 'scripts.md').read_text(encoding='utf-8'))
 
