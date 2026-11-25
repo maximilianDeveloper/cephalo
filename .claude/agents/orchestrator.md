@@ -219,6 +219,8 @@ After each written chapter, and after each revision, before the verification:
    - in the chapter files, without rewording; a non-breaking space as `\ ` (`writer-agent.md`, "Formatting rules")
    - for layout such as fonts, sizes, margins and spacing, in Pandoc's reference document `workspace/output/reference.docx`, which `scripts/build_reference_docx.py` builds from the values in `styleguide.md` (`docs/reference_management.md`, "The reference document": the styles Pandoc uses, and the `Bibliography` style for a reference list without citekeys)
      - An option that no rule of `styleguide.md` and no key of its template names, such as the link colour, stays as in Pandoc's own reference document: do not ask for a value or add a key for it on your own. A rule the user gives from the guidelines or the supervisor, as for a note, is passed like any value, the link colour with `--link-color`
+     - A size or weight `styleguide.md` gives the title page's lines comes from there too, not from formatting in `title_page.md`: `--title-size` and `--title-bold` for the title, `--title-other-size` and `--title-other-bold` for the other lines
+     - A layout value no option of the script sets is the user's to set, in Word in a style of the reference document: name the style and the value, write no program for it, and build the document again only from that file (`--base`), so that the change stays
    - Then re-export the DOCX with Pandoc (without it, ask the user to install it instead of writing an export script of your own)
 5. A format round, in this order:
    - (1) Build the reference document (round 1), or build it again after a layout finding

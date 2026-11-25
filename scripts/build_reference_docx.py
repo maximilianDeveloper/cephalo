@@ -4,9 +4,9 @@ build_reference_docx.py
 
 Builds the reference document Pandoc takes the layout of an exported DOCX
 from (`pandoc --reference-doc`): page size, margins, the page number, the
-title page's numbering, the paragraph styles Pandoc sets the text in, the
-styles Word sets the table of contents in, and a heading style for front
-matter that the table of contents does not list.
+title page's numbering, the paragraph styles Pandoc sets the text and the
+title page's lines in, the styles Word sets the table of contents in, and a
+heading style for front matter that the table of contents does not list.
 The values come from styleguide.md; the orchestrator reads them there and
 passes them as options. What is not given stays as in Pandoc's own reference
 document (see docs/reference_management.md, "The reference document").
@@ -440,14 +440,33 @@ def build(args):
         done.append(f"heading colour {args.heading_color}")
     if args.heading_font:
         done.append(f"heading font {args.heading_font}")
+    # The title page's lines (docs/reference_management.md, "The title page"): Title, and the three other styles.
+    # A size or weight given for a style the starting document lacks adds it; without one, Pandoc would add its own.
     for name in ("Title", "Subtitle", "Author", "Date"):
+        size = args.title_size if name == "Title" else args.title_other_size
+        bold = args.title_bold if name == "Title" else args.title_other_bold
         st = existing(doc, name)
         if st is None:
-            continue
-        if heading_font:
-            set_font(st, heading_font)
-        if args.heading_color:
-            set_color(st, args.heading_color)
+            if size is None and bold is None:
+                continue
+            st = style(doc, name, based_on=normal)
+        for one in (st, existing(doc, f"{name} Char", WD_STYLE_TYPE.CHARACTER)):
+            if one is None:
+                continue
+            if heading_font:
+                set_font(one, heading_font)
+            if args.heading_color:
+                set_color(one, args.heading_color)
+            if size is not None:
+                one.font.size = Pt(size)
+            if bold is not None:
+                one.font.bold = bold
+    for label, size, bold in (("title", args.title_size, args.title_bold),
+                              ("other title page lines", args.title_other_size, args.title_other_bold)):
+        if size is not None or bold is not None:
+            parts = ([f"{size:g} pt"] if size is not None else []) + (
+                [] if bold is None else ["bold" if bold else "regular"])
+            done.append(f"{label} {' '.join(parts)}")
     # A heading in front matter that shows no page number (docs/reference_management.md, "The title page"): it looks
     # like Heading 1 but has no outline level, so the table of contents does not list it, and no chapter number from
     # a template's numbered Heading 1. A starting document's own style of that name stays as it is.
@@ -617,6 +636,11 @@ def main(argv=None):
     ap.add_argument("--heading-color", help="heading colour as hex, e.g. 000000 (all levels; Pandoc's own is blue)")
     ap.add_argument("--heading-space-before", help="space before a heading in pt")
     ap.add_argument("--heading-space-after", help="space after a heading in pt")
+    ap.add_argument("--title-size", help="size of the title on the title page in pt (the style Title)")
+    ap.add_argument("--title-bold", help="title on the title page bold: yes or no")
+    ap.add_argument("--title-other-size", help="size of the title page's other lines in pt (the styles Subtitle, "
+                                               "Author and Date)")
+    ap.add_argument("--title-other-bold", help="the title page's other lines bold: yes or no")
     ap.add_argument("--toc-bold", help="table of contents levels in bold, e.g. 1 or 1,2, or none "
                                        "(headings.toc_emphasis); writes Word's styles toc 1 to toc 3")
     ap.add_argument("--quote-indent", help="block quote indent on the left in cm (style.block_quote_format)")
@@ -653,6 +677,10 @@ def main(argv=None):
             v = getattr(args, name)
             if v is not None:
                 setattr(args, name, number(v, "--" + name.replace("_", "-"), 0, 200, "pt"))
+        for name in ("title_size", "title_other_size"):
+            v = getattr(args, name)
+            if v is not None:
+                setattr(args, name, number(v, "--" + name.replace("_", "-"), 1, 200, "pt"))
         for name in ("line_spacing", "quote_line_spacing", "footnote_line_spacing", "bib_line_spacing"):
             v = getattr(args, name)
             if v is not None:
@@ -665,8 +693,10 @@ def main(argv=None):
             args.heading_sizes = numbers(args.heading_sizes, "--heading-sizes", range(1, 10), 1, 200, "pt")
         if args.margins:
             args.margins = numbers(args.margins, "--margins", (1, 4), 0, 10, "cm")
-        if args.heading_bold is not None:
-            args.heading_bold = yes_no(args.heading_bold, "--heading-bold")
+        for name in ("heading_bold", "title_bold", "title_other_bold"):
+            v = getattr(args, name)
+            if v is not None:
+                setattr(args, name, yes_no(v, "--" + name.replace("_", "-")))
         if args.heading_color:
             args.heading_color = hex_color(args.heading_color, "--heading-color")
         if args.toc_bold is not None:

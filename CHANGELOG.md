@@ -10,6 +10,10 @@ Dates follow ISO 8601 (`YYYY-MM-DD`).
 
 ## [Unreleased]
 
+### Added
+
+- **The reference document sets the size and weight of the title page's lines** (`scripts/build_reference_docx.py`: `--title-size`, `--title-bold`, `--title-other-size`, `--title-other-bold`; `docs/scripts.md`; `docs/reference_management.md`, "The title page"; both orchestrators, Phase B). In a targeted trial run of the long-form bachelor workflow the styleguide gave the title 14 pt bold and the other lines 11 pt, the format round found the styles `Title` and `Author` in Pandoc's own sizes, and the script set only font and colour there. The chat offered a program of its own for the change, which the definitions rule out and the guard denied, and Phase B stayed open until the next chat set the lines with raw OpenXML. The options set the style `Title` and the styles `Subtitle`, `Author` and `Date`; a style the starting document lacks is added. The orchestrators name the options and say what happens with a layout value no option sets: the user sets it in Word in a style of the reference document, and a later build starts from that file (`--base`).
+
 ### Fixed
 
 - **The guard lets a folder made by mistake in a multi-project root be removed again** (`scripts/cephalo_guard.py`, rule S5): in the second trial run a chat had made `04_Submission/` in the root instead of its sub-project, and the clean-up was denied as a change to "a folder that holds the hook settings". The guard took every folder of the multi-project root for a sub-project with hook settings. A sibling now counts as one only if it has a `.claude/` folder of its own, as setup gives each sub-project (on Windows and macOS in any letter case). Removing or moving a sub-project, its `.claude/` folder or its settings is denied as before.
