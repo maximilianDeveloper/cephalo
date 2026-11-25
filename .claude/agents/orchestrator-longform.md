@@ -86,6 +86,7 @@ After every agent call returns, record its result in `00_Status.md` (one line is
 
 - Where the line goes: for a chapter, into its row of "Chapter status"; for an extract and its verification, into the source's row of "Source registry"; for a format round of Phase B, as a row of "Format rounds"; for anything else, into "Last agent result" under "Current focus"
   - In the proposal, `research_gap.md` and the outline files have rows of "Chapter status" as well
+  - A cell of a row holds the step's present state, short and beginning with its status symbol, ✅ once the step is done: a new result replaces what the cell said, and the round counts and the loop count stand once, in "Source-verified"
   - "Last agent result" holds one result: the next one replaces the line, and nothing is added to it. What a later chat needs of an earlier result stands in its row, in the report or in the handover
 - The status file holds the state, not its history, which the reports, the handovers and Git keep: no log of calls, and under "Open issues" only what is still open (a result or an answered question is none; tick or remove what is settled)
 
