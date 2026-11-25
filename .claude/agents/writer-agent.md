@@ -103,6 +103,7 @@ The orchestrator (without one, Claude in the main chat) gives you the chapter's 
 - Cut restatements, and summaries of what another chapter already says
 - If the budget cannot be reached without dropping a claim the chapter's argument needs, shorten as far as it goes, and name that claim and your length estimate in your answer for the orchestrator (without one, Claude in the main chat) rather than cutting the claim silently
 - A shortening task that names sentences an earlier revision changed leaves them word for word as they are: cut elsewhere, and edit the file in place instead of writing it anew
+- Name in your answer everything a shortening took out of the chapter, each claim, figure and source, also where the argument holds without it: the user decides whether it may go, and another chapter may announce it or build on it
 
 You cannot count words reliably: give a length you report as an estimate. The orchestrator counts the words with a command (without an orchestrator, Claude in the main chat or the user does).
 
