@@ -129,7 +129,8 @@ A statement about the project's state in a task prompt ("the decision log record
 - For the verification after a revision, call a new source-verifier with the Agent tool, not a message to the one of the round before, which would judge its own proposals and not read the sources again; give it the previous round's report as well
 - Write that verifier's task prompt as these lines and nothing else:
   - the chapter and the round
-  - with its role, each of these files: the chapter file (in a presentation the slide and companion files its workflow names), the previous round's report, the round's verbatim report, and the files an open item of that report needs (the other chapter's file for a cross-chapter item); after a revision for a finding of another report (another chapter's round, a consistency check), also that report and the chapter files its finding names
+  - with its role, each of these files: the chapter file (in a presentation the slide and companion files its workflow names), the previous round's report, the round's verbatim report, and the files an open item of that report needs (the other chapter's file for a cross-chapter item)
+  - where the chapter's first round was the cross-chapter check as well, the files of the chapters written so far; after a revision for a finding of another report (another chapter's round, a consistency check), also that report and the chapter files its finding names
   - the sources and, in a seminar paper or presentation, the source registry in `workspace/state.md`
   - the changed sentences, by their number in the revised chapter and their first words, each with a few words on what changed
   - the entries of `workspace/feedback.md` that concern it, as written, and what else "Task prompts" asks of every prompt
@@ -145,6 +146,7 @@ A statement about the project's state in a task prompt ("the decision log record
 4. Count its words and compare them with its budget ("Page budget monitoring" below), run `scripts/verbatim_check.py` on the chapter (see above), then give source-verifier the chapter text and the script's report for sentence-by-sentence verification
    - For every second chapter written, counted in the order of writing, and for the last one written (the introduction), this round is the cross-chapter check as well (the workflow's `consistency_check`): its task prompt names `checklists/consistency.md`, Part A, and the files of the chapters written so far (`source-verifier.md`, "Cross-chapter consistency")
    - The round of the conclusion names B.3 as well, that of the introduction B.2: the final check then finds them settled, not for the first time
+   - A later round of that chapter names the checklist no more: the verifier rates the points the report left open and checks the changed sentences against the other chapters (`source-verifier.md`, "Rounds after a revision")
    - A point an earlier report rated `–` for this chapter is settled in its round: name that report and the point in the task prompt
    - The result stands in the chapter's report: no call and no file of its own, and not after the chapter has passed
 5. Give format-verifier the text for styleguide compliance

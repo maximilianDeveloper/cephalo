@@ -293,6 +293,7 @@ The workflow's `consistency_check` is part of a chapter's verification round, no
 
 - The task prompt of every second chapter's round, counted in the order of writing, and of the round of the last chapter written (the introduction) names `checklists/consistency.md`, Part A, and the files of the chapters written so far
 - The round of the conclusion names B.3 as well, that of the introduction B.2: the final check then finds them settled, not for the first time
+- A later round of that chapter names the checklist no more, and its task prompt gives the files of the chapters written so far: the verifier rates the points the report left open and checks the changed sentences against the other chapters (`source-verifier.md`, "Rounds after a revision")
 - A point an earlier report rated `–` for a chapter is settled in that chapter's round: name that report and the point in its task prompt
 
 A chapter passes source-verification when no ⚠️, ❌ or ❓ is left on its sentences, nor in the cross-chapter consistency check of a report (`source-verifier.md`, "Cross-chapter consistency") on a point whose fix changes this chapter's text. Such a status counts as a sentence's does, also one the report calls minor or not blocking or hands on to the final check, although the report's totals line counts only the sentences.
