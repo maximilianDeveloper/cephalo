@@ -37,12 +37,14 @@ Rules (on, except P1)
       cephalo's scripts/ folder: a Write or Edit, or a shell command that
       writes, moves or deletes them (on Windows and macOS in any letter
       case).  Denied: only the user changes them.
-  S6  cephalo's state_check.py run with its output into a pipe (| tail,
-      2>&1 | grep, in PowerShell | Select-Object), also in a ( ) or { }
-      group, an if, a loop or a case that is piped, or with its output
-      thrown away (> /dev/null, > NUL, > $null).  Denied: its whole
-      output is read in the tool result.  --help, its output redirected
-      into a file, and a chain with ;, && or || pass.
+  S6  cephalo's state_check.py or docx_pagination.py run with its output
+      into a pipe (| tail, 2>&1 | grep, in PowerShell | Select-Object),
+      also in a ( ) or { } group, an if, a loop or a case that is piped,
+      or with its output thrown away (> /dev/null, > NUL, > $null).
+      Denied: the whole output of state_check.py is read in the tool
+      result, and a pipe hides the exit code of docx_pagination.py, by
+      which the coordinator goes on.  --help, its output redirected into
+      a file, and a chain with ;, && or || pass.
   R5  The coordinator (main chat or an orchestrator) and a saved
       source-verifier report (verification/*_round_<n>.md,
       consistency_final.md): after a Write, asks for the read-back the
@@ -224,6 +226,16 @@ class Ctx:
             return '.claude/agents/%s.md' % self.agent_type
         longform = self.root != self.project or os.path.exists(os.path.join(self.project_raw, '00_Status.md'))
         return '.claude/agents/orchestrator-longform.md' if longform else '.claude/agents/orchestrator.md'
+
+    def pagination_rule(self):
+        """The definition and the section that have the coordinator run
+        docx_pagination.py after an export: the long-form orchestrator's in a
+        long-form project or a sub-project, otherwise the flat one's (which
+        the seminar and presentation workflows point to)."""
+        longform = self.root != self.project or os.path.exists(os.path.join(self.project_raw, '00_Status.md'))
+        if longform:
+            return '.claude/agents/orchestrator-longform.md', '"08_Formal_Review (Phase B)", format round, step 2'
+        return '.claude/agents/orchestrator.md', '"Action on transition", item 5, step 2'
 
 
 DEVICE = '<device>'
@@ -985,6 +997,19 @@ def protected(n, ctx):
     return None
 
 
+def _has_claude_dir(folder, ctx):
+    """Whether a folder has a .claude/ folder of its own (on Windows and
+    macOS in any letter case)."""
+    if os.path.isdir(os.path.join(folder, '.claude')):
+        return True
+    if not (ctx.windows or ctx.macos):
+        return False
+    try:
+        return any(x.lower() == '.claude' and os.path.isdir(os.path.join(folder, x)) for x in os.listdir(folder))
+    except OSError:
+        return False
+
+
 def holds_protected(n, ctx):
     """A folder whose removal or move takes the hook settings or scripts/
     with it (the project folder, a .claude/ folder, scripts/ itself, in a
@@ -998,9 +1023,12 @@ def holds_protected(n, ctx):
     bases = {ctx.project, ctx.root, ctx.home}
     if ctx.root != ctx.project:
         if ctx._sub_projects is None:
+            # A sibling sub-project is a folder of the multi-project root with a .claude/ folder of its own
+            # (setup gives each sub-project one).  A folder without it holds no hook settings: the shared
+            # materials, or a folder made by mistake, which a chat must be able to remove again.
             try:
                 ctx._sub_projects = [ctx.root + '/' + _fold(d, ctx) for d in os.listdir(ctx.root)
-                                     if os.path.isdir(os.path.join(ctx.root, d))]
+                                     if _has_claude_dir(os.path.join(ctx.root, d), ctx)]
             except OSError:
                 ctx._sub_projects = []
         bases.update(ctx._sub_projects)
@@ -1377,15 +1405,18 @@ def check_shell(cmd, tool, ctx, depth=0, pre=None, data=False):
             if ctx.windows and re.match(r'^python3(\.\d+)?$', c) and mode != 'probe' and ctx.has_py():
                 hits.append(('S3', 'python3 on Windows'))
         prev_script = (c, py_mode(args)[1]) if is_script and seg.sep == '||' else False
-        # S6: cephalo's state_check.py with its output into a pipe, or thrown away (/dev/null, NUL, $null)
-        if _state_check_run(c, args):
+        # S6: cephalo's state_check.py or docx_pagination.py with its output into a pipe, or thrown away
+        # (/dev/null, NUL, $null); a detail on docx_pagination.py begins with its name
+        watched = _whole_output_run(c, args)
+        if watched:
             outs = [t for fd, op, t in seg.redirs
                     if op in _STDOUT_OPS and fd in (None, '1', '&', '*') and t and not t.startswith('&')]
             null = [t for t in outs if _null_device(t)]
+            mark = _PAGINATION_MARK if watched == 'docx_pagination.py' else ''
             if null:
-                hits.append(('S6', 'its output goes to %s' % null[0]))
+                hits.append(('S6', mark + 'its output goes to %s' % null[0]))
             elif piped[si] and not outs:
-                hits.append(('S6', _pipe_detail(segs, si, piped[si])))
+                hits.append(('S6', mark + _pipe_detail(segs, si, piped[si])))
         # S1 (g): a patch typed into git apply / patch
         if (c == 'patch' or (c == 'git' and args[:1] == ['apply'])) and '--check' not in args and \
                 '--stat' not in args and (seg.heredocs or seg.herestrings or
@@ -1530,17 +1561,27 @@ def check_shell(cmd, tool, ctx, depth=0, pre=None, data=False):
     return _dedupe(hits)
 
 
-def _state_check_run(c, args):
-    """The command runs cephalo's state_check.py, by a Python interpreter or by
-    its path (c: the command's base name), and not for its --help."""
+_WHOLE_OUTPUT = ('state_check.py', 'docx_pagination.py')
+_PAGINATION_MARK = 'docx_pagination.py: '
+
+
+def _whole_output_run(c, args):
+    """The name of the script, if the command runs one of cephalo's scripts
+    whose output the coordinator needs whole (state_check.py: its report;
+    docx_pagination.py: its exit code and its warnings), by a Python
+    interpreter or by its path (c: the command's base name), and not for its
+    --help.  Otherwise None."""
     if _PYNAME.match(c):
         mode, val = py_mode(args)
-        if mode != 'script' or base_name(val) != 'state_check.py':
-            return False
+        if mode != 'script' or base_name(val) not in _WHOLE_OUTPUT:
+            return None
+        name = base_name(val)
         args = args[args.index(val) + 1:]
-    elif c != 'state_check.py':
-        return False
-    return not any(a in ('-h', '--help') for a in args)
+    elif c in _WHOLE_OUTPUT:
+        name = c
+    else:
+        return None
+    return None if any(a in ('-h', '--help') for a in args) else name
 
 
 def _null_device(t):
@@ -1800,11 +1841,21 @@ def _rel(n, ctx):
     return n[len(ctx.root) + 1:] if inside(n, ctx.root) and n != ctx.root else n
 
 
-def report_definition(ctx):
-    """The definition that holds the rules on saved reports (orchestrator-defense
-    saves none)."""
+_REPORT_SECTION = {'R5': '"Save every source-verifier report as a file"',
+                   'R6': '"The format-verifier writes its report itself"'}
+
+
+def report_rule(ctx, rule):
+    """(definition, quoted section) that hold the rule on a saved report, for
+    a message of R5 or R6.  The defense orchestrator has the rule on the
+    source-verifier's reports under its Rule 2; it calls no format-verifier,
+    so R6 names the long-form orchestrator there."""
     d = ctx.definition('R5')
-    return '.claude/agents/orchestrator-longform.md' if d.endswith('orchestrator-defense.md') else d
+    if d.endswith('orchestrator-defense.md'):
+        if rule == 'R5':
+            return d, '"Rule 2: Consistency with submitted work"'
+        d = '.claude/agents/orchestrator-longform.md'
+    return d, _REPORT_SECTION[rule]
 
 
 _QUOTE_MARKS = '\u201e\u201c\u201d\u201a\u2018\u2019\u00ab\u00bb"'
@@ -1855,14 +1906,15 @@ def readback(tin, ctx, data=None):
                    'same, leave it.' % (open_, 'is' if open_ == 1 else 'are', 'it' if open_ == 1 else 'them'))
     if fmt:
         return ('cephalo guard R6: %s is saved as the format-verifier\'s answer, the fallback when it writes no '
-                'report (%s, "The format-verifier writes its report itself"). Read the whole file back with the '
+                'report (%s, %s). Read the whole file back with the '
                 'Read tool (no offset or limit) and compare it with the answer. %s If it differs, tell the user: '
-                'the guard does not let a format report be written over.' % (rel, report_definition(ctx), counts))
+                'the guard does not let a format report be written over.'
+                % ((rel,) + report_rule(ctx, 'R6') + (counts,)))
     msg = ('cephalo guard R5: %s is saved. Now read the whole file back with the Read tool (no offset or limit) '
-           'and compare it with the agent\'s answer, as %s says ("Save every source-verifier report as a file"; '
+           'and compare it with the agent\'s answer, as %s says (%s; '
            'the Write tool\'s note that you need not read it back does not apply here). %s If anything differs '
            'from the answer, write the file again with the Write tool, the answer unchanged; only an absolute '
-           'path becomes project-relative.') % (rel, report_definition(ctx), counts)
+           'path becomes project-relative.') % ((rel,) + report_rule(ctx, 'R5') + (counts,))
     absolute = _holds_path(text, _machine_paths(ctx), ctx)
     if absolute:
         msg += (' It still contains an absolute path of this machine: write the file again with the Write tool, '
@@ -2088,9 +2140,7 @@ def agent_reason(hits, ctx):
         out.append('cephalo guard %s: not run. %s Read %s back with the Read tool (no offset or limit; a file too '
                    'large for one Read in parts that together cover every line) and compare it with the %s (%s, %s), '
                    'then call the agent again.'
-                   % (rule, files, whole, 'agent\'s answer' if rule == 'R5' else 'answer', report_definition(ctx),
-                      '"Save every source-verifier report as a file"' if rule == 'R5'
-                      else '"The format-verifier writes its report itself"'))
+                   % ((rule, files, whole, 'agent\'s answer' if rule == 'R5' else 'answer') + report_rule(ctx, rule)))
     return ' '.join(out)
 
 
@@ -2847,6 +2897,10 @@ def check_prompt(tool, tin, ctx):
 # --------------------------------------------------------------- messages
 
 
+# a detail of S1 whose target is a program file: "a here-document into _scratch/format-verifier/c.py"
+_INTO_PROGRAM = re.compile(r' into .*\.(?:py|sh|bash|ps1|psm1|js|rb|pl|r)["\']?$', re.I)
+
+
 def shell_reason(hits, ctx, cmd=''):
     by = {}
     for rule, detail in hits:
@@ -2863,21 +2917,31 @@ def shell_reason(hits, ctx, cmd=''):
         d = ctx.definition('S1')
         tool_words = 'Write tool' if ctx.agent_type == 'format-verifier' else 'Write or Edit tool'
         msg = ('cephalo guard S1: not run. This command writes a file\'s text through the shell (%s). %s, '
-               '"Principles": "Write a file\'s text with the %s". Make the change with %s.'
-               % ('; '.join(by['S1'][:3]), d, tool_words, 'Write' if ctx.agent_type == 'format-verifier'
-                  else 'Edit or Write'))
+               '"Principles": "Write a file\'s text with the %s".' % ('; '.join(by['S1'][:3]), d, tool_words))
         joined = ' '.join(by['S1'])
-        if '.save' in joined and re.search(r'docx|reference', cmd + joined, re.I):
-            msg += ' A layout change in the reference document goes through scripts/build_reference_docx.py.'
-        if 'in place' in joined and ctx.agent_type != 'format-verifier':
-            msg += (' For a string that repeats, use Edit with replace_all, one call per file; do not rewrite '
-                    'a whole chapter with Write.')
-        msg += (" Running one of cephalo's scripts and redirecting its output is fine. If the tool cannot make "
-                'the change, ask the user; do not save the program as a script file to get around this check.')
-        if re.search(r'\bS\.(?:\\?\s|\\u00a0|\\xa0|\\x\{a0\}|\xa0)', cmd) or \
-                re.search(r'00a0|x\{a0\}|nbsp|\xa0', cmd, re.I):
-            msg += (' A non-breaking space before a page number is written in a chapter file as a backslash '
-                    'before the space, `S.\\ 12` (writer-agent.md).')
+        if all(_INTO_PROGRAM.search(x) for x in by['S1']) and 'S5' not in by:
+            # The text is a script's own (a here-document into a check script): Write is the way to save it,
+            # and the warning is about what the saved script does, not about saving it.  (Not for a script in
+            # cephalo's scripts/ folder, which S5 denies in the same message: there Write is no way either.)
+            msg += (' Save the script with the Write tool, then run it from the shell: a script that reads, '
+                    'counts or checks is fine, and so is what a script of the project in its data/scripts/ '
+                    'writes. A program you save to change a file\'s text in the tool\'s place gets around this '
+                    "check. Running one of cephalo's scripts and redirecting its output is fine. If the tool "
+                    'cannot do what you need, ask the user.')
+        else:
+            msg += ' Make the change with %s.' % ('Write' if ctx.agent_type == 'format-verifier' else 'Edit or Write')
+            if '.save' in joined and re.search(r'docx|reference', cmd + joined, re.I):
+                msg += ' A layout change in the reference document goes through scripts/build_reference_docx.py.'
+            if 'in place' in joined and ctx.agent_type != 'format-verifier':
+                msg += (' For a string that repeats, use Edit with replace_all, one call per file; do not rewrite '
+                        'a whole chapter with Write.')
+            msg += (" Running one of cephalo's scripts and redirecting its output is fine. If the tool cannot "
+                    'make the change, ask the user; do not save a program as a script file that makes the change '
+                    'in your place: that gets around this check.')
+            if re.search(r'\bS\.(?:\\?\s|\\u00a0|\\xa0|\\x\{a0\}|\xa0)', cmd) or \
+                    re.search(r'00a0|x\{a0\}|nbsp|\xa0', cmd, re.I):
+                msg += (' A non-breaking space before a page number is written in a chapter file as a backslash '
+                        'before the space, `S.\\ 12` (writer-agent.md).')
         out.append(msg)
     if 'S2' in by:
         out.append('cephalo guard S2: not run. This writes outside the project: %s. %s, "Principles": "Stay '
@@ -2904,21 +2968,29 @@ def shell_reason(hits, ctx, cmd=''):
                    'guard"). If the change is needed, tell the user what to change and why; do not get around '
                    'this check.' % '; '.join(by['S5'][:3]))
     if 'S6' in by:
-        out.append('cephalo guard S6: not run. This command keeps the output of state_check.py from you (%s). '
-                   'Its output goes to you whole: run it without a pipe and without throwing its output away (%s, '
-                   '"Chat closure ritual", item 1; '
-                   'docs/scripts.md, "state_check.py"). Its summary line and its last line give its exit code; '
-                   'read the whole output in the tool result.' % (by['S6'][0], ctx.definition('S6')))
+        pagination = [x[len(_PAGINATION_MARK):] for x in by['S6'] if x.startswith(_PAGINATION_MARK)]
+        state_check = [x for x in by['S6'] if not x.startswith(_PAGINATION_MARK)]
+        if state_check:
+            out.append('cephalo guard S6: not run. This command keeps the output of state_check.py from you (%s). '
+                       'Its output goes to you whole: run it without a pipe and without throwing its output away '
+                       '(%s, "Chat closure ritual", item 1; '
+                       'docs/scripts.md, "state_check.py"). Its summary line and its last line give its exit code; '
+                       'read the whole output in the tool result.' % (state_check[0], ctx.definition('S6')))
+        if pagination:
+            out.append('cephalo guard S6: not run. This command keeps the output of docx_pagination.py from you '
+                       '(%s). Run it without a pipe and without throwing its output away (%s, %s; docs/scripts.md, '
+                       '"docx_pagination.py"): a pipe hides its exit code, and its exit code and its warnings '
+                       'decide what follows.' % ((pagination[0],) + ctx.pagination_rule()))
     if 'R5' in by:
         out.append('cephalo guard R5: not done (%s). A saved source-verifier report stays as the agent\'s '
-                   'answer (%s, "Save every source-verifier report as a file"): if your copy differs from the '
+                   'answer (%s, %s): if your copy differs from the '
                    'answer, write the file again with the Write tool, the answer unchanged; only an absolute '
-                   'path becomes project-relative.' % (by['R5'][0], report_definition(ctx)))
+                   'path becomes project-relative.' % ((by['R5'][0],) + report_rule(ctx, 'R5')))
     if 'R6' in by:
         out.append('cephalo guard R6: not done (%s). The format-verifier writes its report itself; do not write '
-                   'or change it (%s, "The format-verifier writes its report itself"). Read in the file the '
+                   'or change it (%s, %s). Read in the file the '
                    'findings you fix. Only if the file does not exist after the call, save the agent\'s answer '
-                   'there unchanged.' % (by['R6'][0], report_definition(ctx)))
+                   'there unchanged.' % ((by['R6'][0],) + report_rule(ctx, 'R6')))
     return ' '.join(out)
 
 

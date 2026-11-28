@@ -306,7 +306,11 @@ phases:
            each chapter, saving its output as
            workspace/output/verification/<name>_final_verbatim.txt, and give
            these files in the task prompt: their section "Runs shared with
-           other chapters" counts A.2. Save its answer unchanged as
+           other chapters" counts A.2. Name the folder of the round reports
+           as well (workspace/output/verification/), where the check looks up
+           what a round said on a point before it rates it
+           (source-verifier.md, "Cross-chapter consistency"). Save its answer
+           unchanged as
            workspace/output/verification/consistency_final.md, read back as in
            step 2, and record its open items under the open issues of
            workspace/state.md. Its findings go to the writer-agent (chapter text

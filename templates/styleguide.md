@@ -113,6 +113,7 @@
 
 - **`elements`:** [required entries — e.g., institution, exam type, title, author, student ID, supervisor, date]
 - **`decoration`:** [logo/decoration allowed / forbidden]
+- **`text_format`:** [size and weight of the title and of the other lines — e.g., title 14 pt bold, other lines 11 pt regular]
 
 ---
 

@@ -43,6 +43,7 @@ For every category below: **read concrete values from `styleguide.md`**, not fro
 - [ ] Each element on a line of its own, unless the styleguide puts several on one line (a paragraph, or a line of a line block: `docs/reference_management.md`, "The title page")
 - [ ] Quotation marks as `in_text.format_direct` shows them (an ASCII `"` becomes an English mark in the DOCX)
 - [ ] Decoration/logo policy per styleguide (`title_page.decoration`; some institutions forbid any decoration or logo)
+- [ ] Size and weight of the title and of the other lines per styleguide (`title_page.text_format`; in the DOCX's styles `Title`, `Subtitle`, `Author` and `Date`)
 
 ### Pagination
 

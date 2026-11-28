@@ -314,6 +314,37 @@ class TestS1ShellWrites(Base):
         docx = bash(self.SLIPS[2])['hookSpecificOutput']['permissionDecisionReason']
         self.assertIn('build_reference_docx.py', docx)
 
+    def test_message_for_a_script(self):
+        # a here-document into a check script: the message says how to save it (Write), not that a script must
+        # not be saved, and it leaves out the hint on `S.\ 12`, which is about a chapter file
+        cmd = ("cat > _scratch/format-verifier/c.py <<'EOF'\nimport re\n"
+               "print(re.findall(r'S\\. \\d+', open('workspace/output/chapters/ch_1.md', encoding='utf-8').read()))\nEOF")
+        reason = bash(cmd, agent='format-verifier')['hookSpecificOutput']['permissionDecisionReason']
+        for part in ('cephalo guard S1: not run', 'a here-document into _scratch/format-verifier/c.py',
+                     '.claude/agents/format-verifier.md, "Principles": "Write a file\'s text with the Write tool"',
+                     'Save the script with the Write tool, then run it', 'reads, counts or checks is fine',
+                     'in the tool\'s place gets around this check', 'ask the user'):
+            self.assertIn(part, reason)
+        for part in ('Make the change with', 'S.\\ 12', 'do not save', 'non-breaking'):
+            self.assertNotIn(part, reason)
+        # the same for the other shells' forms and another agent
+        for cmd, agent in (("printf '%s\\n' 'print(1)' > _scratch/data-agent/t.py", 'data-agent'),
+                           ("cat <<'EOF' > '_scratch/orchestrator/check it.sh'\ngrep -c x a.md\nEOF", None)):
+            with self.subTest(cmd=cmd):
+                reason = bash(cmd, agent=agent)['hookSpecificOutput']['permissionDecisionReason']
+                self.assertIn('Save the script with the Write tool', reason)
+                self.assertNotIn('do not save', reason)
+        # a file's text beside the script, or a script's text that is not the only thing written: as before
+        both = bash("cat <<'EOF' > _scratch/orchestrator/c.py\nprint(1)\nEOF\necho x > workspace/state.md")
+        reason = both['hookSpecificOutput']['permissionDecisionReason']
+        for part in ('Make the change with Edit or Write', 'do not save a program as a script file that makes the change'):
+            self.assertIn(part, reason)
+        self.assertNotIn('Save the script with the Write tool', reason)
+        # a script in cephalo's scripts/ folder is S5's as well: no advice to write it with the Write tool
+        out = bash("cat <<'EOF' > scripts/helper.py\nprint(1)\nEOF")
+        self.assertEqual(rules_of(out), {'S1', 'S5'})
+        self.assertNotIn('Save the script with the Write tool', out['hookSpecificOutput']['permissionDecisionReason'])
+
 
 class TestS1PowerShell(Base):
     def test_cmdlets_denied(self):
@@ -559,6 +590,79 @@ class TestS6StateCheckPipe(Base):
         self.passes(bash(cmd, off='S6'))
         self.passes(bash(cmd, off='s1, s6'))
         self.deny(bash(cmd, off='S1'), 'S6')
+
+
+class TestS6PaginationPipe(Base):
+    """docx_pagination.py: a pipe hides its exit code, by which the format round goes on (seen in a trial run:
+    ... | head -3 && ./scripts/docx_postprocess.sh ...)."""
+    RUN = ('python3 scripts/docx_pagination.py workspace/output/document.docx --front-matter roman '
+           '--main-text restart --back-matter roman-continue')
+    DENIED = [
+        RUN + ' | head -3 && ./scripts/docx_postprocess.sh workspace/output/document.docx',   # the trial run's form
+        RUN + ' | head -3', RUN + ' 2>&1 | tail -5', RUN + ' |& tail', RUN + ' | tee _scratch/orchestrator/p.txt',
+        'cd /home/u/proj && py scripts/docx_pagination.py workspace/output/document.docx --front-matter roman | cat',
+        '(' + RUN + ') | head -3', '{ ' + RUN + '; echo "exit=$?"; } | tail -2',
+        'for f in a.docx b.docx; do python3 scripts/docx_pagination.py $f --front-matter roman; done | tail',
+        RUN + ' > /dev/null', RUN + ' >/dev/null 2>&1; echo $?',
+    ]
+    PASSING = [
+        RUN, RUN + '; echo "exit=$?"', RUN + ' && ./scripts/docx_postprocess.sh workspace/output/document.docx',
+        RUN + ' 2>&1', RUN + ' > _scratch/orchestrator/p.txt 2>&1; echo $?', RUN + ' 2>/dev/null',
+        'python3 scripts/docx_pagination.py --help | head', 'grep -n Exit scripts/docx_pagination.py | head',
+        'python3 scripts/docx_paginations.py a.docx | tail', 'python3 scripts/bibliography_check.py a.docx | tail -3',
+    ]
+
+    def test_denied(self):
+        for cmd in self.DENIED:
+            with self.subTest(cmd=cmd):
+                self.assertEqual(rules_of(bash(cmd)), {'S6'}, cmd)
+        reason = bash(self.DENIED[0])['hookSpecificOutput']['permissionDecisionReason']
+        for part in ('cephalo guard S6: not run.', 'keeps the output of docx_pagination.py from you (| head -3)',
+                     'without a pipe', '.claude/agents/orchestrator.md, "Action on transition", item 5, step 2',
+                     'docs/scripts.md, "docx_pagination.py"', 'hides its exit code'):
+            self.assertIn(part, reason)
+        self.assertNotIn('state_check.py', reason)
+        self.assertNotIn('docx_pagination.py: ', reason)          # the detail's mark is not shown
+        out = bash(self.RUN + ' > /dev/null')
+        self.assertIn('(its output goes to /dev/null)', out['hookSpecificOutput']['permissionDecisionReason'])
+
+    def test_the_rule_stands_in_the_definitions(self):
+        # the sections the message names hold the rule
+        for name, section in (('orchestrator.md', '**Action on transition:**'),
+                              ('orchestrator-longform.md', '### `08_Formal_Review` (Phase B)')):
+            text = (ROOT / '.claude' / 'agents' / name).read_text(encoding='utf-8')
+            part = text[text.index(section):]
+            self.assertIn('Run the pagination script without a pipe and without throwing its output away',
+                          part[:part.index('\n## ') if '\n## ' in part else len(part)], name)
+
+    def test_long_form_windows_and_powershell(self):
+        top = tempfile.mkdtemp(prefix='guard-pagination-')
+        Path(top, '00_Status.md').write_text('# Status\n', encoding='utf-8')
+        out = bash('python3 scripts/docx_pagination.py 08_Formal_Review/submissions/v_r1.docx --front-matter roman '
+                   '| head -3', root=top, cwd=top)
+        self.assertEqual(rules_of(out), {'S6'})
+        self.assertIn('.claude/agents/orchestrator-longform.md, "08_Formal_Review (Phase B)", format round, step 2',
+                      out['hookSpecificOutput']['permissionDecisionReason'])
+        for cmd in ('py scripts/docx_pagination.py workspace/output/document.docx --front-matter roman | head -3',
+                    'py "C:\\Home\\u\\Projekt Arbeit\\scripts\\DOCX_PAGINATION.PY" a.docx --front-matter roman | more'):
+            with self.subTest(cmd=cmd):
+                self.assertEqual(rules_of(bash(cmd, plat='windows')), {'S6'}, cmd)
+        self.assertEqual(rules_of(ps('py scripts\\docx_pagination.py a.docx --front-matter roman '
+                                     '| Select-Object -First 3')), {'S6'})
+        self.passes(ps('py scripts\\docx_pagination.py workspace\\output\\document.docx --front-matter roman'))
+
+    def test_passing_and_switch(self):
+        for cmd in self.PASSING:
+            with self.subTest(cmd=cmd):
+                self.passes(bash(cmd))
+        self.passes(bash(self.RUN + ' | head -3', off='S6'))
+
+    def test_both_scripts_in_one_command(self):
+        out = bash('python3 scripts/state_check.py workspace/state.md | tail -3; ' + self.RUN + ' | head -3')
+        reason = out['hookSpecificOutput']['permissionDecisionReason']
+        self.assertEqual(rules_of(out), {'S6'})
+        self.assertIn('keeps the output of state_check.py from you (| tail -3)', reason)
+        self.assertIn('keeps the output of docx_pagination.py from you (| head -3)', reason)
 
 
 class TestCompoundCommands(Base):
@@ -2638,6 +2742,37 @@ class TestS5Protected(Base):
         self.passes(bash('cp ../00_Shared_Materials/styleguide.md _scratch/orchestrator/', root=sub, cwd=sub))
         shutil.rmtree(top)
 
+    def test_multi_project_siblings(self):
+        # a sibling counts as a sub-project with hook settings only if it has a .claude/ folder: a folder made by
+        # mistake in the multi-project root (a trial run's `mkdir -p 04_Submission/submissions` after a `cd ..`)
+        # can be removed again, and so can a folder without settings
+        top = tempfile.mkdtemp(prefix='guard-multi8-')
+        for d in ('00_Shared_Materials', '01_Proposal/.claude', '02_Main_Work/.claude', '03_Defense/.Claude',
+                  '04_Submission/submissions', 'notes'):
+            os.makedirs(os.path.join(top, d))
+        Path(top, '02_Main_Work', '.claude', 'settings.json').write_text('{}', encoding='utf-8')
+        sub = os.path.join(top, '01_Proposal')
+        for cmd in ('rm -rf ../04_Submission', 'rmdir ../04_Submission/submissions ../04_Submission',
+                    'rm -r "%s"' % os.path.join(top, '04_Submission'), 'mv ../notes ../notes_old',
+                    'cd .. && rm -rf 04_Submission'):
+            with self.subTest(cmd=cmd):
+                self.passes(bash(cmd, root=sub, cwd=sub))
+        for cmd in ('rm -rf ../02_Main_Work', 'mv ../02_Main_Work ../old', 'rm -rf ../01_Proposal',
+                    'rm -rf "%s"' % top, 'rm -rf ../02_Main_Work/.claude', 'rm ../02_Main_Work/.claude/settings.json'):
+            with self.subTest(cmd=cmd):
+                self.assertIn('S5', rules_of(bash(cmd, root=sub, cwd=sub)), cmd)
+        reason = bash('rm -rf ../02_Main_Work', root=sub, cwd=sub)['hookSpecificOutput']['permissionDecisionReason']
+        self.assertIn('02_Main_Work (a folder that holds the hook settings .claude/settings.json)', reason)
+        # a .claude/ folder in another letter case: a sub-project on macOS and Windows, where the file system
+        # ignores the case; on Linux the folder .Claude/ is not Claude Code's. The second half needs a file system
+        # that keeps the cases apart: on a Mac's own, .Claude/ answers to .claude/ and the folder is a sub-project
+        self.assertIn('S5', rules_of(bash('rm -rf ../03_Defense', plat='macos', root=sub, cwd=sub)))
+        if os.path.isdir(os.path.join(top, '03_Defense', '.claude')):
+            self.assertIn('S5', rules_of(bash('rm -rf ../03_Defense', root=sub, cwd=sub)))
+        else:
+            self.passes(bash('rm -rf ../03_Defense', root=sub, cwd=sub))
+        shutil.rmtree(top)
+
     def test_macos_unicode_form(self):
         nfd, nfc = (unicodedata.normalize(f, POSIX_HOME + '/Masterarbeit Übung') for f in ('NFD', 'NFC'))
         for cmd in ('rm -rf "%s/scripts"' % nfc, 'rm "%s/scripts/cephalo_guard.py"' % nfc,
@@ -2818,6 +2953,49 @@ class TestMessagesPointToRules(Base):
             with self.subTest(agent=agent_type, call='Agent'):
                 self.check(out['hookSpecificOutput']['permissionDecisionReason'])
         shutil.rmtree(root)
+
+    def test_defense_names_its_own_rule(self):
+        # the defense orchestrator has the rule on saved source-verifier reports itself (Rule 2): R5 names that
+        # definition and section in a defense session, not the long-form orchestrator; R6 (the format-verifier,
+        # which the defense does not call) keeps naming the long-form orchestrator
+        top = tempfile.mkdtemp(prefix='guard-defense-')
+        for d in ('00_Shared_Materials', '03_Defense/01_Slides/verification'):
+            os.makedirs(os.path.join(top, d))
+        sub = os.path.join(top, '03_Defense')
+        rep = os.path.join(sub, '01_Slides', 'verification', 'slides_round_1.md')
+        Path(rep).write_text('| a |\nStatus: x\n', encoding='utf-8')
+        own = '.claude/agents/orchestrator-defense.md, "Rule 2: Consistency with submitted work"'
+        edit = run('Edit', {'file_path': rep, 'old_string': 'a', 'new_string': 'b'}, agent='orchestrator-defense',
+                   root=sub, cwd=sub)
+        self.assertEqual(rules_of(edit), {'R5'})
+        self.assertIn(own, edit['hookSpecificOutput']['permissionDecisionReason'])
+        self.assertNotIn('orchestrator-longform.md', edit['hookSpecificOutput']['permissionDecisionReason'])
+        post = run('Write', {'file_path': rep, 'content': 'x'}, event='PostToolUse', agent='orchestrator-defense',
+                   root=sub, cwd=sub)
+        text = (post.get('hookSpecificOutput') or {}).get('additionalContext') or post.get('reason') or json.dumps(post)
+        self.assertIn('as .claude/agents/orchestrator-defense.md says ("Rule 2: Consistency with submitted work";', text)
+        self.assertNotIn('orchestrator-longform.md', text)
+        tr = os.path.join(top, 'sess.jsonl')
+        Path(tr).write_text(json.dumps(tr_call('Write', {'file_path': rep, 'content': 'x'}, 't0')) + '\n', encoding='utf-8')
+        d = payload('Agent', {'prompt': 'x', 'subagent_type': 'writer-agent'}, cwd=sub)
+        d['transcript_path'] = tr
+        d['agent_type'] = 'orchestrator-defense'
+        out = g.evaluate(d, env(root=sub))
+        self.assertEqual(rules_of(out), {'R5'})
+        self.assertIn('(%s)' % own, out['hookSpecificOutput']['permissionDecisionReason'])
+        # the long-form orchestrator in the same folder: its own definition and section, as before
+        edit = run('Edit', {'file_path': rep, 'old_string': 'a', 'new_string': 'b'}, agent='orchestrator-longform',
+                   root=sub, cwd=sub)
+        self.assertIn('.claude/agents/orchestrator-longform.md, "Save every source-verifier report as a file"',
+                      edit['hookSpecificOutput']['permissionDecisionReason'])
+        # R6 in a defense session names the definition that has the format-verifier's rule
+        fmt = os.path.join(sub, '01_Slides', 'verification', 'document_format_round_1.md')
+        Path(fmt).write_text('x', encoding='utf-8')
+        r6 = run('Edit', {'file_path': fmt, 'old_string': 'a', 'new_string': 'b'}, agent='orchestrator-defense',
+                 root=sub, cwd=sub)
+        self.assertIn('.claude/agents/orchestrator-longform.md, "The format-verifier writes its report itself"',
+                      r6['hookSpecificOutput']['permissionDecisionReason'])
+        shutil.rmtree(top)
 
     def test_docs_section(self):
         self.assertIn('### cephalo guard', (ROOT / 'docs' / 'scripts.md').read_text(encoding='utf-8'))

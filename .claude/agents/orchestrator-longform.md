@@ -86,6 +86,8 @@ After every agent call returns, record its result in `00_Status.md` (one line is
 
 - Where the line goes: for a chapter, into its row of "Chapter status"; for an extract and its verification, into the source's row of "Source registry"; for a format round of Phase B, as a row of "Format rounds"; for anything else, into "Last agent result" under "Current focus"
   - In the proposal, `research_gap.md` and the outline files have rows of "Chapter status" as well
+  - A cell of a row holds the step's present state, short and beginning with its status symbol, ✅ once the step is done: a new result replaces what the cell said, and the round counts and the loop count stand once, in "Source-verified"
+  - An earlier word count and what a revision or a shortening changed stand in the reports and the handover, not in the cell; where your count differs from an agent's answer, a few words beside that round's counts say so
   - "Last agent result" holds one result: the next one replaces the line, and nothing is added to it. What a later chat needs of an earlier result stands in its row, in the report or in the handover
 - The status file holds the state, not its history, which the reports, the handovers and Git keep: no log of calls, and under "Open issues" only what is still open (a result or an answered question is none; tick or remove what is settled)
 
@@ -115,8 +117,10 @@ After every agent call returns, record its result in `00_Status.md` (one line is
 - After each draft and each revision, before its verification, count its words as "Step 2: Update status" says
 - A first draft, or a change the user asked for, over 20% above its budget: before the verification, a return call to the writer to shorten it; if the writer names a claim the budget would drop, or the user wants the length, ask the user, and record a length the user accepts in `00_Decisions.md`
 - After a revision for findings, shorten nothing on your own, however far over the chapter now is: the findings set its length (`writer-agent.md`, "Feedback loop behavior"), and a shortening rewrites sentences that have just passed. Record the count and name it in your message; the look-ahead below watches the work as a whole
-  - A shortening then follows only when the user asks for one, there or in answer to the look-ahead: a call of its own that names the sentences the revisions changed, which stay as they are, and a verification round of what it changed
+  - A shortening then follows only when the user asks for one, there or in answer to the look-ahead: a call of its own that names the sentences the chapter's revisions changed, those of every revision and not of the last one only, which stay as they are, and a verification round of what it changed
+  - Before that call, estimate the words of the sentences left to cut from: where they hold fewer than the shortening must take out, or little more, the call cannot reach the length. Give the user the figures and ask which gives way, the length or the protection; a sentence the user frees is new text for the next round
   - Where no chapter is left to write (the last chapter, the proposal's one), compare the work's words with the total yourself after the revision and tell the user if it is over
+- After a shortening, of a first draft too, name in your message what the writer says it took out, item by item, with the new count, not only that the chapter is shorter: a claim that went may be one another chapter announces or builds on
 - While a chapter is still to be written: when the words of the chapters written so far plus the budgets of those still to be written exceed the total in words, warn, propose an adjustment and wait for the answer before the next writer task; once the user has answered for these figures, warn again only when they grow
 
 **The format-verifier writes its report itself:**
@@ -221,6 +225,7 @@ At minimum update:
 Before you finish:
 
 - The chronology has a row for this chat, and no line still says it will be updated later
+- After a shortening in this chat, the message that closes the chat's work names what the writer took out, item by item ("The page budget"): the handover alone does not reach the user
 - Every statement about this chat in the status file and the handover (counts, the order of steps, who asked for what, what the user was asked and answered, "complete", "passed" or "resolved") rests on a file you read in this chat or on the user's own words; a count taken from an agent's answer says so
 - A report's counts stay as you counted them from it: a finding you settle after the report (a fix, a ❓ the user answers in the styleguide) is named as settled and not yet re-checked, until a later round's report shows it
 - Each provenance that this chat wrote into `styleguide.md` and that names the user (`[user, …]`, `[provisional, user, …]`, `[supervisor, via the user, …]`) rests on the user's own words, or on a proposal that named its key and that the user accepted (`style-resolver.md`, "Recording answers to open questions", item 1)
@@ -290,6 +295,7 @@ The workflow's `consistency_check` is part of a chapter's verification round, no
 
 - The task prompt of every second chapter's round, counted in the order of writing, and of the round of the last chapter written (the introduction) names `checklists/consistency.md`, Part A, and the files of the chapters written so far
 - The round of the conclusion names B.3 as well, that of the introduction B.2: the final check then finds them settled, not for the first time
+- A later round of that chapter names the checklist no more, and its task prompt gives the files of the chapters written so far: the verifier rates the points the report left open and checks the changed sentences against the other chapters (`source-verifier.md`, "Rounds after a revision")
 - A point an earlier report rated `–` for a chapter is settled in that chapter's round: name that report and the point in its task prompt
 
 A chapter passes source-verification when no ⚠️, ❌ or ❓ is left on its sentences, nor in the cross-chapter consistency check of a report (`source-verifier.md`, "Cross-chapter consistency") on a point whose fix changes this chapter's text. Such a status counts as a sentence's does, also one the report calls minor or not blocking or hands on to the final check, although the report's totals line counts only the sentences.
@@ -298,7 +304,9 @@ A chapter passes source-verification when no ⚠️, ❌ or ❓ is left on its s
 - These withhold no pass:
   - a point left for a chapter not yet written (`–`): record it as an open item with the chapter it waits for
   - a 🟡 (polish, see the status symbols in `source-verifier.md`). It does not start a revision on its own, nor is it a question to the user: name the 🟡 findings in your message, without asking whether to revise them and without listing them as open items; the user may ask for a revision
-    - When the first revision after a source-verifier round follows for other findings, give the writer the 🟡 findings with it. A later revision changes only what its ⚠️, ❌ or ❓ concern: every reworked sentence is new text to verify, and a polish reworked late comes back as a finding
+    - The 🟡 findings go to the writer once per chapter: with the first of its revisions for other findings that follows a source-verifier round (in an empirical chapter, a revision for the data checks may come before any such round)
+    - Every later revision of the chapter changes only what its ⚠️, ❌ or ❓ concern, also after a round that brought new 🟡: every reworked sentence is new text to verify, and a polish reworked late comes back as a finding
+    - A 🟡 the user has decided to keep (`00_Decisions.md` has the entry) goes with no revision, and you do not ask about it again
   - the `⚠️` for instruction-like content in a source, which the verifier lists under its notes: it starts no revision either, and goes to the user
   - in the `01_Proposal/` sub-project, whose reference list the writer writes: a ❓ on one of its entries for a field the sources do not show and the user says they cannot supply. Ask once, and record it as an open item, `- [ ] ❓ …` with the user's answer
 - A revision for a cross-chapter finding of another chapter's report gets a verification round of the sentences it changed whose task prompt also gives that report and that chapter's file
@@ -326,6 +334,7 @@ A new verification round for an extract follows only a ⚠️ or ❌ on its quot
 ### `03_Theory_chapters`
 - Standard workflow: research -> source-verifier -> writer -> word count ("The page budget") -> `scripts/verbatim_check.py` -> source-verifier -> format-verifier -> status update (research and the first source-verifier as `02_Literature` says)
 - Files: `03_Theory_chapters/chapter_<n>_<slug>.md`
+- The chapter's structure comes from the user or, with no outline from the user, from the writer, who builds it from the verified extracts within the budget and names what it left out. Draft no outline, no order of paragraphs and no word targets per paragraph yourself, put none to the user before the writer starts, and write no such step into a start prompt ("Principles", "No content of your own"); this holds for every chapter
 
 ### `04_Methods` (master / empirical)
 - Setup step 0.6, before any chapter: the methods-agent writes the research design, `04_Methods/design.md` (`methods-agent.md`, "Research design"). Give it the research question and what the user and the materials say about design, sample, instrument and analysis; what it names as open, ask the user
@@ -371,6 +380,7 @@ A new verification round for an extract follows only a ⚠️ or ❌ on its quot
   - (1) Build the reference document (round 1) or build it again after a layout finding
   - (2) Export to a new `08_Formal_Review/submissions/v_r<n>_<date>.docx` and run `scripts/docx_pagination.py` on it with the values of `pagination.front_matter`, `pagination.main_text` and `pagination.back_matter` (`docs/scripts.md`), and, if `styleguide.md` sets `document.hyphenation` to automatic, `scripts/docx_postprocess.sh` (each round: a new export carries neither the sections nor the flag; this belongs to the export, not to the format check)
     - The pagination script changes nothing only where the front matter is Arabic, like the main text, the main text continues the count and the back matter is numbered like the main text
+    - Run the pagination script without a pipe and without throwing its output away (no `| head`, no `> /dev/null`): a pipe hides its exit code, and its exit code and its warnings decide what follows
     - If the pagination script stops with exit 2:
       - because the bookmark `_cephalo_front_matter_end` is missing (`no end of the front matter marked`, as in a title page file written before the bookmark existed), stands twice or is not on the page break that ends the front matter: put it once on that page break in `08_Formal_Review/title_page.md`, as `docs/reference_management.md`, "The title page", shows, then export again and run the script again
       - because the bookmark `_cephalo_back_matter_start` is missing (`no start of the back matter marked`), stands twice, or is not on the page break before the reference list: put it once on that page break in `08_Formal_Review/bibliography.md`, as "The reference list" there shows, then export and run the script again
@@ -386,7 +396,10 @@ A new verification round for an extract follows only a ⚠️ or ❌ on its quot
 - Export first, then let the format-verifier check that DOCX against `styleguide.md`: fonts, margins, spacing, pagination and the title page show only there. Do not check formats yourself, in the DOCX either, also not before a round or between rounds: after changing the reference document you may read it back to see that your change was written, but whether the export is right is the format-verifier's finding
 - format-verifier + build scripts; apply the format-verifier's format-only findings yourself, in the chapter files (no rewording; a non-breaking space as `\ `: `writer-agent.md`, "Formatting rules") or, for layout such as fonts, sizes, margins and spacing, in Pandoc's reference document (`docs/reference_management.md`), or leave them to the user
 - The reference document is `08_Formal_Review/reference.docx`: build it with `scripts/build_reference_docx.py` from the values in `styleguide.md`, and build it again with the corrected value after a layout finding (`docs/scripts.md`); which styles Pandoc uses, and how a reference list without citekeys gets the `Bibliography` style, `docs/reference_management.md` ("The reference document") says
-  - An option that no rule of `styleguide.md` and no key of its template names, such as the link colour, stays as in Pandoc's own reference document: do not ask for a value or add a key for it on your own. A rule the user gives from the guidelines or the supervisor, as for a note, is passed like any value, the link colour with `--link-color`
+  - An option that no rule of `styleguide.md` and no key of its template names, such as the link colour, stays as in Pandoc's own reference document: do not ask for a value or add a key for it on your own. A rule the user gives from the guidelines or the supervisor, as for a note, becomes an entry of `styleguide.md` first (`style-resolver.md`, "Recording answers to open questions", item 6) and is then passed like any value, the link colour with `--link-color`
+  - A size or weight `styleguide.md` gives the title page's lines (`title_page.text_format`) comes from there too, not from formatting in `title_page.md`: `--title-size` and `--title-bold` for the title, `--title-other-size` and `--title-other-bold` for the other lines
+  - A layout rule that stands only in the decision log is set and never checked: the format-verifier checks what `styleguide.md` says, so the rule goes there before the next export, under its key or, without one, as a rule of its own
+  - A layout value no option of the script sets is the user's to set, in Word in a style of the reference document: name the style and the value, write no program for it, and build the document again only from that file (`--base`), so that the change stays
 - The title page is `08_Formal_Review/title_page.md`, the first file of every export, with the table of contents field after it, which every export has: no styleguide key decides whether there is one (`docs/reference_management.md`, "The title page")
 - Without citekeys, you write the reference list `08_Formal_Review/bibliography.md` at the start of Phase B, listed after the chapter files in every export, before an appendix (`docs/reference_management.md`, "The reference list")
 - Where `pagination.back_matter` numbers the back matter unlike the main text, `08_Formal_Review/bibliography.md` starts with the bookmark `_cephalo_back_matter_start` on a page break, and with citekeys you write it too, with that bookmark, the heading and the empty `#refs` div (same section)
@@ -394,6 +407,7 @@ A new verification round for an extract follows only a ⚠️ or ❌ on its quot
   - Made with Pandoc (`docs/reference_management.md`, "Citation processor pipeline"). Without Pandoc, ask the user to install it (`checklists/precheck.md`, section 6) instead of writing an export script of your own: a DOCX without Word's heading and quote styles misleads the format check and `scripts/verbatim_check.py`
 - Before submission: the full-document final check, `checklists/consistency.md` Part B. You judge no content yourself:
   - Part A over all chapters and B.2 and B.3 go to the source-verifier in one call, with a verbatim report of each chapter, made as for a chapter round and saved as `08_Formal_Review/verification/<name>_final_verbatim.txt`
+  - Its task prompt also names the chapters' round reports (each phase folder's `verification/`): before it rates a finding, the verifier looks up what the rounds said on the point, keeps what a round passed in so many words and names the round that missed what it finds (`source-verifier.md`, "Cross-chapter consistency")
   - Save its answer unchanged as `08_Formal_Review/verification/consistency_final.md` and read it back
   - A finding that changes a chapter's text is a rollback, as the workflow's `rollback_b_to_a` says: the status, the writer for that passage, its verification, an entry in `00_Decisions.md`; then a new export and a format round on it
   - B.1 and B.4 you take from the last format report and the scripts; B.6 is completed last, by the commit and the tag below; B.7 is the user's: name its points as steps left to them

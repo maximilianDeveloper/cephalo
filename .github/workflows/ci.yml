@@ -2151,12 +2151,15 @@ jobs:
           ARGS="--font Arial --size 11 --line-spacing 1,5 --align justify --space-after 6 --first-line-indent 0.5
                 --heading-sizes 14,12,11 --heading-bold yes --heading-color 000000 --quote-indent 1 --quote-size 10
                 --quote-line-spacing 1 --footnote-size 10 --bib-hanging 1 --bib-line-spacing 1 --link-color 000000
-                --page-size A4 --margins 2.5,3,2.5,3 --page-number bottom-right --title-page not-counted --toc-bold 1 --lang de-DE"
+                --page-size A4 --margins 2.5,3,2.5,3 --page-number bottom-right --title-page not-counted --toc-bold 1 --lang de-DE
+                --title-size 16 --title-bold no --title-other-size 12 --title-other-bold yes"
           # Without Pandoc: from a python-docx document, which lacks Pandoc's own styles (they are added)
           # and sets its headings in theme fonts and colours, which a plain value must replace.
           # shellcheck disable=SC2086
           expect 0 python scripts/build_reference_docx.py "$R/ref.docx" --base "$R/base.docx" $ARGS
           grep -q '^Reference document written' "$R/out.txt"
+          grep -q '^  - title 16 pt regular$' "$R/out.txt" || { cat "$R/out.txt"; exit 1; }
+          grep -q '^  - other title page lines 12 pt bold$' "$R/out.txt" || { cat "$R/out.txt"; exit 1; }
           python - "$R/ref.docx" <<'EOF'
           import re, sys, zipfile
           import docx
@@ -2187,6 +2190,13 @@ jobs:
               check(h and "asciiTheme" not in h and "themeColor" not in h, f"Heading {level} keeps a theme font or colour")
               check('w:ascii="Arial"' in h and 'w:val="000000"' in h, f"Heading {level}: font or colour not set")
           check(st["Heading 1"].font.size == Pt(14) and st["Heading 3"].font.size == Pt(11) and st["Heading 1"].font.bold, "heading sizes")
+          # The title page's styles: Title, and the three other lines; python-docx has no Author and Date (added),
+          # and its Title has a linked character style, which takes the values too.
+          check(st["Title"].font.size == Pt(16) and st["Title"].font.bold is False, "Title: size or weight")
+          check(st["Title Char"].font.size == Pt(16) and st["Title Char"].font.bold is False, "Title Char: size or weight")
+          for name in ("Subtitle", "Author", "Date"):
+              check(name in st and st[name].font.size == Pt(12) and st[name].font.bold is True, f"{name}: size or weight")
+              check('w:ascii="Arial"' in xml(name) and 'w:val="000000"' in xml(name), f"{name}: font or colour not set")
           q = st["Block Text"]
           check(cm(q.paragraph_format.left_indent, 1) and cm(q.paragraph_format.right_indent, 0) and q.font.size == Pt(10), "Block Text")
           bib = st["Bibliography"].paragraph_format
@@ -2258,6 +2268,10 @@ jobs:
           one_error "--size"
           expect 2 python scripts/build_reference_docx.py "$R/x.docx" --base "$R/base.docx" --toc-bold bold
           one_error "--toc-bold"
+          expect 2 python scripts/build_reference_docx.py "$R/x.docx" --base "$R/base.docx" --title-size large
+          one_error "--title-size"
+          expect 2 python scripts/build_reference_docx.py "$R/x.docx" --base "$R/base.docx" --title-other-bold maybe
+          one_error "--title-other-bold"
           expect 2 python scripts/build_reference_docx.py "$R/x.docx" --base "$R/missing.docx"
           one_error "--base"
           expect 2 python scripts/build_reference_docx.py "$R/nofolder/x.docx" --base "$R/base.docx"
@@ -2278,7 +2292,7 @@ jobs:
           pandoc --version | head -1
           # shellcheck disable=SC2086
           expect 0 python scripts/build_reference_docx.py "$R/pandoc-ref.docx" $ARGS
-          printf '# 1 Kapitel\n\nErster Absatz.\n\nZweiter Absatz.\n\n> Ein Blockzitat.\n\n| A | B |\n|---|---|\n| x | y |\n\n#### Ebene vier\n\nText.\n\n## Literaturverzeichnis\n\n::: {custom-style="Bibliography"}\nAutor, Anna (2020): Titel.\n:::\n' > "$R/doc.md"
+          printf '::: {custom-style="Title"}\nTitel der Arbeit\n:::\n\n::: {custom-style="Author"}\n[Name]\n:::\n\n# 1 Kapitel\n\nErster Absatz.\n\nZweiter Absatz.\n\n> Ein Blockzitat.\n\n| A | B |\n|---|---|\n| x | y |\n\n#### Ebene vier\n\nText.\n\n## Literaturverzeichnis\n\n::: {custom-style="Bibliography"}\nAutor, Anna (2020): Titel.\n:::\n' > "$R/doc.md"
           pandoc "$R/doc.md" --reference-doc "$R/pandoc-ref.docx" -o "$R/doc.docx"
           python - "$R/doc.docx" <<'EOF'
           import sys, zipfile
@@ -2297,8 +2311,12 @@ jobs:
                   raise SystemExit("round trip: " + what)
           def cm(length, value):
               return length is not None and abs(length.cm - value) < 0.01
-          for name in ("Heading 1", "Heading 4", "First Paragraph", "Body Text", "Block Text", "Bibliography"):
+          for name in ("Title", "Author", "Heading 1", "Heading 4", "First Paragraph", "Body Text", "Block Text", "Bibliography"):
               check(name in seen, f"no paragraph in {name}: {sorted(seen)}")
+          check(eff(seen["Title"], lambda s: s.font.size) == Pt(16) and eff(seen["Title"], lambda s: s.font.bold) is False,
+                "title size or weight in the export")
+          check(eff(seen["Author"], lambda s: s.font.size) == Pt(12) and eff(seen["Author"], lambda s: s.font.bold) is True,
+                "size or weight of the title page's other lines in the export")
           check(eff(seen["Body Text"], lambda s: s.font.name) == "Arial", "body font")
           check(eff(seen["Body Text"], lambda s: s.font.size) == Pt(11), "body size")
           check(eff(seen["Heading 1"], lambda s: s.font.size) == Pt(14), "heading size")

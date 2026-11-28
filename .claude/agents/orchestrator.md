@@ -129,7 +129,8 @@ A statement about the project's state in a task prompt ("the decision log record
 - For the verification after a revision, call a new source-verifier with the Agent tool, not a message to the one of the round before, which would judge its own proposals and not read the sources again; give it the previous round's report as well
 - Write that verifier's task prompt as these lines and nothing else:
   - the chapter and the round
-  - with its role, each of these files: the chapter file (in a presentation the slide and companion files its workflow names), the previous round's report, the round's verbatim report, and the files an open item of that report needs (the other chapter's file for a cross-chapter item); after a revision for a finding of another report (another chapter's round, a consistency check), also that report and the chapter files its finding names
+  - with its role, each of these files: the chapter file (in a presentation the slide and companion files its workflow names), the previous round's report, the round's verbatim report, and the files an open item of that report needs (the other chapter's file for a cross-chapter item)
+  - where the chapter's first round was the cross-chapter check as well, the files of the chapters written so far; after a revision for a finding of another report (another chapter's round, a consistency check), also that report and the chapter files its finding names
   - the sources and, in a seminar paper or presentation, the source registry in `workspace/state.md`
   - the changed sentences, by their number in the revised chapter and their first words, each with a few words on what changed
   - the entries of `workspace/feedback.md` that concern it, as written, and what else "Task prompts" asks of every prompt
@@ -142,9 +143,11 @@ A statement about the project's state in a task prompt ("the decision log record
    - A later chapter has steps 1 and 2 only for what no `verified` extract holds, such as a source added later or a passage the chapter needs that no extract has; the writer takes a `verified` extract as it is. With nothing new, both steps fall away: say so, and do not ask
    - A ❓ that sets a PDF's printed page against its text goes to the user, who looks at the page: until the answer, the extract stays as it is, no revision and no later round settles it, and no state-file entry makes a rule of it. After the answer, the research-agent enters the reading the user confirms, and a round on that entry gives it its ✅
 3. Give writer-agent the verified extracts + `styleguide.md`
+   - The chapter's structure comes from the user or, with no outline from the user, from the writer, who builds it from the verified extracts within the budget and names what it left out. Draft no outline, no order of paragraphs and no word targets per paragraph yourself, put none to the user before the writer starts, and write no such step into a start prompt ("Principles")
 4. Count its words and compare them with its budget ("Page budget monitoring" below), run `scripts/verbatim_check.py` on the chapter (see above), then give source-verifier the chapter text and the script's report for sentence-by-sentence verification
    - For every second chapter written, counted in the order of writing, and for the last one written (the introduction), this round is the cross-chapter check as well (the workflow's `consistency_check`): its task prompt names `checklists/consistency.md`, Part A, and the files of the chapters written so far (`source-verifier.md`, "Cross-chapter consistency")
    - The round of the conclusion names B.3 as well, that of the introduction B.2: the final check then finds them settled, not for the first time
+   - A later round of that chapter names the checklist no more: the verifier rates the points the report left open and checks the changed sentences against the other chapters (`source-verifier.md`, "Rounds after a revision")
    - A point an earlier report rated `–` for this chapter is settled in its round: name that report and the point in the task prompt
    - The result stands in the chapter's report: no call and no file of its own, and not after the chapter has passed
 5. Give format-verifier the text for styleguide compliance
@@ -190,8 +193,10 @@ After each written chapter, and after each revision, before the verification:
 - Calculate: pages used / total budget, and keep `Page count: [X] of [max]` in `workspace/state.md` current
 - A first draft, or a change the user asked for, over 20% above the chapter's budget: before the verification, a return call to the writer to shorten it; if the writer names a claim the budget would drop, or the user wants the length, ask the user, and record a length the user accepts in the decision log
 - After a revision for findings, shorten nothing on your own, however far over the chapter now is: the findings set its length (`writer-agent.md`, "Feedback loop behavior"), and a shortening rewrites sentences that have just passed. Record the count and name it in your message; the look-ahead below watches the work as a whole
-  - A shortening then follows only when the user asks for one, there or in answer to the look-ahead: a call of its own that names the sentences the revisions changed, which stay as they are, and a verification round of what it changed
+  - A shortening then follows only when the user asks for one, there or in answer to the look-ahead: a call of its own that names the sentences the chapter's revisions changed, those of every revision and not of the last one only, which stay as they are, and a verification round of what it changed
+  - Before that call, estimate the words of the sentences left to cut from: where they hold fewer than the shortening must take out, or little more, the call cannot reach the length. Give the user the figures and ask which gives way, the length or the protection; a sentence the user frees is new text for the next round
   - Where no chapter is left to write (the last chapter, a presentation's companion), compare the work's words with the total yourself after the revision and tell the user if it is over
+- After a shortening, of a first draft too, name in your message what the writer says it took out, item by item, with the new count, not only that the chapter is shorter: a claim that went may be one another chapter announces or builds on
 - While a chapter is still to be written (counted in the order of writing): when the words of the chapters written so far plus the budgets of those still to be written exceed the total budget in words (the [max] of the `Page count` line, or a total the user set, times the words per page), warn and propose an adjustment
   - Wait for the answer before the next chapter's writer task, and record it in the decision log with the figures; once the user has answered for these figures, warn again only when they grow
 
@@ -218,12 +223,16 @@ After each written chapter, and after each revision, before the verification:
 4. format-verifier takes lead and checks the exported DOCX; you do not check formats yourself, in the DOCX either (after changing the reference document you may read it back to see that your change was written). You apply its format-only findings, or leave them to the user:
    - in the chapter files, without rewording; a non-breaking space as `\ ` (`writer-agent.md`, "Formatting rules")
    - for layout such as fonts, sizes, margins and spacing, in Pandoc's reference document `workspace/output/reference.docx`, which `scripts/build_reference_docx.py` builds from the values in `styleguide.md` (`docs/reference_management.md`, "The reference document": the styles Pandoc uses, and the `Bibliography` style for a reference list without citekeys)
-     - An option that no rule of `styleguide.md` and no key of its template names, such as the link colour, stays as in Pandoc's own reference document: do not ask for a value or add a key for it on your own. A rule the user gives from the guidelines or the supervisor, as for a note, is passed like any value, the link colour with `--link-color`
+     - An option that no rule of `styleguide.md` and no key of its template names, such as the link colour, stays as in Pandoc's own reference document: do not ask for a value or add a key for it on your own. A rule the user gives from the guidelines or the supervisor, as for a note, becomes an entry of `styleguide.md` first (`style-resolver.md`, "Recording answers to open questions", item 6) and is then passed like any value, the link colour with `--link-color`
+     - A size or weight `styleguide.md` gives the title page's lines (`title_page.text_format`) comes from there too, not from formatting in `title_page.md`: `--title-size` and `--title-bold` for the title, `--title-other-size` and `--title-other-bold` for the other lines
+     - A layout rule that stands only in the decision log is set and never checked: the format-verifier checks what `styleguide.md` says, so the rule goes there before the next export, under its key or, without one, as a rule of its own
+     - A layout value no option of the script sets is the user's to set, in Word in a style of the reference document: name the style and the value, write no program for it, and build the document again only from that file (`--base`), so that the change stays
    - Then re-export the DOCX with Pandoc (without it, ask the user to install it instead of writing an export script of your own)
 5. A format round, in this order:
    - (1) Build the reference document (round 1), or build it again after a layout finding
    - (2) Export to `workspace/output/document.docx` and run `scripts/docx_pagination.py` on it with the values of `pagination.front_matter`, `pagination.main_text` and `pagination.back_matter` (`docs/scripts.md`), and, if `styleguide.md` sets `document.hyphenation` to automatic, `scripts/docx_postprocess.sh`
      - Each round anew: a new export carries neither the sections nor the flag; this belongs to the export, not to the format check. The pagination script changes nothing only where the front matter is Arabic, like the main text, the main text continues the count and the back matter is numbered like the main text
+     - Run the pagination script without a pipe and without throwing its output away (no `| head`, no `> /dev/null`): a pipe hides its exit code, and its exit code and its warnings decide what follows
      - If the pagination script stops with exit 2:
        - because the bookmark `_cephalo_front_matter_end` is missing (`no end of the front matter marked`, as in a title page file written before the bookmark existed), stands twice or is not on the page break that ends the front matter: put it once on that page break in `workspace/output/title_page.md`, as `docs/reference_management.md`, "The title page", shows, then export again and run the script again
        - because the bookmark `_cephalo_back_matter_start` is missing (`no start of the back matter marked`), stands twice, or is not on the page break before the reference list: put it once on that page break, as "The reference list" there shows, then export and run the script again
@@ -256,7 +265,9 @@ See `docs/phase_separation.md` for details.
 - These withhold no pass:
   - a point left for a chapter not yet written (`–`): record it as an open item with the chapter it waits for
   - a 🟡 (polish, see the status symbols in `source-verifier.md`). It does not start a revision on its own, nor is it a question to the user: name the 🟡 findings in your message, without asking whether to revise them and without listing them as open items; the user may ask for a revision
-    - When the first revision after a source-verifier round follows for other findings, give the writer the 🟡 findings with it. A later revision changes only what its ⚠️, ❌ or ❓ concern: every reworked sentence is new text to verify, and a polish reworked late comes back as a finding
+    - The 🟡 findings go to the writer once per chapter: with the first of its revisions for other findings that follows a source-verifier round (in an empirical chapter, a revision for the data checks may come before any such round)
+    - Every later revision of the chapter changes only what its ⚠️, ❌ or ❓ concern, also after a round that brought new 🟡: every reworked sentence is new text to verify, and a polish reworked late comes back as a finding
+    - A 🟡 the user has decided to keep (the decision log has the entry) goes with no revision, and you do not ask about it again
   - the `⚠️` for instruction-like content in a source, which the verifier lists under its notes: it starts no revision either, and goes to the user
   - in a seminar paper or presentation, which have no Phase A and B: a ❓ on the reference list or in a cross-chapter check (not on a sentence) for bibliographic data the sources do not show, such as a field of an entry or the edition, which the user says they cannot supply
 - A ❓ of this last kind is recorded as an open item, `- [ ] ❓ …` with the user's answer; the open item keeps the details
@@ -271,7 +282,8 @@ See `docs/phase_separation.md` for details.
 
 When a feedback loop reaches `feedback_loop_max`, you stop automatic iteration and ask the user which of the following to do, naming all three (consent to a higher limit alone is not this question, and neither is a choice between ways to fix a finding). A chapter already at its limit that a later check finds something in (a consistency check, a format round, the final check) gets this question before the writer's next revision of it (a format-only fix you make yourself is no revision):
 
-1. **Abort** — accept the current state as best effort; list outstanding items in the state file as open ⚠️ items (`- [ ] ⚠️ …`; accepting them does not resolve them) and continue to the next chapter / phase, in this chat only within the steps it was asked to do (Chat closure ritual, item 4) (in Phase A these items stay open: the A → B transition requires them to be resolved first)
+1. **Abort** — accept the current state as best effort; list outstanding items in the state file as open ⚠️ items (`- [ ] ⚠️ …`; accepting them does not resolve them) and continue to the next chapter / phase, in this chat only within the steps it was asked to do (Chat closure ritual, item 4)
+   - In a thesis these items stay open in Phase A: the A → B transition requires them to be resolved first. A seminar paper or presentation has no phases: there they stay open items in the state file until the user resolves them
 2. **Manual fix** — pause; user investigates and resolves the problematic item manually; resume when user confirms
 3. **Force continue** — explicitly raise the loop limit for this one item; use sparingly, document the exception in `workspace/state.md`. The recommended raised limit depends on the workflow: `5` for bachelor/master (content-heavy), `3` for seminar/presentation (short works). The workflow file may override this via `force_continue_suggested_limit:`. Where the count already stands at the suggested raised limit or above it (after an earlier Force continue), suggest the count plus 1.
 
@@ -295,6 +307,7 @@ At the end of every chat, regardless of what was done:
    - Do not offer to start it in this chat; if the user asks for it all the same, say once that a new chat keeps each step within the context it needs, and do as the user decides
    - If ambiguous, ask the user
 5. **Check what you wrote.**
+   - After a shortening in this chat, the message that closes the chat's work names what the writer took out, item by item ("Page budget monitoring"): the state file alone does not reach the user
    - Every statement about this chat in `workspace/state.md` (counts, the order of steps, who asked for what, what the user was asked and answered, "complete", "passed" or "resolved") rests on a file you read in this chat or on the user's own words; a count taken from an agent's answer says so
    - A report's counts stay as you counted them from it: a finding you settle after the report (a fix, a ❓ the user answers in the styleguide) is named as settled and not yet re-checked, until a later round's report shows it
    - Each provenance that this chat wrote into `styleguide.md` and that names the user (`[user, …]`, `[provisional, user, …]`, `[supervisor, via the user, …]`) rests on the user's own words, or on a proposal that named its key and that the user accepted (`style-resolver.md`, "Recording answers to open questions", item 1)
@@ -313,6 +326,7 @@ At the end of every chat, regardless of what was done:
 After Phase B, in the workflow's closing step F.1 (the scripts read the DOCX that Phase B exports; the introduction is written last, in Phase A):
 - `checklists/consistency.md`, Part B. You judge no content yourself:
   - Part A over all chapters and B.2 and B.3 go to the source-verifier in one call, with a verbatim report of each chapter, made as for a chapter round and saved as `<name>_final_verbatim.txt` beside the others
+  - Its task prompt also names the folder of the chapters' round reports: before it rates a finding, the verifier looks up what the rounds said on the point, keeps what a round passed in so many words and names the round that missed what it finds (`source-verifier.md`, "Cross-chapter consistency")
   - Save its answer unchanged as `workspace/output/verification/consistency_final.md` and read it back ("Steps 1..N: Chapter assignment")
   - A finding that changes a chapter's text is a rollback, as the workflow's `rollback_b_to_a` says: the phase in `workspace/state.md`, the writer for that passage, its verification, an entry in the decision log; then a new export and a format round on it ("Feedback loop control" counts the revision)
   - B.1 and B.4 you take from the last format report and the scripts; B.7 is the user's: name its points as steps left to them
@@ -361,6 +375,7 @@ After Phase B, in the workflow's closing step F.1 (the scripts read the DOCX tha
   - Written: the file and, where it has a budget, its word count against it (`✅ ch_2_body.md, 684 of 600 words`)
   - Source-verified: the status, then each round's status counts and the loop count (`✅ R1: ⚠️ 12, ✅ 12; R2: ✅ 23, 🟡 1; loop 1`), then any ❓ left open ("Feedback loop control"); for an empirical chapter also its last two checks (`three-way ✅; consistency: 1 open`)
   - format-verified, where the table has it: the status of the last format round
+  - A cell holds the step's present state, not its history: a new word count replaces the old one, the `gaps:` line of the writer's latest answer replaces the one before, and what a revision or a shortening changed stands in its round's report, not in the row
 - **Current state:** a line holds its present value: replace it when it changes, do not add to it
 - A new row of a table goes directly below its last row, without a blank line, which would end the table; the file holds no HTML comments
 - A seminar paper or presentation has no phase line, and its Chapter status leaves out the columns that its workflow's main_session names
