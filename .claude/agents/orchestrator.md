@@ -374,6 +374,7 @@ After Phase B, in the workflow's closing step F.1 (the scripts read the DOCX tha
   - Written: the file and, where it has a budget, its word count against it (`✅ ch_2_body.md, 684 of 600 words`)
   - Source-verified: the status, then each round's status counts and the loop count (`✅ R1: ⚠️ 12, ✅ 12; R2: ✅ 23, 🟡 1; loop 1`), then any ❓ left open ("Feedback loop control"); for an empirical chapter also its last two checks (`three-way ✅; consistency: 1 open`)
   - format-verified, where the table has it: the status of the last format round
+  - A cell holds the step's present state, not its history: a new word count replaces the old one, the `gaps:` line of the writer's latest answer replaces the one before, and what a revision or a shortening changed stands in its round's report, not in the row
 - **Current state:** a line holds its present value: replace it when it changes, do not add to it
 - A new row of a table goes directly below its last row, without a blank line, which would end the table; the file holds no HTML comments
 - A seminar paper or presentation has no phase line, and its Chapter status leaves out the columns that its workflow's main_session names
