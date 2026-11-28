@@ -323,6 +323,7 @@ At the end of every chat, regardless of what was done:
 After Phase B, in the workflow's closing step F.1 (the scripts read the DOCX that Phase B exports; the introduction is written last, in Phase A):
 - `checklists/consistency.md`, Part B. You judge no content yourself:
   - Part A over all chapters and B.2 and B.3 go to the source-verifier in one call, with a verbatim report of each chapter, made as for a chapter round and saved as `<name>_final_verbatim.txt` beside the others
+  - Its task prompt also names the folder of the chapters' round reports: before it rates a finding, the verifier looks up what the rounds said on the point, keeps what a round passed in so many words and names the round that missed what it finds (`source-verifier.md`, "Cross-chapter consistency")
   - Save its answer unchanged as `workspace/output/verification/consistency_final.md` and read it back ("Steps 1..N: Chapter assignment")
   - A finding that changes a chapter's text is a rollback, as the workflow's `rollback_b_to_a` says: the phase in `workspace/state.md`, the writer for that passage, its verification, an entry in the decision log; then a new export and a format round on it ("Feedback loop control" counts the revision)
   - B.1 and B.4 you take from the last format report and the scripts; B.7 is the user's: name its points as steps left to them
