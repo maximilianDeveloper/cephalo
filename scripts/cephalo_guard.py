@@ -37,12 +37,14 @@ Rules (on, except P1)
       cephalo's scripts/ folder: a Write or Edit, or a shell command that
       writes, moves or deletes them (on Windows and macOS in any letter
       case).  Denied: only the user changes them.
-  S6  cephalo's state_check.py run with its output into a pipe (| tail,
-      2>&1 | grep, in PowerShell | Select-Object), also in a ( ) or { }
-      group, an if, a loop or a case that is piped, or with its output
-      thrown away (> /dev/null, > NUL, > $null).  Denied: its whole
-      output is read in the tool result.  --help, its output redirected
-      into a file, and a chain with ;, && or || pass.
+  S6  cephalo's state_check.py or docx_pagination.py run with its output
+      into a pipe (| tail, 2>&1 | grep, in PowerShell | Select-Object),
+      also in a ( ) or { } group, an if, a loop or a case that is piped,
+      or with its output thrown away (> /dev/null, > NUL, > $null).
+      Denied: the whole output of state_check.py is read in the tool
+      result, and a pipe hides the exit code of docx_pagination.py, by
+      which the coordinator goes on.  --help, its output redirected into
+      a file, and a chain with ;, && or || pass.
   R5  The coordinator (main chat or an orchestrator) and a saved
       source-verifier report (verification/*_round_<n>.md,
       consistency_final.md): after a Write, asks for the read-back the
@@ -224,6 +226,16 @@ class Ctx:
             return '.claude/agents/%s.md' % self.agent_type
         longform = self.root != self.project or os.path.exists(os.path.join(self.project_raw, '00_Status.md'))
         return '.claude/agents/orchestrator-longform.md' if longform else '.claude/agents/orchestrator.md'
+
+    def pagination_rule(self):
+        """The definition and the section that have the coordinator run
+        docx_pagination.py after an export: the long-form orchestrator's in a
+        long-form project or a sub-project, otherwise the flat one's (which
+        the seminar and presentation workflows point to)."""
+        longform = self.root != self.project or os.path.exists(os.path.join(self.project_raw, '00_Status.md'))
+        if longform:
+            return '.claude/agents/orchestrator-longform.md', '"08_Formal_Review (Phase B)", format round, step 2'
+        return '.claude/agents/orchestrator.md', '"Action on transition", item 5, step 2'
 
 
 DEVICE = '<device>'
@@ -1393,15 +1405,18 @@ def check_shell(cmd, tool, ctx, depth=0, pre=None, data=False):
             if ctx.windows and re.match(r'^python3(\.\d+)?$', c) and mode != 'probe' and ctx.has_py():
                 hits.append(('S3', 'python3 on Windows'))
         prev_script = (c, py_mode(args)[1]) if is_script and seg.sep == '||' else False
-        # S6: cephalo's state_check.py with its output into a pipe, or thrown away (/dev/null, NUL, $null)
-        if _state_check_run(c, args):
+        # S6: cephalo's state_check.py or docx_pagination.py with its output into a pipe, or thrown away
+        # (/dev/null, NUL, $null); a detail on docx_pagination.py begins with its name
+        watched = _whole_output_run(c, args)
+        if watched:
             outs = [t for fd, op, t in seg.redirs
                     if op in _STDOUT_OPS and fd in (None, '1', '&', '*') and t and not t.startswith('&')]
             null = [t for t in outs if _null_device(t)]
+            mark = _PAGINATION_MARK if watched == 'docx_pagination.py' else ''
             if null:
-                hits.append(('S6', 'its output goes to %s' % null[0]))
+                hits.append(('S6', mark + 'its output goes to %s' % null[0]))
             elif piped[si] and not outs:
-                hits.append(('S6', _pipe_detail(segs, si, piped[si])))
+                hits.append(('S6', mark + _pipe_detail(segs, si, piped[si])))
         # S1 (g): a patch typed into git apply / patch
         if (c == 'patch' or (c == 'git' and args[:1] == ['apply'])) and '--check' not in args and \
                 '--stat' not in args and (seg.heredocs or seg.herestrings or
@@ -1546,17 +1561,27 @@ def check_shell(cmd, tool, ctx, depth=0, pre=None, data=False):
     return _dedupe(hits)
 
 
-def _state_check_run(c, args):
-    """The command runs cephalo's state_check.py, by a Python interpreter or by
-    its path (c: the command's base name), and not for its --help."""
+_WHOLE_OUTPUT = ('state_check.py', 'docx_pagination.py')
+_PAGINATION_MARK = 'docx_pagination.py: '
+
+
+def _whole_output_run(c, args):
+    """The name of the script, if the command runs one of cephalo's scripts
+    whose output the coordinator needs whole (state_check.py: its report;
+    docx_pagination.py: its exit code and its warnings), by a Python
+    interpreter or by its path (c: the command's base name), and not for its
+    --help.  Otherwise None."""
     if _PYNAME.match(c):
         mode, val = py_mode(args)
-        if mode != 'script' or base_name(val) != 'state_check.py':
-            return False
+        if mode != 'script' or base_name(val) not in _WHOLE_OUTPUT:
+            return None
+        name = base_name(val)
         args = args[args.index(val) + 1:]
-    elif c != 'state_check.py':
-        return False
-    return not any(a in ('-h', '--help') for a in args)
+    elif c in _WHOLE_OUTPUT:
+        name = c
+    else:
+        return None
+    return None if any(a in ('-h', '--help') for a in args) else name
 
 
 def _null_device(t):
@@ -2943,11 +2968,19 @@ def shell_reason(hits, ctx, cmd=''):
                    'guard"). If the change is needed, tell the user what to change and why; do not get around '
                    'this check.' % '; '.join(by['S5'][:3]))
     if 'S6' in by:
-        out.append('cephalo guard S6: not run. This command keeps the output of state_check.py from you (%s). '
-                   'Its output goes to you whole: run it without a pipe and without throwing its output away (%s, '
-                   '"Chat closure ritual", item 1; '
-                   'docs/scripts.md, "state_check.py"). Its summary line and its last line give its exit code; '
-                   'read the whole output in the tool result.' % (by['S6'][0], ctx.definition('S6')))
+        pagination = [x[len(_PAGINATION_MARK):] for x in by['S6'] if x.startswith(_PAGINATION_MARK)]
+        state_check = [x for x in by['S6'] if not x.startswith(_PAGINATION_MARK)]
+        if state_check:
+            out.append('cephalo guard S6: not run. This command keeps the output of state_check.py from you (%s). '
+                       'Its output goes to you whole: run it without a pipe and without throwing its output away '
+                       '(%s, "Chat closure ritual", item 1; '
+                       'docs/scripts.md, "state_check.py"). Its summary line and its last line give its exit code; '
+                       'read the whole output in the tool result.' % (state_check[0], ctx.definition('S6')))
+        if pagination:
+            out.append('cephalo guard S6: not run. This command keeps the output of docx_pagination.py from you '
+                       '(%s). Run it without a pipe and without throwing its output away (%s, %s; docs/scripts.md, '
+                       '"docx_pagination.py"): a pipe hides its exit code, and its exit code and its warnings '
+                       'decide what follows.' % ((pagination[0],) + ctx.pagination_rule()))
     if 'R5' in by:
         out.append('cephalo guard R5: not done (%s). A saved source-verifier report stays as the agent\'s '
                    'answer (%s, %s): if your copy differs from the '

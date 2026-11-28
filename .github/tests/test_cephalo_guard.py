@@ -592,6 +592,79 @@ class TestS6StateCheckPipe(Base):
         self.deny(bash(cmd, off='S1'), 'S6')
 
 
+class TestS6PaginationPipe(Base):
+    """docx_pagination.py: a pipe hides its exit code, by which the format round goes on (seen in a trial run:
+    ... | head -3 && ./scripts/docx_postprocess.sh ...)."""
+    RUN = ('python3 scripts/docx_pagination.py workspace/output/document.docx --front-matter roman '
+           '--main-text restart --back-matter roman-continue')
+    DENIED = [
+        RUN + ' | head -3 && ./scripts/docx_postprocess.sh workspace/output/document.docx',   # the trial run's form
+        RUN + ' | head -3', RUN + ' 2>&1 | tail -5', RUN + ' |& tail', RUN + ' | tee _scratch/orchestrator/p.txt',
+        'cd /home/u/proj && py scripts/docx_pagination.py workspace/output/document.docx --front-matter roman | cat',
+        '(' + RUN + ') | head -3', '{ ' + RUN + '; echo "exit=$?"; } | tail -2',
+        'for f in a.docx b.docx; do python3 scripts/docx_pagination.py $f --front-matter roman; done | tail',
+        RUN + ' > /dev/null', RUN + ' >/dev/null 2>&1; echo $?',
+    ]
+    PASSING = [
+        RUN, RUN + '; echo "exit=$?"', RUN + ' && ./scripts/docx_postprocess.sh workspace/output/document.docx',
+        RUN + ' 2>&1', RUN + ' > _scratch/orchestrator/p.txt 2>&1; echo $?', RUN + ' 2>/dev/null',
+        'python3 scripts/docx_pagination.py --help | head', 'grep -n Exit scripts/docx_pagination.py | head',
+        'python3 scripts/docx_paginations.py a.docx | tail', 'python3 scripts/bibliography_check.py a.docx | tail -3',
+    ]
+
+    def test_denied(self):
+        for cmd in self.DENIED:
+            with self.subTest(cmd=cmd):
+                self.assertEqual(rules_of(bash(cmd)), {'S6'}, cmd)
+        reason = bash(self.DENIED[0])['hookSpecificOutput']['permissionDecisionReason']
+        for part in ('cephalo guard S6: not run.', 'keeps the output of docx_pagination.py from you (| head -3)',
+                     'without a pipe', '.claude/agents/orchestrator.md, "Action on transition", item 5, step 2',
+                     'docs/scripts.md, "docx_pagination.py"', 'hides its exit code'):
+            self.assertIn(part, reason)
+        self.assertNotIn('state_check.py', reason)
+        self.assertNotIn('docx_pagination.py: ', reason)          # the detail's mark is not shown
+        out = bash(self.RUN + ' > /dev/null')
+        self.assertIn('(its output goes to /dev/null)', out['hookSpecificOutput']['permissionDecisionReason'])
+
+    def test_the_rule_stands_in_the_definitions(self):
+        # the sections the message names hold the rule
+        for name, section in (('orchestrator.md', '**Action on transition:**'),
+                              ('orchestrator-longform.md', '### `08_Formal_Review` (Phase B)')):
+            text = (ROOT / '.claude' / 'agents' / name).read_text(encoding='utf-8')
+            part = text[text.index(section):]
+            self.assertIn('Run the pagination script without a pipe and without throwing its output away',
+                          part[:part.index('\n## ') if '\n## ' in part else len(part)], name)
+
+    def test_long_form_windows_and_powershell(self):
+        top = tempfile.mkdtemp(prefix='guard-pagination-')
+        Path(top, '00_Status.md').write_text('# Status\n', encoding='utf-8')
+        out = bash('python3 scripts/docx_pagination.py 08_Formal_Review/submissions/v_r1.docx --front-matter roman '
+                   '| head -3', root=top, cwd=top)
+        self.assertEqual(rules_of(out), {'S6'})
+        self.assertIn('.claude/agents/orchestrator-longform.md, "08_Formal_Review (Phase B)", format round, step 2',
+                      out['hookSpecificOutput']['permissionDecisionReason'])
+        for cmd in ('py scripts/docx_pagination.py workspace/output/document.docx --front-matter roman | head -3',
+                    'py "C:\\Home\\u\\Projekt Arbeit\\scripts\\DOCX_PAGINATION.PY" a.docx --front-matter roman | more'):
+            with self.subTest(cmd=cmd):
+                self.assertEqual(rules_of(bash(cmd, plat='windows')), {'S6'}, cmd)
+        self.assertEqual(rules_of(ps('py scripts\\docx_pagination.py a.docx --front-matter roman '
+                                     '| Select-Object -First 3')), {'S6'})
+        self.passes(ps('py scripts\\docx_pagination.py workspace\\output\\document.docx --front-matter roman'))
+
+    def test_passing_and_switch(self):
+        for cmd in self.PASSING:
+            with self.subTest(cmd=cmd):
+                self.passes(bash(cmd))
+        self.passes(bash(self.RUN + ' | head -3', off='S6'))
+
+    def test_both_scripts_in_one_command(self):
+        out = bash('python3 scripts/state_check.py workspace/state.md | tail -3; ' + self.RUN + ' | head -3')
+        reason = out['hookSpecificOutput']['permissionDecisionReason']
+        self.assertEqual(rules_of(out), {'S6'})
+        self.assertIn('keeps the output of state_check.py from you (| tail -3)', reason)
+        self.assertIn('keeps the output of docx_pagination.py from you (| head -3)', reason)
+
+
 class TestCompoundCommands(Base):
     """A command after a reserved word (if/then/else/elif/do/while/until/!) is checked as any other, and a
     piped or redirected compound command (if ... fi, for/while ... done, case ... esac) as a { } group."""
