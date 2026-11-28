@@ -306,6 +306,7 @@ At the end of every chat, regardless of what was done:
    - Do not offer to start it in this chat; if the user asks for it all the same, say once that a new chat keeps each step within the context it needs, and do as the user decides
    - If ambiguous, ask the user
 5. **Check what you wrote.**
+   - After a shortening in this chat, the message that closes the chat's work names what the writer took out, item by item ("Page budget monitoring"): the state file alone does not reach the user
    - Every statement about this chat in `workspace/state.md` (counts, the order of steps, who asked for what, what the user was asked and answered, "complete", "passed" or "resolved") rests on a file you read in this chat or on the user's own words; a count taken from an agent's answer says so
    - A report's counts stay as you counted them from it: a finding you settle after the report (a fix, a ❓ the user answers in the styleguide) is named as settled and not yet re-checked, until a later round's report shows it
    - Each provenance that this chat wrote into `styleguide.md` and that names the user (`[user, …]`, `[provisional, user, …]`, `[supervisor, via the user, …]`) rests on the user's own words, or on a proposal that named its key and that the user accepted (`style-resolver.md`, "Recording answers to open questions", item 1)

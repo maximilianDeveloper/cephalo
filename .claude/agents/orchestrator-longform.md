@@ -224,6 +224,7 @@ At minimum update:
 Before you finish:
 
 - The chronology has a row for this chat, and no line still says it will be updated later
+- After a shortening in this chat, the message that closes the chat's work names what the writer took out, item by item ("The page budget"): the handover alone does not reach the user
 - Every statement about this chat in the status file and the handover (counts, the order of steps, who asked for what, what the user was asked and answered, "complete", "passed" or "resolved") rests on a file you read in this chat or on the user's own words; a count taken from an agent's answer says so
 - A report's counts stay as you counted them from it: a finding you settle after the report (a fix, a ❓ the user answers in the styleguide) is named as settled and not yet re-checked, until a later round's report shows it
 - Each provenance that this chat wrote into `styleguide.md` and that names the user (`[user, …]`, `[provisional, user, …]`, `[supervisor, via the user, …]`) rests on the user's own words, or on a proposal that named its key and that the user accepted (`style-resolver.md`, "Recording answers to open questions", item 1)
