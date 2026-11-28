@@ -2764,9 +2764,13 @@ class TestS5Protected(Base):
         reason = bash('rm -rf ../02_Main_Work', root=sub, cwd=sub)['hookSpecificOutput']['permissionDecisionReason']
         self.assertIn('02_Main_Work (a folder that holds the hook settings .claude/settings.json)', reason)
         # a .claude/ folder in another letter case: a sub-project on macOS and Windows, where the file system
-        # ignores the case; on Linux the folder .Claude/ is not Claude Code's
+        # ignores the case; on Linux the folder .Claude/ is not Claude Code's. The second half needs a file system
+        # that keeps the cases apart: on a Mac's own, .Claude/ answers to .claude/ and the folder is a sub-project
         self.assertIn('S5', rules_of(bash('rm -rf ../03_Defense', plat='macos', root=sub, cwd=sub)))
-        self.passes(bash('rm -rf ../03_Defense', root=sub, cwd=sub))
+        if os.path.isdir(os.path.join(top, '03_Defense', '.claude')):
+            self.assertIn('S5', rules_of(bash('rm -rf ../03_Defense', root=sub, cwd=sub)))
+        else:
+            self.passes(bash('rm -rf ../03_Defense', root=sub, cwd=sub))
         shutil.rmtree(top)
 
     def test_macos_unicode_form(self):
