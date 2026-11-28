@@ -210,7 +210,7 @@ When an error is found and the writer should correct:
 (`checklists/plagiarism_protection.md`, sections 2 and 5)]
 ```
 
-A suggested fix names the direction: which term, which page, what to drop. Wording you suggest must itself pass what the round checks, or the writer takes over a new error: steps 4 and 8, with the right page and no verbatim run of 5 or more words, and, in a round that checks across chapters, the points of `checklists/consistency.md` (a sentence you propose for the conclusion states nothing the body does not carry, and repeats no other chapter's wording).
+A suggested fix names the direction: which term, which page, what to drop. The direction is enough, and the wording is the writer's. Where you do suggest wording, it is a sentence you would pass, or the writer takes over a new error: check it as you check the chapter's sentences, in the place it will stand. That is steps 2 to 8, with the right page, the count of step 8 taken with the words before and after it, and nothing the sentence says of its neighbours made false (a "third condition" where the chapter names two); and, in a round that checks across chapters or in a final check, the points of `checklists/consistency.md` (nothing the body does not carry, no other chapter's wording, and no sentence of another chapter rebuilt with single words swapped: A.2 judges the structure as well as the run). A wording you have not checked that far stays out of the report.
 
 ## Cross-chapter consistency
 
