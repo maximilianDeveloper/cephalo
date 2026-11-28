@@ -332,6 +332,7 @@ A new verification round for an extract follows only a ⚠️ or ❌ on its quot
 ### `03_Theory_chapters`
 - Standard workflow: research -> source-verifier -> writer -> word count ("The page budget") -> `scripts/verbatim_check.py` -> source-verifier -> format-verifier -> status update (research and the first source-verifier as `02_Literature` says)
 - Files: `03_Theory_chapters/chapter_<n>_<slug>.md`
+- The chapter's structure comes from the user or, with no outline from the user, from the writer, who builds it from the verified extracts within the budget and names what it left out. Draft no outline, no order of paragraphs and no word targets per paragraph yourself, put none to the user before the writer starts, and write no such step into a start prompt ("Principles", "No content of your own"); this holds for every chapter
 
 ### `04_Methods` (master / empirical)
 - Setup step 0.6, before any chapter: the methods-agent writes the research design, `04_Methods/design.md` (`methods-agent.md`, "Research design"). Give it the research question and what the user and the materials say about design, sample, instrument and analysis; what it names as open, ask the user
