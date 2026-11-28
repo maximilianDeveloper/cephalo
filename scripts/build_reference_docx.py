@@ -636,7 +636,8 @@ def main(argv=None):
     ap.add_argument("--heading-color", help="heading colour as hex, e.g. 000000 (all levels; Pandoc's own is blue)")
     ap.add_argument("--heading-space-before", help="space before a heading in pt")
     ap.add_argument("--heading-space-after", help="space after a heading in pt")
-    ap.add_argument("--title-size", help="size of the title on the title page in pt (the style Title)")
+    ap.add_argument("--title-size", help="size of the title on the title page in pt (the style Title; "
+                                         "title_page.text_format)")
     ap.add_argument("--title-bold", help="title on the title page bold: yes or no")
     ap.add_argument("--title-other-size", help="size of the title page's other lines in pt (the styles Subtitle, "
                                                "Author and Date)")
